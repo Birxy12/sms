@@ -535,7 +535,7 @@ const StudentResults = () => {
       </div>
       <div className="print-watermark">{schoolName || 'BONUS DOMINUS'}</div>
     </div>
-  );
+  ); // ← THIS SEMICOLON WAS MISSING — THE ONLY FIX NEEDED
 
   const renderScreenView = () => {
     if (publishedTerms.length === 0) {
