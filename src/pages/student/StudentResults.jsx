@@ -337,7 +337,6 @@ const StudentResults = () => {
           .print-final-branding { text-align: center; font-size: 9px; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; border-top: 1px solid #e2e8f0; padding-top: 5px; }
           .print-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 100px; font-weight: 900; color: rgba(15, 23, 42, 0.03); white-space: nowrap; pointer-events: none; z-index: -1; }
         `}</style>
-        <div className="report-card-print" ref={printRef}>
           {/* Top Branding */}
           <div className="print-branding-top">Prepared by GLOBIXTECH ENT {new Date().toLocaleDateString()}</div>
           
@@ -507,7 +506,6 @@ const StudentResults = () => {
           
           {/* Subtle Watermark */}
           <div className="print-watermark">{schoolName || 'BONUS DOMINUS'}</div>
-        </div>
       </div>
     );
   }

@@ -142,28 +142,28 @@ const StudentProfile = () => {
               </div>
             </div>
 
-            <div className="relative z-10 px-8 pb-8">
+            <div className="relative z-10 px-6 pb-8 text-center">
               {isEditing ? (
                 <input 
                   type="text" 
                   value={name} 
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full text-center px-4 py-2.5 rounded-xl border-2 border-indigo-500 bg-white font-black text-slate-800 outline-none mb-2"
+                  className="w-full text-center px-4 py-2.5 rounded-xl border-2 border-indigo-500 bg-white font-black text-slate-800 outline-none mb-1"
                 />
               ) : (
-                <h3 className="text-2xl font-black text-slate-900 mb-1">{currentStudent?.name}</h3>
+                <h3 className="text-lg font-black text-slate-900 mb-1 leading-tight">{currentStudent?.name}</h3>
               )}
-              <p className="text-sm font-bold text-slate-400 tracking-widest uppercase mb-6">{currentStudent?.className}</p>
+              <p className="text-xs font-bold text-indigo-500 tracking-widest uppercase mb-5 px-2 py-1 bg-indigo-50 rounded-full inline-block">{currentStudent?.className}</p>
               
-              <div className="grid grid-cols-2 gap-3 pt-6 border-t border-slate-100">
-                <div className="bg-slate-50 p-3 rounded-2xl">
-                  <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Status</p>
+              <div className="grid grid-cols-2 gap-2 pt-4 border-t border-slate-100">
+                <div className="bg-slate-50 p-3 rounded-2xl text-center">
+                  <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Status</p>
                   <span className="text-xs font-black text-emerald-600 flex items-center justify-center gap-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Active
                   </span>
                 </div>
-                <div className="bg-slate-50 p-3 rounded-2xl">
-                  <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Session</p>
+                <div className="bg-slate-50 p-3 rounded-2xl text-center">
+                  <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Session</p>
                   <span className="text-xs font-black text-slate-700">2025/26</span>
                 </div>
               </div>
