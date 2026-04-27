@@ -57,7 +57,9 @@ const Sidebar = ({ sidebarOpen, onClose }) => {
     { name: 'Results',            path: '/students/results',    icon: Award,           roles: ['student'] },
     { name: 'School Fees',        path: '/students/fees',       icon: CreditCard,      roles: ['student'] },
     { name: 'My Profile',         path: '/students/profile',    icon: UserCircle,      roles: ['student'] },
+    { name: 'ID Card',            path: '/students/idcard',     icon: GraduationCap,   roles: ['student'] },
   ];
+
 
   const navItems = allNavItems.filter(item => item.roles.includes(role));
 

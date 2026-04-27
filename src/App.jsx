@@ -13,6 +13,8 @@ import StudentNotes from './pages/student/StudentNotes';
 import StudentResults from './pages/student/StudentResults';
 import StudentFees from './pages/student/StudentFees';
 import StudentProfile from './pages/student/StudentProfile';
+import StudentIDCard from './pages/student/StudentIDCard';
+
 import StaffManagement from './pages/dashboard/StaffManagement';
 import CourseManagement from './pages/dashboard/CourseManagement';
 import StudentManagement from './pages/dashboard/StudentManagement';
@@ -105,6 +107,12 @@ function App() {
           <Layout><StudentProfile /></Layout>
         </ProtectedStudentRoute>
       } />
+      <Route path="/students/idcard" element={
+        <ProtectedStudentRoute>
+          <Layout><StudentIDCard /></Layout>
+        </ProtectedStudentRoute>
+      } />
+
 
       {/* Admin/Teacher Dashboards (Protected) */}
       <Route path="/admin" element={

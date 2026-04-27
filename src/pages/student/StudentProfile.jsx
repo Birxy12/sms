@@ -102,8 +102,8 @@ const StudentProfile = () => {
         <div className="lg:col-span-1">
           <div className="card-white text-center p-0 relative overflow-hidden">
 
-            {/* ── Banner / Passport Photo ── */}
-            <div className="relative" style={{ height: '120px' }}>
+              {/* ── Banner / Passport Photo ── */}
+            <div className="relative" style={{ height: '140px' }}>
               {currentStudent?.photo ? (
                 <img
                   src={currentStudent.photo}
@@ -115,21 +115,8 @@ const StudentProfile = () => {
               )}
               {/* Dark overlay for readability */}
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.35))' }} />
-
-              {/* Camera upload overlay when editing */}
-              {isEditing && (
-                <label
-                  className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer transition-opacity"
-                  style={{ background: 'rgba(0,0,0,0.45)', color: 'white' }}
-                >
-                  <Camera size={28} />
-                  <span style={{ fontSize: '10px', fontWeight: 900, marginTop: '4px', textTransform: 'uppercase', letterSpacing: '2px' }}>
-                    {uploading ? 'Uploading…' : 'Change Photo'}
-                  </span>
-                  <input type="file" accept="image/*" onChange={handlePassportUpload} className="hidden" />
-                </label>
-              )}
             </div>
+
 
             {/* ── Avatar initial circle sitting at bottom of banner ── */}
             <div style={{ marginTop: '-28px', position: 'relative', zIndex: 10 }} className="flex justify-center mb-3">
