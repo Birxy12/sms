@@ -158,8 +158,13 @@ function App() {
         </ProtectedAdminRoute>
       } />
       <Route path="/finance" element={
-        <ProtectedAdminRoute requiredRole={['bursar']}>
+        <ProtectedAdminRoute requiredRole={['bursar', 'admin']}>
           <Layout><BursarDashboard /></Layout>
+        </ProtectedAdminRoute>
+      } />
+      <Route path="/admin/student-results" element={
+        <ProtectedAdminRoute requiredRole="admin">
+          <Layout><StudentResults /></Layout>
         </ProtectedAdminRoute>
       } />
       <Route path="/messages" element={

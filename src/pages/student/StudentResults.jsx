@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { db } from '../../lib/firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
@@ -8,7 +9,7 @@ import bdsLogo from '../../assets/bdslogo.jpg';
 import resultStamp from '../../assets/stamp.jpeg';
 
 const StudentResults = () => {
-  const { currentStudent } = useStudentAuth();
+  const { currentStudent: loggedInStudent } = useStudentAuth();
   const { schoolName, schoolLogo, primaryColor, principalSignature, principalStamp } = useTheme();
   const printRef = useRef();
   
@@ -18,7 +19,29 @@ const StudentResults = () => {
   const [loading, setLoading] = useState(true);
   const [classStats, setClassStats] = useState({ position: 'N/A', population: 0 });
 
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const adminRegNo = searchParams.get('regNo');
+
+  const [adminFetchedStudent, setAdminFetchedStudent] = useState(null);
+  const currentStudent = adminFetchedStudent || loggedInStudent;
+
+  useEffect(() => {
+    if (adminRegNo) {
+      const fetchAdminStudent = async () => {
+        const q = query(collection(db, 'students'), where('regNo', '==', adminRegNo));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          setAdminFetchedStudent(snap.docs[0].data());
+        }
+      };
+      fetchAdminStudent();
+    }
+  }, [adminRegNo]);
+
   const regNum = currentStudent?.regNo || currentStudent?.['REG NO'] || currentStudent?.REGNO || '';
+  const studentClass = currentStudent?.className || currentStudent?.classId || '';
+  const studentName = currentStudent?.name || currentStudent?.['STUDENT NAME'] || 'Student';
 
   useEffect(() => {
     const fetchPublications = async () => {
@@ -37,7 +60,6 @@ const StudentResults = () => {
             publishedAt: data.publishedAt
           };
         }).filter(pub => {
-          const studentClass = currentStudent?.className || currentStudent?.classId || '';
           return pub.targetClass === 'All Classes' || pub.targetClass === studentClass;
         });
 
@@ -70,8 +92,6 @@ const StudentResults = () => {
       try {
         const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
         if (!selectedPub) return;
-
-        const studentClass = currentStudent?.className || currentStudent?.classId || '';
         
         // ── 1. Fetch ALL marks for this student by regNo only (no composite index needed)
         const marksQuery = query(

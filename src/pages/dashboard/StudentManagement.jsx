@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { db, storage } from '../../lib/firebase';
 import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award } from 'lucide-react';
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('All');
   const [showModal, setShowModal] = useState(false);
@@ -195,8 +197,9 @@ const StudentManagement = () => {
                   </td>
                   <td className="px-8 py-5 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                      <button onClick={() => { setIsEditing(true); setCurrentStudent(student); setShowModal(true); }} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg"><Edit2 size={16} /></button>
-                      <button onClick={() => handleDelete(student.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg"><Trash2 size={16} /></button>
+                      <button onClick={() => navigate(`/admin/student-results?regNo=${encodeURIComponent(student.regNo)}&className=${encodeURIComponent(student.className)}&name=${encodeURIComponent(student.name)}`)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg" title="View Results"><Award size={16} /></button>
+                      <button onClick={() => { setIsEditing(true); setCurrentStudent(student); setShowModal(true); }} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg" title="Edit Student"><Edit2 size={16} /></button>
+                      <button onClick={() => handleDelete(student.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg" title="Delete Student"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
