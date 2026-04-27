@@ -17,6 +17,7 @@ const StudentResults = () => {
   const [selectedTermId, setSelectedTermId] = useState('');
   const [studentMarks, setStudentMarks] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [classStats, setClassStats] = useState({ position: 'N/A', population: 0 });
 
   const location = useLocation();
@@ -249,7 +250,11 @@ const StudentResults = () => {
 
 
   const handlePrint = () => {
-    window.print();
+    setIsPrinting(true);
+    setTimeout(() => {
+      window.print();
+      setIsPrinting(false);
+    }, 500);
   };
 
   if (loading && publishedTerms.length === 0) {
@@ -262,10 +267,76 @@ const StudentResults = () => {
 
   const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
 
-  return (
-    <div className="dashboard-wrapper">
-      {/* Printable Report Card (Hidden from screen) */}
-      <div className="hidden-print-container">
+  if (isPrinting) {
+    return (
+      <div className="report-card-print" ref={printRef}>
+        <style>{`
+          @media print {
+            @page { size: A4; margin: 0; }
+            body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
+          .report-card-print {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 10mm 15mm;
+            margin: 0 auto;
+            background: white;
+            color: #0f172a;
+            font-family: 'Outfit', 'Inter', sans-serif;
+            position: relative;
+            box-sizing: border-box;
+            overflow: hidden;
+          }
+          .print-branding-top { font-size: 8px; text-transform: uppercase; font-weight: 800; color: #94a3b8; margin-bottom: 5px; display: flex; justify-content: space-between; }
+          .print-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px double #0f172a; padding-bottom: 8px; margin-bottom: 15px; }
+          .print-logo { width: 75px; height: 75px; object-fit: contain; }
+          .print-school-info { text-align: center; flex: 1; }
+          .print-school-info h1 { font-size: 18px; font-weight: 900; margin: 0; line-height: 1.2; color: #1e293b; }
+          .print-school-info h2 { font-size: 14px; font-weight: 700; margin: 0; color: #475569; }
+          .print-school-info p { font-size: 9px; margin: 3px 0; font-weight: 600; color: #64748b; }
+          .print-term-badge { display: inline-block; background: #1e293b; color: white; padding: 3px 15px; border-radius: 20px; font-size: 10px; font-weight: 900; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px; }
+          .student-photo-frame { width: 75px; height: 85px; border: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+          .student-photo-frame img { width: 100%; height: 100%; object-fit: cover; }
+          .photo-placeholder { font-size: 8px; font-weight: 900; color: #cbd5e1; }
+          .print-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; border: 1px solid #0f172a; padding: 8px; background: #f8fafc; }
+          .stat-item { font-size: 10px; display: flex; align-items: center; }
+          .stat-item label { font-weight: 800; color: #475569; width: 85px; font-size: 9px; }
+          .stat-item span { font-weight: 700; color: #0f172a; flex: 1; border-bottom: 1px dashed #cbd5e1; padding-bottom: 1px; }
+          .stat-item .highlight { color: #2563eb; font-weight: 900; }
+          .academic-performance-title { background: #f1f5f9; color: #0f172a; text-align: center; font-weight: 900; padding: 4px; font-size: 11px; letter-spacing: 3px; margin-bottom: 8px; border: 1px solid #0f172a; text-transform: uppercase; }
+          .print-main-content { display: flex; gap: 15px; margin-bottom: 15px; }
+          .print-table-wrapper { flex: 2.8; }
+          .print-table { width: 100%; border-collapse: collapse; font-size: 9px; }
+          .print-table th { background: #1e293b; color: white; padding: 5px; border: 1px solid #0f172a; font-weight: 900; text-transform: uppercase; font-size: 8px; }
+          .print-table td { padding: 4px; border: 1px solid #0f172a; text-align: center; font-weight: 700; }
+          .print-table td.subject-name { text-align: left; font-weight: 900; padding-left: 8px; background: #f8fafc; }
+          .print-side-panels { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+          .mini-table { width: 100%; border-collapse: collapse; font-size: 8px; }
+          .mini-table th { background: #e2e8f0; border: 1px solid #0f172a; padding: 3px; font-weight: 900; }
+          .mini-table td { border: 1px solid #0f172a; padding: 3px; text-align: center; font-weight: 700; }
+          .mini-table td:first-child { text-align: left; font-weight: 800; background: #f8fafc; font-size: 7px; }
+          .section-title { font-size: 9px; font-weight: 900; margin-bottom: 3px; padding: 2px 5px; background: #0f172a; color: white; text-transform: uppercase; }
+          .summary-box { border: 1px solid #0f172a; padding: 5px; text-align: center; background: #f8fafc; margin-bottom: 4px; }
+          .summary-box label { font-size: 7px; font-weight: 900; color: #475569; display: block; text-transform: uppercase; }
+          .summary-box .value { font-size: 12px; font-weight: 900; }
+          .status-pass { color: #059669; }
+          .commentary-section { border: 1px solid #0f172a; padding: 8px; margin-bottom: 15px; background: #fdfdfd; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+          .comment-box { margin-bottom: 8px; }
+          .comment-box:last-child { margin-bottom: 0; }
+          .comment-box label { font-size: 9px; font-weight: 900; text-decoration: underline; color: #1e293b; }
+          .comment-box p { font-size: 9px; margin: 2px 0; font-style: italic; color: #334155; line-height: 1.3; min-height: 40px; }
+          .print-footer { margin-top: auto; border-top: 1px solid #0f172a; padding-top: 10px; }
+          .footer-cols { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+          .footer-sign { text-align: center; width: 180px; }
+          .sign-line { border-bottom: 1px dashed #0f172a; margin-bottom: 3px; height: 25px; }
+          .footer-sign p { font-size: 8px; font-weight: 900; margin: 0; text-transform: uppercase; }
+          .stamp-box { width: 140px; height: 70px; border: 2px dashed #cbd5e1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 7px; font-weight: 900; color: #cbd5e1; text-transform: uppercase; transform: rotate(-10deg); }
+          .footer-dates { text-align: right; }
+          .footer-dates p { font-size: 8px; margin: 3px 0; font-weight: 600; color: #475569; }
+          .footer-dates strong { color: #0f172a; font-weight: 800; }
+          .print-final-branding { text-align: center; font-size: 9px; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; border-top: 1px solid #e2e8f0; padding-top: 5px; }
+          .print-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 100px; font-weight: 900; color: rgba(15, 23, 42, 0.03); white-space: nowrap; pointer-events: none; z-index: -1; }
+        `}</style>
         <div className="report-card-print" ref={printRef}>
           {/* Top Branding */}
           <div className="print-branding-top">Prepared by GLOBIXTECH ENT {new Date().toLocaleDateString()}</div>
@@ -438,6 +509,11 @@ const StudentResults = () => {
           <div className="print-watermark">{schoolName || 'BONUS DOMINUS'}</div>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="dashboard-wrapper">
 
       {/* Screen View */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4 no-print">
@@ -576,239 +652,7 @@ const StudentResults = () => {
         </div>
       )}
 
-      {/* Advanced CSS for Printing (A4 Fit) */}
-      <style>{`
-        /* Screen: hide the printable card */
-        .hidden-print-container { display: none !important; }
-        .report-card-print { display: none !important; }
-
-        @media print {
-          @page { size: A4; margin: 0; }
-
-          /* Hide all screen chrome */
-          body > * { visibility: hidden !important; }
-          body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .no-print { display: none !important; visibility: hidden !important; }
-
-          /* Show the report card container */
-          .hidden-print-container {
-            display: block !important;
-            visibility: visible !important;
-            position: fixed !important;
-            inset: 0 !important;
-            z-index: 99999 !important;
-            background: white !important;
-          }
-          .hidden-print-container * { visibility: visible !important; }
-
-          .report-card-print {
-            display: block !important;
-            visibility: visible !important;
-            width: 210mm;
-            min-height: 297mm;
-            padding: 10mm 15mm;
-            margin: 0;
-            background: white;
-            color: #0f172a;
-            font-family: 'Outfit', 'Inter', sans-serif;
-            position: relative;
-            box-sizing: border-box;
-            overflow: hidden;
-          }
-
-          .print-branding-top {
-            font-size: 8px;
-            text-transform: uppercase;
-            font-weight: 800;
-            color: #94a3b8;
-            margin-bottom: 5px;
-            display: flex;
-            justify-content: space-between;
-          }
-
-          .print-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 3px double #0f172a;
-            padding-bottom: 8px;
-            margin-bottom: 15px;
-          }
-
-          .print-logo { width: 75px; height: 75px; object-fit: contain; }
-          
-          .print-school-info { text-align: center; flex: 1; }
-          .print-school-info h1 { font-size: 18px; font-weight: 900; margin: 0; line-height: 1.2; color: #1e293b; }
-          .print-school-info h2 { font-size: 14px; font-weight: 700; margin: 0; color: #475569; }
-          .print-school-info p { font-size: 9px; margin: 3px 0; font-weight: 600; color: #64748b; }
-          
-          .print-term-badge { 
-            display: inline-block; 
-            background: #1e293b; 
-            color: white;
-            padding: 3px 15px; 
-            border-radius: 20px; 
-            font-size: 10px; 
-            font-weight: 900; 
-            margin-top: 5px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-          }
-
-          .student-photo-frame {
-            width: 75px;
-            height: 85px;
-            border: 1px solid #e2e8f0;
-            background: #f8fafc;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-          }
-          .student-photo-frame img { width: 100%; height: 100%; object-fit: cover; }
-          .photo-placeholder { font-size: 8px; font-weight: 900; color: #cbd5e1; }
-
-          .print-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #0f172a;
-            padding: 8px;
-            background: #f8fafc;
-          }
-          .stat-item { font-size: 10px; display: flex; align-items: center; }
-          .stat-item label { font-weight: 800; color: #475569; width: 85px; font-size: 9px; }
-          .stat-item span { font-weight: 700; color: #0f172a; flex: 1; border-bottom: 1px dashed #cbd5e1; padding-bottom: 1px; }
-          .stat-item .highlight { color: #2563eb; font-weight: 900; }
-          
-          .academic-performance-title {
-            background: #f1f5f9;
-            color: #0f172a;
-            text-align: center;
-            font-weight: 900;
-            padding: 4px;
-            font-size: 11px;
-            letter-spacing: 3px;
-            margin-bottom: 8px;
-            border: 1px solid #0f172a;
-            text-transform: uppercase;
-          }
-          
-          .print-main-content {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 15px;
-          }
-          
-          .print-table-wrapper { flex: 2.8; }
-          .print-table { width: 100%; border-collapse: collapse; font-size: 9px; }
-          .print-table th { 
-            background: #1e293b; 
-            color: white;
-            padding: 5px; 
-            border: 1px solid #0f172a; 
-            font-weight: 900; 
-            text-transform: uppercase;
-            font-size: 8px;
-          }
-          .print-table td { padding: 4px; border: 1px solid #0f172a; text-align: center; font-weight: 700; }
-          .print-table td.subject-name { text-align: left; font-weight: 900; padding-left: 8px; background: #f8fafc; }
-          
-          .print-side-panels { flex: 1; display: flex; flex-direction: column; gap: 10px; }
-          .mini-table { width: 100%; border-collapse: collapse; font-size: 8px; }
-          .mini-table th { background: #e2e8f0; border: 1px solid #0f172a; padding: 3px; font-weight: 900; }
-          .mini-table td { border: 1px solid #0f172a; padding: 3px; text-align: center; font-weight: 700; }
-          .mini-table td:first-child { text-align: left; font-weight: 800; background: #f8fafc; font-size: 7px; }
-          
-          .section-title { 
-            font-size: 9px; 
-            font-weight: 900; 
-            margin-bottom: 3px; 
-            padding: 2px 5px;
-            background: #0f172a;
-            color: white;
-            text-transform: uppercase;
-          }
-          
-          .summary-box { 
-            border: 1px solid #0f172a; 
-            padding: 5px; 
-            text-align: center; 
-            background: #f8fafc;
-            margin-bottom: 4px;
-          }
-          .summary-box label { font-size: 7px; font-weight: 900; color: #475569; display: block; text-transform: uppercase; }
-          .summary-box .value { font-size: 12px; font-weight: 900; }
-          .status-pass { color: #059669; }
-
-          .commentary-section {
-            border: 1px solid #0f172a;
-            padding: 8px;
-            margin-bottom: 15px;
-            background: #fdfdfd;
-          }
-          .comment-box { margin-bottom: 8px; }
-          .comment-box:last-child { margin-bottom: 0; }
-          .comment-box label { font-size: 9px; font-weight: 900; text-decoration: underline; color: #1e293b; }
-          .comment-box p { font-size: 9px; margin: 2px 0; font-style: italic; color: #334155; line-height: 1.3; }
-
-          .print-footer {
-            margin-top: auto;
-            border-top: 1px solid #0f172a;
-            padding-top: 10px;
-          }
-          .footer-cols { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-          
-          .footer-sign { text-align: center; width: 180px; }
-          .sign-line { border-bottom: 1px dashed #0f172a; margin-bottom: 3px; height: 25px; }
-          .footer-sign p { font-size: 8px; font-weight: 900; margin: 0; text-transform: uppercase; }
-          
-          .stamp-box {
-            width: 140px;
-            height: 70px;
-            border: 2px dashed #cbd5e1;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 7px;
-            font-weight: 900;
-            color: #cbd5e1;
-            text-transform: uppercase;
-            transform: rotate(-10deg);
-          }
-          
-          .footer-dates { text-align: right; }
-          .footer-dates p { font-size: 8px; margin: 3px 0; font-weight: 600; color: #475569; }
-          .footer-dates strong { color: #0f172a; font-weight: 800; }
-          
-          .print-final-branding {
-            text-align: center;
-            font-size: 9px;
-            font-weight: 900;
-            color: #1e293b;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-top: 5px;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 5px;
-          }
-
-          .print-watermark {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 100px;
-            font-weight: 900;
-            color: rgba(15, 23, 42, 0.03);
-            white-space: nowrap;
-            pointer-events: none;
-            z-index: -1;
-          }
-        }
-      `}</style>
+      )}
     </div>
   );
 };
