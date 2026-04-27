@@ -4,7 +4,11 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = 'https://iqhppzndambyyskfwqyc.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxaHBwem5kYW1ieXlza2Z3cXljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NzA4NjUsImV4cCI6MjA5MjU0Njg2NX0.B9Bc9k96i5tKzJq2upa8RUuwnOvx42l052JgAEXK0bM';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false, // Prevents "Lock was not released" errors in multi-tab/HMR environments
+  }
+});
 
 /**
  * Uploads a file to a Supabase Storage bucket

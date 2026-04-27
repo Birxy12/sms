@@ -319,9 +319,9 @@ const BulkUpload = ({ onComplete }) => {
   const uploadData = async (rawData, type) => {
     try {
       setStatus({ type: 'info', message: `Uploading ${type} to Firestore...` });
-      
-      const batch = writeBatch(db);
+      let batch = writeBatch(db);
       let count = 0;
+      let hasPending = false;
 
       if (type === 'students') {
         const headerRow = rawData[0] || [];
@@ -356,12 +356,15 @@ const BulkUpload = ({ onComplete }) => {
             className: selectedClass,
             updatedAt: new Date().toISOString()
           }, { merge: true });
+          hasPending = true;
           
           count++;
           setUploadProgress(Math.round((i / rawData.length) * 100));
 
           if (count % 400 === 0) {
             await batch.commit();
+            batch = writeBatch(db);
+            hasPending = false;
           }
         }
       } else if (type === 'marksheet') {
@@ -376,12 +379,18 @@ const BulkUpload = ({ onComplete }) => {
         const matchSubject = (raw) => {
           if (!raw) return null;
           let upper = raw.toString().toUpperCase().trim();
-          if (upper === 'ENGLISH LANG.' || upper === 'ENGLIS L.') return 'ENGLISH LANGUAGE';
-          if (upper === 'IGBO LANG.') return 'IGBO LANGUAGE';
-          if (upper === 'COMP. SCIENCE' || upper === 'COMPUTER') return 'COMPUTER SCIENCE';
-          if (upper === 'ANIMAL HUS.') return 'ANIMAL HUSBANDRY';
-          if (upper === 'AGRIC SCIENCE' || upper === 'AGRIC') return 'AGRIC SCIENCE';
-          if (upper === 'CRS' || upper === 'C.R.S.') return 'C.R.S';
+          if (upper === 'ENGLISH LANG.' || upper === 'ENGLIS L.' || upper === 'ENGL') return 'ENGLISH LANGUAGE';
+          if (upper === 'IGBO LANG.' || upper === 'IGBO') return 'IGBO LANGUAGE';
+          if (upper === 'COMP. SCIENCE' || upper === 'COMPUTER' || upper === 'COMP SCI') return 'COMPUTER SCIENCE';
+          if (upper === 'ANIMAL HUS.' || upper === 'ANIMAL H') return 'ANIMAL HUSBANDRY';
+          if (upper === 'AGRIC SCIENCE' || upper === 'AGRIC' || upper === 'AGR') return 'AGRIC SCIENCE';
+          if (upper === 'CRS' || upper === 'C.R.S.' || upper === 'C.R.S') return 'C.R.S';
+          if (upper === 'P.H.E' || upper === 'PHE' || upper === 'P H E') return 'PHYSICAL & HEALTH EDUCATION';
+          if (upper === 'CIVIC' || upper === 'CIVIC EDU') return 'CIVIC EDUCATION';
+          if (upper === 'BIO' || upper === 'BIOL') return 'BIOLOGY';
+          if (upper === 'PHY' || upper === 'PHYS') return 'PHYSICS';
+          if (upper === 'CHEM' || upper === 'CHM') return 'CHEMISTRY';
+          if (upper === 'MATH' || upper === 'MATHS') return 'MATHEMATICS';
           
           const match = validSubjects.find(s => s === upper || s.includes(upper) || upper.includes(s));
           return match || upper;
@@ -398,7 +407,8 @@ const BulkUpload = ({ onComplete }) => {
           const found = [];
           for (let c = 0; c < row.length; c++) {
             const mapped = matchSubject(row[c]);
-            if (mapped && classSubjects.includes(mapped.toUpperCase())) {
+            // Be more inclusive: accept any valid subject even if not explicitly in classSubjects list
+            if (mapped && (classSubjects.includes(mapped.toUpperCase()) || validSubjects.includes(mapped.toUpperCase()))) {
               found.push({ name: mapped, startIndex: c });
             }
           }
@@ -454,19 +464,21 @@ const BulkUpload = ({ onComplete }) => {
           }
 
           const docId = finalRegNo.replace(/\//g, '-');
-          const marks = {};
+          const updateData = {
+            regNo: finalRegNo,
+            studentName: finalName,
+            className: selectedClass,
+            term: selectedTerm,
+            session: selectedSession,
+            updatedAt: new Date().toISOString()
+          };
 
           subjects.forEach(subject => {
             const sIdx = subject.startIndex;
-            // Determine scores - check if subject name is merged or if data starts at sIdx
-            // Most common: Name, CAT1, CAT2, Exam, Total...
-            // Or: CAT1(at sIdx), CAT2, Exam...
-            
             let cat1 = parseFloat(row[sIdx] || 0);
             let cat2 = parseFloat(row[sIdx + 1] || 0);
             let exam = parseFloat(row[sIdx + 2] || 0);
             
-            // If the values are 0 at sIdx but present at sIdx + 1 (common with merged headers)
             if (isNaN(row[sIdx]) || row[sIdx] === subject.name) {
                cat1 = parseFloat(row[sIdx + 1] || 0);
                cat2 = parseFloat(row[sIdx + 2] || 0);
@@ -485,7 +497,8 @@ const BulkUpload = ({ onComplete }) => {
             else if (total >= 35) grade = 'E8';
             else grade = 'F9';
 
-            marks[subject.name] = {
+            // Use dot notation to merge individual subjects into the marks object
+            updateData[`marks.${subject.name}`] = {
               cat1: cat1,
               cat2: cat2,
               exam: exam,
@@ -498,27 +511,33 @@ const BulkUpload = ({ onComplete }) => {
           const safeSession = selectedSession.replace('/', '-');
           const safeTerm = selectedTerm.replace(/\s/g, '').toLowerCase();
           const marksRef = doc(collection(db, 'marks'), `${docId}_${safeSession}_${safeTerm}`);
-          batch.set(marksRef, {
-            regNo: finalRegNo,
-            studentName: finalName,
-            className: selectedClass,
-            marks,
-            term: selectedTerm,
-            session: selectedSession,
-            updatedAt: new Date().toISOString()
-          }, { merge: true });
+          
+          batch.set(marksRef, updateData, { merge: true });
+          hasPending = true;
 
           count++;
           setUploadProgress(Math.round((i / rawData.length) * 100));
+
+          // Commit every 200 operations to prevent transport errors and batch limits
+          if (count % 200 === 0) {
+            await batch.commit();
+            batch = writeBatch(db); 
+            hasPending = false;
         }
         
+        if (hasPending) {
+          await batch.commit();
+          hasPending = false;
+        }
+
         console.log(`Matching results: Reg=${matchedByReg}, Name=${matchedByName}, Failed=${failedMatch}`);
         if (failedMatch > 0) {
            setStatus({ type: 'info', message: `Matched ${matchedByReg + matchedByName} students. ${failedMatch} could not be matched.` });
         }
       }
 
-      await batch.commit();
+      if (hasPending) await batch.commit();
+      
       setUploadProgress(100);
       setStatus({ type: 'success', message: `Successfully uploaded ${count} records to Firestore!` });
       
