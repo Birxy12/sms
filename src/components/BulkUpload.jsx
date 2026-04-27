@@ -344,7 +344,6 @@ const BulkUpload = ({ onComplete }) => {
           if (!rawRegNo || rawRegNo === '0') continue;
 
           const docId = rawRegNo.replace(/\//g, '-');
-          
           const studentRef = doc(collection(db, 'students'), docId);
           batch.set(studentRef, {
             regNo: rawRegNo,
@@ -371,7 +370,6 @@ const BulkUpload = ({ onComplete }) => {
         const validSubjects = getAllSubjects();
         const classSubjects = getSubjectsForClass(selectedClass).map(s => s.toUpperCase());
         
-        // 1. Fetch current students for name-based matching fallback
         const studentRef = collection(db, 'students');
         const studentSnap = await getDocs(query(studentRef, where('className', '==', selectedClass)));
         const classStudents = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -396,10 +394,8 @@ const BulkUpload = ({ onComplete }) => {
           return match || upper;
         };
 
-        // 2. Dynamic Header Detection (scan first 15 rows)
         let subjects = [];
         let subjectRowIdx = -1;
-        let colStep = 6; 
 
         for (let r = 0; r < Math.min(rawData.length, 15); r++) {
           const row = rawData[r];
@@ -407,7 +403,6 @@ const BulkUpload = ({ onComplete }) => {
           const found = [];
           for (let c = 0; c < row.length; c++) {
             const mapped = matchSubject(row[c]);
-            // Be more inclusive: accept any valid subject even if not explicitly in classSubjects list
             if (mapped && (classSubjects.includes(mapped.toUpperCase()) || validSubjects.includes(mapped.toUpperCase()))) {
               found.push({ name: mapped, startIndex: c });
             }
@@ -415,9 +410,6 @@ const BulkUpload = ({ onComplete }) => {
           if (found.length >= 3) { 
             subjects = found;
             subjectRowIdx = r;
-            if (found.length > 1) {
-               colStep = found[1].startIndex - found[0].startIndex;
-            }
             break;
           }
         }
@@ -426,7 +418,6 @@ const BulkUpload = ({ onComplete }) => {
           throw new Error("Could not detect subjects in the spreadsheet. Please ensure subject names match the school config.");
         }
 
-        // 3. Process data rows
         let matchedByReg = 0;
         let matchedByName = 0;
         let failedMatch = 0;
@@ -444,13 +435,10 @@ const BulkUpload = ({ onComplete }) => {
           let finalRegNo = '';
           let finalName = studentName;
           
-          // Match by Reg No
           if (rawRegNo && rawRegNo !== '0' && (rawRegNo.includes('/') || rawRegNo.includes('-'))) {
             finalRegNo = rawRegNo;
             matchedByReg++;
-          } 
-          // Fallback: Match by Name
-          else if (studentName) {
+          } else if (studentName) {
             const match = classStudents.find(s => s.name.toUpperCase().trim() === studentName.toUpperCase().trim());
             if (match) {
               finalRegNo = match.regNo;
@@ -497,14 +485,8 @@ const BulkUpload = ({ onComplete }) => {
             else if (total >= 35) grade = 'E8';
             else grade = 'F9';
 
-            // Use dot notation to merge individual subjects into the marks object
             updateData[`marks.${subject.name}`] = {
-              cat1: cat1,
-              cat2: cat2,
-              exam: exam,
-              total: total,
-              percent: total,
-              grade: grade
+              cat1, cat2, exam, total, percent: total, grade
             };
           });
 
@@ -518,7 +500,6 @@ const BulkUpload = ({ onComplete }) => {
           count++;
           setUploadProgress(Math.round((i / rawData.length) * 100));
 
-          // Commit every 200 operations to prevent transport errors and batch limits
           if (count % 200 === 0) {
             await batch.commit();
             batch = writeBatch(db); 
@@ -537,14 +518,13 @@ const BulkUpload = ({ onComplete }) => {
         }
       }
 
-      if (hasPending) await batch.commit();
+      if (hasPending) {
+        await batch.commit();
+      }
       
       setUploadProgress(100);
       setStatus({ type: 'success', message: `Successfully uploaded ${count} records to Firestore!` });
-      
-      // Auto-publish result for this session/term
       await autoPublish();
-
       if (onComplete) onComplete();
     } catch (error) {
       console.error('Upload error:', error);
