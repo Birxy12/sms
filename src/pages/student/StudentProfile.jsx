@@ -100,30 +100,49 @@ const StudentProfile = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Profile Card */}
         <div className="lg:col-span-1">
-          <div className="card-white text-center p-8 relative overflow-hidden">
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '80px', background: `linear-gradient(to bottom, ${primaryColor}20, transparent)` }} />
-            
-            <div className="relative z-10">
-              <div className="w-28 h-28 rounded-3xl bg-white shadow-xl mx-auto mb-6 flex items-center justify-center border-4 border-white overflow-hidden relative group">
-                {uploading ? (
-                  <Loader2 className="animate-spin text-indigo-600" />
-                ) : currentStudent?.photo ? (
-                  <img src={currentStudent.photo} alt="Student" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div className="card-white text-center p-0 relative overflow-hidden">
+
+            {/* ── Banner / Passport Photo ── */}
+            <div className="relative" style={{ height: '120px' }}>
+              {currentStudent?.photo ? (
+                <img
+                  src={currentStudent.photo}
+                  alt="Passport"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+              ) : (
+                <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${primaryColor}40, ${primaryColor}15)` }} />
+              )}
+              {/* Dark overlay for readability */}
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.35))' }} />
+
+              {/* Camera upload overlay when editing */}
+              {isEditing && (
+                <label
+                  className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer transition-opacity"
+                  style={{ background: 'rgba(0,0,0,0.45)', color: 'white' }}
+                >
+                  <Camera size={28} />
+                  <span style={{ fontSize: '10px', fontWeight: 900, marginTop: '4px', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                    {uploading ? 'Uploading…' : 'Change Photo'}
+                  </span>
+                  <input type="file" accept="image/*" onChange={handlePassportUpload} className="hidden" />
+                </label>
+              )}
+            </div>
+
+            {/* ── Avatar initial circle sitting at bottom of banner ── */}
+            <div style={{ marginTop: '-28px', position: 'relative', zIndex: 10 }} className="flex justify-center mb-3">
+              <div className="w-14 h-14 rounded-full border-4 border-white shadow-lg bg-indigo-600 flex items-center justify-center overflow-hidden">
+                {currentStudent?.photo ? (
+                  <img src={currentStudent.photo} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
-                  <div className="text-4xl font-black text-indigo-600 bg-indigo-50 w-full h-full flex items-center justify-center">
-                    {currentStudent?.name?.[0] || '?'}
-                  </div>
-                )}
-                
-                {isEditing && (
-                  <label className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Camera size={24} />
-                    <span className="text-[10px] font-bold mt-1 uppercase">Change</span>
-                    <input type="file" accept="image/*" onChange={handlePassportUpload} className="hidden" />
-                  </label>
+                  <span className="text-xl font-black text-white">{currentStudent?.name?.[0]?.toUpperCase() || '?'}</span>
                 )}
               </div>
-              
+            </div>
+
+            <div className="relative z-10 px-8 pb-8">
               {isEditing ? (
                 <input 
                   type="text" 

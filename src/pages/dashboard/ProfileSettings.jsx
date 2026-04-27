@@ -143,46 +143,58 @@ const ProfileSettings = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Sidebar: Profile Photo */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200 text-center sticky top-8">
-            <div className="relative w-32 h-32 mx-auto mb-6 group">
-              <div className="w-full h-full rounded-[2.5rem] overflow-hidden border-4 border-slate-50 bg-slate-100 flex items-center justify-center shadow-inner">
+          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 text-center sticky top-8 overflow-hidden">
+
+            {/* Cover / Photo Banner */}
+            <div className="relative" style={{ height: '120px' }}>
+              {photoURL ? (
+                <img src={photoURL} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              ) : (
+                <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #6366f140, #6366f115)' }} />
+              )}
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.35))' }} />
+              {/* Click to upload */}
+              <label
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer transition-opacity opacity-0 hover:opacity-100"
+                style={{ background: 'rgba(0,0,0,0.45)', color: 'white' }}
+              >
+                {uploadingPhoto ? <Loader2 size={24} className="animate-spin" /> : <Camera size={24} />}
+                <span style={{ fontSize: '10px', fontWeight: 900, marginTop: '4px', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                  {uploadingPhoto ? 'Uploading…' : 'Change Photo'}
+                </span>
+              </label>
+              <input type="file" ref={fileInputRef} onChange={handlePhotoUpload} className="hidden" accept="image/*" />
+            </div>
+
+            {/* Avatar circle overlapping banner */}
+            <div style={{ marginTop: '-28px', position: 'relative', zIndex: 10 }} className="flex justify-center mb-3">
+              <div className="w-14 h-14 rounded-full border-4 border-white shadow-lg bg-indigo-100 flex items-center justify-center overflow-hidden">
                 {photoURL ? (
-                  <img src={photoURL} alt="Profile" className="w-full h-full object-cover" />
+                  <img src={photoURL} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-4xl font-black text-slate-300">{(name[0] || '?').toUpperCase()}</span>
+                  <span className="text-xl font-black text-indigo-600">{(name[0] || '?').toUpperCase()}</span>
                 )}
               </div>
-              <button 
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingPhoto}
-                className="absolute -bottom-2 -right-2 p-3 bg-indigo-600 text-white rounded-2xl shadow-lg hover:bg-indigo-700 transition-all active:scale-90 disabled:opacity-50"
-              >
-                {uploadingPhoto ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
-              </button>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handlePhotoUpload} 
-                className="hidden" 
-                accept="image/*" 
-              />
             </div>
-            
-            <h3 className="text-xl font-black text-slate-900 mb-1">{name}</h3>
-            <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">
-              {isStudent ? 'Student Account' : (currentAdmin.role === 'admin' ? 'Super Admin' : 'Staff Member')}
-            </p>
-            
-            <div className="pt-6 border-t border-slate-100 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{isStudent ? 'REG NO' : 'STAFF ID'}</span>
-                <span className="text-sm font-black text-slate-700 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">{user.regNo || user.staffId || 'N/A'}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">STATUS</span>
-                <span className="text-emerald-600 font-black text-[10px] flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-full uppercase tracking-tighter">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div> Verified
-                </span>
+
+            <div className="px-8 pb-8">
+              <h3 className="text-xl font-black text-slate-900 mb-1">{name}</h3>
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">
+                {isStudent ? 'Student Account' : (currentAdmin.role === 'admin' ? 'Super Admin' : 'Staff Member')}
+              </p>
+              
+              <div className="pt-6 border-t border-slate-100 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{isStudent ? 'REG NO' : 'STAFF ID'}</span>
+                  <span className="text-sm font-black text-slate-700 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">{user.regNo || user.staffId || 'N/A'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">STATUS</span>
+                  <span className="text-emerald-600 font-black text-[10px] flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-full uppercase tracking-tighter">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div> Verified
+                  </span>
+                </div>
               </div>
             </div>
           </div>
