@@ -651,8 +651,6 @@ const StudentResults = () => {
           )}
         </div>
       )}
-
-      )}
     </div>
   );
 };

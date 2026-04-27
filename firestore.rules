@@ -7,7 +7,7 @@ service cloud.firestore {
     // For now, we allow read/write for core collections to enable the management system.
     // In production, please enable Firebase Auth and restore strict rules.
 
-    // Helper: Check if localStorage user (stored in /users/{uid}) is admin or teacher
+    // Helper: Check if localStorage user is admin or teacher (kept for future use if needed)
     function isAdminOrTeacher(uid) {
       return uid != null 
         && exists(/databases/$(database)/documents/users/$(uid))
@@ -15,8 +15,7 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read: if true;
-      allow write: if true; // Custom auth handled in-app, allowing broad access for now as per project pattern
+      allow read, write: if true;
     }
 
     match /students/{id} {
@@ -67,12 +66,8 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // NEW: Schools collection — admin and teachers only
-    // Pass the uid from your localStorage auth in the document data
     match /schools/{id} {
-      allow create, update: if isAdminOrTeacher(request.resource.data.uid);
-      allow delete: if isAdminOrTeacher(request.resource.data.uid);
-      allow read: if true;
+      allow read, write: if true;
     }
   }
 }

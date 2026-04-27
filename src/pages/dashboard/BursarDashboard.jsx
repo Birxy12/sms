@@ -22,7 +22,7 @@ const BursarDashboard = () => {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [activeView, setActiveView] = useState('ledgers'); // 'ledgers' or 'debtors'
-  const [isPrintingReceipt, setIsPrintingReceipt] = useState(false);
+  const [printMode, setPrintMode] = useState('none'); // 'none', 'receipt', 'list'
   const [selectedClass, setSelectedClass] = useState('All');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -190,16 +190,19 @@ const BursarDashboard = () => {
 
   const handlePrintReceipt = (student) => {
     setSelectedStudent(student);
-    setIsPrintingReceipt(true);
+    setPrintMode('receipt');
     setTimeout(() => {
       window.print();
-      setIsPrintingReceipt(false);
+      setPrintMode('none');
     }, 400);
   };
 
-  const handlePrintDebtors = () => {
-    setIsPrintingReceipt(false);
-    window.print();
+  const handlePrintList = () => {
+    setPrintMode('list');
+    setTimeout(() => {
+      window.print();
+      setPrintMode('none');
+    }, 400);
   };
 
   // Class-wise collection stats for bar chart
@@ -418,14 +421,22 @@ const BursarDashboard = () => {
               <DollarSign className="text-indigo-600" /> {activeView === 'debtors' ? 'Class Debtor List' : 'Student Financial Ledgers'}
             </h3>
             <div className="flex items-center gap-3 w-full sm:w-auto">
-              <select 
-                value={selectedClass} 
-                onChange={(e) => setSelectedClass(e.target.value)}
-                className="px-3 py-2 rounded-xl bg-slate-50 border-none outline-none text-xs font-bold text-slate-600 focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="All">All Classes</option>
-                {classList.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <div className="flex gap-2">
+                <select 
+                  value={selectedClass} 
+                  onChange={(e) => setSelectedClass(e.target.value)}
+                  className="px-4 py-2 rounded-xl bg-slate-50 border-2 border-slate-100 font-bold text-slate-700 outline-none focus:border-indigo-500"
+                >
+                  <option value="All">All Classes</option>
+                  {classList.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <button 
+                  onClick={handlePrintList}
+                  className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl font-bold hover:bg-black transition-all"
+                >
+                  <Printer size={16} /> Print {activeView === 'debtors' ? 'Debtors' : 'Class List'}
+                </button>
+              </div>
               <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input 
@@ -686,9 +697,16 @@ const BursarDashboard = () => {
         </div>
       )}
 
-      {/* ── Hidden Printable Receipt (only visible when isPrintingReceipt = true) ── */}
-      {selectedStudent && (
-        <div className={isPrintingReceipt ? 'bursar-print-receipt-area' : 'bursar-print-receipt-area bursar-print-receipt-hidden'}>
+      {/* ── Return early if printing ── */}
+      {printMode === 'receipt' && selectedStudent && (
+        <div className="bursar-print-receipt-area">
+          <style>{`
+            @media print {
+              @page { size: A4 portrait; margin: 15mm; }
+              body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+            .bursar-print-receipt-area { display: block !important; width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; font-family: sans-serif; }
+          `}</style>
           <div style={{ maxWidth: '600px', margin: '0 auto', padding: '40px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', borderBottom: '2px dashed #cbd5e1', paddingBottom: '24px', marginBottom: '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
@@ -743,108 +761,67 @@ const BursarDashboard = () => {
         </div>
       )}
 
-      {/* ── Debtor Print View (visible only when NOT printing receipt) ── */}
-      <div className={`bursar-debtors-print-area${isPrintingReceipt ? ' bursar-print-receipt-hidden' : ''}`}>
-        <div className="flex flex-col items-center text-center mb-10 border-b-4 border-slate-900 pb-8">
-          <div className="flex items-center gap-6 mb-4">
-             <img src={schoolLogo || bdsLogo} alt="Logo" className="w-24 h-24 object-contain" />
-             <div className="text-left">
-                <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">{schoolName || 'BONUS DOMINUS NURSERY & PRIMARY'}</h1>
-                <h2 className="text-xl font-bold text-slate-600 mt-2 uppercase">Official Debtors Analysis Report</h2>
-             </div>
-          </div>
-          <p className="font-bold text-slate-500">Document Generated: {new Date().toLocaleDateString()}</p>
-          <div className="mt-4 flex gap-4">
-            <div className="bg-slate-900 text-white px-6 py-2 rounded-full font-black uppercase text-sm">
-              Class: {selectedClass}
+      {printMode === 'list' && (
+        <div className="bursar-debtors-print-area">
+          <style>{`
+            @media print {
+              @page { size: A4 portrait; margin: 15mm; }
+              body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+            .bursar-debtors-print-area { display: block !important; width: 100%; padding: 20px; font-family: sans-serif; color: black; }
+          `}</style>
+          <div className="flex flex-col items-center text-center mb-10 border-b-4 border-slate-900 pb-8">
+            <div className="flex items-center gap-6 mb-4">
+               <img src={schoolLogo || bdsLogo} alt="Logo" className="w-24 h-24 object-contain" />
+               <div className="text-left">
+                  <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">{schoolName || 'BONUS DOMINUS NURSERY & PRIMARY'}</h1>
+                  <h2 className="text-xl font-bold text-slate-600 mt-2 uppercase">Official {activeView === 'debtors' ? 'Debtors Analysis' : 'Class List'} Report</h2>
+               </div>
             </div>
-            <div className="bg-slate-100 text-slate-900 px-6 py-2 rounded-full font-black uppercase text-sm border-2 border-slate-900">
-              Verified Document
+            <p className="font-bold text-slate-500">Document Generated: {new Date().toLocaleDateString()}</p>
+            <div className="mt-4 flex gap-4">
+              <div className="bg-slate-900 text-white px-6 py-2 rounded-full font-black uppercase text-sm">
+                Class: {selectedClass}
+              </div>
+              <div className="bg-slate-100 text-slate-900 px-6 py-2 rounded-full font-black uppercase text-sm border-2 border-slate-900">
+                Verified Document
+              </div>
             </div>
           </div>
-        </div>
-        <table className="w-full border-collapse border-2 border-slate-900">
-          <thead>
-            <tr className="bg-slate-100">
-              <th className="border border-slate-900 p-3 text-left">Student Name</th>
-              <th className="border border-slate-900 p-3 text-left">Reg No</th>
-              <th className="border border-slate-900 p-3 text-right">Paid</th>
-              <th className="border border-slate-900 p-3 text-right">Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredStudents.filter(s => s.paidFee < s.expectedFee).map(s => (
-              <tr key={s.id}>
-                <td className="border border-slate-900 p-3 font-bold">{s.name}</td>
-                <td className="border border-slate-900 p-3">{s.regNo}</td>
-                <td className="border border-slate-900 p-3 text-right">₦{s.paidFee.toLocaleString()}</td>
-                <td className="border border-slate-900 p-3 text-right font-black">₦{(s.expectedFee - s.paidFee).toLocaleString()}</td>
+          <table className="w-full border-collapse border-2 border-slate-900">
+            <thead>
+              <tr className="bg-slate-100">
+                <th className="border border-slate-900 p-3 text-left">S/N</th>
+                <th className="border border-slate-900 p-3 text-left">Student Name</th>
+                <th className="border border-slate-900 p-3 text-left">Reg No</th>
+                <th className="border border-slate-900 p-3 text-right">Paid</th>
+                <th className="border border-slate-900 p-3 text-right">Balance</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="mt-10 pt-10 border-t-2 border-dashed flex justify-between">
-          <div className="text-center">
-            <div className="w-40 border-b border-black h-10"></div>
-            <p className="text-xs font-bold mt-2 uppercase">Bursar's Signature</p>
-          </div>
-          <div className="text-center">
-            <div className="w-40 border-b border-black h-10"></div>
-            <p className="text-xs font-bold mt-2 uppercase">Principal's Approval</p>
+            </thead>
+            <tbody>
+              {(activeView === 'debtors' ? filteredStudents.filter(s => s.paidFee < s.expectedFee) : filteredStudents).map((s, idx) => (
+                <tr key={s.id}>
+                  <td className="border border-slate-900 p-3 text-center">{idx + 1}</td>
+                  <td className="border border-slate-900 p-3 font-bold">{s.name}</td>
+                  <td className="border border-slate-900 p-3">{s.regNo}</td>
+                  <td className="border border-slate-900 p-3 text-right">₦{s.paidFee.toLocaleString()}</td>
+                  <td className="border border-slate-900 p-3 text-right font-black">₦{(s.expectedFee - s.paidFee).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="mt-10 pt-10 border-t-2 border-dashed flex justify-between">
+            <div className="text-center">
+              <div className="w-40 border-b border-black h-10"></div>
+              <p className="text-xs font-bold mt-2 uppercase">Bursar's Signature</p>
+            </div>
+            <div className="text-center">
+              <div className="w-40 border-b border-black h-10"></div>
+              <p className="text-xs font-bold mt-2 uppercase">Principal's Approval</p>
+            </div>
           </div>
         </div>
-      </div>
-
-      <style>{`
-        /* ── Screen: hide both print areas ── */
-        .bursar-print-receipt-area,
-        .bursar-debtors-print-area {
-          display: none;
-        }
-        .bursar-print-receipt-hidden {
-          display: none !important;
-        }
-
-        /* ── Print: show only the correct area ── */
-        @media print {
-          @page { size: A4; margin: 15mm; }
-
-          /* Hide all screen UI */
-          body > * { visibility: hidden !important; }
-          body { background: white !important; margin: 0 !important; padding: 0 !important; }
-
-          /* Show receipt card */
-          .bursar-print-receipt-area {
-            display: block !important;
-            visibility: visible !important;
-            position: fixed;
-            inset: 0;
-            background: white;
-            z-index: 99999;
-            overflow: auto;
-          }
-          .bursar-print-receipt-area * { visibility: visible !important; }
-
-          /* Show debtor table */
-          .bursar-debtors-print-area {
-            display: block !important;
-            visibility: visible !important;
-            position: fixed;
-            inset: 0;
-            background: white;
-            z-index: 99999;
-            overflow: auto;
-            padding: 40px;
-          }
-          .bursar-debtors-print-area * { visibility: visible !important; }
-
-          /* Hidden flag wins over print display */
-          .bursar-print-receipt-hidden {
-            display: none !important;
-            visibility: hidden !important;
-          }
-        }
-      `}</style>
+      )}
     </div>
   );
 };
