@@ -523,6 +523,7 @@ const BulkUpload = ({ onComplete }) => {
             await batch.commit();
             batch = writeBatch(db); 
             hasPending = false;
+          }
         }
         
         if (hasPending) {
