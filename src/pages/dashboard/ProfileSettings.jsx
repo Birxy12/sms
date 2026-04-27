@@ -6,8 +6,7 @@ import {
   ArrowLeft, Camera, Lock, Eye, EyeOff, UploadCloud, Trash2 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../lib/firebase';
+import { uploadFileToSupabase } from '../../lib/supabase';
 
 const ProfileSettings = () => {
   const { currentAdmin, updateProfile: updateAdminProfile } = useAdminAuth();
@@ -92,9 +91,7 @@ const ProfileSettings = () => {
 
     setUploadingPhoto(true);
     try {
-      const storageRef = ref(storage, `profiles/${user.id || user.regNo || 'unknown'}_${Date.now()}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
+      const url = await uploadFileToSupabase(file, 'images', 'profiles/');
       
       const updateFn = isStudent ? updateStudentProfile : updateAdminProfile;
       await updateFn({ photo: url, photoURL: url });

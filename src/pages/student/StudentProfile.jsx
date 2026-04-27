@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { db, storage } from '../../lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db } from '../../lib/firebase';
+import { uploadFileToSupabase } from '../../lib/supabase';
 import { User, Mail, GraduationCap, MapPin, Calendar, CheckCircle, Edit2, Save, X, Hash, UserCircle, Camera, Upload, Loader2 } from 'lucide-react';
 
 const StudentProfile = () => {
@@ -39,9 +39,7 @@ const StudentProfile = () => {
 
     setUploading(true);
     try {
-      const storageRef = ref(storage, `students/passports/${currentStudent.id || Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
+      const url = await uploadFileToSupabase(file, 'images', 'passports/');
       const result = await updateProfile({ photo: url });
       if (result.success) {
         setStatus({ type: 'success', message: 'Passport updated successfully!' });
