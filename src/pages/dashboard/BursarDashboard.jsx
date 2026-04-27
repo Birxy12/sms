@@ -745,6 +745,9 @@ const BursarDashboard = () => {
             @media print {
               @page { size: A4 portrait; margin: 15mm; }
               body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              body > * { visibility: hidden !important; }
+              .bursar-print-receipt-area, .bursar-print-receipt-area * { visibility: visible !important; }
+              .bursar-print-receipt-area { position: absolute; left: 0; top: 0; width: 100%; }
             }
             .bursar-print-receipt-area { display: block !important; width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; font-family: sans-serif; }
           `}</style>
@@ -808,6 +811,9 @@ const BursarDashboard = () => {
             @media print {
               @page { size: A4 portrait; margin: 15mm; }
               body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              body > * { visibility: hidden !important; }
+              .bursar-debtors-print-area, .bursar-debtors-print-area * { visibility: visible !important; }
+              .bursar-debtors-print-area { position: absolute; left: 0; top: 0; width: 100%; }
             }
             .bursar-debtors-print-area { display: block !important; width: 100%; padding: 20px; font-family: sans-serif; color: black; }
           `}</style>
