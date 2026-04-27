@@ -490,6 +490,26 @@ const BulkUpload = ({ onComplete }) => {
             };
           });
 
+          // Calculate overall average based on policy (JSS: 16, SS: 9)
+          const clsUpper = selectedClass.toUpperCase();
+          let divisor = 16;
+          if (clsUpper.includes('JSS')) {
+            divisor = 16;
+          } else if (clsUpper.includes('SS')) {
+            divisor = 9;
+          }
+
+          // Calculate total of all subjects present in this updateData
+          let totalScore = 0;
+          Object.keys(updateData).forEach(key => {
+            if (key.startsWith('marks.') && updateData[key].total) {
+              totalScore += parseFloat(updateData[key].total || 0);
+            }
+          });
+          
+          updateData.average = (totalScore / divisor).toFixed(1);
+          updateData.overallTotal = totalScore;
+
           const safeSession = selectedSession.replace('/', '-');
           const safeTerm = selectedTerm.replace(/\s/g, '').toLowerCase();
           const marksRef = doc(collection(db, 'marks'), `${docId}_${safeSession}_${safeTerm}`);

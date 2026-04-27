@@ -226,13 +226,12 @@ const StudentResults = () => {
         const displaySubjects = processedMarks.filter(s => s.total > 0);
 
         // Calculate average based on school policy: SS2/3 (9 subjects), SS1 & JSS (16 subjects)
-        const className = (currentStudent?.className || '').toUpperCase();
-        let divisor = 16; // default for SS1 and JSS
-        
-        if (className.includes('SS2') || className.includes('SS3')) {
-          divisor = 9;
-        } else if (className.includes('JSS') || className.includes('SS1')) {
+        const cls = (currentStudent?.className || '').toUpperCase();
+        let divisor = 16;
+        if (cls.includes('JSS')) {
           divisor = 16;
+        } else if (cls.includes('SS')) {
+          divisor = 9;
         }
 
         setStudentMarks({
