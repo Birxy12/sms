@@ -205,6 +205,31 @@ const BursarDashboard = () => {
     }, 400);
   };
 
+  const handleDownloadTemplate = () => {
+    const filtered = selectedClass === 'All' ? students : students.filter(s => s.class === selectedClass);
+    const rows = filtered.map((s, idx) => ({
+      'S/N': idx + 1,
+      'STUDENT NAME': s.name,
+      'REG NO': s.regNo,
+      'CLASS': s.class,
+      'EXPECTED FEE (₦)': s.expectedFee,
+      'AMOUNT PAID (₦)': s.paidFee || '',
+      'BALANCE (₦)': s.expectedFee - (s.paidFee || 0),
+      'PAYMENT DATE': s.lastPaymentDate !== 'N/A' ? s.lastPaymentDate : '',
+      'STATUS': s.paidFee >= s.expectedFee ? 'FULLY PAID' : s.paidFee > 0 ? 'PARTIAL' : 'NOT PAID'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [
+      { wch: 5 }, { wch: 30 }, { wch: 15 }, { wch: 14 },
+      { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 15 }, { wch: 12 }
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Fee Collection');
+    const filename = `fee-collection-${selectedClass.replace(/\s/g, '-')}-${new Date().toISOString().slice(0,10)}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  };
+
   // Class-wise collection stats for bar chart
   const classCollectionStats = classList.map(cls => {
     const classStudents = students.filter(s => s.class === cls);
@@ -290,21 +315,30 @@ const BursarDashboard = () => {
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col justify-center h-40">
           <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase mb-2">View & Export</p>
           <div className="flex gap-2">
-            <button 
+            <button
               onClick={() => setActiveView(activeView === 'ledgers' ? 'debtors' : 'ledgers')}
               className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all ${activeView === 'debtors' ? 'bg-rose-600 text-white shadow-lg shadow-rose-100' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
             >
               {activeView === 'debtors' ? 'Back to Ledgers' : 'Debtor List'}
             </button>
-            <button 
-              onClick={handlePrintDebtors}
+            <button
+              onClick={handlePrintList}
+              title="Print current list"
               className="px-4 py-3 bg-slate-900 text-white rounded-xl hover:bg-black transition-all shadow-lg shadow-slate-200"
             >
               <Printer size={16} />
             </button>
+            <button
+              onClick={handleDownloadTemplate}
+              title="Download fee collection Excel template"
+              className="px-4 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
+            >
+              <FileText size={16} />
+            </button>
           </div>
         </div>
       </div>
+
 
       {/* Visual Analytics Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
