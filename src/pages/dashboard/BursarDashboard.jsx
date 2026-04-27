@@ -197,6 +197,36 @@ const BursarDashboard = () => {
     }, 400);
   };
 
+  const handleExportToExcel = () => {
+    try {
+      const filtered = selectedClass === 'All' ? students : students.filter(s => s.class === selectedClass);
+      const rows = filtered.map((s, idx) => ({
+        'S/N': idx + 1,
+        'STUDENT NAME': s.name,
+        'REG NO': s.regNo,
+        'CLASS': s.class,
+        'EXPECTED FEE (₦)': s.expectedFee,
+        'AMOUNT PAID (₦)': s.paidFee || '',
+        'BALANCE (₦)': s.expectedFee - (s.paidFee || 0),
+        'PAYMENT DATE': s.lastPaymentDate !== 'N/A' ? s.lastPaymentDate : '',
+        'STATUS': s.paidFee >= s.expectedFee ? 'FULLY PAID' : s.paidFee > 0 ? 'PARTIAL' : 'NOT PAID'
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws['!cols'] = [
+        { wch: 5 }, { wch: 30 }, { wch: 15 }, { wch: 14 },
+        { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 15 }, { wch: 12 }
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Fee Collection');
+      const filename = `fee-collection-${selectedClass.replace(/\s/g, '-')}-${new Date().toISOString().slice(0,10)}.xlsx`;
+      XLSX.writeFile(wb, filename);
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert("Failed to export Excel file. Please try again.");
+    }
+  };
+
   const handlePrintList = () => {
     setPrintMode('list');
     setTimeout(() => {
@@ -205,30 +235,7 @@ const BursarDashboard = () => {
     }, 400);
   };
 
-  const handleDownloadTemplate = () => {
-    const filtered = selectedClass === 'All' ? students : students.filter(s => s.class === selectedClass);
-    const rows = filtered.map((s, idx) => ({
-      'S/N': idx + 1,
-      'STUDENT NAME': s.name,
-      'REG NO': s.regNo,
-      'CLASS': s.class,
-      'EXPECTED FEE (₦)': s.expectedFee,
-      'AMOUNT PAID (₦)': s.paidFee || '',
-      'BALANCE (₦)': s.expectedFee - (s.paidFee || 0),
-      'PAYMENT DATE': s.lastPaymentDate !== 'N/A' ? s.lastPaymentDate : '',
-      'STATUS': s.paidFee >= s.expectedFee ? 'FULLY PAID' : s.paidFee > 0 ? 'PARTIAL' : 'NOT PAID'
-    }));
 
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = [
-      { wch: 5 }, { wch: 30 }, { wch: 15 }, { wch: 14 },
-      { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 15 }, { wch: 12 }
-    ];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Fee Collection');
-    const filename = `fee-collection-${selectedClass.replace(/\s/g, '-')}-${new Date().toISOString().slice(0,10)}.xlsx`;
-    XLSX.writeFile(wb, filename);
-  };
 
   // Class-wise collection stats for bar chart
   const classCollectionStats = classList.map(cls => {
@@ -329,7 +336,7 @@ const BursarDashboard = () => {
               <Printer size={16} />
             </button>
             <button
-              onClick={handleDownloadTemplate}
+              onClick={handleExportToExcel}
               title="Download fee collection Excel template"
               className="px-4 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
             >
