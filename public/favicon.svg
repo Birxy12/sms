@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#863bff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5a1fd6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Shield background -->
+  <path d="M24 2 L44 12 L44 28 C44 38 34 46 24 46 C14 46 4 38 4 28 L4 12 Z" fill="url(#grad)" />
+  <!-- Book icon -->
+  <path d="M14 18 L24 14 L34 18 L34 34 L24 30 L14 34 Z" fill="rgba(255,255,255,0.95)" />
+  <line x1="24" y1="14" x2="24" y2="30" stroke="#863bff" stroke-width="1.5" />
+  <!-- Graduation cap -->
+  <polygon points="24,10 38,16 24,22 10,16" fill="rgba(255,255,255,0.9)" />
+  <line x1="34" y1="16" x2="34" y2="24" stroke="rgba(255,255,255,0.8)" stroke-width="1.5" />
+  <circle cx="34" cy="24.5" r="1.5" fill="rgba(255,255,255,0.8)" />
+</svg>

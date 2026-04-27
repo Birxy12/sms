@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // NOTE: This system uses a custom localStorage-based auth. 
+    // To use request.auth, you must enable Firebase Authentication in the console.
+    
+    // For now, we allow read/write for core collections to enable the management system.
+    // In production, please enable Firebase Auth and restore strict rules.
+
+    // Helper: Check if localStorage user (stored in /users/{uid}) is admin or teacher
+    function isAdminOrTeacher(uid) {
+      return uid != null 
+        && exists(/databases/$(database)/documents/users/$(uid))
+        && get(/databases/$(database)/documents/users/$(uid)).data.role in ['admin', 'teacher'];
+    }
+
+    match /users/{uid} {
+      allow read: if true;
+      allow write: if true; // Custom auth handled in-app, allowing broad access for now as per project pattern
+    }
+
+    match /students/{id} {
+      allow read, write: if true;
+    }
+
+    match /staff/{id} {
+      allow read, write: if true;
+    }
+
+    match /marks/{id} {
+      allow read, write: if true;
+    }
+
+    match /marks/{id}/{subcollection=**} {
+      allow read, write: if true;
+    }
+
+    match /subjects/{id} {
+      allow read, write: if true;
+    }
+
+    match /publications/{id} {
+      allow read, write: if true;
+    }
+
+    match /testimonies/{id} {
+      allow read, write: if true;
+    }
+
+    match /settings/{id} {
+      allow read, write: if true;
+    }
+
+    match /posts/{id} {
+      allow read, write: if true;
+    }
+
+    match /assignments/{id} {
+      allow read, write: if true;
+    }
+    
+    match /notes/{id} {
+      allow read, write: if true;
+    }
+
+    match /notifications/{id} {
+      allow read, write: if true;
+    }
+
+    // NEW: Schools collection — admin and teachers only
+    // Pass the uid from your localStorage auth in the document data
+    match /schools/{id} {
+      allow create, update: if isAdminOrTeacher(request.resource.data.uid);
+      allow delete: if isAdminOrTeacher(request.resource.data.uid);
+      allow read: if true;
+    }
+  }
+}

@@ -1,0 +1,239 @@
+/* ============================================
+   MainFooter.css — Modern 4-Column Footer
+   ============================================ */
+
+.main-footer {
+  width: 100%;
+  position: relative;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ── Top accent line ── */
+.footer-accent {
+  width: 100%;
+}
+
+/* ── Main content grid ── */
+.footer-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: clamp(2rem, 4vw, 3.5rem);
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* On larger screens, give brand column more room */
+@media (min-width: 1024px) {
+  .footer-content {
+    grid-template-columns: 1.4fr 0.9fr 1fr 1.1fr;
+  }
+}
+
+/* ── Column base styles ── */
+.f-logo,
+.f-links,
+.f-contact,
+.f-newsletter {
+  min-width: 0; /* prevent overflow in grid */
+}
+
+/* ── Logo & brand ── */
+.f-logo img {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.f-logo img:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Quick links ── */
+.f-links nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.f-links nav li {
+  margin-bottom: 10px;
+}
+
+.f-links nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  font-size: 14px;
+  transition: all 0.25s ease;
+  position: relative;
+}
+
+.f-links nav a::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 4px solid currentColor;
+  opacity: 0.4;
+  transition: opacity 0.2s, transform 0.2s;
+  flex-shrink: 0;
+}
+
+.f-links nav a:hover::before {
+  opacity: 0.9;
+  transform: translateX(2px);
+}
+
+/* ── Contact info ── */
+.f-contact ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.f-contact li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.f-contact li > span:first-child {
+  margin-top: 2px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.f-contact li a {
+  text-decoration: none;
+  transition: opacity 0.2s;
+  border-bottom: 1px solid transparent;
+}
+
+.f-contact li a:hover {
+  opacity: 1;
+  border-bottom-color: currentColor;
+}
+
+/* ── Newsletter ── */
+.f-newsletter form {
+  display: flex;
+  gap: 8px;
+}
+
+.f-newsletter input::placeholder {
+  color: inherit;
+  opacity: 0.4;
+}
+
+/* ── Social icons ── */
+.social-links {
+  display: flex;
+  gap: 12px;
+}
+
+.social-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.social-icon:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.social-icon:active {
+  transform: translateY(-1px);
+}
+
+/* ── Made with love ── */
+.made-with {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.made-with svg {
+  animation: heartPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes heartPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+/* ── Bottom bar ── */
+.f-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* ── Responsive tweaks ── */
+@media (max-width: 768px) {
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    padding: 48px 20px 24px;
+  }
+
+  .f-bottom {
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+
+  .f-newsletter form {
+    flex-direction: column;
+  }
+
+  .f-newsletter button {
+    width: 100%;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1023px) {
+  .footer-content {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .f-logo img,
+  .social-icon,
+  .f-links nav a,
+  .made-with svg {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* ── Focus styles for accessibility ── */
+.f-links nav a:focus-visible,
+.f-contact a:focus-visible,
+.social-icon:focus-visible,
+.f-newsletter input:focus-visible,
+.f-newsletter button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 4px;
+}

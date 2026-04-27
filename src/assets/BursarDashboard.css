@@ -1,0 +1,720 @@
+/* ============================================
+   BursarDashboard.css — Finance Dashboard Styles
+   Version: 2.0
+   ============================================ */
+
+/* ── CSS Custom Properties ─────────────────── */
+:root {
+  --primary: #4f46e5;
+  --primary-dark: #4338ca;
+  --primary-light: #818cf8;
+  --success: #10b981;
+  --success-light: #34d399;
+  --danger: #ef4444;
+  --danger-light: #f87171;
+  --warning: #f59e0b;
+  --warning-light: #fbbf24;
+
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 1.75rem;
+  --radius-3xl: 2rem;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-glow: 0 0 20px rgba(79, 70, 229, 0.15);
+}
+
+/* ── Base ──────────────────────────────────── */
+.bursar-dashboard {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: var(--slate-800);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--slate-50);
+  min-height: 100vh;
+}
+
+/* ── Scrollbar ─────────────────────────────── */
+.bursar-dashboard ::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.bursar-dashboard ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bursar-dashboard ::-webkit-scrollbar-thumb {
+  background-color: var(--slate-300);
+  border-radius: 20px;
+}
+
+.bursar-dashboard ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--slate-400);
+}
+
+.bursar-dashboard * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--slate-300) transparent;
+}
+
+/* ── Number Input ──────────────────────────── */
+.bursar-dashboard input[type="number"]::-webkit-inner-spin-button,
+.bursar-dashboard input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.bursar-dashboard input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ── Animations ────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-in-top {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.8; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes modal-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes toast-slide {
+  from {
+    opacity: 0;
+    transform: translateY(-24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes progress-fill {
+  from { width: 0%; }
+}
+
+.animate-in {
+  animation-duration: 0.5s;
+  animation-fill-mode: both;
+}
+
+.fade-in {
+  animation-name: fade-in;
+}
+
+.slide-in-from-top-4 {
+  animation-name: slide-in-top;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* ── KPI Cards ─────────────────────────────── */
+.kpi-card {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+.kpi-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.kpi-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-xl);
+}
+
+.kpi-card:hover::after {
+  opacity: 1;
+}
+
+.kpi-card:active {
+  transform: translateY(-2px);
+}
+
+/* Progress bar glow */
+.progress-glow {
+  position: relative;
+}
+
+.progress-glow::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: inherit;
+  filter: blur(8px);
+  opacity: 0.4;
+  border-radius: inherit;
+  z-index: -1;
+}
+
+/* ── Student Rows ──────────────────────────── */
+.student-row {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.student-row:hover {
+  transform: translateX(4px);
+  box-shadow: var(--shadow-md);
+}
+
+.student-row .action-btn {
+  opacity: 0.85;
+  transition: all 0.2s ease;
+}
+
+.student-row:hover .action-btn {
+  opacity: 1;
+}
+
+/* ── Staff Cards ───────────────────────────── */
+.staff-card {
+  transition: border-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.staff-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow-md);
+}
+
+.staff-card input {
+  transition: all 0.2s ease;
+}
+
+.staff-card input:focus {
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+/* ── Modal ─────────────────────────────────── */
+.modal-backdrop {
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+}
+
+@supports not (backdrop-filter: blur(12px)) {
+  .modal-backdrop {
+    background-color: rgba(15, 23, 42, 0.88);
+  }
+}
+
+.modal-content {
+  animation: modal-pop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Modal scroll lock */
+body.modal-open {
+  overflow: hidden;
+  padding-right: var(--scrollbar-width, 0px);
+}
+
+/* ── Drop Zone ─────────────────────────────── */
+.drop-zone {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.drop-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(79, 70, 229, 0.04),
+    transparent
+  );
+  background-size: 200% 100%;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.drop-zone:hover::before {
+  opacity: 1;
+  animation: shimmer 2.5s infinite;
+}
+
+.drop-zone:hover {
+  border-color: var(--primary) !important;
+  background-color: rgba(79, 70, 229, 0.02);
+}
+
+.drop-zone.drag-active {
+  border-color: var(--primary) !important;
+  background-color: rgba(79, 70, 229, 0.06);
+  transform: scale(1.01);
+}
+
+/* ── Pie Chart ─────────────────────────────── */
+.pie-segment {
+  transition: stroke-dasharray 1.2s cubic-bezier(0.4, 0, 0.2, 1),
+              stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Toast ─────────────────────────────────── */
+.toast-enter {
+  animation: toast-slide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Pagination ────────────────────────────── */
+.pagination-btn {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.pagination-btn:not(:disabled):hover {
+  background-color: var(--slate-200);
+  transform: translateY(-1px);
+}
+
+.pagination-btn:not(:disabled):active {
+  transform: translateY(0);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Receipt ───────────────────────────────── */
+.receipt-print {
+  background: white;
+}
+
+.receipt-header {
+  position: relative;
+}
+
+.receipt-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary), var(--success));
+  border-radius: 2px;
+}
+
+.receipt-divider {
+  border: none;
+  height: 1px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--slate-300),
+    var(--slate-300) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+  margin: 1.5rem 0;
+}
+
+/* ── Barcode ───────────────────────────────── */
+.barcode-container {
+  background: white;
+  padding: 10px;
+  border: 1px solid var(--slate-200);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  display: inline-block;
+}
+
+/* ── Status Badge ──────────────────────────── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  border-width: 1px;
+}
+
+.status-badge::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ── Skeleton Loading ──────────────────────── */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--slate-100) 25%,
+    var(--slate-200) 50%,
+    var(--slate-100) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-lg);
+}
+
+.skeleton-text {
+  height: 1em;
+  margin-bottom: 0.5em;
+}
+
+.skeleton-circle {
+  border-radius: 50%;
+}
+
+/* ── Print Styles — CRITICAL ───────────────── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 15mm 12mm;
+  }
+
+  /* Hide everything */
+  body > * {
+    display: none !important;
+  }
+
+  /* Show print containers */
+  .print-only-debtors,
+  .print-only-debtors * {
+    visibility: visible !important;
+    display: revert !important;
+  }
+
+  .receipt-print,
+  .receipt-print * {
+    visibility: visible !important;
+    display: revert !important;
+  }
+
+  /* Position print containers */
+  .print-only-debtors {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    padding: 0 !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  .receipt-print {
+    position: fixed !important;
+    inset: 0 !important;
+    background: white !important;
+    z-index: 99999 !important;
+    padding: 30px !important;
+    overflow: auto !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+  }
+
+  /* Hide screen-only elements */
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+
+  /* Print table styling */
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+    margin-top: 20px;
+  }
+
+  .print-table thead {
+    display: table-header-group;
+  }
+
+  .print-table th,
+  .print-table td {
+    border: 1px solid var(--slate-800);
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .print-table th {
+    background-color: var(--slate-100) !important;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 8pt;
+    letter-spacing: 0.05em;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-table td {
+    font-size: 9.5pt;
+  }
+
+  .print-table tr:nth-child(even) td {
+    background-color: var(--slate-50) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Print header */
+  .print-header {
+    text-align: center;
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 3px solid var(--slate-900);
+  }
+
+  .print-header h1 {
+    font-size: 22pt;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    margin: 0;
+    line-height: 1.1;
+  }
+
+  .print-header h2 {
+    font-size: 12pt;
+    font-weight: 700;
+    color: var(--slate-600);
+    margin-top: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .print-header img {
+    max-height: 80px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  /* Signature lines */
+  .signature-line {
+    border-bottom: 1.5px solid black;
+    width: 180px;
+    height: 35px;
+    margin: 0 auto 8px;
+  }
+
+  .signature-label {
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-align: center;
+  }
+
+  /* Badges for print */
+  .print-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 8pt;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 1.5px solid currentColor;
+  }
+
+  /* Ensure background colors print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Links */
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
+
+  /* Page breaks */
+  .page-break {
+    page-break-before: always;
+  }
+
+  .no-break {
+    page-break-inside: avoid;
+  }
+}
+
+/* ── Screen-only ───────────────────────────── */
+@media screen {
+  .print-only-debtors {
+    display: none !important;
+  }
+}
+
+/* ── Responsive ────────────────────────────── */
+@media (max-width: 640px) {
+  .bursar-dashboard {
+    padding: 1rem !important;
+  }
+
+  .kpi-card {
+    height: auto !important;
+    min-height: 140px;
+  }
+
+  .kpi-card h3 {
+    font-size: 1.5rem !important;
+  }
+
+  .student-row {
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+
+  .student-row .actions {
+    width: 100% !important;
+  }
+
+  .modal-content {
+    margin: 0.75rem !important;
+    max-height: calc(100vh - 1.5rem) !important;
+    border-radius: var(--radius-lg) !important;
+  }
+
+  .receipt-print {
+    padding: 20px !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1023px) {
+  .kpi-card h3 {
+    font-size: 1.75rem !important;
+  }
+}
+
+/* ── Focus Accessibility ───────────────────── */
+.bursar-dashboard *:focus-visible {
+  outline: 2.5px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.bursar-dashboard button:focus-visible,
+.bursar-dashboard input:focus-visible,
+.bursar-dashboard select:focus-visible,
+.bursar-dashboard a:focus-visible {
+  outline: 2.5px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ── Selection ─────────────────────────────── */
+.bursar-dashboard ::selection {
+  background-color: rgba(79, 70, 229, 0.2);
+  color: var(--slate-900);
+}
+
+/* ── Reduced Motion ────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .fade-in,
+  .slide-in-from-top-4,
+  .animate-spin,
+  .kpi-card,
+  .student-row,
+  .staff-card,
+  .drop-zone,
+  .pie-segment,
+  .pagination-btn,
+  .skeleton,
+  .modal-content,
+  .toast-enter {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .skeleton {
+    background: var(--slate-200);
+  }
+
+  .kpi-card:hover,
+  .student-row:hover,
+  .staff-card:hover {
+    transform: none;
+  }
+}
+
+/* ── High Contrast Mode ────────────────────── */
+@media (prefers-contrast: high) {
+  .bursar-dashboard {
+    --primary: #0000ee;
+    --success: #008000;
+    --danger: #cc0000;
+    --warning: #ff8c00;
+  }
+
+  .student-row {
+    border-width: 2px !important;
+  }
+
+  .kpi-card {
+    border: 2px solid currentColor;
+  }
+}

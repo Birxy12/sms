@@ -1,0 +1,22 @@
+@media print {
+  .nav-sidebar, .top-header, .table-actions, .no-print {
+    display: none !important;
+  }
+  .marksheet-container {
+    padding: 0;
+    margin: 0;
+  }
+  .marksheet-table-wrapper {
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+  table {
+    width: 100% !important;
+    border: 1px solid #000 !important;
+  }
+  th, td {
+    border: 1px solid #000 !important;
+    padding: 4px !important;
+    font-size: 10px !important;
+  }
+}
