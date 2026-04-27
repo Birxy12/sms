@@ -1190,11 +1190,9 @@ const StudentIDCard = () => {
           }
 
           .dashboard-wrapper { 
-            position: absolute; 
-            left: 0; 
-            top: 0; 
-            width: 100%;
+            display: block !important;
             background: white;
+            height: auto !important;
           }
 
           .no-print, .no-print * { 
@@ -1206,10 +1204,8 @@ const StudentIDCard = () => {
           }
 
           .dashboard-wrapper > div:last-child {
-            display: flex !important;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            display: block !important;
+            min-height: auto;
             padding: 0;
           }
 

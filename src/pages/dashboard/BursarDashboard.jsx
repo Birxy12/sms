@@ -260,8 +260,10 @@ const BursarDashboard = () => {
   const notPaidPercent = totalStudents > 0 ? (paymentStatusStats.notPaid / totalStudents) * 100 : 0;
 
   return (
-    <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="animate-in fade-in duration-500">
+      {/* Main Dashboard UI - Hidden when printing */}
+      <div className="p-4 md:p-8 space-y-8 no-print">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Finance Command Center</h2>
           <p className="text-slate-500 font-medium">Bursar's hub for school fees, warnings, and payroll.</p>
@@ -752,9 +754,7 @@ const BursarDashboard = () => {
             @media print {
               @page { size: A4 portrait; margin: 15mm; }
               body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-              body > * { visibility: hidden !important; }
-              .bursar-print-receipt-area, .bursar-print-receipt-area * { visibility: visible !important; }
-              .bursar-print-receipt-area { position: absolute; left: 0; top: 0; width: 100%; }
+              .bursar-print-receipt-area { display: block !important; width: 100%; position: relative; }
             }
             .bursar-print-receipt-area { display: block !important; width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; font-family: sans-serif; }
           `}</style>
@@ -818,9 +818,7 @@ const BursarDashboard = () => {
             @media print {
               @page { size: A4 portrait; margin: 15mm; }
               body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-              body > * { visibility: hidden !important; }
-              .bursar-debtors-print-area, .bursar-debtors-print-area * { visibility: visible !important; }
-              .bursar-debtors-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+              .bursar-debtors-print-area { display: block !important; width: 100%; position: relative; }
             }
             .bursar-debtors-print-area { display: block !important; width: 100%; padding: 20px; font-family: sans-serif; color: black; }
           `}</style>
