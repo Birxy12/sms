@@ -50,71 +50,91 @@ const StudentIDCard = () => {
       </div>
 
       <div className="flex justify-center py-10">
-        {/* ID Card Container */}
+        {/* ID Card Container - Landscape 3.5" x 2.5" */}
         <div 
           ref={cardRef}
-          className="relative w-[320px] h-[500px] bg-white rounded-[32px] shadow-2xl overflow-hidden border border-slate-100"
-          style={{ fontFamily: "'Outfit', sans-serif" }}
+          className="relative bg-white shadow-2xl overflow-hidden border border-slate-200"
+          style={{ 
+            width: '3.5in', 
+            height: '2.5in', 
+            fontFamily: "'Outfit', sans-serif",
+            borderRadius: '12px'
+          }}
         >
-          {/* Top Design Element */}
+          {/* Side Accent */}
           <div 
-            className="absolute top-0 left-0 right-0 h-[180px]"
-            style={{ background: `linear-gradient(135deg, ${primaryColor}, #1e293b)` }}
-          >
-            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '20px 20px' }}></div>
-          </div>
+            className="absolute left-0 top-0 bottom-0 w-[8px]"
+            style={{ background: primaryColor }}
+          />
 
           {/* School Header */}
-          <div className="relative z-10 pt-8 px-6 text-center text-white">
-             <div className="flex justify-center mb-2">
-                <img src={schoolLogo || bdsLogo} alt="Logo" className="w-12 h-12 object-contain bg-white rounded-xl p-1 shadow-lg" />
-             </div>
-             <h1 className="text-[14px] font-black uppercase tracking-tight leading-tight">{schoolName || 'BONUS DOMINUS'}</h1>
-             <p className="text-[8px] font-bold text-white/70 uppercase tracking-widest mt-1">Secondary School Section</p>
-          </div>
-
-          {/* Photo Section */}
-          <div className="relative z-10 flex justify-center mt-6">
-            <div className="w-[120px] h-[140px] rounded-[24px] border-4 border-white shadow-2xl overflow-hidden bg-slate-50">
-               {currentStudent?.photo || currentStudent?.photoURL ? (
-                 <img src={currentStudent.photo || currentStudent.photoURL} alt="Student" className="w-full h-full object-cover" />
-               ) : (
-                 <div className="w-full h-full flex items-center justify-center text-slate-300">
-                    <User size={48} />
-                 </div>
-               )}
-            </div>
-          </div>
-
-          {/* Student Info */}
-          <div className="relative z-10 px-8 pt-6 text-center">
-             <h2 className="text-[20px] font-black text-slate-900 leading-tight mb-1">{currentStudent?.name}</h2>
-             <p className="text-[12px] font-black text-indigo-600 uppercase tracking-widest mb-4">{currentStudent?.className}</p>
-             
-             <div className="space-y-3 pt-4 border-t border-slate-100">
-                <div className="flex flex-col">
-                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Registration No</span>
-                   <span className="text-[14px] font-bold text-slate-800">{currentStudent?.regNo || 'BDS/2025/001'}</span>
-                </div>
-                <div className="flex flex-col">
-                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Valid Session</span>
-                   <span className="text-[14px] font-bold text-slate-800">2025 - 2026</span>
-                </div>
-             </div>
-          </div>
-
-          {/* Card Footer / Hologram Effect */}
-          <div className="absolute bottom-0 left-0 right-0 h-[60px] bg-slate-50 border-t border-slate-100 flex items-center justify-between px-8">
+          <div className="pl-6 pr-4 pt-4 flex items-start justify-between">
              <div className="flex items-center gap-2">
-                <ShieldCheck size={20} className="text-emerald-500" />
-                <span className="text-[9px] font-black text-slate-600 uppercase tracking-tighter">Verified Identity</span>
+                <img src={schoolLogo || bdsLogo} alt="Logo" className="w-8 h-8 object-contain" />
+                <div>
+                   <h1 className="text-[10px] font-black uppercase tracking-tight leading-none text-slate-900">{schoolName || 'BONUS DOMINUS'}</h1>
+                   <p className="text-[6px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Official Student ID</p>
+                </div>
              </div>
-             <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center overflow-hidden opacity-50">
-                <img src={schoolLogo || bdsLogo} alt="Seal" className="w-6 h-6 grayscale" />
+             <div className="text-right">
+                <p className="text-[6px] font-black text-indigo-600 uppercase tracking-widest leading-none">Session</p>
+                <p className="text-[8px] font-bold text-slate-800">2025/2026</p>
              </div>
           </div>
+
+          {/* Main Body - Landscape Layout */}
+          <div className="flex pl-6 pr-4 mt-3 gap-4">
+             {/* Photo Column */}
+             <div className="flex flex-col items-center">
+                <div className="w-[65px] h-[80px] rounded-lg border-2 border-slate-100 shadow-sm overflow-hidden bg-slate-50">
+                   {currentStudent?.photo || currentStudent?.photoURL ? (
+                     <img src={currentStudent.photo || currentStudent.photoURL} alt="Student" className="w-full h-full object-cover" />
+                   ) : (
+                     <div className="w-full h-full flex items-center justify-center text-slate-300">
+                        <User size={24} />
+                     </div>
+                   )}
+                </div>
+                <div className="mt-1">
+                   <ShieldCheck size={14} className="text-emerald-500 mx-auto" />
+                </div>
+             </div>
+
+             {/* Details Column */}
+             <div className="flex-1 space-y-2">
+                <div>
+                   <span className="text-[6px] font-black text-slate-400 uppercase tracking-widest block">Full Name</span>
+                   <h2 className="text-[12px] font-black text-slate-900 leading-tight truncate w-[160px]">{currentStudent?.name}</h2>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                   <div>
+                      <span className="text-[6px] font-black text-slate-400 uppercase tracking-widest block">Class</span>
+                      <span className="text-[10px] font-black text-indigo-600">{currentStudent?.className}</span>
+                   </div>
+                   <div>
+                      <span className="text-[6px] font-black text-slate-400 uppercase tracking-widest block">Reg No</span>
+                      <span className="text-[10px] font-bold text-slate-800">{currentStudent?.regNo || 'N/A'}</span>
+                   </div>
+                </div>
+
+                <div className="pt-2 flex items-center justify-between">
+                   <div className="h-[15px] w-[60px] bg-slate-100 rounded flex items-center justify-center border border-slate-200">
+                      <span className="text-[6px] font-black text-slate-400 uppercase tracking-tighter">Barcode Area</span>
+                   </div>
+                   <img src={schoolLogo || bdsLogo} alt="Seal" className="w-6 h-6 opacity-20 grayscale" />
+                </div>
+             </div>
+          </div>
+
+          {/* Bottom Strip */}
+          <div 
+            className="absolute bottom-0 left-0 right-0 h-[10px]"
+            style={{ background: `linear-gradient(90deg, ${primaryColor}, #1e293b)` }}
+          />
         </div>
       </div>
+
 
       <style>{`
         @media print {
