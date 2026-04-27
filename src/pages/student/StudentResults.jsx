@@ -254,7 +254,39 @@ const StudentResults = () => {
     setTimeout(() => {
       window.print();
       setIsPrinting(false);
-    }, 500);
+    }, 1000);
+  };
+
+  const handleDownloadPDF = async () => {
+    setIsPrinting(true);
+    // Give time for the print view to render
+    setTimeout(async () => {
+      try {
+        const element = printRef.current;
+        if (!element) {
+           setIsPrinting(false);
+           return;
+        }
+
+        // Dynamic import to handle potential install lag
+        const html2pdf = (await import('html2pdf.js')).default;
+        
+        const opt = {
+          margin: 0,
+          filename: `${currentStudent?.name || 'Student'}-Result-${selectedPub?.term || ''}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 3, useCORS: true, logging: false, letterRendering: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        
+        await html2pdf().set(opt).from(element).save();
+      } catch (err) {
+        console.error("PDF Download failed, falling back to print:", err);
+        window.print();
+      } finally {
+        setIsPrinting(false);
+      }
+    }, 1000);
   };
 
   if (loading && publishedTerms.length === 0) {
@@ -274,6 +306,17 @@ const StudentResults = () => {
           @media print {
             @page { size: A4; margin: 0; }
             body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            body > * { visibility: hidden !important; }
+            .report-card-print, .report-card-print * { visibility: visible !important; }
+            .report-card-print { 
+              position: absolute; 
+              left: 0; 
+              top: 0; 
+              width: 210mm; 
+              min-height: 297mm;
+              padding: 10mm 15mm;
+              background: white !important;
+            }
           }
           .report-card-print {
             width: 210mm;
@@ -540,7 +583,7 @@ const StudentResults = () => {
               <Printer size={18} /> Print Result
             </button>
             <button 
-              onClick={handlePrint}
+              onClick={handleDownloadPDF}
               className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95"
             >
               <Download size={18} /> Download PDF
