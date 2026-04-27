@@ -46,7 +46,7 @@ const StudentResults = () => {
   useEffect(() => {
     const fetchPublications = async () => {
       try {
-        const pubQuery = query(collection(db, 'publications'), where('type', '==', 'Result'), orderBy('publishedAt', 'desc'));
+        const pubQuery = query(collection(db, 'publications'), where('type', '==', 'Result'));
         const pubSnap = await getDocs(pubQuery);
         
         const terms = pubSnap.docs.map(doc => {
