@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
+import { Link } from 'react-router-dom';
 import { collection, getDocs, updateDoc, doc, setDoc, getDoc } from 'firebase/firestore';
 import { DollarSign, AlertTriangle, Users, Mail, CheckCircle, Search, CreditCard, ChevronRight, Upload, Settings, X, FileText, Loader2, Printer, TrendingUp } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
@@ -266,6 +267,12 @@ const BursarDashboard = () => {
           <p className="text-slate-500 font-medium">Bursar's hub for school fees, warnings, and payroll.</p>
         </div>
         <div className="flex gap-3">
+          <Link 
+            to="/profile"
+            className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2.5 rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+          >
+            <Users size={18} /> My Profile
+          </Link>
           <button 
             onClick={() => setShowSettingsModal(true)}
             className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2.5 rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"

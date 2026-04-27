@@ -16,6 +16,8 @@ const ContentCMS = () => {
     { id: 'about', label: 'About Us', icon: Info },
     { id: 'contact', label: 'Contact & Location', icon: MapPin },
     { id: 'blog', label: 'Blog & News', icon: FileText },
+    { id: 'testimonies', label: 'Testimonies', icon: MessageSquare },
+    { id: 'dates', label: 'School Dates', icon: CheckCircle },
   ];
 
 
@@ -48,9 +50,21 @@ const ContentCMS = () => {
     heroImages: [] // Array of image URLs
   });
 
+  // Testimonies State
+  const [testimonies, setTestimonies] = useState([]);
+  
+  // School Dates State
+  const [schoolDates, setSchoolDates] = useState({
+    termEnds: '',
+    nextTermBegins: '',
+    resumptionDate: ''
+  });
+
   useEffect(() => {
     fetchGlobalSettings();
     if (activeTab === 'blog') fetchPosts();
+    if (activeTab === 'testimonies') fetchTestimonies();
+    if (activeTab === 'dates') fetchSchoolDates();
   }, [activeTab]);
 
   const fetchGlobalSettings = async () => {
@@ -74,6 +88,27 @@ const ContentCMS = () => {
       const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
       const snap = await getDocs(q);
       setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchTestimonies = async () => {
+    try {
+      const q = query(collection(db, 'testimonies'), orderBy('createdAt', 'desc'));
+      const snap = await getDocs(q);
+      setTestimonies(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchSchoolDates = async () => {
+    try {
+      const docSnap = await getDoc(doc(db, 'settings', 'school_dates'));
+      if (docSnap.exists()) {
+        setSchoolDates(docSnap.data());
+      }
     } catch (e) {
       console.error(e);
     }
@@ -111,6 +146,8 @@ const ContentCMS = () => {
         await setDoc(docRef, { managementTeam }, { merge: true });
       } else if (type === 'principal') {
         await setDoc(docRef, { principalData }, { merge: true });
+      } else if (type === 'dates') {
+        await setDoc(doc(db, 'settings', 'school_dates'), schoolDates);
       }
       setStatus({ type: 'success', message: 'Content updated globally!' });
     } catch (error) {
@@ -149,6 +186,26 @@ const ContentCMS = () => {
       fetchPosts();
     } catch (e) {
       alert('Error deleting post');
+    }
+  };
+
+  const approveTestimony = async (id, currentStatus) => {
+    try {
+      await setDoc(doc(db, 'testimonies', id), { approved: !currentStatus }, { merge: true });
+      fetchTestimonies();
+      setStatus({ type: 'success', message: currentStatus ? 'Testimony hidden' : 'Testimony approved!' });
+    } catch (e) {
+      setStatus({ type: 'error', message: 'Failed to update testimony' });
+    }
+  };
+
+  const deleteTestimony = async (id) => {
+    if (!window.confirm('Delete this testimony?')) return;
+    try {
+      await deleteDoc(doc(db, 'testimonies', id));
+      fetchTestimonies();
+    } catch (e) {
+      alert('Error deleting testimony');
     }
   };
 
@@ -567,6 +624,106 @@ const ContentCMS = () => {
                 </form>
              </div>
           )}
+
+        {activeTab === 'testimonies' && (
+          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 animate-in slide-in-from-bottom-4">
+            <div className="mb-6 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-black text-slate-800">Student & Parent Testimonies</h3>
+                <p className="text-sm text-slate-500">Approve or delete stories submitted from the landing page.</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-widest border-b border-slate-100">
+                  <tr>
+                    <th className="px-6 py-4">Author</th>
+                    <th className="px-6 py-4">Story Snippet</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {testimonies.map(t => (
+                    <tr key={t.id} className="hover:bg-slate-50">
+                      <td className="px-6 py-4">
+                        <p className="font-bold text-slate-800">{t.name}</p>
+                        <p className="text-[10px] text-slate-400">{t.email}</p>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 max-w-md">
+                        <p className="line-clamp-2 italic">"{t.content}"</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${t.approved ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                          {t.approved ? 'Approved' : 'Pending'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 flex justify-end gap-2">
+                        <button 
+                          onClick={() => approveTestimony(t.id, t.approved)}
+                          className={`p-2 rounded-lg transition-colors ${t.approved ? 'text-amber-500 hover:bg-amber-50' : 'text-emerald-500 hover:bg-emerald-50'}`}
+                          title={t.approved ? 'Unapprove' : 'Approve'}
+                        >
+                          <CheckCircle size={18} />
+                        </button>
+                        <button onClick={() => deleteTestimony(t.id)} className="p-2 text-slate-400 hover:text-rose-600 rounded-lg"><Trash2 size={18} /></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {testimonies.length === 0 && <div className="p-12 text-center text-slate-400 font-bold">No testimonies submitted yet.</div>}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'dates' && (
+          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 animate-in slide-in-from-bottom-4">
+            <div className="mb-6 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-black text-slate-800">Critical School Dates</h3>
+                <p className="text-sm text-slate-500">Set term end and resumption dates shown on report cards and dashboards.</p>
+              </div>
+              <button onClick={() => saveSettings('dates')} disabled={loading} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700">
+                {loading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} Save Dates
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Term Ends</label>
+                <input 
+                  type="text" 
+                  value={schoolDates.termEnds} 
+                  onChange={e => setSchoolDates({...schoolDates, termEnds: e.target.value})} 
+                  placeholder="e.g. 12th Dec, 2025"
+                  className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold" 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Next Term Begins</label>
+                <input 
+                  type="text" 
+                  value={schoolDates.nextTermBegins} 
+                  onChange={e => setSchoolDates({...schoolDates, nextTermBegins: e.target.value})} 
+                  placeholder="e.g. 10th Jan, 2026"
+                  className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold" 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Resumption Date</label>
+                <input 
+                  type="text" 
+                  value={schoolDates.resumptionDate} 
+                  onChange={e => setSchoolDates({...schoolDates, resumptionDate: e.target.value})} 
+                  placeholder="e.g. Monday, 12th Jan"
+                  className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold" 
+                />
+              </div>
+            </div>
+          </div>
+        )}
         </div>
         )}
       </div>

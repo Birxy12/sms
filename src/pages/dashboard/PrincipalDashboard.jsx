@@ -112,8 +112,20 @@ const PrincipalDashboard = () => {
             to="/admin/posts"
             className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
           >
-            <PenTool size={20} /> Publish Update
+            <PenTool size={20} /> CMS
           </Link>
+          <button 
+            onClick={() => window.location.href = '/admin/posts?tab=testimonies'}
+            className="hidden md:flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 px-6 py-3 rounded-2xl font-bold hover:bg-emerald-100 transition-all active:scale-95"
+          >
+            <UserCheck size={20} /> Stories
+          </button>
+          <button 
+            onClick={() => window.location.href = '/admin/posts?tab=dates'}
+            className="hidden md:flex items-center justify-center gap-2 bg-amber-50 text-amber-600 px-6 py-3 rounded-2xl font-bold hover:bg-amber-100 transition-all active:scale-95"
+          >
+            <BookOpen size={20} /> Dates
+          </button>
         </div>
       </div>
 

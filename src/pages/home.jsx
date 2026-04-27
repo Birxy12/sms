@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Star, LogIn, Users, Trophy, GraduationCap, Shield, BookOpen, Award, MapPin, Phone, Mail, ChevronRight, Quote, Sparkles } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, query, where, getDocs, orderBy } from 'firebase/firestore';
 
 import Navbar from '../components/Navbar';
 import Footer from '../components/MainFooter';
@@ -95,11 +95,51 @@ const Home = () => {
     { icon: <Award size={24} />, title: "Proven Excellence", desc: "Consistently ranked among top institutions with award-winning programs and outstanding results.", color: "indigo" }
   ];
 
-  const testimonials = [
-    { name: "Blessing Okon", role: "Alumna, Class of 2023", text: "The discipline and academic rigor here shaped me into who I am today. I am forever grateful." },
-    { name: "John David", role: "Alumnus, Class of 2022", text: "Best environment for learning. The teachers are true mentors and the facilities are world-class." },
-    { name: "Sarah Mensah", role: "Parent", text: "Watching my child grow academically and morally has been the greatest joy. This school truly lives up to its promise." }
-  ];
+  const [testimonials, setTestimonials] = useState([
+    { name: "Blessing Okon", role: "Alumna, Class of 2023", content: "The discipline and academic rigor here shaped me into who I am today. I am forever grateful." },
+    { name: "John David", role: "Alumnus, Class of 2022", content: "Best environment for learning. The teachers are true mentors and the facilities are world-class." },
+    { name: "Sarah Mensah", role: "Parent", content: "Watching my child grow academically and morally has been the greatest joy. This school truly lives up to its promise." }
+  ]);
+
+  const [testimonyForm, setTestimonyForm] = useState({ name: '', email: '', content: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  useEffect(() => {
+    const fetchTestimonies = async () => {
+      try {
+        const q = query(collection(db, 'testimonies'), where('approved', '==', true), orderBy('createdAt', 'desc'));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          setTestimonials(snap.docs.map(d => d.data()));
+        }
+      } catch (e) {
+        console.error("Error fetching testimonies:", e);
+      }
+    };
+    fetchTestimonies();
+  }, []);
+
+  const handleTestimonySubmit = async (e) => {
+    e.preventDefault();
+    if (!testimonyForm.name || !testimonyForm.content) return;
+    
+    setSubmitting(true);
+    try {
+      await addDoc(collection(db, 'testimonies'), {
+        ...testimonyForm,
+        approved: false,
+        createdAt: new Date().toISOString()
+      });
+      setSubmitSuccess(true);
+      setTestimonyForm({ name: '', email: '', content: '' });
+      setTimeout(() => setSubmitSuccess(false), 5000);
+    } catch (e) {
+      alert("Failed to submit testimony. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const quickLinks = [
     { label: 'About Us', href: '/about', icon: <BookOpen size={16} /> },
@@ -376,7 +416,7 @@ const Home = () => {
                         <Star key={star} size={14} className="text-orange-400 fill-orange-400" />
                       ))}
                     </div>
-                    <p className="home-testimonial-text">"{t.text}"</p>
+                    <p className="home-testimonial-text">"{t.content}"</p>
                     <div className="home-testimonial-author">
                       <div className="home-testimonial-avatar">
                         {t.name[0]}
@@ -409,21 +449,43 @@ const Home = () => {
                   Have something to say about your experience? We'd love to hear from you.
                 </p>
 
-                <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+                <form className="space-y-5" onSubmit={handleTestimonySubmit}>
                   <div className="home-form-group">
                     <label className="home-form-label">Full Name</label>
-                    <input type="text" placeholder="Your full name" className="home-form-input" />
+                    <input 
+                      type="text" 
+                      placeholder="Your full name" 
+                      className="home-form-input" 
+                      value={testimonyForm.name}
+                      onChange={e => setTestimonyForm({...testimonyForm, name: e.target.value})}
+                      required
+                    />
                   </div>
                   <div className="home-form-group">
                     <label className="home-form-label">Email Address</label>
-                    <input type="email" placeholder="your@email.com" className="home-form-input" />
+                    <input 
+                      type="email" 
+                      placeholder="your@email.com" 
+                      className="home-form-input" 
+                      value={testimonyForm.email}
+                      onChange={e => setTestimonyForm({...testimonyForm, email: e.target.value})}
+                    />
                   </div>
                   <div className="home-form-group">
                     <label className="home-form-label">Your Testimony</label>
-                    <textarea rows="4" placeholder="How has our school helped you?" className="home-form-textarea"></textarea>
+                    <textarea 
+                      rows="4" 
+                      placeholder="How has our school helped you?" 
+                      className="home-form-textarea"
+                      value={testimonyForm.content}
+                      onChange={e => setTestimonyForm({...testimonyForm, content: e.target.value})}
+                      required
+                    ></textarea>
                   </div>
-                  <button type="submit" className="home-form-submit">
-                    Submit Testimony <ArrowRight size={18} />
+                  <button type="submit" disabled={submitting} className="home-form-submit">
+                    {submitting ? 'Submitting...' : submitSuccess ? 'Submitted for Review!' : 'Submit Testimony'} 
+                    {!submitting && !submitSuccess && <ArrowRight size={18} />}
+                    {submitSuccess && <CheckCircle size={18} />}
                   </button>
                   <p className="home-form-note">All submissions are reviewed by management before publishing.</p>
                 </form>

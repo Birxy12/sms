@@ -19,7 +19,7 @@ export const AdminAuthProvider = ({ children }) => {
 
   const login = async (identifier, password) => {
     // 1. Check hardcoded Admin credentials
-    if (identifier === 'globixtechinc@gmail.com' && password === '@@@@@@@@') {
+    if (identifier === 'admin@birxysms.edu' && password === '@@@@@@@@') {
       const adminUser = { email: identifier, role: 'admin', name: 'System Administrator', staffId: 'ADMIN/001' };
       setCurrentAdmin(adminUser);
       localStorage.setItem('adminUser', JSON.stringify(adminUser));

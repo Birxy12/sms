@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { db } from '../../lib/firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
 import { Award, AlertCircle, Printer, Download, ChevronLeft, User } from 'lucide-react';
 import bdsLogo from '../../assets/bdslogo.jpg';
@@ -19,6 +19,10 @@ const StudentResults = () => {
   const [loading, setLoading] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
   const [classStats, setClassStats] = useState({ position: 'N/A', population: 0 });
+  const [schoolDates, setSchoolDates] = useState({
+    termEnds: '12/12/2025',
+    nextTermBegins: '12/01/2026'
+  });
 
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -248,11 +252,30 @@ const StudentResults = () => {
     fetchResults();
   }, [selectedTermId, publishedTerms, regNum, currentStudent]);
 
+  useEffect(() => {
+    const fetchSchoolDates = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, 'settings', 'school_dates'));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setSchoolDates({
+            termEnds: data.termEnds || '12/12/2025',
+            nextTermBegins: data.nextTermBegins || '12/01/2026'
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching school dates:", error);
+      }
+    };
+    fetchSchoolDates();
+  }, []);
+
 
   const handlePrint = () => {
     setIsPrinting(true);
     setTimeout(() => {
       window.print();
+      // Use onafterprint if supported or a longer delay to ensure the dialog is closed before resetting
       setIsPrinting(false);
     }, 1000);
   };
@@ -273,7 +296,7 @@ const StudentResults = () => {
         
         const opt = {
           margin: 0,
-          filename: `${currentStudent?.name || 'Student'}-Result-${selectedPub?.term || ''}.pdf`,
+          filename: `${currentStudent?.name || 'Student'}-Report-Card-${selectedPub?.term || ''}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: { scale: 3, useCORS: true, logging: false, letterRendering: true },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -377,7 +400,7 @@ const StudentResults = () => {
         .print-final-branding { text-align: center; font-size: 9px; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; border-top: 1px solid #e2e8f0; padding-top: 5px; }
         .print-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 100px; font-weight: 900; color: rgba(15, 23, 42, 0.03); white-space: nowrap; pointer-events: none; z-index: -1; }
       `}</style>
-      <div className="print-branding-top">Prepared by GLOBIXTECH ENT {new Date().toLocaleDateString()}</div>
+      <div className="print-branding-top">Academic Session: {selectedPub?.session}</div>
       <div className="print-header">
         <div className="print-logo-box">
            <img src={schoolLogo || bdsLogo} alt="Logo" className="print-logo" />
@@ -386,7 +409,7 @@ const StudentResults = () => {
           <h1>{schoolName || 'BONUS DOMINUS NURSERY, PRIMARY'}</h1>
           <h2>& SECONDARY SCHOOL</h2>
           <p>5A - 5C UZOANYA CRESCENT, AMUZUKWU, UMUAHIA, ABIA STATE</p>
-          <div className="print-term-badge">{selectedPub?.term} Report Sheet for {selectedPub?.session}</div>
+          <div className="print-term-badge">{selectedPub?.term} Report Card for {selectedPub?.session}</div>
         </div>
         <div className="print-photo-box">
            <div className="student-photo-frame">
@@ -433,7 +456,7 @@ const StudentResults = () => {
                     {sub.total >= 75 ? 'Excellent' : 
                      sub.total >= 60 ? 'Very Good' : 
                      sub.total >= 50 ? 'Good' : 
-                     sub.total >= 40 ? 'Average' : 'Fail'}
+                     sub.total >= 40 ? 'Average' : 'Below Average'}
                   </td>
                 </tr>
               ))}
@@ -442,7 +465,7 @@ const StudentResults = () => {
         </div>
         <div className="print-side-panels">
            <div className="behaviour-section">
-              <div className="section-title">BEHAVIOUR</div>
+              <div className="section-title">BEHAVIOURAL ASSESSMENT</div>
               <table className="mini-table">
                 <thead><tr><th>TRAITS</th><th>1</th><th>2</th><th>3</th><th>4</th></tr></thead>
                 <tbody>
@@ -464,7 +487,7 @@ const StudentResults = () => {
               </table>
            </div>
            <div className="skills-section">
-              <div className="section-title">SKILLS</div>
+              <div className="section-title">PSYCHOMOTOR SKILLS</div>
               <table className="mini-table">
                 <thead><tr><th>SKILL</th><th>1</th><th>2</th><th>3</th><th>4</th></tr></thead>
                 <tbody>
@@ -489,8 +512,8 @@ const StudentResults = () => {
                 <div className="value">{studentMarks?.overallTotal}</div>
               </div>
               <div className="summary-box">
-                <label>RESULT STATUS</label>
-                <div className="value status-pass">PASSED</div>
+                <label>PERFORMANCE STATUS</label>
+                <div className="value status-pass">PROMOTED</div>
               </div>
            </div>
         </div>
@@ -527,15 +550,15 @@ const StudentResults = () => {
                </div>
              </div>
             <div className="footer-dates">
-               <p>Term Ends: <strong>12/12/2025</strong></p>
-               <p>Next Term Begins: <strong>12/01/2026</strong></p>
+               <p>Term Ends: <strong>{schoolDates.termEnds}</strong></p>
+               <p>Next Term Begins: <strong>{schoolDates.nextTermBegins}</strong></p>
             </div>
          </div>
-         <div className="print-final-branding">Powered by GLOBIXTECH ENT - satisfaction is our drive</div>
+          <div className="print-final-branding">Report Card Sheet - Character and Learning</div>
       </div>
       <div className="print-watermark">{schoolName || 'BONUS DOMINUS'}</div>
     </div>
-  ); // ← THIS SEMICOLON WAS MISSING — THE ONLY FIX NEEDED
+  );
 
   const renderScreenView = () => {
     if (publishedTerms.length === 0) {
@@ -653,8 +676,8 @@ const StudentResults = () => {
         <>
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4 no-print">
             <div>
-              <h2 style={{ fontWeight: '900', fontSize: '28px', marginBottom: '8px', color: '#1e293b' }}>Academic Report</h2>
-              <p style={{ color: '#64748b', fontSize: '14px' }}>Official term results and subject performance summary.</p>
+              <h2 style={{ fontWeight: '900', fontSize: '28px', marginBottom: '8px', color: '#1e293b' }}>Report Card</h2>
+              <p style={{ color: '#64748b', fontSize: '14px' }}>Official termly academic performance summary.</p>
             </div>
             <div className="flex items-center gap-4 md:gap-8">
               <div className="flex flex-col items-end">
@@ -674,7 +697,7 @@ const StudentResults = () => {
                   onClick={handlePrint}
                   className="flex items-center gap-2 bg-white border-2 border-slate-200 px-5 py-3 rounded-2xl font-black text-slate-700 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
                 >
-                  <Printer size={18} /> Print Result
+                  <Printer size={18} /> Print Report Card
                 </button>
                 <button 
                   onClick={handleDownloadPDF}

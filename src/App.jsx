@@ -181,7 +181,7 @@ function App() {
         </ProtectedAdminRoute>
       } />
       <Route path="/admin/posts" element={
-        <ProtectedAdminRoute requiredRole={['principal']}>
+        <ProtectedAdminRoute requiredRole={['principal', 'admin']}>
           <Layout><ContentCMS /></Layout>
         </ProtectedAdminRoute>
       } />
