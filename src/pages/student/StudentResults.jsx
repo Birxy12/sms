@@ -98,14 +98,12 @@ const StudentResults = () => {
         const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
         if (!selectedPub) return;
         
-        // ── 1. Fetch ALL marks for this student by regNo only (no composite index needed)
         const marksQuery = query(
           collection(db, 'marks'),
           where('regNo', '==', regNum)
         );
         const marksSnap = await getDocs(marksQuery);
 
-        // Normalise term string for comparison (e.g. 'Second Term' === 'secondterm')
         const normTerm = (t = '') => t.toLowerCase().replace(/\s+/g, '');
         
         let foundMarksDoc = null;
@@ -120,7 +118,6 @@ const StudentResults = () => {
           }
         });
 
-        // ── 2. Compute class standing: fetch all marks for class/session (single field index)
         const allMarksQuery = query(
           collection(db, 'marks'),
           where('className', '==', studentClass)
@@ -147,7 +144,6 @@ const StudentResults = () => {
           .sort((a, b) => b[1] - a[1])
           .map(entry => entry[0]);
         
-        // Position: use stored value if present, else calculate
         let posStr = foundMarksDoc?.position || '';
         if (!posStr || posStr === '0' || posStr === 'N/A') {
           const pos = sortedStudents.indexOf(regNum) + 1;
@@ -156,7 +152,6 @@ const StudentResults = () => {
           posStr = pos > 0 ? pos + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]) : 'N/A';
         }
         
-        // ── 3. Class population
         const classPopQuery = query(collection(db, 'students'), where('className', '==', studentClass));
         const classPopSnap = await getDocs(classPopQuery);
         
@@ -165,7 +160,6 @@ const StudentResults = () => {
           population: foundMarksDoc?.classPopulation || classPopSnap.size
         });
 
-        // ── 4. Build subject list for this class
         const subjectsQuery = query(collection(db, 'subjects'), where('class', '==', studentClass));
         const subjectsSnap = await getDocs(subjectsQuery);
         const classSubjects = subjectsSnap.docs.map(d => d.data().name);
@@ -174,7 +168,6 @@ const StudentResults = () => {
         const subjectList = classSubjects.length > 0 ? classSubjects : Object.keys(rawMarks);
 
         if (!foundMarksDoc && subjectList.length === 0) {
-          // No marks found at all – show empty state rather than all-zero rows
           setStudentMarks(null);
           setLoading(false);
           return;
@@ -184,7 +177,6 @@ const StudentResults = () => {
         let subjectCount = 0;
         
         const processedMarks = subjectList.map(subjectName => {
-          // Case-insensitive lookup
           const dbKey = Object.keys(rawMarks).find(
             k => k.toUpperCase() === subjectName.toUpperCase()
           ) || subjectName;
@@ -222,15 +214,14 @@ const StudentResults = () => {
           };
         });
 
-        // Only show subjects that have been offered (total > 0)
         const displaySubjects = processedMarks.filter(s => s.total > 0);
 
-        // Calculate average based on school policy: SS2/3 (9 subjects), SS1 & JSS (16 subjects)
+        // === UPDATED: Average by School Policy ===
         const cls = (currentStudent?.className || '').toUpperCase();
-        let divisor = 16;
-        if (cls.includes('JSS')) {
+        let divisor = 15;
+        if (cls.includes('SS1')) {
           divisor = 16;
-        } else if (cls.includes('SS')) {
+        } else if (cls.includes('SS2') || cls.includes('SS3')) {
           divisor = 9;
         }
 
@@ -269,19 +260,16 @@ const StudentResults = () => {
     fetchSchoolDates();
   }, []);
 
-
   const handlePrint = () => {
     setIsPrinting(true);
     setTimeout(() => {
       window.print();
-      // Use onafterprint if supported or a longer delay to ensure the dialog is closed before resetting
       setIsPrinting(false);
     }, 1000);
   };
 
   const handleDownloadPDF = async () => {
     setIsPrinting(true);
-    // Give time for the print view to render
     setTimeout(async () => {
       try {
         const element = printRef.current;
@@ -289,8 +277,6 @@ const StudentResults = () => {
            setIsPrinting(false);
            return;
         }
-
-        // Dynamic import to handle potential install lag
         const html2pdf = (await import('html2pdf.js')).default;
         
         const opt = {
@@ -320,27 +306,40 @@ const StudentResults = () => {
   }
 
   const renderPrintView = () => (
-    <div className="report-card-print" ref={printRef}>
+    <div className="report-card-print" ref={printRef} style={{ display: 'flex', flexDirection: 'column', height: '297mm' }}>
       <style>{`
         @media print {
-          @page { size: A4; margin: 0; }
-          body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          body > * { visibility: hidden !important; }
+          @page { size: A4 portrait; margin: 0; }
+          html, body { 
+            background: white !important; 
+            margin: 0; 
+            padding: 0; 
+            -webkit-print-color-adjust: exact; 
+            print-color-adjust: exact;
+            height: 100%;
+            overflow: hidden;
+          }
+          body > *:not(.report-card-print) { display: none !important; }
           .report-card-print, .report-card-print * { visibility: visible !important; }
           .report-card-print { 
             position: absolute; 
             left: 0; 
             top: 0; 
             width: 210mm; 
-            min-height: 297mm;
-            padding: 10mm 15mm;
+            height: 297mm;
+            padding: 8mm 12mm;
             background: white !important;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            page-break-after: avoid;
+            page-break-inside: avoid;
           }
         }
         .report-card-print {
           width: 210mm;
-          min-height: 297mm;
-          padding: 10mm 15mm;
+          height: 297mm;
+          padding: 8mm 12mm;
           margin: 0 auto;
           background: white;
           color: #0f172a;
@@ -348,56 +347,58 @@ const StudentResults = () => {
           position: relative;
           box-sizing: border-box;
           overflow: hidden;
+          display: flex;
+          flex-direction: column;
         }
-        .print-branding-top { font-size: 8px; text-transform: uppercase; font-weight: 800; color: #94a3b8; margin-bottom: 5px; display: flex; justify-content: space-between; }
-        .print-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px double #0f172a; padding-bottom: 8px; margin-bottom: 15px; }
-        .print-logo { width: 75px; height: 75px; object-fit: contain; }
+        .print-branding-top { font-size: 7px; text-transform: uppercase; font-weight: 800; color: #94a3b8; margin-bottom: 3px; display: flex; justify-content: space-between; }
+        .print-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px double #0f172a; padding-bottom: 5px; margin-bottom: 8px; }
+        .print-logo { width: 55px; height: 55px; object-fit: contain; }
         .print-school-info { text-align: center; flex: 1; }
-        .print-school-info h1 { font-size: 18px; font-weight: 900; margin: 0; line-height: 1.2; color: #1e293b; }
-        .print-school-info h2 { font-size: 14px; font-weight: 700; margin: 0; color: #475569; }
-        .print-school-info p { font-size: 9px; margin: 3px 0; font-weight: 600; color: #64748b; }
-        .print-term-badge { display: inline-block; background: #1e293b; color: white; padding: 3px 15px; border-radius: 20px; font-size: 10px; font-weight: 900; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px; }
-        .student-photo-frame { width: 75px; height: 85px; border: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .print-school-info h1 { font-size: 14px; font-weight: 900; margin: 0; line-height: 1.2; color: #1e293b; }
+        .print-school-info h2 { font-size: 11px; font-weight: 700; margin: 0; color: #475569; }
+        .print-school-info p { font-size: 7px; margin: 2px 0; font-weight: 600; color: #64748b; }
+        .print-term-badge { display: inline-block; background: #1e293b; color: white; padding: 2px 10px; border-radius: 20px; font-size: 8px; font-weight: 900; margin-top: 3px; text-transform: uppercase; letter-spacing: 1px; }
+        .student-photo-frame { width: 55px; height: 65px; border: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .student-photo-frame img { width: 100%; height: 100%; object-fit: cover; }
         .photo-placeholder { font-size: 8px; font-weight: 900; color: #cbd5e1; }
-        .print-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; border: 1px solid #0f172a; padding: 8px; background: #f8fafc; }
-        .stat-item { font-size: 10px; display: flex; align-items: center; }
-        .stat-item label { font-weight: 800; color: #475569; width: 85px; font-size: 9px; }
+        .print-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 8px; border: 1px solid #0f172a; padding: 5px; background: #f8fafc; }
+        .stat-item { font-size: 8px; display: flex; align-items: center; }
+        .stat-item label { font-weight: 800; color: #475569; width: 65px; font-size: 7px; }
         .stat-item span { font-weight: 700; color: #0f172a; flex: 1; border-bottom: 1px dashed #cbd5e1; padding-bottom: 1px; }
         .stat-item .highlight { color: #2563eb; font-weight: 900; }
-        .academic-performance-title { background: #f1f5f9; color: #0f172a; text-align: center; font-weight: 900; padding: 4px; font-size: 11px; letter-spacing: 3px; margin-bottom: 8px; border: 1px solid #0f172a; text-transform: uppercase; }
-        .print-main-content { display: flex; gap: 15px; margin-bottom: 15px; }
-        .print-table-wrapper { flex: 2.8; }
-        .print-table { width: 100%; border-collapse: collapse; font-size: 9px; }
-        .print-table th { background: #1e293b; color: white; padding: 5px; border: 1px solid #0f172a; font-weight: 900; text-transform: uppercase; font-size: 8px; }
-        .print-table td { padding: 4px; border: 1px solid #0f172a; text-align: center; font-weight: 700; }
-        .print-table td.subject-name { text-align: left; font-weight: 900; padding-left: 8px; background: #f8fafc; }
-        .print-side-panels { flex: 1; display: flex; flex-direction: column; gap: 10px; }
-        .mini-table { width: 100%; border-collapse: collapse; font-size: 8px; }
-        .mini-table th { background: #e2e8f0; border: 1px solid #0f172a; padding: 3px; font-weight: 900; }
-        .mini-table td { border: 1px solid #0f172a; padding: 3px; text-align: center; font-weight: 700; }
-        .mini-table td:first-child { text-align: left; font-weight: 800; background: #f8fafc; font-size: 7px; }
-        .section-title { font-size: 9px; font-weight: 900; margin-bottom: 3px; padding: 2px 5px; background: #0f172a; color: white; text-transform: uppercase; }
-        .summary-box { border: 1px solid #0f172a; padding: 5px; text-align: center; background: #f8fafc; margin-bottom: 4px; }
-        .summary-box label { font-size: 7px; font-weight: 900; color: #475569; display: block; text-transform: uppercase; }
-        .summary-box .value { font-size: 12px; font-weight: 900; }
+        .academic-performance-title { background: #f1f5f9; color: #0f172a; text-align: center; font-weight: 900; padding: 3px; font-size: 9px; letter-spacing: 2px; margin-bottom: 6px; border: 1px solid #0f172a; text-transform: uppercase; }
+        .print-main-content { display: flex; gap: 8px; margin-bottom: 8px; flex: 1; min-height: 0; }
+        .print-table-wrapper { flex: 2.8; min-width: 0; overflow: hidden; }
+        .print-table { width: 100%; border-collapse: collapse; font-size: 7px; }
+        .print-table th { background: #1e293b; color: white; padding: 3px 2px; border: 1px solid #0f172a; font-weight: 900; text-transform: uppercase; font-size: 6px; }
+        .print-table td { padding: 2px 1px; border: 1px solid #0f172a; text-align: center; font-weight: 700; }
+        .print-table td.subject-name { text-align: left; font-weight: 900; padding-left: 4px; background: #f8fafc; }
+        .print-side-panels { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+        .mini-table { width: 100%; border-collapse: collapse; font-size: 6px; }
+        .mini-table th { background: #e2e8f0; border: 1px solid #0f172a; padding: 2px 1px; font-weight: 900; }
+        .mini-table td { border: 1px solid #0f172a; padding: 2px 1px; text-align: center; font-weight: 700; }
+        .mini-table td:first-child { text-align: left; font-weight: 800; background: #f8fafc; font-size: 5px; }
+        .section-title { font-size: 7px; font-weight: 900; margin-bottom: 2px; padding: 1px 3px; background: #0f172a; color: white; text-transform: uppercase; }
+        .summary-box { border: 1px solid #0f172a; padding: 3px; text-align: center; background: #f8fafc; margin-bottom: 2px; }
+        .summary-box label { font-size: 6px; font-weight: 900; color: #475569; display: block; text-transform: uppercase; }
+        .summary-box .value { font-size: 10px; font-weight: 900; }
         .status-pass { color: #059669; }
-        .commentary-section { border: 1px solid #0f172a; padding: 8px; margin-bottom: 15px; background: #fdfdfd; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .comment-box { margin-bottom: 8px; }
+        .commentary-section { border: 1px solid #0f172a; padding: 5px; margin-bottom: 6px; background: #fdfdfd; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .comment-box { margin-bottom: 4px; }
         .comment-box:last-child { margin-bottom: 0; }
-        .comment-box label { font-size: 9px; font-weight: 900; text-decoration: underline; color: #1e293b; }
-        .comment-box p { font-size: 9px; margin: 2px 0; font-style: italic; color: #334155; line-height: 1.3; min-height: 40px; }
-        .print-footer { margin-top: auto; border-top: 1px solid #0f172a; padding-top: 10px; }
-        .footer-cols { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .footer-sign { text-align: center; width: 180px; }
-        .sign-line { border-bottom: 1px dashed #0f172a; margin-bottom: 3px; height: 25px; }
-        .footer-sign p { font-size: 8px; font-weight: 900; margin: 0; text-transform: uppercase; }
-        .stamp-box { width: 140px; height: 70px; border: 2px dashed #cbd5e1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 7px; font-weight: 900; color: #cbd5e1; text-transform: uppercase; transform: rotate(-10deg); }
+        .comment-box label { font-size: 7px; font-weight: 900; text-decoration: underline; color: #1e293b; }
+        .comment-box p { font-size: 7px; margin: 1px 0; font-style: italic; color: #334155; line-height: 1.2; min-height: 20px; }
+        .print-footer { margin-top: auto; border-top: 1px solid #0f172a; padding-top: 5px; }
+        .footer-cols { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .footer-sign { text-align: center; width: 140px; }
+        .sign-line { border-bottom: 1px dashed #0f172a; margin-bottom: 2px; height: 18px; }
+        .footer-sign p { font-size: 6px; font-weight: 900; margin: 0; text-transform: uppercase; }
+        .stamp-box { width: 100px; height: 50px; border: 2px dashed #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 6px; font-weight: 900; color: #cbd5e1; text-transform: uppercase; transform: rotate(-10deg); }
         .footer-dates { text-align: right; }
-        .footer-dates p { font-size: 8px; margin: 3px 0; font-weight: 600; color: #475569; }
+        .footer-dates p { font-size: 7px; margin: 2px 0; font-weight: 600; color: #475569; }
         .footer-dates strong { color: #0f172a; font-weight: 800; }
-        .print-final-branding { text-align: center; font-size: 9px; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; border-top: 1px solid #e2e8f0; padding-top: 5px; }
-        .print-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 100px; font-weight: 900; color: rgba(15, 23, 42, 0.03); white-space: nowrap; pointer-events: none; z-index: -1; }
+        .print-final-branding { text-align: center; font-size: 7px; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; border-top: 1px solid #e2e8f0; padding-top: 3px; }
+        .print-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 80px; font-weight: 900; color: rgba(15, 23, 42, 0.03); white-space: nowrap; pointer-events: none; z-index: -1; }
       `}</style>
       <div className="print-branding-top">Academic Session: {selectedPub?.session}</div>
       <div className="print-header">
@@ -517,16 +518,16 @@ const StudentResults = () => {
            </div>
         </div>
       </div>
-      <div className="commentary-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+      <div className="commentary-section">
         <div className="comment-box">
           <label>TEACHER'S COMMENT:</label>
-          <p style={{ minHeight: '40px' }}>{studentMarks?.raw?.teacherComment || 'An impressive performance. Keep up the good work.'}</p>
+          <p style={{ minHeight: '20px' }}>{studentMarks?.raw?.teacherComment || 'An impressive performance. Keep up the good work.'}</p>
           <div style={{ marginTop: '10px', borderBottom: '1px solid #000', width: '100px' }}></div>
           <span style={{ fontSize: '7px', fontWeight: 'bold' }}>CLASS TEACHER</span>
         </div>
         <div className="comment-box">
           <label>PRINCIPAL'S COMMENT:</label>
-          <p style={{ minHeight: '40px' }}>{studentMarks?.raw?.principalComment || 'You came out with flying colours. Congratulations!'}</p>
+          <p style={{ minHeight: '20px' }}>{studentMarks?.raw?.principalComment || 'You came out with flying colours. Congratulations!'}</p>
           <div style={{ marginTop: '10px', borderBottom: '1px solid #000', width: '100px' }}></div>
           <span style={{ fontSize: '7px', fontWeight: 'bold' }}>PRINCIPAL</span>
         </div>
@@ -553,7 +554,7 @@ const StudentResults = () => {
                <p>Next Term Begins: <strong>{schoolDates.nextTermBegins}</strong></p>
             </div>
          </div>
-          <div className="print-final-branding">Report Card Sheet - Character and Learning</div>
+          <div className="print-final-branding">Powered by G Logic Tech Ent</div>
       </div>
       <div className="print-watermark">{schoolName || 'BONUS DOMINUS'}</div>
     </div>
