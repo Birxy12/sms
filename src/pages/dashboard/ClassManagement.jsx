@@ -1,17 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
-import { collection, query, getDocs, where } from 'firebase/firestore';
-import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info } from 'lucide-react';
+import { collection, query, getDocs, where, doc, setDoc } from 'firebase/firestore';
+import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info, UserCheck } from 'lucide-react';
 
 const ClassManagement = () => {
   const [classStats, setClassStats] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [staff, setStaff] = useState([]);
+  const [savingTeacher, setSavingTeacher] = useState('');
 
   const classes = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'];
 
   const fetchClassStats = async () => {
     setLoading(true);
-    try {
+      const staffSnap = await getDocs(collection(db, 'staff'));
+      const staffList = staffSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setStaff(staffList);
+
+      const classesSnap = await getDocs(collection(db, 'classes'));
+      const classesData = {};
+      classesSnap.docs.forEach(d => {
+        classesData[d.id] = d.data();
+      });
+
       const stats = await Promise.all(classes.map(async (className) => {
         // Count students in this class
         const studentsQuery = query(collection(db, 'students'), where('className', '==', className));
@@ -25,6 +36,7 @@ const ClassManagement = () => {
           name: className,
           studentCount: studentsSnap.size,
           subjectCount: subjectsSnap.size,
+          formTeacherId: classesData[className]?.formTeacherId || '',
           id: className
         };
       }));
@@ -33,6 +45,28 @@ const ClassManagement = () => {
       console.error('Error fetching class stats:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAssignTeacher = async (className, teacherId) => {
+    setSavingTeacher(className);
+    try {
+      const teacher = staff.find(s => s.id === teacherId);
+      const formTeacherName = teacher ? teacher.name : '';
+      await setDoc(doc(db, 'classes', className), {
+        formTeacherId: teacherId,
+        formTeacherName: formTeacherName,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      
+      setClassStats(prev => prev.map(c => 
+        c.id === className ? { ...c, formTeacherId: teacherId } : c
+      ));
+    } catch (e) {
+      console.error("Error assigning teacher", e);
+      alert("Failed to assign form teacher.");
+    } finally {
+      setSavingTeacher('');
     }
   };
 
@@ -81,7 +115,25 @@ const ClassManagement = () => {
               </div>
             </div>
 
-            <button className="mt-8 w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
+            <div className="mt-6 pt-4 border-t border-slate-100 text-left">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1 mb-2">
+                <UserCheck size={14} /> Form Teacher
+              </label>
+              <select
+                value={cls.formTeacherId}
+                onChange={(e) => handleAssignTeacher(cls.id, e.target.value)}
+                disabled={savingTeacher === cls.id}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"
+              >
+                <option value="">-- Select Teacher --</option>
+                {staff.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              {savingTeacher === cls.id && <p className="text-xs text-indigo-500 mt-1 font-bold animate-pulse">Saving...</p>}
+            </div>
+
+            <button className="mt-6 w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
               Manage Details <ArrowUpRight size={16} />
             </button>
           </div>

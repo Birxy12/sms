@@ -24,6 +24,7 @@ const [schoolDates, setSchoolDates] = useState({
 termEnds: '12/12/2025',
 nextTermBegins: '12/01/2026'
 });
+const [formTeacher, setFormTeacher] = useState('CLASS TEACHER');
 
 const location = useLocation();
 const searchParams = new URLSearchParams(location.search);
@@ -243,7 +244,7 @@ divisor = 9; // Fallback for other SS2/3 departments if any
 setStudentMarks({
 subjects: displaySubjects.sort((a, b) => a.subject.localeCompare(b.subject)),
 overallTotal: totalScore,
-average: foundMarksDoc?.average || (totalScore / divisor).toFixed(1),
+average: (totalScore / divisor).toFixed(1),
 raw: foundMarksDoc
 });
 
@@ -274,6 +275,22 @@ console.error("Error fetching school dates:", error);
 };
 fetchSchoolDates();
 }, []);
+
+useEffect(() => {
+const fetchFormTeacher = async () => {
+if (studentClass) {
+try {
+const docSnap = await getDoc(doc(db, 'classes', studentClass));
+if (docSnap.exists() && docSnap.data().formTeacherName) {
+setFormTeacher(docSnap.data().formTeacherName.toUpperCase());
+}
+} catch (e) {
+console.error("Error fetching form teacher", e);
+}
+}
+};
+fetchFormTeacher();
+}, [studentClass]);
 
 
 const handlePrint = () => {
@@ -528,13 +545,13 @@ sub.total >= 40 ? 'Average' : 'Below Average'}
 <label>TEACHER'S COMMENT:</label>
 <p style={{ minHeight: '40px' }}>{studentMarks?.raw?.teacherComment || 'An impressive performance. Keep up the good work.'}</p>
 <div style={{ marginTop: '10px', borderBottom: '1px solid #000', width: '100px' }}></div>
-<span style={{ fontSize: '7px', fontWeight: 'bold' }}>CLASS TEACHER</span>
+<span style={{ fontSize: '7px', fontWeight: 'bold' }}>{formTeacher}</span>
 </div>
 <div className="comment-box">
 <label>PRINCIPAL'S COMMENT:</label>
 <p style={{ minHeight: '40px' }}>{studentMarks?.raw?.principalComment || 'You came out with flying colours. Congratulations!'}</p>
 <div style={{ marginTop: '10px', borderBottom: '1px solid #000', width: '100px' }}></div>
-<span style={{ fontSize: '7px', fontWeight: 'bold' }}>PRINCIPAL</span>
+<span style={{ fontSize: '7px', fontWeight: 'bold' }}>PRINCIPAL (MRS ETUZU ANITA)</span>
 </div>
 </div>
 <div className="print-footer">
@@ -543,6 +560,7 @@ sub.total >= 40 ? 'Average' : 'Below Average'}
 <div className="sign-line">
 {principalSignature && <img src={principalSignature} alt="Principal Signature" style={{ height: '100%', objectFit: 'contain' }} />}
 </div>
+<p>MRS ETUZU ANITA</p>
 <p>PRINCIPAL'S SIGNATURE</p>
 </div>
 <div className="footer-stamp">
