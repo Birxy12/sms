@@ -73,7 +73,9 @@ const LeaderboardPage = () => {
           // Correct divisor based on school policy
           let divisor = 15; // JSS
           const cls = (className || '').toUpperCase();
-          if (cls.includes('SS1')) {
+          if (cls.includes('JSS')) {
+            divisor = 15;
+          } else if (cls.includes('SS1')) {
             divisor = 16;
           } else if ((cls.includes('SS2') || cls.includes('SS3')) && (cls.includes('ART') || cls.includes('SCIENCE'))) {
             divisor = 9;

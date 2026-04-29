@@ -490,12 +490,14 @@ const BulkUpload = ({ onComplete }) => {
             };
           });
 
-          // Calculate overall average based on policy (JSS: 16, SS: 9)
+          // Calculate overall average based on policy (JSS: 15, SS1: 16, SS2/3: 9)
           const clsUpper = selectedClass.toUpperCase();
-          let divisor = 16;
+          let divisor = 15;
           if (clsUpper.includes('JSS')) {
+            divisor = 15;
+          } else if (clsUpper.includes('SS1')) {
             divisor = 16;
-          } else if (clsUpper.includes('SS')) {
+          } else if (clsUpper.includes('SS2') || clsUpper.includes('SS3')) {
             divisor = 9;
           }
 

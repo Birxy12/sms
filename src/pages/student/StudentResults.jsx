@@ -229,16 +229,18 @@ const displaySubjects = processedMarks.filter(s => s.total > 0);
 
 // Calculate average based on school policy: SS2/3 Art/Science (9 subjects), JSS (15 subjects), SS1 (16 subjects)
 const cls = (currentStudent?.className || '').toUpperCase();
-let divisor = 15; // JSS1, JSS2, JSS3
-if (cls.includes('SS1')) {
-divisor = 16;
+let divisor = 15; // Default
+if (cls.includes('JSS')) {
+  divisor = 15;
+} else if (cls.includes('SS1')) {
+  divisor = 16;
 } else if (
   (cls.includes('SS2') || cls.includes('SS3')) && 
   (cls.includes('ART') || cls.includes('SCIENCE'))
 ) {
-divisor = 9;
+  divisor = 9;
 } else if (cls.includes('SS2') || cls.includes('SS3')) {
-divisor = 9; // Fallback for other SS2/3 departments if any
+  divisor = 9; // Fallback for other SS2/3 departments if any
 }
 
 setStudentMarks({
