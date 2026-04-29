@@ -44,7 +44,7 @@ const Sidebar = ({ sidebarOpen, onClose }) => {
     { name: 'Manage Classes',     path: '/admin/classes',  icon: Layers,          roles: ['admin', 'principal'] },
     { name: 'Manage Staff',       path: '/staff',          icon: Users,           roles: ['admin'] },
     { name: 'School Mailing',     path: '/messages',       icon: Mail,            roles: ['admin', 'teacher', 'principal', 'bursar'] },
-    { name: 'Announcements',      path: '/admin/posts',    icon: FileText,        roles: ['admin', 'principal'] },
+    { name: 'Content Management', path: '/admin/posts',    icon: FileText,        roles: ['admin', 'principal'] },
     { name: 'Manage Courses',     path: '/courses',        icon: BookOpen,        roles: ['admin', 'principal'] },
     { name: 'School Branding',    path: '/settings',       icon: Settings,        roles: ['admin'] },
     { name: 'My Profile',         path: '/profile',        icon: UserCircle,      roles: ['admin', 'teacher', 'principal', 'bursar'] },
