@@ -217,6 +217,23 @@ const CourseManagement = () => {
   const handleAddSubject = async (e) => {
     e.preventDefault();
     setSaving(true);
+
+    // Check for duplicates
+    const checkName = currentSubject.name.trim().toUpperCase();
+    const configSubjects = getSubjectsForClass(currentSubject.class).map(s => s.toUpperCase());
+    const existingFirestore = firestoreSubjects.find(
+      s => s.class === currentSubject.class && s.name.toUpperCase() === checkName
+    );
+
+    const isDuplicate = (configSubjects.includes(checkName) && !isEditing) || 
+                        (existingFirestore && existingFirestore.id !== currentSubject.id);
+
+    if (isDuplicate) {
+      setStatus({ type: 'error', message: 'A subject with this name already exists for the selected class.' });
+      setSaving(false);
+      return;
+    }
+
     let teacherName = '';
     if (currentSubject.teacherId) {
       const t = staff.find(s => s.id === currentSubject.teacherId);

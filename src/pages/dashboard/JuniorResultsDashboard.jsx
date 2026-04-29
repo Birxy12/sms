@@ -34,7 +34,7 @@ const JuniorResultsDashboard = () => {
 
     const calculateAverage = (marks) => {
         const total = marks.reduce((acc, mark) => acc + mark, 0);
-        return (total / 15) * 100;
+        return total / 15;
     };
 
     const performanceStatus = (average) => {

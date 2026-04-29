@@ -71,10 +71,14 @@ const LeaderboardPage = () => {
           });
 
           // Correct divisor based on school policy
-          if (cls.includes('JSS')) {
+          let divisor = 15; // JSS
+          const cls = (className || '').toUpperCase();
+          if (cls.includes('SS1')) {
             divisor = 16;
-          } else if (cls.includes('SS')) {
+          } else if ((cls.includes('SS2') || cls.includes('SS3')) && (cls.includes('ART') || cls.includes('SCIENCE'))) {
             divisor = 9;
+          } else if (cls.includes('SS2') || cls.includes('SS3')) {
+            divisor = 9; // Fallback
           }
 
           if (!classRankings[className]) {

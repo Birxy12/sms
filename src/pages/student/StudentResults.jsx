@@ -226,13 +226,18 @@ grade: grade || (total > 0 ? 'F9' : '-')
 // Only show subjects that have been offered (total > 0)
 const displaySubjects = processedMarks.filter(s => s.total > 0);
 
-// Calculate average based on school policy: SS2/3 (9 subjects), SS1 & JSS (16 subjects)
+// Calculate average based on school policy: SS2/3 Art/Science (9 subjects), JSS (15 subjects), SS1 (16 subjects)
 const cls = (currentStudent?.className || '').toUpperCase();
-let divisor = 15;
+let divisor = 15; // JSS1, JSS2, JSS3
 if (cls.includes('SS1')) {
 divisor = 16;
-} else if (cls.includes('SS2') || cls.includes('SS3')) {
+} else if (
+  (cls.includes('SS2') || cls.includes('SS3')) && 
+  (cls.includes('ART') || cls.includes('SCIENCE'))
+) {
 divisor = 9;
+} else if (cls.includes('SS2') || cls.includes('SS3')) {
+divisor = 9; // Fallback for other SS2/3 departments if any
 }
 
 setStudentMarks({
