@@ -13,6 +13,7 @@ const ClassManagement = () => {
 
   const fetchClassStats = async () => {
     setLoading(true);
+    try {
       const staffSnap = await getDocs(collection(db, 'staff'));
       const staffList = staffSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       setStaff(staffList);
