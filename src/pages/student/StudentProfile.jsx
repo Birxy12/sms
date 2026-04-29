@@ -10,14 +10,15 @@ const StudentProfile = () => {
   const { primaryColor } = useTheme();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(currentStudent?.name || '');
+  const [phone, setPhone] = useState(currentStudent?.phone || '');
+  const [dob, setDob] = useState(currentStudent?.dob || '');
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
 
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
-    const result = await updateProfile({ name });
+    const result = await updateProfile({ name, phone, dob });
     if (result.success) {
       setStatus({ type: 'success', message: 'Profile updated!' });
       setIsEditing(false);
@@ -26,33 +27,6 @@ const StudentProfile = () => {
       setStatus({ type: 'error', message: result.message });
     }
     setSaving(false);
-  };
-
-  const handlePassportUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      setStatus({ type: 'error', message: 'Image size must be less than 2MB' });
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const url = await uploadFileToSupabase(file, 'images', 'passports/');
-      const result = await updateProfile({ photo: url });
-      if (result.success) {
-        setStatus({ type: 'success', message: 'Passport updated successfully!' });
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (error) {
-      console.error("Upload error:", error);
-      setStatus({ type: 'error', message: 'Failed to upload passport.' });
-    } finally {
-      setUploading(false);
-      setTimeout(() => setStatus({ type: '', message: '' }), 3000);
-    }
   };
 
   const infoFields = [
@@ -81,7 +55,12 @@ const StudentProfile = () => {
         ) : (
           <div className="flex gap-2">
             <button 
-              onClick={() => { setIsEditing(false); setName(currentStudent?.name || ''); }}
+              onClick={() => { 
+                setIsEditing(false); 
+                setName(currentStudent?.name || ''); 
+                setPhone(currentStudent?.phone || ''); 
+                setDob(currentStudent?.dob || ''); 
+              }}
               className="px-5 py-2.5 rounded-2xl font-black text-slate-500 hover:bg-slate-100 transition-all"
             >
               Cancel
@@ -131,14 +110,34 @@ const StudentProfile = () => {
 
             <div className="relative z-10 px-6 pb-8 text-center">
               {isEditing ? (
-                <input 
-                  type="text" 
-                  value={name} 
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full text-center px-4 py-2.5 rounded-xl border-2 border-indigo-500 bg-white font-black text-slate-800 outline-none mb-1"
-                />
+                <div className="space-y-3 mb-4">
+                  <input 
+                    type="text" 
+                    value={name} 
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Full Name"
+                    className="w-full text-center px-4 py-2.5 rounded-xl border-2 border-indigo-500 bg-white font-black text-slate-800 outline-none"
+                  />
+                  <input 
+                    type="text" 
+                    value={phone} 
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Phone Number"
+                    className="w-full text-center px-4 py-2.5 rounded-xl border-2 border-indigo-500 bg-white font-black text-slate-800 outline-none"
+                  />
+                  <input 
+                    type="date" 
+                    value={dob} 
+                    onChange={(e) => setDob(e.target.value)}
+                    className="w-full text-center px-4 py-2.5 rounded-xl border-2 border-indigo-500 bg-white font-black text-slate-800 outline-none"
+                  />
+                </div>
               ) : (
-                <h3 className="text-lg font-black text-slate-900 mb-1 leading-tight">{currentStudent?.name}</h3>
+                <>
+                  <h3 className="text-lg font-black text-slate-900 mb-1 leading-tight">{currentStudent?.name}</h3>
+                  <p className="text-sm font-bold text-slate-600 mb-1">{currentStudent?.phone || 'No Phone Number'}</p>
+                  <p className="text-xs font-bold text-slate-500 mb-3">{currentStudent?.dob || 'No DOB'}</p>
+                </>
               )}
               <p className="text-xs font-bold text-indigo-500 tracking-widest uppercase mb-5 px-2 py-1 bg-indigo-50 rounded-full inline-block">{currentStudent?.className}</p>
               
