@@ -5,6 +5,7 @@ import { db } from '../../lib/firebase';
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import { LayoutDashboard, Award, CreditCard, Calendar, Bell, ChevronRight, Inbox as InboxIcon, Trophy, Wallet, BookOpen, Library } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import PinSetupModal from '../../components/student/PinSetupModal';
 
 const StudentDashboard = () => {
   const { currentStudent } = useStudentAuth();
@@ -136,6 +137,7 @@ const StudentDashboard = () => {
           </div>
         </div>
       </div>
+      <PinSetupModal />
     </div>
   );
 };

@@ -12,6 +12,8 @@ const StudentProfile = () => {
   const [name, setName] = useState(currentStudent?.name || '');
   const [phone, setPhone] = useState(currentStudent?.phone || '');
   const [dob, setDob] = useState(currentStudent?.dob || '');
+  const [email, setEmail] = useState(currentStudent?.email || '');
+  const [gender, setGender] = useState(currentStudent?.gender || '');
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [avatarFile, setAvatarFile] = useState(null);
@@ -33,6 +35,8 @@ const StudentProfile = () => {
   const hasChanges = name !== (currentStudent?.name || '') ||
                      phone !== (currentStudent?.phone || '') ||
                      dob !== (currentStudent?.dob || '') ||
+                     email !== (currentStudent?.email || '') ||
+                     gender !== (currentStudent?.gender || '') ||
                      avatarFile !== null;
 
   const isFormValid = name.trim().length >= 2 &&
@@ -104,6 +108,8 @@ const StudentProfile = () => {
       case 'name': setName(value); break;
       case 'phone': setPhone(value); break;
       case 'dob': setDob(value); break;
+      case 'email': setEmail(value); break;
+      case 'gender': setGender(value); break;
     }
     if (touched[field]) {
       setErrors(prev => ({ ...prev, [field]: validateField(field, value) }));
@@ -170,7 +176,7 @@ const StudentProfile = () => {
       setUploadingAvatar(false);
     }
 
-    const result = await updateProfile({ name, phone, dob, photo: photoUrl });
+    const result = await updateProfile({ name, phone, dob, email, gender, photo: photoUrl });
     if (result.success) {
       setStatus({ type: 'success', message: 'Profile updated successfully!' });
       setIsEditing(false);
@@ -188,6 +194,8 @@ const StudentProfile = () => {
     setName(currentStudent?.name || '');
     setPhone(currentStudent?.phone || '');
     setDob(currentStudent?.dob || '');
+    setEmail(currentStudent?.email || '');
+    setGender(currentStudent?.gender || '');
     setAvatarFile(null);
     setAvatarPreview(null);
     setErrors({});
@@ -352,6 +360,26 @@ const StudentProfile = () => {
                     {errors.dob && touched.dob && (
                       <p className="text-xs text-rose-500 font-bold mt-1">{errors.dob}</p>
                     )}
+                  </div>
+                  <div>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => handleChange('email', e.target.value)}
+                      placeholder="Email Address"
+                      className="w-full text-center px-4 py-2.5 rounded-xl border-2 border-indigo-500 bg-white font-black text-slate-800 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <select
+                      value={gender}
+                      onChange={(e) => handleChange('gender', e.target.value)}
+                      className="w-full text-center px-4 py-2.5 rounded-xl border-2 border-indigo-500 bg-white font-black text-slate-800 outline-none appearance-none"
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
                   </div>
                 </form>
               ) : (

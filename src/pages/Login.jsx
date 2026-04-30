@@ -24,7 +24,12 @@ const GoogleIcon = () => (
 const Login = () => {
   const [loginType, setLoginType] = useState('student');
   const [staffLoginMode, setStaffLoginMode] = useState('email'); // 'email' | 'phone'
-  const [formData, setFormData] = useState({ regNo: '', className: '', email: '', password: '', phone: '' });
+  const [loginStep, setLoginStep] = useState('id'); // 'id', 'pin', 'forgot_pin'
+  const [formData, setFormData] = useState({ 
+    regNo: '', className: '', email: '', password: '', phone: '',
+    pin: '', securityAnswer: '', newPin: '' 
+  });
+  const [securityQuestion, setSecurityQuestion] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -55,8 +60,16 @@ const Login = () => {
     try {
       if (loginType === 'student') {
         const result = await studentAuth.login(formData.regNo, formData.className);
-        if (result.success) navigate('/students');
-        else setError(result.message);
+        if (result.success) {
+          if (result.requirePin) {
+            setSecurityQuestion(result.securityQuestion);
+            setLoginStep('pin');
+          } else {
+            navigate('/students');
+          }
+        } else {
+          setError(result.message);
+        }
       } else if (staffLoginMode === 'phone') {
         const result = await adminAuth.loginWithPhone(formData.phone, formData.password);
         if (result.success) navigateByRole(result.role);
@@ -75,6 +88,40 @@ const Login = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePinSubmit = async (e) => {
+    e.preventDefault();
+    if (formData.pin.length !== 6) {
+      setError('Please enter a 6-digit PIN.');
+      return;
+    }
+    setLoading(true);
+    const result = await studentAuth.verifyPin(formData.pin);
+    if (result.success) {
+      navigate('/students');
+    } else {
+      setError(result.message);
+      setLoading(false);
+    }
+  };
+
+  const handlePinReset = async (e) => {
+    e.preventDefault();
+    if (formData.newPin.length !== 6) {
+      setError('New PIN must be 6 digits.');
+      return;
+    }
+    setLoading(true);
+    const result = await studentAuth.resetPin(formData.regNo, formData.className, formData.securityAnswer, formData.newPin);
+    if (result.success) {
+      setError('PIN reset successfully. Please login with your new PIN.');
+      setLoginStep('pin');
+      setFormData({ ...formData, pin: '', securityAnswer: '', newPin: '' });
+    } else {
+      setError(result.message);
+    }
+    setLoading(false);
   };
 
   const handleGoogleLogin = async () => {
@@ -220,40 +267,136 @@ const Login = () => {
         <form onSubmit={handleLogin} className="auth-form mt-6">
           <AnimatePresence mode="wait">
             {loginType === 'student' ? (
-              <motion.div key="student" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-5">
-                {/* Reg No */}
-                <div className="input-field-container">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="field-label">Registration Number</label>
-                    <div className="relative group">
-                      <HelpCircle size={14} className="text-slate-300 cursor-help" onMouseEnter={() => setHoveredField('regNo')} onMouseLeave={() => setHoveredField(null)} />
-                      {hoveredField === 'regNo' && <div className="field-tooltip">{getTooltipContent('regNo')}</div>}
+              <motion.div key={loginStep} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-5">
+                {loginStep === 'id' ? (
+                  <>
+                    {/* Reg No */}
+                    <div className="input-field-container">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="field-label">Registration Number</label>
+                        <div className="relative group">
+                          <HelpCircle size={14} className="text-slate-300 cursor-help" onMouseEnter={() => setHoveredField('regNo')} onMouseLeave={() => setHoveredField(null)} />
+                          {hoveredField === 'regNo' && <div className="field-tooltip">{getTooltipContent('regNo')}</div>}
+                        </div>
+                      </div>
+                      <div className="input-group-advanced">
+                        <User size={18} className="input-icon" />
+                        <input type="text" name="regNo" placeholder="e.g. BDS/24/001" value={formData.regNo} onChange={handleInputChange} required className="auth-input-advanced" />
+                      </div>
                     </div>
-                  </div>
-                  <div className="input-group-advanced">
-                    <User size={18} className="input-icon" />
-                    <input type="text" name="regNo" placeholder="e.g. BDS/24/001" value={formData.regNo} onChange={handleInputChange} required className="auth-input-advanced" />
-                  </div>
-                </div>
-                {/* Class */}
-                <div className="input-field-container">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="field-label">Academic Class</label>
-                    <div className="relative group">
-                      <HelpCircle size={14} className="text-slate-300 cursor-help" onMouseEnter={() => setHoveredField('className')} onMouseLeave={() => setHoveredField(null)} />
-                      {hoveredField === 'className' && <div className="field-tooltip">{getTooltipContent('className')}</div>}
+                    {/* Class */}
+                    <div className="input-field-container">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="field-label">Academic Class</label>
+                        <div className="relative group">
+                          <HelpCircle size={14} className="text-slate-300 cursor-help" onMouseEnter={() => setHoveredField('className')} onMouseLeave={() => setHoveredField(null)} />
+                          {hoveredField === 'className' && <div className="field-tooltip">{getTooltipContent('className')}</div>}
+                        </div>
+                      </div>
+                      <div className="input-group-advanced">
+                        <SchoolIcon size={18} className="input-icon" />
+                        <select name="className" value={formData.className} onChange={handleInputChange} required className="auth-input-advanced pr-10">
+                          <option value="">Choose Class</option>
+                          {['JSS1','JSS2','JSS3','SS1','SS2 ART','SS2 SCIENCE','SS3 ART','SS3 SCIENCE'].map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                  </div>
-                  <div className="input-group-advanced">
-                    <SchoolIcon size={18} className="input-icon" />
-                    <select name="className" value={formData.className} onChange={handleInputChange} required className="auth-input-advanced pr-10">
-                      <option value="">Choose Class</option>
-                      {['JSS1','JSS2','JSS3','SS1','SS2 ART','SS2 SCIENCE','SS3 ART','SS3 SCIENCE'].map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                    <button type="submit" onClick={handleLogin} disabled={loading} className={`auth-btn-advanced ${accentColor}`}>
+                      {loading ? <Loader2 size={22} className="animate-spin" /> : <><ArrowRight size={20} /> Continue</>}
+                    </button>
+                  </>
+                ) : loginStep === 'pin' ? (
+                  <>
+                    <div className="text-center mb-4">
+                      <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Verify PIN</p>
+                      <p className="text-xs text-slate-400">Enter your 6-digit access code</p>
+                    </div>
+                    <div className="input-group-advanced">
+                      <Lock size={18} className="input-icon" />
+                      <input 
+                        type="password" 
+                        name="pin" 
+                        maxLength={6}
+                        placeholder="••••••" 
+                        value={formData.pin} 
+                        onChange={handleInputChange} 
+                        required 
+                        className="auth-input-advanced text-center tracking-[1em] text-xl" 
+                      />
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      <button type="submit" onClick={handlePinSubmit} disabled={loading} className={`auth-btn-advanced ${accentColor}`}>
+                        {loading ? <Loader2 size={22} className="animate-spin" /> : <><Lock size={20} /> Login</>}
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => { setLoginStep('forgot_pin'); setError(''); }}
+                        className="text-xs font-black text-indigo-600 hover:text-indigo-700 transition-colors uppercase tracking-widest text-center py-2"
+                      >
+                        Forgot your PIN?
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => { setLoginStep('id'); setError(''); }}
+                        className="text-xs font-bold text-slate-400 hover:text-slate-600 text-center"
+                      >
+                        Back to Identification
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-center mb-4">
+                      <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Reset PIN</p>
+                      <p className="text-xs text-slate-400">Answer your security question</p>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100">
+                        <p className="text-[10px] font-black text-indigo-400 uppercase mb-1">Question</p>
+                        <p className="text-sm font-bold text-slate-700">{securityQuestion}</p>
+                      </div>
+                      <div className="input-group-advanced">
+                        <HelpCircle size={18} className="input-icon" />
+                        <input 
+                          type="text" 
+                          name="securityAnswer" 
+                          placeholder="Your Answer" 
+                          value={formData.securityAnswer} 
+                          onChange={handleInputChange} 
+                          required 
+                          className="auth-input-advanced" 
+                        />
+                      </div>
+                      <div className="input-group-advanced">
+                        <Lock size={18} className="input-icon" />
+                        <input 
+                          type="password" 
+                          name="newPin" 
+                          maxLength={6}
+                          placeholder="New 6-Digit PIN" 
+                          value={formData.newPin} 
+                          onChange={handleInputChange} 
+                          required 
+                          className="auth-input-advanced" 
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-3 pt-2">
+                      <button type="submit" onClick={handlePinReset} disabled={loading} className={`auth-btn-advanced ${accentColor}`}>
+                        {loading ? <Loader2 size={22} className="animate-spin" /> : <><ArrowRight size={20} /> Reset & Login</>}
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => { setLoginStep('pin'); setError(''); }}
+                        className="text-xs font-bold text-slate-400 hover:text-slate-600 text-center"
+                      >
+                        Cancel Reset
+                      </button>
+                    </div>
+                  </>
+                )}
               </motion.div>
             ) : staffLoginMode === 'phone' ? (
               <motion.div key="staff-phone" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-5">
@@ -326,9 +469,6 @@ const Login = () => {
             </motion.div>
           )}
 
-          <button type="submit" disabled={loading} className={`auth-btn-advanced ${accentColor}`}>
-            {loading ? <Loader2 size={22} className="animate-spin" /> : <><ArrowRight size={20} /> Access Portal</>}
-          </button>
         </form>
 
         <div className="auth-footer-advanced">
