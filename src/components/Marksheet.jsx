@@ -81,12 +81,19 @@ const Marksheet = ({ className: propClassName }) => {
 
       const subjectList = [];
       const row1 = rawData[0] || [];
+      const seenSubjects = new Set();
+
       for (let i = 2; i < row1.length; i++) {
         const cellValue = row1[i] || '';
         if (cellValue === 'TOTAL') break;
-        // In this sheet, subjects names are every 6 columns, starting at index 3 (we use i-1 to point to CAT)
-        if (cellValue && isNaN(cellValue) && !['NAME', 'REG NO.', 'ROLL NO.'].includes(cellValue.toUpperCase())) {
-          subjectList.push({ name: cellValue, startIndex: i - 1 });
+        
+        const upperName = cellValue.toUpperCase();
+        // Check for duplicates
+        if (cellValue && isNaN(cellValue) && !['NAME', 'REG NO.', 'ROLL NO.'].includes(upperName)) {
+          if (!seenSubjects.has(upperName)) {
+            subjectList.push({ name: cellValue, startIndex: i - 1 });
+            seenSubjects.add(upperName);
+          }
           i += 5; // Move to next subject block
         }
       }

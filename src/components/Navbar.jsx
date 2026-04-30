@@ -292,7 +292,7 @@ const Navbar = () => {
   return (
     <>
       <nav
-        className="fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out"
+        className="sticky top-0 left-0 right-0 z-50 transition-all duration-500 ease-out"
         style={getNavStyle()}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -307,8 +307,6 @@ const Navbar = () => {
         </div>
         <MobileMenu />
       </nav>
-      {/* Spacer to prevent content from jumping up under the fixed navbar */}
-      <div className="h-[88px] md:h-[96px] w-full shrink-0" aria-hidden="true" />
     </>
   );
 };

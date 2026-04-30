@@ -66,7 +66,7 @@ const StudentManagement = () => {
     try {
       const url = await uploadFileToSupabase(file, 'images', 'passports/');
       setCurrentStudent(prev => ({ ...prev, photo: url }));
-      setStatus({ type: 'success', message: 'Passport uploaded successfully!' });
+      setStatus({ type: 'success', message: 'Passport uploaded to Supabase successfully!' });
     } catch (error) {
       console.error("Upload error:", error);
       setStatus({ type: 'error', message: 'Failed to upload passport.' });

@@ -97,7 +97,7 @@ const ProfileSettings = () => {
       await updateFn({ photo: url, photoURL: url });
       
       setPhotoURL(url);
-      setStatus({ type: 'success', message: 'Profile picture updated!' });
+      setStatus({ type: 'success', message: 'Profile picture updated on Supabase!' });
     } catch (error) {
       console.error('Upload error:', error);
       setStatus({ type: 'error', message: 'Failed to upload image.' });

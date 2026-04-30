@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { db, storage } from '../../lib/firebase';
+import { db } from '../../lib/firebase';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, deleteDoc, query, orderBy } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadFileToSupabase } from '../../lib/supabase';
 import { Save, FileText, Image as ImageIcon, MessageSquare, Trash2, Edit2, Loader2, CheckCircle, AlertCircle, Phone, MapPin, Plus, Info, Upload } from 'lucide-react';
 
 
@@ -114,17 +114,15 @@ const ContentCMS = () => {
     }
   };
 
-  const handleFileUpload = async (file, path) => {
+  const handleFileUpload = async (file, bucket = 'images', path = 'cms/') => {
     if (!file) return null;
     setUploading(true);
     try {
-      const storageRef = ref(storage, `${path}/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
+      const url = await uploadFileToSupabase(file, bucket, path);
       return url;
     } catch (error) {
       console.error("Upload error:", error);
-      setStatus({ type: 'error', message: 'Image upload failed.' });
+      setStatus({ type: 'error', message: 'Image upload failed to Supabase.' });
       return null;
     } finally {
       setUploading(false);
