@@ -18,19 +18,20 @@ const firebaseConfig = {
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 
-// Initialize Firestore with settings to mitigate QUIC errors
+// Initialize Firestore with settings to mitigate common errors and support multi-tab persistence
 let db;
 try {
+  // Try to get the existing instance first to avoid "Firestore has already been initialized" error
+  db = getFirestore(app);
+} catch (e) {
+  // If no instance exists, initialize with specific settings
   db = initializeFirestore(app, {
     localCache: persistentLocalCache({
       tabManager: persistentMultipleTabManager()
     }),
-    experimentalForceLongPolling: true,
+    experimentalForceLongPolling: true, // Mitigates QUIC/Network issues
     useFetchStreams: false,
   });
-} catch (e) {
-  // If already initialized (common in HMR), get the existing instance
-  db = getFirestore(app);
 }
 const auth = getAuth(app);
 const storage = getStorage(app);
