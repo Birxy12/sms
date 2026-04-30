@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStudentAuth } from '../../context/StudentAuthContext';
-import { Lock, ShieldCheck, HelpCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { Lock, ShieldCheck, HelpCircle, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const PinSetupModal = () => {
@@ -117,11 +117,11 @@ const PinSetupModal = () => {
             <AnimatePresence>
               {error && (
                 <motion.div 
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-rose-50 text-rose-600 p-2 text-[8px] font-black uppercase tracking-widest border-l-2 border-rose-600"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="bg-rose-50 text-rose-600 p-3 text-[9px] font-black uppercase tracking-widest border-l-4 border-rose-600 shadow-sm"
                 >
-                  System Error: {error}
+                  System Alert: {error}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -129,10 +129,24 @@ const PinSetupModal = () => {
             <button 
               type="submit"
               disabled={loading}
-              className="w-full py-4 bg-slate-900 text-white font-black hover:bg-indigo-600 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 text-[10px] uppercase tracking-[0.2em]"
+              className="group relative w-full py-5 bg-slate-900 text-white font-black overflow-hidden transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-4 text-[10px] uppercase tracking-[0.3em] hover:bg-indigo-600 shadow-[0_10px_30px_rgba(0,0,0,0.1)]"
             >
-              {loading ? <Loader2 size={14} className="animate-spin" /> : 'Register Access PIN'}
+              <div className="absolute inset-0 w-1/3 h-full bg-white/5 -skew-x-12 -translate-x-full group-hover:translate-x-[400%] transition-transform duration-1000 ease-in-out" />
+              
+              {loading ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <>
+                  <ShieldCheck size={18} className="group-hover:rotate-12 transition-transform" />
+                  <span>Execute Security Setup</span>
+                  <ArrowRight size={14} className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                </>
+              )}
             </button>
+            
+            <p className="text-[8px] text-center text-slate-400 font-bold uppercase tracking-widest">
+              Encryption Level: AES-256 Protocol Active
+            </p>
           </div>
         </form>
       </motion.div>
