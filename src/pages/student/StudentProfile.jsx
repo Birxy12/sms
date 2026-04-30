@@ -22,7 +22,8 @@ const StudentProfile = () => {
     phone: currentStudent?.phone || '',
     dob: currentStudent?.dob || '',
     email: currentStudent?.email || '',
-    gender: currentStudent?.gender || ''
+    gender: currentStudent?.gender || '',
+    house: currentStudent?.house || ''
   });
   const [saving, setSaving] = useState(false);
   const [canEdit, setCanEdit] = useState(true);
@@ -47,6 +48,7 @@ const StudentProfile = () => {
                      formData.dob !== (currentStudent?.dob || '') ||
                      formData.email !== (currentStudent?.email || '') ||
                      formData.gender !== (currentStudent?.gender || '') ||
+                     formData.house !== (currentStudent?.house || '') ||
                      avatarFile !== null;
 
   const validateField = useCallback((field, value) => {
@@ -77,6 +79,19 @@ const StudentProfile = () => {
     const filled = fields.filter(f => currentStudent?.[f]).length;
     setStats(prev => ({ ...prev, profileCompletion: Math.round((filled / fields.length) * 100) }));
   }, [currentStudent]);
+
+  useEffect(() => {
+    if (currentStudent && !isEditing) {
+      setFormData({
+        name: currentStudent.name || '',
+        phone: currentStudent.phone || '',
+        dob: currentStudent.dob || '',
+        email: currentStudent.email || '',
+        gender: currentStudent.gender || '',
+        house: currentStudent.house || ''
+      });
+    }
+  }, [currentStudent, isEditing]);
 
   useEffect(() => {
     if (status.message) {
@@ -413,6 +428,16 @@ const StudentProfile = () => {
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
                     </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">House / Wing</label>
+                    <input 
+                      type="text"
+                      value={formData.house}
+                      onChange={(e) => setFormData(prev => ({ ...prev, house: e.target.value }))}
+                      placeholder="e.g. Red House"
+                      className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all font-bold outline-none"
+                    />
                   </div>
                 </div>
               </div>

@@ -13,7 +13,10 @@ const StudentManagement = () => {
   const [selectedClass, setSelectedClass] = useState('All');
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentStudent, setCurrentStudent] = useState({ name: '', regNo: '', className: 'JSS1', gender: 'Male', email: '' });
+  const [currentStudent, setCurrentStudent] = useState({ 
+    name: '', regNo: '', className: 'JSS1', gender: 'Male', email: '', 
+    phone: '', dob: '', house: '' 
+  });
   const [status, setStatus] = useState({ type: '', message: '' });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -108,12 +111,13 @@ const StudentManagement = () => {
     e.preventDefault();
     setSaving(true);
     try {
+      const { id, ...saveData } = currentStudent;
       if (isEditing) {
-        await updateDoc(doc(db, 'students', currentStudent.id), currentStudent);
+        await updateDoc(doc(db, 'students', id), saveData);
         setStatus({ type: 'success', message: 'Student updated successfully!' });
       } else {
         await addDoc(collection(db, 'students'), {
-          ...currentStudent,
+          ...saveData,
           createdAt: new Date().toISOString()
         });
         setStatus({ type: 'success', message: 'Student registered successfully!' });
@@ -121,6 +125,7 @@ const StudentManagement = () => {
       setShowModal(false);
       fetchStudents();
     } catch (error) {
+      console.error('Save error:', error);
       setStatus({ type: 'error', message: 'Error saving student record.' });
     } finally {
       setSaving(false);
@@ -164,7 +169,14 @@ const StudentManagement = () => {
             </button>
           </div>
           <button 
-            onClick={() => { setIsEditing(false); setCurrentStudent({ name: '', regNo: '', className: 'JSS1', gender: 'Male', email: '' }); setShowModal(true); }}
+            onClick={() => { 
+              setIsEditing(false); 
+              setCurrentStudent({ 
+                name: '', regNo: '', className: 'JSS1', gender: 'Male', email: '',
+                phone: '', dob: '', house: '' 
+              }); 
+              setShowModal(true); 
+            }}
             className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95"
           >
             <UserPlus size={20} />
@@ -325,15 +337,46 @@ const StudentManagement = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Guardian Email</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">House / Wing</label>
                     <input 
-                      type="email" 
-                      value={currentStudent.email}
-                      onChange={(e) => setCurrentStudent({...currentStudent, email: e.target.value})}
-                      placeholder="parent@email.com"
+                      type="text" 
+                      value={currentStudent.house || ''}
+                      onChange={(e) => setCurrentStudent({...currentStudent, house: e.target.value})}
+                      placeholder="e.g. Blue House"
                       className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
                     />
                   </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Phone Number</label>
+                    <input 
+                      type="tel" 
+                      value={currentStudent.phone || ''}
+                      onChange={(e) => setCurrentStudent({...currentStudent, phone: e.target.value})}
+                      placeholder="+234..."
+                      className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Date of Birth</label>
+                    <input 
+                      type="date" 
+                      value={currentStudent.dob || ''}
+                      onChange={(e) => setCurrentStudent({...currentStudent, dob: e.target.value})}
+                      className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Guardian Email</label>
+                  <input 
+                    type="email" 
+                    value={currentStudent.email}
+                    onChange={(e) => setCurrentStudent({...currentStudent, email: e.target.value})}
+                    placeholder="parent@email.com"
+                    className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                  />
                 </div>
               </div>
 
