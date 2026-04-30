@@ -53,12 +53,19 @@ const CourseManagement = () => {
     const configSubjects = getSubjectsForClass(activeTab);
     const fsForClass = firestoreSubjects.filter(s => s.class === activeTab);
     const fsMap = {};
-    fsForClass.forEach(fs => { fsMap[fs.name.toUpperCase()] = fs; });
+    fsForClass.forEach(fs => { fsMap[fs.name.toUpperCase().trim()] = fs; });
+
+    const seenNames = new Set();
+    const merged = [];
 
     // Start with config subjects, attach Firestore data if it exists
-    const merged = configSubjects.map(name => {
-      const fs = fsMap[name.toUpperCase()];
-      return {
+    configSubjects.forEach(name => {
+      const upperName = name.toUpperCase().trim();
+      if (seenNames.has(upperName)) return;
+      seenNames.add(upperName);
+
+      const fs = fsMap[upperName];
+      merged.push({
         name,
         class: activeTab,
         id: fs?.id || null,
@@ -66,13 +73,14 @@ const CourseManagement = () => {
         teacherName: fs?.teacherName || '',
         department: fs?.department || 'General',
         inFirestore: !!fs,
-      };
+      });
     });
 
     // Add any Firestore subjects not in the config (custom subjects admin added)
-    const configUpper = new Set(configSubjects.map(s => s.toUpperCase()));
     fsForClass.forEach(fs => {
-      if (!configUpper.has(fs.name.toUpperCase())) {
+      const upperName = fs.name.toUpperCase().trim();
+      if (!seenNames.has(upperName)) {
+        seenNames.add(upperName);
         merged.push({
           ...fs,
           inFirestore: true,
@@ -94,9 +102,9 @@ const CourseManagement = () => {
     setSyncing(true);
     const configSubjects = getSubjectsForClass(activeTab);
     const existingNames = new Set(
-      firestoreSubjects.filter(s => s.class === activeTab).map(s => s.name.toUpperCase())
+      firestoreSubjects.filter(s => s.class === activeTab).map(s => s.name.toUpperCase().trim())
     );
-    const toAdd = configSubjects.filter(name => !existingNames.has(name.toUpperCase()));
+    const toAdd = configSubjects.filter(name => !existingNames.has(name.toUpperCase().trim()));
 
     if (toAdd.length === 0) {
       setStatus({ type: 'success', message: `All subjects already synced for ${activeTab}.` });
@@ -109,7 +117,7 @@ const CourseManagement = () => {
       for (const name of toAdd) {
         const ref = doc(collection(db, 'subjects'));
         batch.set(ref, {
-          name,
+          name: name.trim().toUpperCase(),
           class: activeTab,
           department: 'General',
           teacherId: '',
@@ -137,17 +145,22 @@ const CourseManagement = () => {
       for (const cls of classes) {
         const configSubjs = getSubjectsForClass(cls);
         const existingNames = new Set(
-          firestoreSubjects.filter(s => s.class === cls).map(s => s.name.toUpperCase())
+          firestoreSubjects.filter(s => s.class === cls).map(s => s.name.toUpperCase().trim())
         );
         for (const name of configSubjs) {
-          if (!existingNames.has(name.toUpperCase())) {
+          const upperName = name.toUpperCase().trim();
+          if (!existingNames.has(upperName)) {
             const ref = doc(collection(db, 'subjects'));
             batch.set(ref, {
-              name, class: cls, department: 'General',
-              teacherId: '', teacherName: '',
+              name: name.trim().toUpperCase(), 
+              class: cls, 
+              department: 'General',
+              teacherId: '', 
+              teacherName: '',
               createdAt: new Date().toISOString()
             });
             totalAdded++;
+            existingNames.add(upperName); // Prevent adding multiple times if config has duplicates (though config is fixed now)
           }
         }
       }

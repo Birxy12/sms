@@ -23,7 +23,8 @@ export const JSS_SUBJECTS = [
   'HISTORY',
   'HOME ECONOMICS',
   'BUSINESS STUDIES',
-  'AGRICULTURAL SCIENCE'
+  'AGRICULTURAL SCIENCE',
+  'C.C.A'
 ];
 
 // Common Senior Secondary subjects (both Art & Science)
@@ -73,11 +74,13 @@ export const SS1_SUBJECTS = [
  */
 export const getSubjectsForClass = (className) => {
   if (!className) return [];
-  if (['JSS1', 'JSS2', 'JSS3'].includes(className)) return JSS_SUBJECTS;
-  if (className === 'SS1') return SS1_SUBJECTS;
-  if (className.includes('ART')) return SS_ART_SUBJECTS;
-  if (className.includes('SCIENCE')) return SS_SCIENCE_SUBJECTS;
-  return [];
+  let subjects = [];
+  if (['JSS1', 'JSS2', 'JSS3'].includes(className)) subjects = JSS_SUBJECTS;
+  else if (className === 'SS1') subjects = SS1_SUBJECTS;
+  else if (className.includes('ART')) subjects = SS_ART_SUBJECTS;
+  else if (className.includes('SCIENCE')) subjects = SS_SCIENCE_SUBJECTS;
+  
+  return [...new Set(subjects.map(s => s.trim().toUpperCase()))];
 };
 
 /**
@@ -85,5 +88,5 @@ export const getSubjectsForClass = (className) => {
  * @returns {string[]}
  */
 export const getAllSubjects = () => {
-  return [...new Set([...JSS_SUBJECTS, ...SS1_SUBJECTS, ...SS_ART_SUBJECTS, ...SS_SCIENCE_SUBJECTS])];
+  return [...new Set([...JSS_SUBJECTS, ...SS1_SUBJECTS, ...SS_ART_SUBJECTS, ...SS_SCIENCE_SUBJECTS].map(s => s.trim().toUpperCase()))];
 };

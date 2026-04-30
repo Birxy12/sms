@@ -229,7 +229,7 @@ const displaySubjects = processedMarks.filter(s => s.total > 0);
 
 // Calculate average based on school policy: SS2/3 Art/Science (9 subjects), JSS (15 subjects), SS1 (16 subjects)
 const cls = (currentStudent?.className || '').toUpperCase();
-let divisor = 15; // Default
+let divisor = 16; // Default
 if (cls.includes('JSS')) {
   divisor = 15;
 } else if (cls.includes('SS1')) {

@@ -9,7 +9,7 @@ import BulkUpload from '../../components/BulkUpload';
 import ScoreEntry from '../../components/ScoreEntry';
 import StaffDashboard from './StaffDashboard';
 import StudentDashboard from './StudentDashboard';
-import { Users, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database } from 'lucide-react';
+import { Users, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers } from 'lucide-react';
 
 const AdminDashboard = () => {
   const [viewMode, setViewMode] = useState('admin'); // admin, staff, student
