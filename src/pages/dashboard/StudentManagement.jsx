@@ -156,16 +156,17 @@ const StudentManagement = () => {
           <p className="text-slate-500">Manage enrollment, class assignments, and individual student profiles.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <div className="bg-white border border-slate-200 px-6 py-3 rounded-xl flex items-center gap-4 shadow-sm">
+          <div className="bg-white border border-slate-200 px-6 py-3 rounded-xl flex items-center gap-4 shadow-sm hover:border-indigo-200 transition-colors group">
             <div className="flex flex-col">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Portal Permission</span>
-              <span className="text-sm font-bold text-slate-700">Student Profile Editing</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1 group-hover:text-indigo-600">Portal Governance</span>
+              <span className="text-sm font-bold text-slate-700">Self-Service Profile Edit</span>
+              <span className="text-[9px] font-medium text-slate-400 mt-1 italic italic">Restricted to identity & contact fields</span>
             </div>
             <button 
               onClick={toggleProfileEdit}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${allowProfileEdit ? 'bg-indigo-600' : 'bg-slate-200'}`}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none ${allowProfileEdit ? 'bg-indigo-600 ring-4 ring-indigo-50' : 'bg-slate-200'}`}
             >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${allowProfileEdit ? 'translate-x-6' : 'translate-x-1'}`} />
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${allowProfileEdit ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
           <button 

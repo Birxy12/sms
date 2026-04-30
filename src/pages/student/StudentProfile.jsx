@@ -389,7 +389,7 @@ const StudentProfile = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-bottom-4">
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Legal Name</label>
                     <input 
                       type="text"
                       value={formData.name}
@@ -398,7 +398,7 @@ const StudentProfile = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Active Phone Number</label>
                     <input 
                       type="tel"
                       value={formData.phone}
@@ -418,26 +418,26 @@ const StudentProfile = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Gender</label>
-                    <select 
-                      value={formData.gender}
-                      onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
-                      className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all font-bold outline-none appearance-none"
-                    >
-                      <option value="">Select Gender</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">House / Wing</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Primary Email Address</label>
                     <input 
-                      type="text"
-                      value={formData.house}
-                      onChange={(e) => setFormData(prev => ({ ...prev, house: e.target.value }))}
-                      placeholder="e.g. Red House"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="email@example.com"
                       className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all font-bold outline-none"
                     />
+                  </div>
+                </div>
+
+                {/* Read-only fields in edit mode */}
+                <div className="md:col-span-2 grid grid-cols-2 gap-8 pt-4 border-t border-slate-50">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1 opacity-50">Gender Identity (Locked)</p>
+                    <p className="px-6 py-4 rounded-2xl bg-slate-50 text-slate-400 font-bold border-2 border-transparent cursor-not-allowed uppercase">{currentStudent?.gender || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1 opacity-50">House / Wing (Locked)</p>
+                    <p className="px-6 py-4 rounded-2xl bg-slate-50 text-slate-400 font-bold border-2 border-transparent cursor-not-allowed uppercase">{currentStudent?.house || 'N/A'}</p>
                   </div>
                 </div>
               </div>
