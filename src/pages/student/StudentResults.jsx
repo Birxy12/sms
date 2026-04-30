@@ -347,21 +347,6 @@ return (
 const renderPrintView = () => (
 <div className="report-card-print" ref={printRef}>
 <style>{`
-@media print {
-@page { size: A4; margin: 0; }
-body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-body > * { visibility: hidden !important; }
-.report-card-print, .report-card-print * { visibility: visible !important; }
-.report-card-print {
-position: absolute;
-left: 0;
-top: 0;
-width: 210mm;
-min-height: 297mm;
-padding: 10mm 15mm;
-background: white !important;
-}
-}
 .report-card-print {
 width: 210mm;
 min-height: 297mm;
@@ -373,6 +358,33 @@ font-family: 'Outfit', 'Inter', sans-serif;
 position: relative;
 box-sizing: border-box;
 overflow: hidden;
+display: flex;
+flex-direction: column;
+}
+@media print {
+  @page { size: A4; margin: 0; }
+  body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body > * { visibility: hidden !important; }
+  .report-card-print, .report-card-print * { visibility: visible !important; }
+  .report-card-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 210mm;
+    min-height: 297mm;
+    padding: 10mm 15mm;
+    background: white !important;
+    transform: scale(1);
+    transform-origin: top left;
+  }
+}
+@media (max-width: 768px) {
+  .report-card-print {
+    width: 100%;
+    min-height: auto;
+    padding: 5mm;
+    zoom: 0.8;
+  }
 }
 .print-branding-top { font-size: 8px; text-transform: uppercase; font-weight: 800; color: #94a3b8; margin-bottom: 5px; display: flex; justify-content: space-between; }
 .print-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px double #0f172a; padding-bottom: 8px; margin-bottom: 15px; }
@@ -579,7 +591,9 @@ sub.total >= 40 ? 'Average' : 'Below Average'}
 <p>Next Term Begins: <strong>{schoolDates.nextTermBegins}</strong></p>
 </div>
 </div>
-<div className="print-final-branding">Powered by GlobixTech Ent. Contact @ 09066202949</div>
+<div className="print-final-branding" style={{ textAlign: 'center', fontSize: '8px', color: '#94a3b8', marginTop: '10px', borderTop: '1px solid #f1f5f9', paddingTop: '5px' }}>
+  Powered by GlobixTech Ent. Contact @ 09066202949
+</div>
 </div>
 <div className="print-watermark">{schoolName || 'BONUS DOMINUS'}</div>
 </div>

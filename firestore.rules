@@ -69,5 +69,9 @@ service cloud.firestore {
     match /schools/{id} {
       allow read, write: if true;
     }
+
+    match /classes/{id} {
+      allow read, write: if true;
+    }
   }
 }
