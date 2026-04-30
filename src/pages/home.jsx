@@ -108,10 +108,19 @@ const Home = () => {
   useEffect(() => {
     const fetchTestimonies = async () => {
       try {
-        const q = query(collection(db, 'testimonies'), where('approved', '==', true), orderBy('createdAt', 'desc'));
+        // Querying without filters/sorting to bypass immediate index requirement
+        const q = query(collection(db, 'testimonies'));
         const snap = await getDocs(q);
         if (!snap.empty) {
-          setTestimonials(snap.docs.map(d => d.data()));
+          const allTestimonies = snap.docs.map(d => d.data());
+          // Filter and sort in memory
+          const approvedTestimonies = allTestimonies
+            .filter(t => t.approved === true)
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          
+          if (approvedTestimonies.length > 0) {
+            setTestimonials(approvedTestimonies);
+          }
         }
       } catch (e) {
         console.error("Error fetching testimonies:", e);
