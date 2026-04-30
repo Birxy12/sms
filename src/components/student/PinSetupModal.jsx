@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStudentAuth } from '../../context/StudentAuthContext';
-import { Lock, ShieldCheck, HelpCircle, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Lock, ShieldCheck, HelpCircle, Loader2, CheckCircle2, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
 
 const PinSetupModal = () => {
@@ -139,7 +139,7 @@ const PinSetupModal = () => {
                 <>
                   <ShieldCheck size={18} className="group-hover:rotate-12 transition-transform" />
                   <span>Execute Security Setup</span>
-                  <ArrowRight size={14} className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                  <ChevronRight size={14} className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
                 </>
               )}
             </button>
