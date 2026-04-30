@@ -48,89 +48,83 @@ const PinSetupModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm">
       <motion.div 
-        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+        initial={{ scale: 0.98, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0, y: 20 }}
-        className="bg-white w-full max-w-md rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden relative"
+        exit={{ scale: 0.98, opacity: 0, y: 10 }}
+        className="bg-white w-full max-w-md rounded-none shadow-[20px_20px_0px_rgba(79,70,229,0.1)] border-2 border-slate-900 overflow-hidden relative"
       >
-        {/* Decorative Background Icon */}
-        <div className="absolute -top-12 -right-12 text-indigo-500/5 rotate-12 pointer-events-none">
-          <ShieldCheck size={280} />
+        {/* Modern Geometric Accent */}
+        <div className="absolute top-0 left-0 w-full h-2 bg-indigo-600" />
+
+        <div className="p-8 pt-12 text-slate-900 relative">
+          <div className="absolute top-4 right-8 opacity-5 text-indigo-600">
+            <ShieldCheck size={80} />
+          </div>
+          <div className="relative z-10 text-left">
+            <h3 className="text-3xl font-black mb-2 tracking-tighter uppercase">Secure Account</h3>
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Initial PIN Registration Required</p>
+          </div>
         </div>
 
-        <div className="bg-indigo-600 p-8 pt-10 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-10">
-            <ShieldCheck size={120} />
-          </div>
-          <div className="relative z-10">
-            <h3 className="text-2xl font-black mb-2 tracking-tight">Secure Your Account</h3>
-            <p className="text-indigo-100 text-sm font-bold opacity-80">Set a 6-digit PIN for future logins.</p>
-          </div>
-          {/* Progress bar or decorative line */}
-          <div className="absolute bottom-0 left-0 h-1 bg-white/20 w-full" />
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-8 sm:p-10 space-y-6 relative z-10">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Set 6-Digit PIN</label>
+        <form onSubmit={handleSubmit} className="p-8 space-y-8 relative z-10">
+          <div className="space-y-3">
+            <div className="flex justify-between items-end">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Access PIN</label>
+              <span className="text-[10px] font-bold text-indigo-600 tracking-tighter">6 DIGITS REQUIRED</span>
+            </div>
             <div className="relative group">
-              <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" size={18} />
               <input 
                 type="password" 
                 maxLength={6}
                 value={pin}
                 onChange={(e) => setLocalPin(e.target.value.replace(/\D/g, ''))}
-                placeholder="••••••"
+                placeholder="000000"
                 required
-                className="w-full pl-14 pr-4 py-4.5 rounded-[1.25rem] bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none font-black text-2xl tracking-[0.8em] transition-all placeholder:tracking-normal placeholder:text-slate-300"
+                className="w-full px-0 py-4 border-b-4 border-slate-100 focus:border-indigo-600 bg-transparent outline-none font-black text-4xl tracking-[0.5em] transition-all placeholder:text-slate-100"
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Security Question</label>
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Recovery Question</label>
             <div className="relative group">
-              <HelpCircle className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" size={18} />
               <select 
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 required
-                className="w-full pl-14 pr-10 py-4.5 rounded-[1.25rem] bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none font-bold text-slate-700 appearance-none transition-all"
+                className="w-full px-0 py-4 border-b-4 border-slate-100 focus:border-indigo-600 bg-transparent outline-none font-bold text-slate-700 appearance-none transition-all cursor-pointer"
               >
-                <option value="">Select a question</option>
+                <option value="">Select Verification Question</option>
                 {questions.map(q => <option key={q} value={q}>{q}</option>)}
               </select>
-              <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-focus-within:text-indigo-600">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
               </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Your Answer</label>
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Verification Answer</label>
             <input 
               type="text"
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
-              placeholder="Keep it memorable"
+              placeholder="MEMORABLE RESPONSE"
               required
-              className="w-full px-6 py-4.5 rounded-[1.25rem] bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none font-bold text-slate-700 transition-all placeholder:text-slate-300"
+              className="w-full px-0 py-4 border-b-4 border-slate-100 focus:border-indigo-600 bg-transparent outline-none font-bold text-slate-700 transition-all placeholder:text-slate-200 uppercase"
             />
           </div>
 
           <AnimatePresence>
             {error && (
               <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="bg-rose-600 text-white p-4 font-black text-[10px] uppercase tracking-widest"
               >
-                <div className="bg-rose-50 text-rose-600 p-4 rounded-2xl text-xs font-bold flex items-center gap-2 border border-rose-100">
-                  <ShieldCheck size={16} /> {error}
-                </div>
+                ERROR: {error}
               </motion.div>
             )}
           </AnimatePresence>
@@ -138,14 +132,9 @@ const PinSetupModal = () => {
           <button 
             type="submit"
             disabled={loading}
-            className="w-full py-5 bg-indigo-600 text-white font-black rounded-[1.25rem] hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 text-sm uppercase tracking-widest"
+            className="w-full py-6 bg-slate-900 text-white font-black hover:bg-indigo-600 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 text-xs uppercase tracking-[0.3em]"
           >
-            {loading ? <Loader2 size={20} className="animate-spin" /> : (
-              <>
-                <ShieldCheck size={20} />
-                Activate Security PIN
-              </>
-            )}
+            {loading ? <Loader2 size={18} className="animate-spin" /> : 'Confirm & Activate'}
           </button>
         </form>
       </motion.div>
@@ -153,15 +142,12 @@ const PinSetupModal = () => {
       <AnimatePresence>
         {success && (
           <motion.div 
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-12 bg-emerald-600 text-white px-8 py-5 rounded-[2rem] shadow-2xl flex items-center gap-4 z-[210] border-4 border-emerald-500"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="fixed top-8 bg-slate-900 text-white px-8 py-4 border-2 border-indigo-500 shadow-[10px_10px_0px_rgba(79,70,229,0.2)] flex items-center gap-4 z-[210]"
           >
-            <div className="bg-white text-emerald-600 rounded-full p-1">
-              <CheckCircle2 size={24} />
-            </div>
-            <span className="font-black text-lg tracking-tight">Security PIN Activated!</span>
+            <CheckCircle2 size={24} className="text-indigo-400" />
+            <span className="font-black text-sm uppercase tracking-widest">Security System Enabled</span>
           </motion.div>
         )}
       </AnimatePresence>
