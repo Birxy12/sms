@@ -82,6 +82,64 @@ const StudentProfile = () => {
     };
   }, [status.message]);
 
+  // ── Save handler ──
+  const handleSave = useCallback(async (e) => {
+    e?.preventDefault();
+
+    const newErrors = {
+      name: validateField('name', name),
+      phone: validateField('phone', phone),
+      dob: validateField('dob', dob),
+    };
+    setErrors(newErrors);
+    setTouched({ name: true, phone: true, dob: true });
+
+    if (Object.values(newErrors).some(Boolean)) {
+      setStatus({ type: 'error', message: 'Please fix the errors before saving' });
+      return;
+    }
+
+    setSaving(true);
+    let photoUrl = currentStudent?.photo;
+
+    if (avatarFile) {
+      setUploadingAvatar(true);
+      try {
+        const uploadResult = await uploadFileToSupabase(avatarFile, 'avatars', `${currentStudent?.id}/avatar`);
+        if (uploadResult?.url) photoUrl = uploadResult.url;
+      } catch {
+        setStatus({ type: 'error', message: 'Failed to upload photo. Profile saved without photo.' });
+      }
+      setUploadingAvatar(false);
+    }
+
+    const result = await updateProfile({ name, phone, dob, email, gender, photo: photoUrl });
+    if (result.success) {
+      setStatus({ type: 'success', message: 'Profile updated successfully!' });
+      setIsEditing(false);
+      setAvatarFile(null);
+      setAvatarPreview(null);
+    } else {
+      setStatus({ type: 'error', message: result.message || 'Failed to update profile' });
+    }
+    setSaving(false);
+  }, [name, phone, dob, email, gender, avatarFile, currentStudent, validateField, updateProfile]);
+
+  // ── Cancel handler ──
+  const handleCancel = useCallback(() => {
+    setIsEditing(false);
+    setName(currentStudent?.name || '');
+    setPhone(currentStudent?.phone || '');
+    setDob(currentStudent?.dob || '');
+    setEmail(currentStudent?.email || '');
+    setGender(currentStudent?.gender || '');
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    setErrors({});
+    setTouched({});
+    setShowConfirmCancel(false);
+  }, [currentStudent]);
+
   // ── Keyboard shortcuts ──
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -99,7 +157,7 @@ const StudentProfile = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isEditing, hasChanges, isFormValid, saving]);
+  }, [isEditing, hasChanges, isFormValid, saving, handleCancel, handleSave]);
 
   // ── Validation ──
   const validateField = useCallback((field, value) => {
@@ -162,63 +220,6 @@ const StudentProfile = () => {
     reader.readAsDataURL(file);
   };
 
-  // ── Save handler ──
-  const handleSave = async (e) => {
-    e?.preventDefault();
-
-    const newErrors = {
-      name: validateField('name', name),
-      phone: validateField('phone', phone),
-      dob: validateField('dob', dob),
-    };
-    setErrors(newErrors);
-    setTouched({ name: true, phone: true, dob: true });
-
-    if (Object.values(newErrors).some(Boolean)) {
-      setStatus({ type: 'error', message: 'Please fix the errors before saving' });
-      return;
-    }
-
-    setSaving(true);
-    let photoUrl = currentStudent?.photo;
-
-    if (avatarFile) {
-      setUploadingAvatar(true);
-      try {
-        const uploadResult = await uploadFileToSupabase(avatarFile, 'avatars', `${currentStudent?.id}/avatar`);
-        if (uploadResult?.url) photoUrl = uploadResult.url;
-      } catch (err) {
-        setStatus({ type: 'error', message: 'Failed to upload photo. Profile saved without photo.' });
-      }
-      setUploadingAvatar(false);
-    }
-
-    const result = await updateProfile({ name, phone, dob, email, gender, photo: photoUrl });
-    if (result.success) {
-      setStatus({ type: 'success', message: 'Profile updated successfully!' });
-      setIsEditing(false);
-      setAvatarFile(null);
-      setAvatarPreview(null);
-    } else {
-      setStatus({ type: 'error', message: result.message || 'Failed to update profile' });
-    }
-    setSaving(false);
-  };
-
-  // ── Cancel handler ──
-  const handleCancel = () => {
-    setIsEditing(false);
-    setName(currentStudent?.name || '');
-    setPhone(currentStudent?.phone || '');
-    setDob(currentStudent?.dob || '');
-    setEmail(currentStudent?.email || '');
-    setGender(currentStudent?.gender || '');
-    setAvatarFile(null);
-    setAvatarPreview(null);
-    setErrors({});
-    setTouched({});
-    setShowConfirmCancel(false);
-  };
 
   // ── Copy to clipboard ──
   const copyToClipboard = (text, label) => {

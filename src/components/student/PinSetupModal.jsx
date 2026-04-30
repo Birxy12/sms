@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { Lock, ShieldCheck, HelpCircle, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
 
 const PinSetupModal = () => {
   const { currentStudent, setPin } = useStudentAuth();
