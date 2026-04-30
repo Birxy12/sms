@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, query, getDocs, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 import StatCard from '../../components/StatCard';
 import ResultPublisher from '../../components/ResultPublisher';
 import Marksheet from '../../components/Marksheet';
@@ -14,6 +15,7 @@ const AdminDashboard = () => {
   const [viewMode, setViewMode] = useState('admin'); // admin, staff, student
   const [selectedClass, setSelectedClass] = useState('JSS1');
   const [activeTab, setActiveTab] = useState('Overview');
+  const navigate = useNavigate();
   
   const classes = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'];
   const adminTabs = [
@@ -362,6 +364,38 @@ const AdminDashboard = () => {
       {/* Management Tab */}
       {activeTab === 'Management' && (
         <div className="animate-in fade-in space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <button 
+              onClick={() => navigate('/admin/students')}
+              className="card-white flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+            >
+              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><Users size={24} /></div>
+              <div>
+                <h4 className="font-black text-slate-800">Student Management</h4>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Enrollment & Records</p>
+              </div>
+            </button>
+            <button 
+              onClick={() => navigate('/staff')}
+              className="card-white flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+            >
+              <div className="p-3 bg-rose-50 text-rose-600 rounded-xl"><Briefcase size={24} /></div>
+              <div>
+                <h4 className="font-black text-slate-800">Staff Management</h4>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Teachers & Roles</p>
+              </div>
+            </button>
+            <button 
+              onClick={() => navigate('/admin/classes')}
+              className="card-white flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+            >
+              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><Layers size={24} /></div>
+              <div>
+                <h4 className="font-black text-slate-800">Class Management</h4>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Assign Class Teachers</p>
+              </div>
+            </button>
+          </div>
           <BulkUpload />
           <ResultPublisher />
         </div>

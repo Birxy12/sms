@@ -118,7 +118,7 @@ const ClassManagement = () => {
 
             <div className="mt-6 pt-4 border-t border-slate-100 text-left">
               <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1 mb-2">
-                <UserCheck size={14} /> Form Teacher
+                <UserCheck size={14} /> Class/Form Teacher
               </label>
               <select
                 value={cls.formTeacherId}

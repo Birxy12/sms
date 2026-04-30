@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { db } from '../../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { uploadFileToSupabase } from '../../lib/supabase';
 import { User, Mail, GraduationCap, MapPin, Calendar, CheckCircle, Edit2, Save, X, Hash, UserCircle, Camera, Upload, Loader2 } from 'lucide-react';
 
@@ -15,6 +16,7 @@ const StudentProfile = () => {
   const [email, setEmail] = useState(currentStudent?.email || '');
   const [gender, setGender] = useState(currentStudent?.gender || '');
   const [saving, setSaving] = useState(false);
+  const [canEdit, setCanEdit] = useState(true);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
@@ -42,6 +44,21 @@ const StudentProfile = () => {
   const isFormValid = name.trim().length >= 2 &&
                       (!phone || /^[+]?[\d\s-]{7,15}$/.test(phone)) &&
                       (!dob || new Date(dob) < new Date());
+
+  const fetchPermissions = async () => {
+    try {
+      const docSnap = await getDoc(doc(db, 'settings', 'student_permissions'));
+      if (docSnap.exists()) {
+        setCanEdit(docSnap.data().allowProfileEdit ?? true);
+      }
+    } catch (error) {
+      console.error('Error fetching permissions:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchPermissions();
+  }, [currentStudent]);
 
   // ── Profile completion calculation ──
   useEffect(() => {
@@ -233,12 +250,26 @@ const StudentProfile = () => {
           </p>
         </div>
         {!isEditing ? (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="flex items-center gap-2 bg-white border-2 border-slate-200 px-5 py-2.5 rounded-2xl font-black text-slate-700 hover:bg-slate-50 hover:border-indigo-300 transition-all active:scale-95 shadow-sm"
-          >
-            <Edit2 size={18} /> Edit Profile
-          </button>
+          <div className="flex flex-col items-end gap-1">
+            <button
+              onClick={() => {
+                if (canEdit) {
+                  setIsEditing(true);
+                } else {
+                  setStatus({ type: 'error', message: 'Profile editing is currently disabled by administration.' });
+                }
+              }}
+              disabled={!canEdit}
+              className={`flex items-center gap-2 border-2 px-5 py-2.5 rounded-2xl font-black transition-all active:scale-95 shadow-sm ${
+                canEdit 
+                  ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-indigo-300' 
+                  : 'bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed opacity-60'
+              }`}
+            >
+              <Edit2 size={18} /> Edit Profile
+            </button>
+            {!canEdit && <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest animate-pulse">Editing Locked</p>}
+          </div>
         ) : (
           <div className="flex gap-2">
             <button

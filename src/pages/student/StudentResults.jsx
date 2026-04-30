@@ -372,18 +372,22 @@ flex-direction: column;
     top: 0;
     width: 210mm;
     min-height: 297mm;
-    padding: 10mm 15mm;
+    padding: 15mm 20mm;
     background: white !important;
     transform: scale(1);
     transform-origin: top left;
+    box-shadow: none !important;
+    border: none !important;
   }
 }
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .report-card-print {
     width: 100%;
     min-height: auto;
-    padding: 5mm;
-    zoom: 0.8;
+    padding: 10mm;
+    transform: none;
+    zoom: normal;
+    overflow-x: auto;
   }
 }
 .print-branding-top { font-size: 8px; text-transform: uppercase; font-weight: 800; color: #94a3b8; margin-bottom: 5px; display: flex; justify-content: space-between; }

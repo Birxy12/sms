@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, storage } from '../../lib/firebase';
-import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, where } from 'firebase/firestore';
+import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, where, setDoc } from 'firebase/firestore';
 import { uploadFileToSupabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award } from 'lucide-react';
@@ -17,6 +17,7 @@ const StudentManagement = () => {
   const [status, setStatus] = useState({ type: '', message: '' });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [allowProfileEdit, setAllowProfileEdit] = useState(true);
 
   const classes = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'];
 
@@ -35,8 +36,36 @@ const StudentManagement = () => {
     }
   };
 
+  const fetchPermissions = async () => {
+    try {
+      const docSnap = await getDocs(query(collection(db, 'settings'), where('__name__', '==', 'student_permissions')));
+      if (!docSnap.empty) {
+        setAllowProfileEdit(docSnap.docs[0].data().allowProfileEdit ?? true);
+      }
+    } catch (error) {
+      console.error('Error fetching permissions:', error);
+    }
+  };
+
+  const toggleProfileEdit = async () => {
+    const newValue = !allowProfileEdit;
+    setAllowProfileEdit(newValue);
+    try {
+      await setDoc(doc(db, 'settings', 'student_permissions'), {
+        allowProfileEdit: newValue,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      setStatus({ type: 'success', message: `Profile editing ${newValue ? 'enabled' : 'disabled'} for students.` });
+    } catch (error) {
+      console.error('Error updating permissions:', error);
+      setAllowProfileEdit(!newValue);
+      setStatus({ type: 'error', message: 'Failed to update permissions.' });
+    }
+  };
+
   useEffect(() => {
     fetchStudents();
+    fetchPermissions();
   }, []);
 
   // Auto-generate RegNo when enrolling a new student and class changes
@@ -121,13 +150,27 @@ const StudentManagement = () => {
           <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Student Records</h2>
           <p className="text-slate-500">Manage enrollment, class assignments, and individual student profiles.</p>
         </div>
-        <button 
-          onClick={() => { setIsEditing(false); setCurrentStudent({ name: '', regNo: '', className: 'JSS1', gender: 'Male', email: '' }); setShowModal(true); }}
-          className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95"
-        >
-          <UserPlus size={20} />
-          Enroll New Student
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="bg-white border border-slate-200 px-6 py-3 rounded-xl flex items-center gap-4 shadow-sm">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Portal Permission</span>
+              <span className="text-sm font-bold text-slate-700">Student Profile Editing</span>
+            </div>
+            <button 
+              onClick={toggleProfileEdit}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${allowProfileEdit ? 'bg-indigo-600' : 'bg-slate-200'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${allowProfileEdit ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+          <button 
+            onClick={() => { setIsEditing(false); setCurrentStudent({ name: '', regNo: '', className: 'JSS1', gender: 'Male', email: '' }); setShowModal(true); }}
+            className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95"
+          >
+            <UserPlus size={20} />
+            Enroll New Student
+          </button>
+        </div>
       </div>
 
       {/* Filters & Search */}
