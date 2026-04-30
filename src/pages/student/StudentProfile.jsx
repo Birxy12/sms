@@ -82,6 +82,20 @@ const StudentProfile = () => {
     };
   }, [status.message]);
 
+  // ── Validation ──
+  const validateField = useCallback((field, value) => {
+    switch (field) {
+      case 'name':
+        return value.trim().length < 2 ? 'Name must be at least 2 characters' : '';
+      case 'phone':
+        return value && !/^[+]?[\d\s-]{7,15}$/.test(value) ? 'Invalid phone number format' : '';
+      case 'dob':
+        return value && new Date(value) > new Date() ? 'Date cannot be in the future' : '';
+      default:
+        return '';
+    }
+  }, []);
+
   // ── Save handler ──
   const handleSave = useCallback(async (e) => {
     e?.preventDefault();
@@ -158,20 +172,6 @@ const StudentProfile = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isEditing, hasChanges, isFormValid, saving, handleCancel, handleSave]);
-
-  // ── Validation ──
-  const validateField = useCallback((field, value) => {
-    switch (field) {
-      case 'name':
-        return value.trim().length < 2 ? 'Name must be at least 2 characters' : '';
-      case 'phone':
-        return value && !/^[+]?[\d\s-]{7,15}$/.test(value) ? 'Invalid phone number format' : '';
-      case 'dob':
-        return value && new Date(value) > new Date() ? 'Date cannot be in the future' : '';
-      default:
-        return '';
-    }
-  }, []);
 
   const handleBlur = (field, value) => {
     setTouched(prev => ({ ...prev, [field]: true }));
