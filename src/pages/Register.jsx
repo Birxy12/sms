@@ -8,6 +8,7 @@ import {
   ArrowRight, ChevronLeft, Loader2, AlertCircle,
   Hash
 } from 'lucide-react';
+import { formatDateForInput } from '../utils/dateFormatter';
 import './Auth.css';
 import bdsLogo from '../assets/bdslogo.jpg';
 
@@ -182,7 +183,7 @@ const Register = () => {
                 <input 
                   type="date" 
                   name="dob"
-                  value={formData.dob}
+                  value={formatDateForInput(formData.dob)}
                   onChange={handleInputChange}
                   required
                   className="bg-transparent w-full outline-none font-semibold text-slate-700"

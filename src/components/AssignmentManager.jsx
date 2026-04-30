@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, addDoc, getDocs, query, deleteDoc, doc, orderBy } from 'firebase/firestore';
 import { Plus, Trash2, Calendar, Book, Users, Loader2, CheckCircle, X } from 'lucide-react';
+import { formatDateForInput } from '../utils/dateFormatter';
 
 const AssignmentManager = () => {
   const [assignments, setAssignments] = useState([]);
@@ -179,7 +180,7 @@ const AssignmentManager = () => {
                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Due Date</label>
                 <input 
                   type="date" required
-                  value={formData.dueDate} 
+                  value={formatDateForInput(formData.dueDate)} 
                   onChange={e => setFormData({...formData, dueDate: e.target.value})}
                   className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold"
                 />

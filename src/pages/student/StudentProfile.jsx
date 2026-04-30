@@ -4,6 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { db } from '../../lib/firebase';
 import { uploadFileToSupabase } from '../../lib/supabase';
 import { User, Mail, GraduationCap, MapPin, Calendar, CheckCircle, Edit2, Save, X, Hash, UserCircle, Camera, Upload, Loader2 } from 'lucide-react';
+import { formatDateForInput } from '../../utils/dateFormatter';
 
 const StudentProfile = () => {
   const { currentStudent, updateProfile } = useStudentAuth();
@@ -11,7 +12,7 @@ const StudentProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(currentStudent?.name || '');
   const [phone, setPhone] = useState(currentStudent?.phone || '');
-  const [dob, setDob] = useState(currentStudent?.dob || '');
+  const [dob, setDob] = useState(formatDateForInput(currentStudent?.dob) || '');
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
 
@@ -59,7 +60,7 @@ const StudentProfile = () => {
                 setIsEditing(false); 
                 setName(currentStudent?.name || ''); 
                 setPhone(currentStudent?.phone || ''); 
-                setDob(currentStudent?.dob || ''); 
+                setDob(formatDateForInput(currentStudent?.dob) || ''); 
               }}
               className="px-5 py-2.5 rounded-2xl font-black text-slate-500 hover:bg-slate-100 transition-all"
             >
