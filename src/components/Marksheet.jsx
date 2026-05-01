@@ -196,14 +196,22 @@ const Marksheet = ({ className: propClassName }) => {
           }
         });
 
-        if (!studentsSnapshot.empty) {
+          // Set subjects based on class configuration (Dynamic Headers)
+          const classSubjects = getSubjectsForClass(currentClassName);
+          
           let studentList = studentsSnapshot.docs.map(doc => {
             const sData = doc.data();
             const marks = dbMarks[sData.regNo] || {};
             
             let total = 0;
-            Object.values(marks).forEach(m => {
-               total += parseFloat(m.total || 0);
+            // ONLY sum subjects that are in the class configuration
+            classSubjects.forEach(subjName => {
+               const upperSubj = subjName.toUpperCase().trim();
+               // Try to match the subject in marks (case-insensitive)
+               const mKey = Object.keys(marks).find(k => k.toUpperCase().trim() === upperSubj);
+               if (mKey && marks[mKey]) {
+                 total += parseFloat(marks[mKey].total || 0);
+               }
             });
 
             return {
@@ -234,8 +242,6 @@ const Marksheet = ({ className: propClassName }) => {
             studentList[i].rank = studentList[i].totalMarks > 0 ? getOrdinal(currentRank) : 'N/A';
           }
 
-          // Set subjects based on class configuration (Dynamic Headers)
-          const classSubjects = getSubjectsForClass(currentClassName);
           if (classSubjects && classSubjects.length > 0) {
             setSubjects(classSubjects.map(name => ({ name, startIndex: -1 })));
           } else {

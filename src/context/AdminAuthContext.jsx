@@ -35,7 +35,7 @@ export const AdminAuthProvider = ({ children }) => {
     }
     
     // 3. Bursar Login
-    if (identifier === 'bussar' && password === '@@@@@@@@') {
+    if (identifier === 'bursar' && password === '@@@@@@@@') {
       const adminUser = { email: 'bursar@bonusdominus.edu', role: 'bursar', name: 'School Bursar', staffId: 'BDS/BUR/001' };
       setCurrentAdmin(adminUser);
       localStorage.setItem('adminUser', JSON.stringify(adminUser));
