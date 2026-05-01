@@ -77,8 +77,7 @@ const Login = () => {
       } else {
         const result = await adminAuth.login(formData.email, formData.password);
         if (result.success) {
-          const user = JSON.parse(localStorage.getItem('adminUser'));
-          navigateByRole(user?.role);
+          navigateByRole(result.role);
         } else {
           setError(result.message);
         }
@@ -462,6 +461,17 @@ const Login = () => {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* ── Staff Submit Button ── */}
+          {isStaff && (
+            <button
+              type="submit"
+              disabled={loading}
+              className={`auth-btn-advanced ${accentColor} mt-2`}
+            >
+              {loading ? <Loader2 size={22} className="animate-spin" /> : <><ArrowRight size={20} /> Sign In</>}
+            </button>
+          )}
 
           {error && (
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="auth-error-advanced">

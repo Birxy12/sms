@@ -23,7 +23,7 @@ export const AdminAuthProvider = ({ children }) => {
       const adminUser = { email: identifier, role: 'admin', name: 'System Administrator', staffId: 'ADMIN/001' };
       setCurrentAdmin(adminUser);
       localStorage.setItem('adminUser', JSON.stringify(adminUser));
-      return { success: true };
+      return { success: true, role: 'admin' };
     }
     
     // 2. Principal Login
@@ -31,7 +31,7 @@ export const AdminAuthProvider = ({ children }) => {
       const adminUser = { email: 'principal@bonusdominus.edu', role: 'principal', name: 'School Principal', staffId: 'BDS/PRIN/001' };
       setCurrentAdmin(adminUser);
       localStorage.setItem('adminUser', JSON.stringify(adminUser));
-      return { success: true };
+      return { success: true, role: 'principal' };
     }
     
     // 3. Bursar Login
@@ -39,7 +39,7 @@ export const AdminAuthProvider = ({ children }) => {
       const adminUser = { email: 'bursar@bonusdominus.edu', role: 'bursar', name: 'School Bursar', staffId: 'BDS/BUR/001' };
       setCurrentAdmin(adminUser);
       localStorage.setItem('adminUser', JSON.stringify(adminUser));
-      return { success: true };
+      return { success: true, role: 'bursar' };
     }
     
     // 4. Try Firestore lookup (either by Email or Staff ID)
@@ -78,7 +78,7 @@ export const AdminAuthProvider = ({ children }) => {
           const user = { ...staffData, id: querySnapshot.docs[0].id };
           setCurrentAdmin(user);
           localStorage.setItem('adminUser', JSON.stringify(user));
-          return { success: true };
+          return { success: true, role: user.role };
         }
       }
     } catch (error) {

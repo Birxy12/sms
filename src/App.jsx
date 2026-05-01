@@ -46,15 +46,23 @@ const ProtectedStudentRoute = ({ children }) => {
 const ProtectedAdminRoute = ({ children, requiredRole }) => {
   const { currentAdmin, loading } = useAdminAuth();
   if (loading) return <div>Loading...</div>;
-  if (!currentAdmin) return <Navigate to="/admin-login" replace />;
-  
-  if (requiredRole && currentAdmin.role !== 'admin') {
+  if (!currentAdmin) return <Navigate to="/login" replace />;
+
+  // Admin can access everything
+  if (currentAdmin.role === 'admin') return children;
+
+  // Check role if specified
+  if (requiredRole) {
     const allowedRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
     if (!allowedRoles.includes(currentAdmin.role)) {
-      return <Navigate to="/" replace />; // Alternatively /unauthorized
+      // Redirect to their own dashboard instead of home
+      if (currentAdmin.role === 'principal') return <Navigate to="/principal" replace />;
+      if (currentAdmin.role === 'bursar') return <Navigate to="/finance" replace />;
+      if (currentAdmin.role === 'teacher') return <Navigate to="/teachers" replace />;
+      return <Navigate to="/" replace />;
     }
   }
-  
+
   return children;
 };
 
@@ -126,7 +134,7 @@ function App() {
         </ProtectedAdminRoute>
       } />
       <Route path="/teachers" element={
-        <ProtectedAdminRoute requiredRole={['teacher', 'principal']}>
+        <ProtectedAdminRoute requiredRole={['teacher', 'principal', 'admin', 'bursar']}>
           <Layout><StaffDashboard /></Layout>
         </ProtectedAdminRoute>
       } />
@@ -181,7 +189,7 @@ function App() {
         </ProtectedAdminRoute>
       } />
       <Route path="/admin/posts" element={
-        <ProtectedAdminRoute requiredRole={['principal', 'admin']}>
+        <ProtectedAdminRoute requiredRole={['principal', 'admin', 'teacher']}>
           <Layout><ContentCMS /></Layout>
         </ProtectedAdminRoute>
       } />
