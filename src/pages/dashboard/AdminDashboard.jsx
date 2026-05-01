@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
-import { collection, query, getDocs, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, limit, onSnapshot, doc, getDoc, setDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import StatCard from '../../components/StatCard';
 import ResultPublisher from '../../components/ResultPublisher';
@@ -16,6 +16,41 @@ const AdminDashboard = () => {
   const [selectedClass, setSelectedClass] = useState('JSS1');
   const [activeTab, setActiveTab] = useState('Overview');
   const navigate = useNavigate();
+
+  // -- System Controls State --
+  const [systemControls, setSystemControls] = useState({
+    allowProfileEdit: false,
+  });
+  const [controlsSaving, setControlsSaving] = useState(false);
+  const [controlsStatus, setControlsStatus] = useState('');
+
+  useEffect(() => {
+    const fetchControls = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'student_permissions'));
+        if (snap.exists()) {
+          setSystemControls(prev => ({ ...prev, ...snap.data() }));
+        }
+      } catch (e) { console.error('Error fetching system controls:', e); }
+    };
+    fetchControls();
+  }, []);
+
+  const handleToggleControl = async (key, value) => {
+    const updated = { ...systemControls, [key]: value };
+    setSystemControls(updated);
+    setControlsSaving(true);
+    try {
+      await setDoc(doc(db, 'settings', 'student_permissions'), updated, { merge: true });
+      setControlsStatus('Saved!');
+      setTimeout(() => setControlsStatus(''), 2500);
+    } catch (e) {
+      console.error('Error saving control:', e);
+      setControlsStatus('Error saving.');
+    } finally {
+      setControlsSaving(false);
+    }
+  };
   
   const classes = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'];
   const adminTabs = [
@@ -398,6 +433,55 @@ const AdminDashboard = () => {
           </div>
           <BulkUpload />
           <ResultPublisher />
+
+          {/* System Controls Card */}
+          <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+            <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 tracking-tight">System Controls</h3>
+                <p className="text-xs font-medium text-slate-400 mt-0.5">Toggle system-wide permissions for students and staff.</p>
+              </div>
+              {controlsStatus && (
+                <span className={`text-xs font-black px-3 py-1.5 rounded-xl ${
+                  controlsStatus === 'Saved!' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+                }`}>{controlsStatus}</span>
+              )}
+            </div>
+            <div className="p-8 space-y-0 divide-y divide-slate-100">
+              {[
+                {
+                  key: 'allowProfileEdit',
+                  label: 'Allow Student Profile Editing',
+                  description: 'When ON, students can edit their name, phone number, date of birth, email and profile photo from their profile page.',
+                  color: 'indigo',
+                },
+              ].map(control => (
+                <div key={control.key} className="flex items-start justify-between py-6 gap-6">
+                  <div className="flex-1">
+                    <p className="text-sm font-black text-slate-800">{control.label}</p>
+                    <p className="text-xs text-slate-400 font-medium mt-1 leading-relaxed max-w-lg">{control.description}</p>
+                  </div>
+                  <button
+                    id={`toggle-${control.key}`}
+                    onClick={() => handleToggleControl(control.key, !systemControls[control.key])}
+                    disabled={controlsSaving}
+                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${control.color}-500 disabled:opacity-60 ${
+                      systemControls[control.key] ? `bg-${control.color}-600` : 'bg-slate-200'
+                    }`}
+                    role="switch"
+                    aria-checked={systemControls[control.key]}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        systemControls[control.key] ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
         </div>
       )}
       </div>
