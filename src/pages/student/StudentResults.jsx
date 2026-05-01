@@ -173,7 +173,16 @@ const subjectsSnap = await getDocs(subjectsQuery);
 const classSubjects = subjectsSnap.docs.map(d => d.data().name);
 
 const rawMarks = foundMarksDoc?.marks || foundMarksDoc?.subjects || {};
-const subjectList = classSubjects.length > 0 ? classSubjects : Object.keys(rawMarks);
+let subjectList = classSubjects.length > 0 ? classSubjects : Object.keys(rawMarks);
+
+// Deduplicate subject list (case-insensitive)
+const seen = new Set();
+subjectList = subjectList.filter(subj => {
+  const upper = subj.toUpperCase().trim();
+  if (seen.has(upper)) return false;
+  seen.add(upper);
+  return true;
+});
 
 if (!foundMarksDoc && subjectList.length === 0) {
 // No marks found at all – show empty state rather than all-zero rows

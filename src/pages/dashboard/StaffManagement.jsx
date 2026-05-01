@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, limit } from 'firebase/firestore';
-import { Users, UserPlus, Mail, Phone, Briefcase, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Search } from 'lucide-react';
+import { Users, UserPlus, Mail, Phone, Briefcase, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Search, ShieldCheck, Wallet } from 'lucide-react';
 
 const StaffManagement = () => {
   const [staff, setStaff] = useState([]);
@@ -116,20 +116,21 @@ const StaffManagement = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         {[
           { label: 'Total Staff', value: staff.length, icon: Users, color: 'indigo' },
-          { label: 'Science Dept', value: staff.filter(s => s.department === 'Science').length, icon: Briefcase, color: 'teal' },
-          { label: 'Arts Dept', value: staff.filter(s => s.department === 'Arts').length, icon: Briefcase, color: 'rose' },
-          { label: 'Admins', value: staff.filter(s => s.role === 'admin').length, icon: Briefcase, color: 'blue' },
+          { label: 'Teachers', value: staff.filter(s => s.role === 'teacher').length, icon: Briefcase, color: 'blue' },
+          { label: 'Admins', value: staff.filter(s => s.role === 'admin').length, icon: ShieldCheck, color: 'rose' },
+          { label: 'Principals', value: staff.filter(s => s.role === 'principal').length, icon: ShieldCheck, color: 'purple' },
+          { label: 'Bursars', value: staff.filter(s => s.role === 'bursar').length, icon: Wallet, color: 'emerald' },
         ].map((stat, i) => (
           <div key={i} className={`bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow`}>
             <div className={`p-4 rounded-xl bg-${stat.color}-50 text-${stat.color}-600`}>
               <stat.icon size={24} />
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-500">{stat.label}</p>
-              <h4 className="text-2xl font-bold text-slate-900">{stat.value}</h4>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-widest">{stat.label}</p>
+              <h4 className="text-xl font-bold text-slate-900">{stat.value}</h4>
             </div>
           </div>
         ))}
