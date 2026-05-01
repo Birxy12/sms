@@ -256,7 +256,7 @@ const Marksheet = ({ className: propClassName }) => {
           setData(studentList);
           setLoading(false);
           return;
-        }
+
 
         // 2. Fallback to CSV for JSS1/SS1 if Firestore is empty
         if (currentClassName === 'JSS1') {

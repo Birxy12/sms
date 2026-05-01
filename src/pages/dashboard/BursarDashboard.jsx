@@ -4,7 +4,7 @@ import { collection, query, getDocs, orderBy, where, doc, getDoc, setDoc } from 
 import { 
   Wallet, DollarSign, TrendingUp, TrendingDown, Users, 
   Search, Filter, Download, Plus, ArrowUpRight, 
-  ArrowDownRight, Calendar, FileText, CheckCircle, AlertCircle, Loader2
+  ArrowDownRight, Calendar, FileText, CheckCircle, AlertCircle, Loader2, Briefcase
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -327,7 +327,7 @@ const BursarDashboard = () => {
              <button className="btn-blue px-8 py-4 rounded-2xl shadow-xl shadow-blue-100 mt-4">Manage Payroll</button>
           </div>
         )}
-      </div>    </div>
+      </div>
 
       {status.message && (
         <div className={`fixed bottom-8 right-8 p-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-8 ${
