@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { db } from '../../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
 import { uploadFileToSupabase } from '../../lib/supabase';
 import { 
   User, Mail, GraduationCap, MapPin, Calendar, CheckCircle, 
@@ -26,7 +25,7 @@ const StudentProfile = () => {
     house: currentStudent?.house || ''
   });
   const [saving, setSaving] = useState(false);
-  const [canEdit, setCanEdit] = useState(true);
+  const canEdit = true; // Always allow student profile editing
   const [status, setStatus] = useState({ type: '', message: '' });
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
@@ -64,15 +63,8 @@ const StudentProfile = () => {
                       !validateField('phone', formData.phone);
 
   // -- Effects --
-  useEffect(() => {
-    const fetchPermissions = async () => {
-      try {
-        const docSnap = await getDoc(doc(db, 'settings', 'student_permissions'));
-        if (docSnap.exists()) setCanEdit(docSnap.data().allowProfileEdit ?? true);
-      } catch (e) { console.error(e); }
-    };
-    fetchPermissions();
-  }, [currentStudent]);
+  // Note: canEdit is always true — students can always edit their profile.
+
 
   useEffect(() => {
     const fields = ['name', 'phone', 'dob', 'email', 'gender', 'photo'];
