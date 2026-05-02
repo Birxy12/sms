@@ -1,40 +1,54 @@
 import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { UploadCloud, Camera } from 'lucide-react';
+import { UploadCloud, Camera, FileImage } from 'lucide-react';
 
 const UploadView = ({ onUpload, onSwitchToCamera }) => {
   const onDrop = useCallback((acceptedFiles) => {
     const file = acceptedFiles[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        onUpload(e.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      onUpload({ imageSrc: e.target.result, source: 'upload' });
+    };
+    reader.readAsDataURL(file);
   }, [onUpload]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'image/*': [] },
-    multiple: false
+    multiple: false,
   });
 
   return (
     <div className="upload-view">
+      <div className="upload-hero">
+        <FileImage size={32} className="upload-hero-icon" />
+        <h2>Scan a Receipt</h2>
+        <p>Upload an image or use your camera for live document detection</p>
+      </div>
+
       <div {...getRootProps()} className={`dropzone ${isDragActive ? 'active' : ''}`}>
         <input {...getInputProps()} />
-        <UploadCloud size={48} className="upload-icon" />
+        <UploadCloud size={44} className="upload-icon" />
         {isDragActive ? (
-          <p>Drop the receipt image here...</p>
+          <p className="dropzone-text">Drop it here!</p>
         ) : (
-          <p>Drag & drop a receipt image here, or click to select file</p>
+          <>
+            <p className="dropzone-text">Drag & drop a receipt image</p>
+            <span className="dropzone-sub">or click to browse files</span>
+          </>
         )}
+        <div className="supported-formats">JPG · PNG · WEBP · HEIC</div>
       </div>
-      <div className="upload-divider"><span>OR</span></div>
+
+      <div className="upload-divider">
+        <span>OR</span>
+      </div>
+
       <button onClick={onSwitchToCamera} className="switch-camera-btn">
         <Camera size={20} />
-        Use Camera to Scan
+        Use Camera with Live Detection
+        <span className="btn-badge">jscanify</span>
       </button>
     </div>
   );
