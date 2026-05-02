@@ -141,7 +141,7 @@ const Login = () => {
       case 'className': return 'Select the class you are currently enrolled in';
       case 'email': return 'Enter your school-assigned email or Staff ID';
       case 'phone': return 'Enter the mobile number registered with the school';
-      case 'password': return 'Default password is 134 if not yet changed';
+      case 'password': return 'Enter your password';
       default: return '';
     }
   };

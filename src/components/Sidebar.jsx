@@ -6,7 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { 
   LayoutDashboard, Users, BookOpen, GraduationCap, Settings, LogOut,
   DollarSign, Calendar, Layers, FileText, Mail, UserCircle, Award,
-  Inbox as InboxIcon, CreditCard, Home, X
+  Inbox as InboxIcon, CreditCard, Home, X, MonitorCheck
 } from 'lucide-react';
 
 const Sidebar = ({ sidebarOpen, onClose }) => {
@@ -46,6 +46,7 @@ const Sidebar = ({ sidebarOpen, onClose }) => {
     { name: 'School Mailing',     path: '/messages',       icon: Mail,            roles: ['admin', 'teacher', 'principal', 'bursar'] },
     { name: 'Content Management', path: '/admin/posts',    icon: FileText,        roles: ['admin', 'principal'] },
     { name: 'Manage Courses',     path: '/courses',        icon: BookOpen,        roles: ['admin', 'principal'] },
+    { name: 'CBT Exams',          path: '/cbt',            icon: MonitorCheck,    roles: ['admin', 'principal', 'teacher'] },
     { name: 'School Branding',    path: '/settings',       icon: Settings,        roles: ['admin'] },
     { name: 'My Profile',         path: '/profile',        icon: UserCircle,      roles: ['admin', 'teacher', 'principal', 'bursar'] },
 
@@ -53,6 +54,7 @@ const Sidebar = ({ sidebarOpen, onClose }) => {
     { name: 'Overview',           path: '/students',            icon: LayoutDashboard, roles: ['student'], exact: true },
     { name: 'Inbox',              path: '/students/inbox',      icon: InboxIcon,       roles: ['student'] },
     { name: 'Assignments',        path: '/students/assignments',icon: Calendar,        roles: ['student'] },
+    { name: 'CBT Exams',          path: '/students/cbt',        icon: MonitorCheck,    roles: ['student'] },
     { name: 'Notes & Materials',  path: '/students/notes',      icon: FileText,        roles: ['student'] },
     { name: 'Results',            path: '/students/results',    icon: Award,           roles: ['student'] },
     { name: 'School Fees',        path: '/students/fees',       icon: CreditCard,      roles: ['student'] },

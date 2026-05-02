@@ -15,7 +15,8 @@ const StaffRegister = () => {
     name: '',
     email: '',
     phone: '',
-    role: 'teacher'
+    role: 'teacher',
+    password: ''
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -177,6 +178,23 @@ const StaffRegister = () => {
                 <option value="principal">Principal</option>
                 <option value="bursar">Bursar</option>
               </select>
+            </div>
+          </div>
+
+          {/* Password */}
+          <div className="input-field-container">
+            <label className="field-label">Password</label>
+            <div className="input-group-advanced">
+              <Lock size={18} className="input-icon" />
+              <input 
+                type="password" 
+                name="password" 
+                placeholder="••••••••" 
+                value={formData.password} 
+                onChange={handleInputChange} 
+                required 
+                className="auth-input-advanced" 
+              />
             </div>
           </div>
 

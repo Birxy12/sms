@@ -158,7 +158,7 @@ const StudentFees = () => {
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-slate-500 font-bold">Account Number</span>
-                <span className="text-slate-900 font-black font-mono text-lg">2041234567</span>
+                <span className="text-slate-900 font-black font-mono text-lg">2022829027</span>
               </div>
             </div>
 

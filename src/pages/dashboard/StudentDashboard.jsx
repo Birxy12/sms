@@ -3,7 +3,7 @@ import { useStudentAuth } from '../../context/StudentAuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { db } from '../../lib/firebase';
 import { collection, query, getDocs, where } from 'firebase/firestore';
-import { LayoutDashboard, Award, CreditCard, Calendar, Bell, ChevronRight, Inbox as InboxIcon, Trophy, Wallet, BookOpen, Library } from 'lucide-react';
+import { LayoutDashboard, Award, CreditCard, Calendar, Bell, ChevronRight, Inbox as InboxIcon, Trophy, Wallet, BookOpen, Library, MonitorCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PinSetupModal from '../../components/student/PinSetupModal';
 
@@ -39,19 +39,21 @@ const StudentDashboard = () => {
       finally { setLoading(false); }
     };
     load();
-  }, [currentStudent]);
+  }, [currentStudent, className, regNum]);
 
   const stats = [
     { label: 'School Alerts', value: inboxCount, color: '#6366f1', icon: InboxIcon,  path: '/students/inbox' },
     { label: 'Results',       value: resultsCount,color: '#10b981', icon: Trophy,      path: '/students/results' },
     { label: 'Fees Balance',  value: '₦60,000',   color: '#f59e0b', icon: Wallet,      path: '/students/fees' },
     { label: 'Assignments',   value: 2,            color: '#ef4444', icon: Library,     path: '/students/assignments' },
+    { label: 'CBT Exams',     value: 'Open',       color: '#2563eb', icon: MonitorCheck,path: '/students/cbt' },
   ];
 
   const quickLinks = [
     { label: 'View Inbox',       path: '/students/inbox',       icon: InboxIcon },
     { label: 'My Results',       path: '/students/results',     icon: Trophy },
     { label: 'Assignments',      path: '/students/assignments', icon: BookOpen },
+    { label: 'CBT Exams',        path: '/students/cbt',         icon: MonitorCheck },
     { label: 'School Fees',      path: '/students/fees',        icon: CreditCard },
   ];
 

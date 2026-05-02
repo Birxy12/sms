@@ -14,9 +14,11 @@ import StudentResults from './pages/student/StudentResults';
 import StudentFees from './pages/student/StudentFees';
 import StudentProfile from './pages/student/StudentProfile';
 import StudentIDCard from './pages/student/StudentIDCard';
+import StudentCBT from './pages/student/StudentCBT';
 
 import StaffManagement from './pages/dashboard/StaffManagement';
 import CourseManagement from './pages/dashboard/CourseManagement';
+import CBTManagement from './pages/dashboard/CBTManagement';
 import StudentManagement from './pages/dashboard/StudentManagement';
 import ClassManagement from './pages/dashboard/ClassManagement';
 import ProfileSettings from './pages/dashboard/ProfileSettings';
@@ -120,6 +122,11 @@ function App() {
           <Layout><StudentIDCard /></Layout>
         </ProtectedStudentRoute>
       } />
+      <Route path="/students/cbt" element={
+        <ProtectedStudentRoute>
+          <Layout><StudentCBT /></Layout>
+        </ProtectedStudentRoute>
+      } />
 
 
       {/* Admin/Teacher Dashboards (Protected) */}
@@ -171,6 +178,11 @@ function App() {
       <Route path="/courses" element={
         <ProtectedAdminRoute requiredRole="admin">
           <Layout><CourseManagement /></Layout>
+        </ProtectedAdminRoute>
+      } />
+      <Route path="/cbt" element={
+        <ProtectedAdminRoute requiredRole={['teacher', 'principal', 'admin']}>
+          <Layout><CBTManagement /></Layout>
         </ProtectedAdminRoute>
       } />
       <Route path="/finance" element={

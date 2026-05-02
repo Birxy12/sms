@@ -67,7 +67,7 @@ const StaffManagement = () => {
         await addDoc(collection(db, 'staff'), {
           ...currentStaff,
           staffId,
-          password: currentStaff.password || '134', // Default password 134
+          password: currentStaff.password, // Set the password directly without fallback
           createdAt: new Date().toISOString()
         });
         setStatus({ type: 'success', message: `Staff added successfully! New ID: ${staffId}` });
@@ -316,7 +316,8 @@ const StaffManagement = () => {
                     type="password" 
                     value={currentStaff.password || ''}
                     onChange={(e) => setCurrentStaff({...currentStaff, password: e.target.value})}
-                    placeholder={isEditing ? '••••••••' : 'Default: 134'}
+                    placeholder={isEditing ? '••••••••' : 'Enter password'}
+                    required={!isEditing}
                     className="w-full px-5 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none transition-all placeholder:text-slate-300 font-medium"
                   />
                 </div>

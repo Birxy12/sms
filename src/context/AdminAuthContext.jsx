@@ -18,31 +18,16 @@ export const AdminAuthProvider = ({ children }) => {
   }, []);
 
   const login = async (identifier, password) => {
-    // 1. Check hardcoded Admin credentials
+    // 1. Check hardcoded Admin credentials (fallback to prevent lockout)
     if (identifier === 'admin@birxysms.edu' && password === '@@@@@@@@') {
       const adminUser = { email: identifier, role: 'admin', name: 'System Administrator', staffId: 'ADMIN/001' };
       setCurrentAdmin(adminUser);
       localStorage.setItem('adminUser', JSON.stringify(adminUser));
       return { success: true, role: 'admin' };
     }
-    
-    // 2. Principal Login
-    if (identifier === 'bdspal' && password === '@@@@@@@@') {
-      const adminUser = { email: 'principal@bonusdominus.edu', role: 'principal', name: 'School Principal', staffId: 'BDS/PRIN/001' };
-      setCurrentAdmin(adminUser);
-      localStorage.setItem('adminUser', JSON.stringify(adminUser));
-      return { success: true, role: 'principal' };
-    }
-    
-    // 3. Bursar Login
-    if (identifier === 'bursar' && password === '@@@@@@@@') {
-      const adminUser = { email: 'bursar@bonusdominus.edu', role: 'bursar', name: 'School Bursar', staffId: 'BDS/BUR/001' };
-      setCurrentAdmin(adminUser);
-      localStorage.setItem('adminUser', JSON.stringify(adminUser));
-      return { success: true, role: 'bursar' };
-    }
-    
-    // 4. Try Firestore lookup (either by Email or Staff ID)
+
+    // 2. Try Firestore lookup (either by Email or Staff ID)
+    // Principal and Bursar accounts should be managed via Staff Management.
     try {
       const { db } = await import('../lib/firebase');
       const { collection, query, where, getDocs } = await import('firebase/firestore');
@@ -73,8 +58,8 @@ export const AdminAuthProvider = ({ children }) => {
       
       if (!querySnapshot.empty) {
         const staffData = querySnapshot.docs[0].data();
-        // Allow the user-defined password OR the default 134
-        if (staffData.password === password || (password === '134' && !staffData.password)) {
+        // Check password matching exactly what's set in the DB
+        if (staffData.password === password) {
           const user = { ...staffData, id: querySnapshot.docs[0].id };
           setCurrentAdmin(user);
           localStorage.setItem('adminUser', JSON.stringify(user));
@@ -85,7 +70,7 @@ export const AdminAuthProvider = ({ children }) => {
       console.error('Staff login error:', error);
     }
 
-    return { success: false, message: 'Invalid credentials. Teachers default password is 134' };
+    return { success: false, message: 'Invalid credentials. Please verify your password.' };
   };
 
   const logout = () => {
@@ -154,14 +139,14 @@ export const AdminAuthProvider = ({ children }) => {
         return { success: false, message: 'Your account is pending admin approval.' };
       }
 
-      if (staffData.password === password || (password === '134' && !staffData.password)) {
+      if (staffData.password === password) {
         const user = { ...staffData, id: snap.docs[0].id };
         setCurrentAdmin(user);
         localStorage.setItem('adminUser', JSON.stringify(user));
         return { success: true, role: staffData.role };
       }
 
-      return { success: false, message: 'Incorrect password. Default is 134.' };
+      return { success: false, message: 'Incorrect password.' };
     } catch (err) {
       console.error('Phone login error:', err);
       return { success: false, message: 'Login failed. Check your connection.' };

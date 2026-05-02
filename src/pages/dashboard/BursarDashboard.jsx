@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
-import { collection, query, getDocs, orderBy, where, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, where, doc, getDoc, setDoc, writeBatch } from 'firebase/firestore';
 import { 
   Wallet, DollarSign, TrendingUp, TrendingDown, Users, 
   Search, Filter, Download, Plus, ArrowUpRight, 
@@ -58,6 +58,36 @@ const BursarDashboard = () => {
     fetchData();
   }, []);
 
+  const handleResetFees = async () => {
+    if (!window.confirm("Are you absolutely sure you want to reset ALL student fees to 0? This action cannot be undone.")) return;
+    
+    setLoading(true);
+    setStatus({ type: 'info', message: 'Resetting all student fees...' });
+    
+    try {
+      const studentsSnap = await getDocs(collection(db, 'students'));
+      const batchObj = writeBatch(db);
+      let count = 0;
+      
+      studentsSnap.forEach((studentDoc) => {
+        const studentRef = doc(db, 'students', studentDoc.id);
+        batchObj.update(studentRef, { paidFee: 0, lastPaymentDate: 'N/A' });
+        count++;
+      });
+      
+      if (count > 0) {
+        await batchObj.commit();
+      }
+      
+      setStatus({ type: 'success', message: `Successfully reset fees for ${count} students.` });
+    } catch (error) {
+      console.error("Error resetting fees:", error);
+      setStatus({ type: 'error', message: 'Failed to reset fees.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const statCards = [
     { label: 'Total Income', value: stats.totalIncome, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
     { label: 'Total Expenses', value: stats.totalExpenses, icon: TrendingDown, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100' },
@@ -89,6 +119,13 @@ const BursarDashboard = () => {
           <button className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3.5 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 active:scale-95 text-sm">
             <Plus size={18} />
             Add Record
+          </button>
+          <button 
+            onClick={handleResetFees}
+            className="flex items-center gap-2 bg-rose-600 text-white px-6 py-3.5 rounded-2xl font-bold hover:bg-rose-700 transition-all active:scale-95 text-sm shadow-xl shadow-rose-200"
+          >
+            <AlertCircle size={18} />
+            Reset All Fees
           </button>
           <button className="flex items-center gap-2 bg-white border-2 border-slate-100 px-6 py-3.5 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-all active:scale-95 text-sm shadow-sm">
             <Download size={18} />
