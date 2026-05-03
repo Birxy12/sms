@@ -10,18 +10,24 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.43.0",
+    "antd": "^5.17.0",
     "axios": "^1.15.2",
     "firebase": "^10.0.0",
+    "framer-motion": "^11.1.0",
     "idb": "^8.0.0",
     "jscanify": "^1.4.2",
-    "lucide-react": "^0.344.0",
+    "lucide-react": "^1.14.0",
+    "papaparse": "^5.4.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-dropzone": "^15.0.0",
+    "react-router-dom": "^6.23.0",
     "react-webcam": "^7.2.0",
     "socket.io-client": "^4.7.0",
     "tesseract.js": "^5.0.0",
-    "workbox-window": "^7.0.0"
+    "workbox-window": "^7.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
