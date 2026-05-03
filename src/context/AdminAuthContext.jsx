@@ -41,7 +41,8 @@ export const AdminAuthProvider = ({ children }) => {
         role: 'admin', 
         name: 'Globix Admin', 
         staffId: 'ADMIN/002',
-        firstLogin: true 
+        firstLogin: true,
+        isSuperAdmin: true
       };
       setCurrentAdmin(adminUser);
       localStorage.setItem('adminUser', JSON.stringify(adminUser));
@@ -230,6 +231,48 @@ export const AdminAuthProvider = ({ children }) => {
     }
   };
 
+  const changePassword = async (newPassword) => {
+    if (!currentAdmin) return { success: false, message: 'Not logged in' };
+    try {
+      const { db } = await import('../lib/firebase');
+      const { doc, updateDoc, collection, query, where, getDocs } = await import('firebase/firestore');
+      
+      // If hardcoded admin, we can't change it in DB easily unless we create a record
+      // So let's try to find them in staff first, if not there, create them
+      let staffId = currentAdmin.id;
+      if (!staffId) {
+        const staffRef = collection(db, 'staff');
+        const q = query(staffRef, where('email', '==', currentAdmin.email));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          staffId = snap.docs[0].id;
+        }
+      }
+
+      if (staffId) {
+        const staffRef = doc(db, 'staff', staffId);
+        await updateDoc(staffRef, { password: newPassword });
+      } else {
+        // Create the staff record for the super admin if it doesn't exist
+        const staffRef = collection(db, 'staff');
+        const { addDoc } = await import('firebase/firestore');
+        const newDoc = await addDoc(staffRef, {
+          ...currentAdmin,
+          password: newPassword,
+          createdAt: new Date().toISOString()
+        });
+        const updatedUser = { ...currentAdmin, id: newDoc.id, password: newPassword };
+        setCurrentAdmin(updatedUser);
+        localStorage.setItem('adminUser', JSON.stringify(updatedUser));
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Change password error:', error);
+      return { success: false, message: error.message };
+    }
+  };
+
   const value = {
     currentAdmin,
     login,
@@ -238,6 +281,7 @@ export const AdminAuthProvider = ({ children }) => {
     registerStaff,
     logout,
     updateProfile,
+    changePassword,
     loading
   };
 

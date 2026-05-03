@@ -1,77 +1,73 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // NOTE: This system uses a custom localStorage-based auth. 
-    // To use request.auth, you must enable Firebase Authentication in the console.
     
-    // For now, we allow read/write for core collections to enable the management system.
-    // In production, please enable Firebase Auth and restore strict rules.
-
-    // Helper: Check if localStorage user is admin or teacher (kept for future use if needed)
-    function isAdminOrTeacher(uid) {
-      return uid != null 
-        && exists(/databases/$(database)/documents/users/$(uid))
-        && get(/databases/$(database)/documents/users/$(uid)).data.role in ['admin', 'teacher'];
+    // Helper: Is the user authenticated via Firebase Auth?
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    match /users/{uid} {
-      allow read, write: if true;
+    // Helper: Is the user the specific super admin?
+    // Requires Email/Password or Google Auth for email field
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == 'globixtechinc@gmail.com' ||
+        request.auth.token.email == 'admin@birxysms.edu'
+      );
     }
 
-    match /students/{id} {
-      allow read, write: if true;
+    // Helper: Is the user a staff member?
+    function isStaff() {
+      return isAuthenticated(); // For now, allow any auth'd user to be staff if we use anonymous auth as bridge
     }
 
+    // 1. Staff Records: Only Super Admin can manage staff list
     match /staff/{id} {
-      allow read, write: if true;
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
     }
 
+    // 2. Student Records: Public read for login, auth'd write
+    match /students/{id} {
+      allow read: if true; 
+      allow write: if isAuthenticated();
+    }
+
+    // 3. CBT System
+    match /cbtExams/{id} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /cbtSubmissions/{id} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // 4. Academic Marks
     match /marks/{id} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
     }
-
     match /marks/{id}/{subcollection=**} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
     }
 
-    match /subjects/{id} {
-      allow read, write: if true;
-    }
+    // 5. General Collections
+    match /subjects/{id} { allow read: if true; allow write: if isAuthenticated(); }
+    match /publications/{id} { allow read: if true; allow write: if isAuthenticated(); }
+    match /testimonies/{id} { allow read: if true; allow write: if isAuthenticated(); }
+    match /settings/{id} { allow read: if true; allow write: if isAuthenticated(); }
+    match /posts/{id} { allow read: if true; allow write: if isAuthenticated(); }
+    match /assignments/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /notes/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /notifications/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /schools/{id} { allow read: if true; allow write: if isSuperAdmin(); }
+    match /classes/{id} { allow read: if true; allow write: if isAuthenticated(); }
 
-    match /publications/{id} {
-      allow read, write: if true;
-    }
-
-    match /testimonies/{id} {
-      allow read, write: if true;
-    }
-
-    match /settings/{id} {
-      allow read, write: if true;
-    }
-
-    match /posts/{id} {
-      allow read, write: if true;
-    }
-
-    match /assignments/{id} {
-      allow read, write: if true;
-    }
-    
-    match /notes/{id} {
-      allow read, write: if true;
-    }
-
-    match /notifications/{id} {
-      allow read, write: if true;
-    }
-
-    match /schools/{id} {
-      allow read, write: if true;
-    }
-
-    match /classes/{id} {
-      allow read, write: if true;
+    // Default: Authenticated users can read/write other things
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
     }
   }
 }
