@@ -75,11 +75,14 @@ const parseQuestionRows = (rows = []) => rows
     const options = [optionA, optionB, optionC, optionD].map((item) => String(item || '').trim());
     const answerRaw = String(answer || '').trim();
     const alphaIndex = ['A', 'B', 'C', 'D'].indexOf(answerRaw.toUpperCase());
-    const numericIndex = Number(answerRaw);
-        return {
+    const numericAnswer = Number(answerRaw);
+    const numericIndex = Number.isInteger(numericAnswer) ? numericAnswer - 1 : NaN;
+    return {
       prompt: String(prompt || '').trim(),
       options,
-      correctIndex: alphaIndex >= 0 ? alphaIndex : (Number.isFinite(numericIndex) ? Math.min(Math.max(numericIndex, 0), 3) : 0),
+      correctIndex: alphaIndex >= 0
+        ? alphaIndex
+        : (Number.isFinite(numericIndex) ? Math.min(Math.max(numericIndex, 0), 3) : 0),
     };
   })
   .filter((question) => question.prompt && question.options.every(Boolean));
