@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { db } from '../../lib/firebase';
 import {
   addDoc,
@@ -57,6 +58,34 @@ const normalizeExam = (exam) => ({
     }))
     .filter((question) => question.prompt && question.options.every(Boolean)),
 });
+
+
+const GENERATED_QUESTION_COUNT = 25;
+
+const generateQuestions = (subject, className) => Array.from({ length: GENERATED_QUESTION_COUNT }, (_, index) => ({
+  prompt: `${subject} (${className}) question ${index + 1}`,
+  options: ['Option A', 'Option B', 'Option C', 'Option D'],
+  correctIndex: 0,
+}));
+
+const parseQuestionRows = (rows = []) => rows
+  .map((row) => {
+    const values = Array.isArray(row) ? row : Object.values(row || {});
+    const [prompt, optionA, optionB, optionC, optionD, answer] = values;
+    const options = [optionA, optionB, optionC, optionD].map((item) => String(item || '').trim());
+    const answerRaw = String(answer || '').trim();
+    const alphaIndex = ['A', 'B', 'C', 'D'].indexOf(answerRaw.toUpperCase());
+    const numericAnswer = Number(answerRaw);
+    const numericIndex = Number.isInteger(numericAnswer) ? numericAnswer - 1 : NaN;
+    return {
+      prompt: String(prompt || '').trim(),
+      options,
+      correctIndex: alphaIndex >= 0
+        ? alphaIndex
+        : (Number.isFinite(numericIndex) ? Math.min(Math.max(numericIndex, 0), 3) : 0),
+    };
+  })
+  .filter((question) => question.prompt && question.options.every(Boolean));
 
 const CBTManagement = () => {
   const [exams, setExams] = useState([]);
@@ -218,6 +247,53 @@ const CBTManagement = () => {
     }
   };
 
+  const autoGenerateQuestions = () => {
+    setForm((current) => ({
+      ...current,
+      questions: generateQuestions(current.subject, current.targetClass),
+    }));
+    setStatus({ type: 'success', message: 'Generated 25 questions for this class and subject.' });
+  };
+
+  const uploadQuestions = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    try {
+      const lowerName = file.name.toLowerCase();
+      let rows = [];
+
+      if (lowerName.endsWith('.csv')) {
+        const text = await file.text();
+        rows = text.split(/\r?\n/).filter(Boolean).map((line) => line.split(','));
+      } else if (/\.(xlsx|xls|xlsm|xlsb)$/.test(lowerName)) {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+      } else if (/\.(txt|doc|docx)$/.test(lowerName)) {
+        const text = await file.text();
+        rows = text.split(/\r?\n/).filter(Boolean).map((line) => line.split('|'));
+      } else {
+        setStatus({ type: 'error', message: 'Unsupported file. Upload CSV, Excel, or DOC/TXT.' });
+        return;
+      }
+
+      const parsed = parseQuestionRows(rows);
+      if (!parsed.length) {
+        setStatus({ type: 'error', message: 'No valid questions found. Format: prompt, A, B, C, D, answer.' });
+        return;
+      }
+
+      setForm((current) => ({ ...current, questions: parsed }));
+      setStatus({ type: 'success', message: `Loaded ${parsed.length} questions from file.` });
+    } catch (error) {
+      console.error('Question upload error:', error);
+      setStatus({ type: 'error', message: 'Unable to read uploaded file.' });
+    }
+  };
+
   const submissionsByExam = useMemo(() => submissions.reduce((acc, submission) => {
     acc[submission.examId] = acc[submission.examId] || [];
     acc[submission.examId].push(submission);
@@ -332,6 +408,13 @@ const CBTManagement = () => {
           <button type="button" className="cbt-secondary-button" onClick={addQuestion}>
             <Plus size={18} /> Add Question
           </button>
+          <button type="button" className="cbt-secondary-button" onClick={autoGenerateQuestions}>
+            Generate 25 Questions
+          </button>
+          <label className="cbt-secondary-button" style={{ cursor: 'pointer' }}>
+            Upload Questions
+            <input type="file" accept=".csv,.xlsx,.xls,.xlsm,.xlsb,.txt,.doc,.docx" onChange={uploadQuestions} style={{ display: 'none' }} />
+          </label>
           <button type="submit" className="cbt-primary-button" disabled={saving}>
             {saving ? <Loader2 size={18} className="cbt-spin" /> : <Save size={18} />}
             {editingId ? 'Save Changes' : 'Save Exam'}

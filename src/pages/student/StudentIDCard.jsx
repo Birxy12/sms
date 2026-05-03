@@ -32,21 +32,14 @@ const StudentIDCard = () => {
   const handleDownload = async () => {
     setIsGenerating(true);
     try {
-      const html2pdf = (await import('html2pdf.js')).default;
       const element = cardRef.current;
-      const opt = {
-        margin: 0,
-        filename: `${currentStudent?.name || 'Student'}-ID-Card-2025-26.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-          scale: 4, 
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff'
-        },
-        jsPDF: { unit: 'mm', format: [85.6, 54], orientation: 'landscape' }
-      };
-      await html2pdf().set(opt).from(element).save();
+      if (!element) throw new Error('ID card not ready');
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) throw new Error('Popup blocked');
+      printWindow.document.write(`<html><head><title>Student ID Card</title></head><body>${element.outerHTML}</body></html>`);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
     } catch (error) {
       console.error('PDF generation failed:', error);
     } finally {
