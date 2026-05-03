@@ -28,6 +28,14 @@ export const AdminAuthProvider = ({ children }) => {
 
     // New Super Admin requested by user
     if (identifier === 'globixtechinc@gmail.com' && (password === 'admin123' || password === '@@@@@@@@')) {
+      try {
+        const { signInAnonymously } = await import('firebase/auth');
+        const { auth } = await import('../lib/firebase');
+        await signInAnonymously(auth);
+      } catch (authError) {
+        console.error('Anonymous auth failed:', authError);
+      }
+
       const adminUser = { 
         email: identifier, 
         role: 'admin', 

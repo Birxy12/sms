@@ -39,6 +39,14 @@ export const StudentAuthProvider = ({ children }) => {
         }
 
         // First login or no PIN set
+        try {
+          const { signInAnonymously } = await import('firebase/auth');
+          const { auth } = await import('../lib/firebase');
+          await signInAnonymously(auth);
+        } catch (authError) {
+          console.error('Anonymous student auth failed:', authError);
+        }
+
         setCurrentStudent(studentData);
         localStorage.setItem('currentStudent', JSON.stringify(studentData));
         return { success: true, requirePin: false };
@@ -55,6 +63,14 @@ export const StudentAuthProvider = ({ children }) => {
     if (!pendingStudent) return { success: false, message: 'No login session found.' };
     
     if (pendingStudent.pin === pin) {
+      try {
+        const { signInAnonymously } = await import('firebase/auth');
+        const { auth } = await import('../lib/firebase');
+        await signInAnonymously(auth);
+      } catch (authError) {
+        console.error('Anonymous student pin auth failed:', authError);
+      }
+
       setCurrentStudent(pendingStudent);
       localStorage.setItem('currentStudent', JSON.stringify(pendingStudent));
       setPendingStudent(null);
