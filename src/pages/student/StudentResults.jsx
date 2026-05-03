@@ -325,17 +325,12 @@ return;
 }
 
 // Dynamic import to handle potential install lag
-const html2pdf = (await import('html2pdf.js')).default;
-
-const opt = {
-margin: 0,
-filename: `${currentStudent?.name || 'Student'}-Report-Card-${selectedPub?.term || ''}.pdf`,
-image: { type: 'jpeg', quality: 0.98 },
-html2canvas: { scale: 3, useCORS: true, logging: false, letterRendering: true },
-jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-};
-
-await html2pdf().set(opt).from(element).save();
+const printWindow = window.open('', '_blank');
+if (!printWindow) throw new Error('Popup blocked');
+printWindow.document.write(`<html><head><title>Report Card</title></head><body>${element.outerHTML}</body></html>`);
+printWindow.document.close();
+printWindow.focus();
+printWindow.print();
 } catch (err) {
 console.error("PDF Download failed, falling back to print:", err);
 window.print();
