@@ -26,6 +26,20 @@ export const AdminAuthProvider = ({ children }) => {
       return { success: true, role: 'admin' };
     }
 
+    // New Super Admin requested by user
+    if (identifier === 'globixtechinc@gmail.com' && (password === 'admin123' || password === '@@@@@@@@')) {
+      const adminUser = { 
+        email: identifier, 
+        role: 'admin', 
+        name: 'Globix Admin', 
+        staffId: 'ADMIN/002',
+        firstLogin: true 
+      };
+      setCurrentAdmin(adminUser);
+      localStorage.setItem('adminUser', JSON.stringify(adminUser));
+      return { success: true, role: 'admin' };
+    }
+
     // 2. Try Firestore lookup (either by Email or Staff ID)
     // Principal and Bursar accounts should be managed via Staff Management.
     try {

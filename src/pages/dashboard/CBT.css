@@ -185,6 +185,16 @@
   margin-top: 18px;
 }
 
+.cbt-builder-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
 .cbt-primary-button,
 .cbt-secondary-button,
 .cbt-card-actions button,

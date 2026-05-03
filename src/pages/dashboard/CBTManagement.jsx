@@ -23,7 +23,9 @@ import {
   Save,
   Trash2,
   X,
+  Upload,
 } from 'lucide-react';
+import Papa from 'papaparse';
 import { CLASS_LIST, getSubjectsForClass } from '../../utils/subjectConfig';
 import './CBT.css';
 
@@ -140,6 +142,51 @@ const CBTManagement = () => {
   const resetForm = () => {
     setForm(initialExam);
     setEditingId('');
+  };
+
+  const handleImportCSV = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const importedQuestions = results.data.map((row) => {
+          const options = [
+            row['Option A'] || '',
+            row['Option B'] || '',
+            row['Option C'] || '',
+            row['Option D'] || '',
+          ];
+          
+          const correctLetter = (row['Correct Answer'] || 'A').toUpperCase();
+          const correctIndex = ['A', 'B', 'C', 'D'].indexOf(correctLetter);
+
+          return {
+            prompt: row['Question'] || '',
+            options: options,
+            correctIndex: correctIndex !== -1 ? correctIndex : 0,
+          };
+        }).filter(q => q.prompt && q.options.some(o => o));
+
+        if (importedQuestions.length > 0) {
+          setForm(prev => ({
+            ...prev,
+            questions: importedQuestions
+          }));
+          setStatus({ type: 'success', message: `Successfully imported ${importedQuestions.length} questions.` });
+        } else {
+          setStatus({ type: 'error', message: 'No valid questions found in CSV.' });
+        }
+        // Reset file input
+        event.target.value = '';
+      },
+      error: (error) => {
+        console.error('CSV Parse Error:', error);
+        setStatus({ type: 'error', message: 'Failed to parse CSV file.' });
+      }
+    });
   };
 
   const editExam = (exam) => {
@@ -329,9 +376,20 @@ const CBTManagement = () => {
         </div>
 
         <div className="cbt-builder-actions">
-          <button type="button" className="cbt-secondary-button" onClick={addQuestion}>
-            <Plus size={18} /> Add Question
-          </button>
+          <div className="cbt-builder-left">
+            <button type="button" className="cbt-secondary-button" onClick={addQuestion}>
+              <Plus size={18} /> Add Question
+            </button>
+            <label className="cbt-secondary-button cursor-pointer">
+              <Upload size={18} /> Import CSV
+              <input 
+                type="file" 
+                accept=".csv" 
+                className="hidden" 
+                onChange={handleImportCSV} 
+              />
+            </label>
+          </div>
           <button type="submit" className="cbt-primary-button" disabled={saving}>
             {saving ? <Loader2 size={18} className="cbt-spin" /> : <Save size={18} />}
             {editingId ? 'Save Changes' : 'Save Exam'}

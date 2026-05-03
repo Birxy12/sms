@@ -23,7 +23,7 @@ for (const className of CLASS_LIST) {
     
     let csvContent = 'Question,Option A,Option B,Option C,Option D,Correct Answer\n';
     
-    for (let i = 1; i <= 20; i++) {
+    for (let i = 1; i <= 25; i++) {
       const q = `What is the correct answer for sample question ${i} in ${className} ${subject}?`;
       const a = `Option A for Q${i}`;
       const b = `Option B for Q${i}`;
@@ -39,4 +39,4 @@ for (const className of CLASS_LIST) {
   }
 }
 
-console.log(`Successfully generated ${totalGenerated} CSV templates with 20 questions each in cbt_question_banks/`);
+console.log(`Successfully generated ${totalGenerated} CSV templates with 25 questions each in cbt_question_banks/`);
