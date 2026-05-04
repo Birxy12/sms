@@ -3,13 +3,15 @@ import { useStudentAuth } from '../../context/StudentAuthContext';
 import { db } from '../../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
-import { DollarSign, CreditCard, Clock, AlertTriangle, CheckCircle, ArrowRight, Printer } from 'lucide-react';
+import { DollarSign, CreditCard, Clock, AlertTriangle, CheckCircle, ArrowRight, Printer, X } from 'lucide-react';
+import ReceiptScanner from '../../components/ReceiptScanner';
 
 const StudentFees = () => {
   const { currentStudent } = useStudentAuth();
   const { primaryColor } = useTheme();
   const [feeData, setFeeData] = useState({ expected: 0, paid: 0, lastDate: 'N/A' });
   const [loading, setLoading] = useState(true);
+  const [showScanner, setShowScanner] = useState(false);
 
   useEffect(() => {
     const fetchFeeInfo = async () => {
@@ -162,11 +164,14 @@ const StudentFees = () => {
               </div>
             </div>
 
-            <div className="mt-6 flex items-center gap-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            <button 
+              onClick={() => setShowScanner(true)}
+              className="mt-6 w-full flex items-center gap-3 bg-slate-50 hover:bg-slate-100 p-4 rounded-2xl border-2 border-dashed border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider transition-all group"
+            >
               <CheckCircle size={14} className="text-emerald-500" />
-              Scan & Upload Receipt via Message Hub
-              <ArrowRight size={12} className="ml-auto" />
-            </div>
+              Scan & Upload Receipt
+              <ArrowRight size={12} className="ml-auto group-hover:translate-x-1 transition-transform" />
+            </button>
           </div>
 
           <div className="card-white p-6 bg-slate-900 text-white flex items-center justify-between group cursor-pointer hover:bg-black transition-all">
@@ -180,6 +185,42 @@ const StudentFees = () => {
           </div>
         </div>
       </div>
+
+      {/* Receipt Scanner Modal */}
+      {showScanner && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 relative">
+            <div className="p-6 border-b border-slate-100 bg-slate-900 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-black m-0">Receipt Scanner</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest m-0">Upload or capture your payment evidence</p>
+              </div>
+              <button 
+                onClick={() => setShowScanner(false)} 
+                className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-rose-500 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-4 bg-slate-50">
+              <ReceiptScanner 
+                onComplete={(result) => {
+                  console.log('Upload Complete:', result);
+                  setShowScanner(false);
+                  alert('Receipt uploaded successfully! Our bursar will review it shortly.');
+                }}
+                messageHubConfig={{
+                  type: 'rest',
+                  endpoint: import.meta.env.VITE_MESSAGE_HUB_URL,
+                  apiKey: import.meta.env.VITE_MESSAGE_HUB_API_KEY,
+                  topic: 'receipt.uploads'
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
