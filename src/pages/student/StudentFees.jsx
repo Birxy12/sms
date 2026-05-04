@@ -216,6 +216,7 @@ const StudentFees = () => {
                   apiKey: import.meta.env.VITE_MESSAGE_HUB_API_KEY,
                   topic: 'receipt.uploads'
                 }}
+                userId={currentStudent?.id || 'anonymous'}
               />
             </div>
           </div>

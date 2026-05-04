@@ -1,21 +1,79 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize the Supabase client using the provided URL and Anon Key
-const supabaseUrl = 'https://iqhppzndambyyskfwqyc.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxaHBwem5kYW1ieXlza2Z3cXljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NzA4NjUsImV4cCI6MjA5MjU0Njg2NX0.B9Bc9k96i5tKzJq2upa8RUuwnOvx42l052JgAEXK0bM';
+// Initialize the Supabase client using environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: false, // Prevents "Lock was not released" errors in multi-tab/HMR environments
+    persistSession: false,
   }
 });
 
 /**
- * Uploads a file to a Supabase Storage bucket
- * @param {File} file - The file to upload
- * @param {string} bucket - The storage bucket name (e.g., 'images', 'documents')
- * @param {string} folderPath - Optional folder path inside the bucket (e.g., 'avatars/')
- * @returns {Promise<string>} The public URL of the uploaded file
+ * Uploads a receipt image
+ * @param {File} file - The receipt image file
+ * @param {string} userId - The student/user ID
+ * @returns {Promise<string>} Public URL
+ */
+export async function uploadReceipt(file, userId) {
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/${Date.now()}.${fileExt}`;
+    
+    const { data, error } = await supabase.storage
+      .from('images')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) throw error;
+    
+    const { data: { publicUrl } } = supabase.storage
+      .from('images')
+      .getPublicUrl(fileName);
+      
+    return publicUrl;
+  } catch (error) {
+    console.error('Error uploading receipt:', error);
+    throw error;
+  }
+}
+
+/**
+ * Uploads a profile avatar
+ * @param {File} file - The avatar image file
+ * @param {string} userId - The user ID
+ * @returns {Promise<string>} Public URL
+ */
+export async function uploadAvatar(file, userId) {
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/avatar.${fileExt}`;
+    
+    const { data, error } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: true  // Overwrite existing avatar
+      });
+
+    if (error) throw error;
+    
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(fileName);
+      
+    return publicUrl;
+  } catch (error) {
+    console.error('Error uploading avatar:', error);
+    throw error;
+  }
+}
+
+/**
+ * Legacy upload function for backward compatibility
  */
 export const uploadFileToSupabase = async (file, bucket, folderPath = '') => {
   try {

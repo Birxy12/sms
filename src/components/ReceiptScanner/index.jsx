@@ -10,7 +10,7 @@ import './receiptScanner.css';
  * @param {function} onComplete         - Called with final payload after successful send
  * @param {object}   messageHubConfig   - { type, endpoint, apiKey, topic }
  */
-const ReceiptScanner = ({ onComplete, messageHubConfig }) => {
+const ReceiptScanner = ({ onComplete, messageHubConfig, userId }) => {
   const [view, setView] = useState('upload'); // 'upload' | 'camera' | 'preview'
   const [receiptImage, setReceiptImage] = useState(null);
   const [captureSource, setCaptureSource] = useState(null);
@@ -54,6 +54,7 @@ const ReceiptScanner = ({ onComplete, messageHubConfig }) => {
           onRetake={handleRetake}
           onComplete={onComplete}
           messageHubConfig={messageHubConfig}
+          userId={userId}
         />
       )}
     </div>

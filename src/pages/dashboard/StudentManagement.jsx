@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, storage } from '../../lib/firebase';
 import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, where, setDoc } from 'firebase/firestore';
-import { uploadFileToSupabase } from '../../lib/supabase';
+import { uploadAvatar } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award } from 'lucide-react';
 
@@ -96,7 +96,7 @@ const StudentManagement = () => {
 
     setUploading(true);
     try {
-      const url = await uploadFileToSupabase(file, 'images', 'passports/');
+      const url = await uploadAvatar(file, currentStudent.regNo || 'new-student');
       setCurrentStudent(prev => ({ ...prev, photo: url }));
       setStatus({ type: 'success', message: 'Passport uploaded to Supabase successfully!' });
     } catch (error) {

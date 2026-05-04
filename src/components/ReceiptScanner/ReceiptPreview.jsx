@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Check, RefreshCw, Loader2, Send, CheckCircle2, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import processReceipt from '../../utils/receiptProcessor';
 import useMessageHub from '../../hooks/useMessageHub';
+import { uploadReceipt } from '../../lib/supabase';
 
-const ReceiptPreview = ({ imageSrc, source, onRetake, onComplete, messageHubConfig }) => {
+const ReceiptPreview = ({ imageSrc, source, onRetake, onComplete, messageHubConfig, userId }) => {
   const [stage, setStage] = useState('idle'); // idle | ocr | sending | done | error
   const [extractedData, setExtractedData] = useState(null);
   const [ocrProgress, setOcrProgress] = useState(0);
@@ -48,19 +49,34 @@ const ReceiptPreview = ({ imageSrc, source, onRetake, onComplete, messageHubConf
   /* ── Send to message hub ───────────────────────────────────── */
   const handleSend = async () => {
     setStage('sending');
-    const payload = {
-      image: imageSrc,
-      extractedData,
-      metadata: {
-        source: source || 'upload',
-        dimensions,
-      },
-    };
+    
+    try {
+      // 1. Convert base64 to File for Supabase
+      const res = await fetch(imageSrc);
+      const blob = await res.blob();
+      const file = new File([blob], 'receipt.jpg', { type: 'image/jpeg' });
 
-    const res = await sendMessage(payload);
-    setHubResult(res);
-    setStage(res.success ? 'done' : 'error');
-    if (res.success && onComplete) onComplete({ ...payload, hubResult: res });
+      // 2. Upload to Supabase
+      const publicUrl = await uploadReceipt(file, userId || 'anonymous');
+
+      // 3. Prepare payload with URL
+      const payload = {
+        image: publicUrl,
+        extractedData,
+        metadata: {
+          source: source || 'upload',
+          dimensions,
+        },
+      };
+
+      const hubRes = await sendMessage(payload);
+      setHubResult(hubRes);
+      setStage(hubRes.success ? 'done' : 'error');
+      if (hubRes.success && onComplete) onComplete({ ...payload, hubResult: hubRes });
+    } catch (err) {
+      console.error('Upload/Send error:', err);
+      setStage('error');
+    }
   };
 
   const isOCRing = stage === 'ocr';

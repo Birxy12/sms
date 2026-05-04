@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { db } from '../../lib/firebase';
-import { uploadFileToSupabase } from '../../lib/supabase';
+import { uploadAvatar } from '../../lib/supabase';
 import { 
   User, Mail, GraduationCap, MapPin, Calendar, CheckCircle, 
   Edit2, Save, X, Hash, UserCircle, Camera, Upload, 
@@ -103,8 +103,8 @@ const StudentProfile = () => {
     if (avatarFile) {
       setUploadingAvatar(true);
       try {
-        const uploadResult = await uploadFileToSupabase(avatarFile, 'avatars', `${currentStudent?.id}/avatar`);
-        if (uploadResult?.url) photoUrl = uploadResult.url;
+        const uploadResult = await uploadAvatar(avatarFile, currentStudent?.id);
+        if (uploadResult) photoUrl = uploadResult;
       } catch {
         setStatus({ type: 'error', message: 'Photo upload failed.' });
       }

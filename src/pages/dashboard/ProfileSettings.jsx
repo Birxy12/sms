@@ -6,7 +6,7 @@ import {
   ArrowLeft, Camera, Lock, Eye, EyeOff, UploadCloud, Trash2 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { uploadFileToSupabase } from '../../lib/supabase';
+import { uploadAvatar } from '../../lib/supabase';
 
 const ProfileSettings = () => {
   const { currentAdmin, updateProfile: updateAdminProfile } = useAdminAuth();
@@ -91,7 +91,7 @@ const ProfileSettings = () => {
 
     setUploadingPhoto(true);
     try {
-      const url = await uploadFileToSupabase(file, 'images', 'profiles/');
+      const url = await uploadAvatar(file, isStudent ? currentStudent.id : currentAdmin.id);
       
       const updateFn = isStudent ? updateStudentProfile : updateAdminProfile;
       await updateFn({ photo: url, photoURL: url });
