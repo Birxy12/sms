@@ -19,7 +19,6 @@
     "framer-motion": "^11.1.0",
     "html2pdf.js": "^0.14.0",
     "idb": "^8.0.0",
-    "jscanify": "^1.4.2",
     "lucide-react": "^1.14.0",
     "motion": "^12.38.0",
     "openai": "^6.36.0",

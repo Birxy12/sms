@@ -1,121 +1,149 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import Webcam from 'react-webcam';
-import { Camera, X, ScanLine, AlertCircle } from 'lucide-react';
+import { Camera, X, ScanLine, AlertCircle, Loader2 } from 'lucide-react';
 
 /**
- * CameraView — live camera feed with jscanify document detection overlay.
- *
- * - Loads jscanify (OpenCV.js-backed) lazily after webcam is ready.
- * - Every animation frame: scans video → draws green quadrilateral over receipt.
- * - On capture: applies perspective transform to deskew, falls back to raw screenshot.
+ * CameraView — live camera feed with pure OpenCV.js document detection.
+ * 
+ * - Loads OpenCV.js from CDN.
+ * - Every frame: detectDocument scans the video for a rectangle.
+ * - On capture: draws the detected region to a canvas or takes a raw screenshot.
  */
 const CameraView = ({ onCapture, onSwitchToUpload }) => {
   const webcamRef = useRef(null);
-  const canvasRef = useRef(null);        // overlay canvas
-  const outputRef = useRef(null);        // hidden output canvas for perspective transform
+  const canvasRef = useRef(null);
   const animFrameRef = useRef(null);
-  const scannerRef = useRef(null);       // jscanify instance
-  const isDetectingRef = useRef(false);
-
-  const [scannerReady, setScannerReady] = useState(false);
-  const [detected, setDetected] = useState(false);
-  const [loadError, setLoadError] = useState(null);
+  const [cvLoaded, setCvLoaded] = useState(false);
+  const [loadingLibs, setLoadingLibs] = useState(true);
+  const [detectedCorners, setDetectedCorners] = useState(null);
   const [capturing, setCapturing] = useState(false);
 
-  /* ── Load jscanify once webcam is ready ─────────────────────── */
+  /* ── Load OpenCV.js ─────────────────────────────────────────── */
   useEffect(() => {
-    let cancelled = false;
-
-    const loadScanner = async () => {
-      try {
-        const { default: Jscanify } = await import('jscanify');
-        if (cancelled) return;
-        const instance = new Jscanify();
-        scannerRef.current = instance;
-        setScannerReady(true);
-      } catch (err) {
-        if (!cancelled) setLoadError(err.message);
+    const loadOpenCV = async () => {
+      if (window.cv) {
+        setCvLoaded(true);
+        setLoadingLibs(false);
+        return;
       }
+      
+      const script = document.createElement('script');
+      script.src = 'https://docs.opencv.org/4.8.0/opencv.js';
+      script.async = true;
+      script.onload = () => {
+        // OpenCV.js is ready when cv.onRuntimeInitialized is called
+        if (window.cv.onRuntimeInitialized) {
+            const originalCallback = window.cv.onRuntimeInitialized;
+            window.cv.onRuntimeInitialized = () => {
+                originalCallback();
+                setCvLoaded(true);
+                setLoadingLibs(false);
+            };
+        } else {
+            window.cv.onRuntimeInitialized = () => {
+                setCvLoaded(true);
+                setLoadingLibs(false);
+            };
+        }
+      };
+      document.body.appendChild(script);
     };
-
-    loadScanner();
-    return () => { cancelled = true; };
+    
+    loadOpenCV();
+    return () => {
+        // Clean up animation frame on unmount
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
   }, []);
 
-  /* ── Detection loop ─────────────────────────────────────────── */
-  useEffect(() => {
-    if (!scannerReady) return;
+  /* ── Document Detection Logic ──────────────────────────────── */
+  const detectDocument = useCallback(() => {
+    if (!window.cv || !webcamRef.current || !cvLoaded) return;
+    
+    const video = webcamRef.current.video;
+    if (!video || video.readyState !== 4) return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const { videoWidth: w, videoHeight: h } = video;
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
 
-    const tick = () => {
-      const video = webcamRef.current?.video;
-      const canvas = canvasRef.current;
-      if (!video || !canvas || video.readyState < 2) {
-        animFrameRef.current = requestAnimationFrame(tick);
-        return;
-      }
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, w, h);
 
-      const { videoWidth: w, videoHeight: h } = video;
-      if (canvas.width !== w) canvas.width = w;
-      if (canvas.height !== h) canvas.height = h;
-
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, w, h);
-
-      if (isDetectingRef.current) {
-        animFrameRef.current = requestAnimationFrame(tick);
-        return;
-      }
-
-      isDetectingRef.current = true;
-
-      try {
-        const scanner = scannerRef.current;
-        // highlightPaper draws the detection quad on a temp canvas and returns corner points
-        const resultCanvas = scanner.highlightPaper(video);
-
-        if (resultCanvas) {
-          // Draw the detection overlay
-          const tempCtx = resultCanvas.getContext('2d');
-          const imageData = tempCtx.getImageData(0, 0, resultCanvas.width, resultCanvas.height);
-
-          // Check if any green pixels exist (detection happened)
-          const data = imageData.data;
-          let hasGreen = false;
-          for (let i = 0; i < data.length; i += 16) {
-            if (data[i + 1] > 150 && data[i] < 100 && data[i + 2] < 100) {
-              hasGreen = true;
-              break;
-            }
-          }
-
-          if (hasGreen) {
-            ctx.drawImage(resultCanvas, 0, 0, w, h);
-            setDetected(true);
-          } else {
-            // Draw subtle scanning guide
-            drawGuide(ctx, w, h, false);
-            setDetected(false);
-          }
+    try {
+      const cv = window.cv;
+      const src = cv.imread(video);
+      const gray = new cv.Mat();
+      const blurred = new cv.Mat();
+      const edges = new cv.Mat();
+      
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+      cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+      cv.Canny(blurred, edges, 50, 150);
+      
+      const contours = new cv.MatVector();
+      const hierarchy = new cv.Mat();
+      cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+      
+      let largestContour = null;
+      let maxArea = 0;
+      
+      for (let i = 0; i < contours.size(); i++) {
+        const contour = contours.get(i);
+        const area = cv.contourArea(contour);
+        const peri = cv.arcLength(contour, true);
+        const approx = new cv.Mat();
+        cv.approxPolyDP(contour, approx, 0.02 * peri, true);
+        
+        // Document should be 4 corners and large enough
+        if (area > maxArea && approx.rows === 4 && area > (w * h * 0.05)) {
+          maxArea = area;
+          if (largestContour) largestContour.delete();
+          largestContour = approx;
         } else {
-          drawGuide(ctx, w, h, false);
-          setDetected(false);
+          approx.delete();
         }
-      } catch {
-        drawGuide(ctx, w, h, false);
-        setDetected(false);
       }
+      
+      if (largestContour) {
+        const corners = [];
+        ctx.strokeStyle = '#22c55e';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        
+        for (let i = 0; i < 4; i++) {
+          const px = largestContour.data32S[i * 2];
+          const py = largestContour.data32S[i * 2 + 1];
+          corners.push({ x: px, y: py });
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        
+        setDetectedCorners(corners);
+        largestContour.delete();
+      } else {
+        setDetectedCorners(null);
+        // Draw guide
+        drawGuide(ctx, w, h, false);
+      }
+      
+      src.delete();
+      gray.delete();
+      blurred.delete();
+      edges.delete();
+      contours.delete();
+      hierarchy.delete();
+      
+    } catch (err) {
+      // console.warn('Detection error:', err);
+    }
+  }, [cvLoaded]);
 
-      isDetectingRef.current = false;
-      animFrameRef.current = requestAnimationFrame(tick);
-    };
-
-    animFrameRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-    };
-  }, [scannerReady]);
-
-  /* ── Draw scanning guide rectangle ─────────────────────────── */
   const drawGuide = (ctx, w, h, isDetected) => {
     const pad = 40;
     const x = pad, y = pad * 1.5;
@@ -126,49 +154,42 @@ const CameraView = ({ onCapture, onSwitchToUpload }) => {
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
 
-    // Four corners only
-    const corners = [
-      [x, y, cornerLen, 0, cornerLen, 0],
-    ];
-    // top-left
     ctx.beginPath(); ctx.moveTo(x + cornerLen, y); ctx.lineTo(x, y); ctx.lineTo(x, y + cornerLen); ctx.stroke();
-    // top-right
     ctx.beginPath(); ctx.moveTo(x + rw - cornerLen, y); ctx.lineTo(x + rw, y); ctx.lineTo(x + rw, y + cornerLen); ctx.stroke();
-    // bottom-left
     ctx.beginPath(); ctx.moveTo(x, y + rh - cornerLen); ctx.lineTo(x, y + rh); ctx.lineTo(x + cornerLen, y + rh); ctx.stroke();
-    // bottom-right
     ctx.beginPath(); ctx.moveTo(x + rw - cornerLen, y + rh); ctx.lineTo(x + rw, y + rh); ctx.lineTo(x + rw, y + rh - cornerLen); ctx.stroke();
   };
 
-  /* ── Capture with perspective correction ────────────────────── */
-  const capture = useCallback(async () => {
+  /* ── Detection Loop ────────────────────────────────────────── */
+  useEffect(() => {
+    const tick = () => {
+      detectDocument();
+      animFrameRef.current = requestAnimationFrame(tick);
+    };
+    if (cvLoaded) {
+      animFrameRef.current = requestAnimationFrame(tick);
+    }
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, [cvLoaded, detectDocument]);
+
+  const capture = useCallback(() => {
     if (capturing) return;
     setCapturing(true);
 
     const video = webcamRef.current?.video;
     if (!video) { setCapturing(false); return; }
 
-    try {
-      const scanner = scannerRef.current;
-
-      if (scanner && detected) {
-        // Attempt perspective-corrected extraction
-        const extracted = scanner.extractPaper(video);
-        if (extracted) {
-          onCapture({ imageSrc: extracted.toDataURL('image/jpeg', 0.92), source: 'camera_deskewed' });
-          setCapturing(false);
-          return;
-        }
-      }
-    } catch {
-      // fall through to raw capture
-    }
-
-    // Fallback: raw screenshot
+    // For now, we take a high-quality screenshot. 
+    // Perspective correction with raw OpenCV is complex, so we fallback to raw capture
+    // but the detection UI guides the user to a good alignment.
     const raw = webcamRef.current?.getScreenshot();
-    if (raw) onCapture({ imageSrc: raw, source: 'camera_raw' });
+    if (raw) {
+      onCapture({ imageSrc: raw, source: 'camera_raw' });
+    }
     setCapturing(false);
-  }, [capturing, detected, onCapture]);
+  }, [capturing, onCapture]);
 
   return (
     <div className="camera-view">
@@ -191,42 +212,30 @@ const CameraView = ({ onCapture, onSwitchToUpload }) => {
           videoConstraints={{ facingMode: 'environment', width: 1280, height: 720 }}
           className="webcam"
         />
-        {/* Detection overlay canvas — sits on top of webcam */}
         <canvas ref={canvasRef} className="detection-canvas" />
-        <canvas ref={outputRef} style={{ display: 'none' }} />
 
-        {/* Status badge */}
-        <div className={`detection-badge ${detected ? 'detected' : ''}`}>
-          {scannerReady
-            ? detected
-              ? '✓ Receipt detected — tap to capture'
-              : 'Position receipt in frame'
-            : loadError
-              ? 'Detection unavailable'
-              : 'Loading scanner…'}
+        <div className={`detection-badge ${detectedCorners ? 'detected' : ''}`}>
+          {loadingLibs ? (
+            <span className="flex items-center gap-2"><Loader2 className="animate-spin" size={14} /> Initializing AI...</span>
+          ) : detectedCorners ? (
+            '✓ Receipt detected — tap to capture'
+          ) : (
+            'Position receipt in frame'
+          )}
         </div>
       </div>
-
-      {loadError && (
-        <div className="scanner-error">
-          <AlertCircle size={16} />
-          <span>jscanify failed to load: {loadError}. Using basic capture.</span>
-        </div>
-      )}
 
       <div className="camera-controls">
         <button
           onClick={capture}
-          className={`capture-btn ${detected ? 'ready' : ''}`}
-          disabled={capturing}
+          className={`capture-btn ${detectedCorners ? 'ready' : ''}`}
+          disabled={capturing || loadingLibs}
           aria-label="Capture receipt"
         >
-          {capturing
-            ? <span className="capture-spinner" />
-            : <Camera size={30} />}
+          {capturing ? <span className="capture-spinner" /> : <Camera size={30} />}
         </button>
         <span className="capture-hint">
-          {detected ? 'Perspective correction active' : 'Tap to capture'}
+          {detectedCorners ? 'Ready for capture' : 'Align receipt corners'}
         </span>
       </div>
     </div>

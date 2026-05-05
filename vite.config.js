@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    mainFields: ['browser', 'module', 'main'],
     alias: {
       'fs': 'path-browserify',
       'stream': 'stream-browserify',
