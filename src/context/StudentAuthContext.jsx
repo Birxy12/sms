@@ -4,9 +4,57 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const StudentAuthContext = createContext();
 
+const STUDENT_AUTH_UNAVAILABLE_MESSAGE =
+  'Student portal authentication is not enabled. Please ask the administrator to enable Anonymous sign-in in Firebase Console > Authentication > Sign-in method.';
+
+let anonymousAuthPromise = null;
+let hasLoggedAnonymousAuthDisabled = false;
+
+const getStudentAuthErrorMessage = (error) => {
+  if (error?.code === 'auth/admin-restricted-operation') {
+    return STUDENT_AUTH_UNAVAILABLE_MESSAGE;
+  }
+
+  return error?.message || 'Unable to start student authentication. Please try again.';
+};
+
+const ensureStudentFirebaseAuth = async () => {
+  const { auth } = await import('../lib/firebase');
+
+  if (auth.currentUser) {
+    return { success: true };
+  }
+
+  if (!anonymousAuthPromise) {
+    anonymousAuthPromise = (async () => {
+      try {
+        const { signInAnonymously } = await import('firebase/auth');
+        await signInAnonymously(auth);
+        return { success: true };
+      } catch (error) {
+        if (error?.code === 'auth/admin-restricted-operation') {
+          if (!hasLoggedAnonymousAuthDisabled) {
+            console.error(STUDENT_AUTH_UNAVAILABLE_MESSAGE);
+            hasLoggedAnonymousAuthDisabled = true;
+          }
+        } else {
+          console.error('Anonymous student auth failed:', error);
+        }
+
+        return { success: false, message: getStudentAuthErrorMessage(error) };
+      } finally {
+        anonymousAuthPromise = null;
+      }
+    })();
+  }
+
+  return anonymousAuthPromise;
+};
+
 export const StudentAuthProvider = ({ children }) => {
   const [currentStudent, setCurrentStudent] = useState(null);
   const [pendingStudent, setPendingStudent] = useState(null);
+  const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(true);
 
   // Load student on mount
@@ -14,16 +62,20 @@ export const StudentAuthProvider = ({ children }) => {
     const initAuth = async () => {
       const storedStudent = localStorage.getItem('currentStudent');
       if (storedStudent) {
-        const studentData = JSON.parse(storedStudent);
-        setCurrentStudent(studentData);
-        
-        // Restore Firebase Auth session
         try {
-          const { signInAnonymously } = await import('firebase/auth');
-          const { auth } = await import('../lib/firebase');
-          await signInAnonymously(auth);
-        } catch (authError) {
-          console.error('Anonymous student auth restoration failed:', authError);
+          const studentData = JSON.parse(storedStudent);
+          const authResult = await ensureStudentFirebaseAuth();
+
+          if (authResult.success) {
+            setAuthError('');
+            setCurrentStudent(studentData);
+          } else {
+            setAuthError(authResult.message);
+            localStorage.removeItem('currentStudent');
+          }
+        } catch (error) {
+          console.error('Stored student session could not be restored:', error);
+          localStorage.removeItem('currentStudent');
         }
       }
       setLoading(false);
@@ -52,14 +104,13 @@ export const StudentAuthProvider = ({ children }) => {
         }
 
         // First login or no PIN set
-        try {
-          const { signInAnonymously } = await import('firebase/auth');
-          const { auth } = await import('../lib/firebase');
-          await signInAnonymously(auth);
-        } catch (authError) {
-          console.error('Anonymous student auth failed:', authError);
+        const authResult = await ensureStudentFirebaseAuth();
+        if (!authResult.success) {
+          setAuthError(authResult.message);
+          return { success: false, message: authResult.message };
         }
 
+        setAuthError('');
         setCurrentStudent(studentData);
         localStorage.setItem('currentStudent', JSON.stringify(studentData));
         return { success: true, requirePin: false };
@@ -76,14 +127,13 @@ export const StudentAuthProvider = ({ children }) => {
     if (!pendingStudent) return { success: false, message: 'No login session found.' };
     
     if (pendingStudent.pin === pin) {
-      try {
-        const { signInAnonymously } = await import('firebase/auth');
-        const { auth } = await import('../lib/firebase');
-        await signInAnonymously(auth);
-      } catch (authError) {
-        console.error('Anonymous student pin auth failed:', authError);
+      const authResult = await ensureStudentFirebaseAuth();
+      if (!authResult.success) {
+        setAuthError(authResult.message);
+        return { success: false, message: authResult.message };
       }
 
+      setAuthError('');
       setCurrentStudent(pendingStudent);
       localStorage.setItem('currentStudent', JSON.stringify(pendingStudent));
       setPendingStudent(null);
@@ -143,6 +193,7 @@ export const StudentAuthProvider = ({ children }) => {
   const logout = () => {
     setCurrentStudent(null);
     setPendingStudent(null);
+    setAuthError('');
     localStorage.removeItem('currentStudent');
   };
 
@@ -172,7 +223,7 @@ export const StudentAuthProvider = ({ children }) => {
 
   return (
     <StudentAuthContext.Provider value={{ 
-      currentStudent, pendingStudent, login, verifyPin, setPin, resetPin, logout, updateProfile, loading 
+      currentStudent, pendingStudent, login, verifyPin, setPin, resetPin, logout, updateProfile, loading, authError 
     }}>
       {!loading && children}
     </StudentAuthContext.Provider>

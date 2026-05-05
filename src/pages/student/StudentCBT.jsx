@@ -59,7 +59,14 @@ const StudentCBT = () => {
       setSubmissions(submissionSnap.docs.map((item) => ({ id: item.id, ...item.data() })));
     } catch (error) {
       console.error('Error loading student CBT:', error);
-      setStatus({ type: 'error', message: 'Unable to load CBT exams.' });
+      if (error.code === 'permission-denied') {
+        setStatus({ 
+          type: 'error', 
+          message: 'Access Denied: You do not have permission to view exams. Please contact the administrator to ensure Anonymous Auth is enabled.' 
+        });
+      } else {
+        setStatus({ type: 'error', message: 'Unable to load CBT exams.' });
+      }
     } finally {
       setLoading(false);
     }

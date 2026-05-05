@@ -3,12 +3,12 @@ import { useStudentAuth } from '../../context/StudentAuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { db } from '../../lib/firebase';
 import { collection, query, getDocs, where } from 'firebase/firestore';
-import { LayoutDashboard, Award, CreditCard, Calendar, Bell, ChevronRight, Inbox as InboxIcon, Trophy, Wallet, BookOpen, Library, MonitorCheck } from 'lucide-react';
+import { LayoutDashboard, Award, CreditCard, Calendar, Bell, ChevronRight, Inbox as InboxIcon, Trophy, Wallet, BookOpen, Library, MonitorCheck, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PinSetupModal from '../../components/student/PinSetupModal';
 
 const StudentDashboard = () => {
-  const { currentStudent } = useStudentAuth();
+  const { currentStudent, authError } = useStudentAuth();
   const { primaryColor } = useTheme();
   const navigate = useNavigate();
 
@@ -19,11 +19,19 @@ const StudentDashboard = () => {
   const [inboxCount, setInboxCount]     = useState(0);
   const [resultsCount, setResultsCount] = useState(0);
   const [loading, setLoading]           = useState(true);
+  const [dashboardError, setDashboardError] = useState('');
 
   useEffect(() => {
     if (!currentStudent) return;
+    if (authError) {
+      setDashboardError(authError);
+      setLoading(false);
+      return;
+    }
+
     const load = async () => {
       try {
+        setDashboardError('');
         const classLevel = className;
         const [s1, s2, s3] = await Promise.all([
           getDocs(query(collection(db, 'notifications'), where('targetType', '==', 'global'))),
@@ -35,11 +43,18 @@ const StudentDashboard = () => {
 
         const rSnap = await getDocs(query(collection(db, 'marks'), where('regNo', '==', regNum)));
         setResultsCount(rSnap.size);
-      } catch (e) { console.error(e); }
+      } catch (e) {
+        if (e?.code === 'permission-denied') {
+          setDashboardError('Student dashboard data is blocked by Firebase permissions. Please enable Anonymous sign-in or update Firestore rules.');
+        } else {
+          console.error(e);
+          setDashboardError('Unable to load dashboard data right now.');
+        }
+      }
       finally { setLoading(false); }
     };
     load();
-  }, [currentStudent, className, regNum]);
+  }, [currentStudent, className, regNum, authError]);
 
   const stats = [
     { label: 'School Alerts', value: inboxCount, color: '#6366f1', icon: InboxIcon,  path: '/students/inbox' },
@@ -73,6 +88,18 @@ const StudentDashboard = () => {
       </div>
 
       {/* Stat Cards */}
+      {dashboardError && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '10px',
+          border: '1px solid #fecaca', background: '#fef2f2', color: '#991b1b',
+          borderRadius: '12px', padding: '14px 16px', marginBottom: '20px',
+          fontSize: '14px', fontWeight: 700
+        }}>
+          <AlertCircle size={18} />
+          {dashboardError}
+        </div>
+      )}
+
       <div className="stats-grid" style={{ marginBottom: '28px' }}>
         {stats.map(s => (
           <div
