@@ -85,7 +85,7 @@ const BonusAI = () => {
             color: 'white', 
             display: 'flex', 
             alignItems: 'center', 
-            justify-content: 'space-between' 
+            justifyContent: 'space-between' 
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ background: 'white', padding: '6px', borderRadius: '10px' }}>
