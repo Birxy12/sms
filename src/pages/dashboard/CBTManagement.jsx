@@ -24,8 +24,10 @@ import {
   Trash2,
   X,
   Upload,
+  Wand2,
 } from 'lucide-react';
 import Papa from 'papaparse';
+import { generateQuestions } from '../../utils/questionGenerator';
 import { CLASS_LIST, getSubjectsForClass } from '../../utils/subjectConfig';
 import './CBT.css';
 
@@ -271,6 +273,18 @@ const CBTManagement = () => {
     return acc;
   }, {}), [submissions]);
 
+  const handleAutoGenerate = () => {
+    if (form.questions.length > 0 && !window.confirm('This will replace your current questions. Continue?')) return;
+    const newQuestions = generateQuestions(form.subject, 30);
+    setForm({
+      ...form,
+      questions: newQuestions.map(q => ({
+        id: Date.now() + Math.random(),
+        ...q
+      }))
+    });
+  };
+
   return (
     <div className="cbt-page">
       <div className="cbt-header">
@@ -379,6 +393,9 @@ const CBTManagement = () => {
           <div className="cbt-builder-left">
             <button type="button" className="cbt-secondary-button" onClick={addQuestion}>
               <Plus size={18} /> Add Question
+            </button>
+            <button type="button" onClick={handleAutoGenerate} className="cbt-secondary-button" style={{ background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe' }}>
+              <Wand2 size={18} /> Auto-generate 30 (AI)
             </button>
             <label className="cbt-secondary-button cursor-pointer">
               <Upload size={18} /> Import CSV

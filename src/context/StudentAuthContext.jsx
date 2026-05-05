@@ -11,11 +11,24 @@ export const StudentAuthProvider = ({ children }) => {
 
   // Load student on mount
   useEffect(() => {
-    const storedStudent = localStorage.getItem('currentStudent');
-    if (storedStudent) {
-      setCurrentStudent(JSON.parse(storedStudent));
-    }
-    setLoading(false);
+    const initAuth = async () => {
+      const storedStudent = localStorage.getItem('currentStudent');
+      if (storedStudent) {
+        const studentData = JSON.parse(storedStudent);
+        setCurrentStudent(studentData);
+        
+        // Restore Firebase Auth session
+        try {
+          const { signInAnonymously } = await import('firebase/auth');
+          const { auth } = await import('../lib/firebase');
+          await signInAnonymously(auth);
+        } catch (authError) {
+          console.error('Anonymous student auth restoration failed:', authError);
+        }
+      }
+      setLoading(false);
+    };
+    initAuth();
   }, []);
 
   const login = async (regNo, className) => {

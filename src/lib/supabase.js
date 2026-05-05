@@ -4,11 +4,17 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: false,
-  }
-});
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Supabase credentials missing. Storage features will be unavailable.');
+}
+
+export const supabase = (supabaseUrl && supabaseAnonKey) 
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+      }
+    })
+  : null;
 
 /**
  * Uploads a receipt image
@@ -17,6 +23,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
  * @returns {Promise<string>} Public URL
  */
 export async function uploadReceipt(file, userId) {
+  if (!supabase) {
+    console.error('Supabase not initialized. Cannot upload receipt.');
+    throw new Error('Supabase client is not configured.');
+  }
   try {
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
@@ -48,6 +58,10 @@ export async function uploadReceipt(file, userId) {
  * @returns {Promise<string>} Public URL
  */
 export async function uploadAvatar(file, userId) {
+  if (!supabase) {
+    console.error('Supabase not initialized. Cannot upload avatar.');
+    throw new Error('Supabase client is not configured.');
+  }
   try {
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/avatar.${fileExt}`;
@@ -76,6 +90,10 @@ export async function uploadAvatar(file, userId) {
  * Legacy upload function for backward compatibility
  */
 export const uploadFileToSupabase = async (file, bucket, folderPath = '') => {
+  if (!supabase) {
+    console.error('Supabase not initialized. Cannot upload file.');
+    throw new Error('Supabase client is not configured.');
+  }
   try {
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;

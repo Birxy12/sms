@@ -34,6 +34,7 @@ import BursarDashboard from './pages/dashboard/BursarDashboard';
 import StaffRegister from './pages/StaffRegister';
 import { useStudentAuth } from './context/StudentAuthContext';
 import { useAdminAuth } from './context/AdminAuthContext';
+import BonusAI from './components/BonusAI';
 import './App.css';
 
 // Protected Route Component for Students
@@ -70,7 +71,8 @@ const ProtectedAdminRoute = ({ children, requiredRole }) => {
 
 function App() {
   return (
-    <Routes>
+    <>
+      <Routes>
       {/* Public Landing Page */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
@@ -208,7 +210,9 @@ function App() {
 
       {/* Redirect unknown routes back to home */}
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+      <BonusAI />
+    </>
   );
 }
 
