@@ -4,11 +4,21 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials missing. Storage features will be unavailable.');
+// Robust check for valid configuration
+const isConfigValid = (
+  supabaseUrl && 
+  supabaseUrl !== 'undefined' && 
+  supabaseUrl !== '' &&
+  supabaseAnonKey && 
+  supabaseAnonKey !== 'undefined' &&
+  supabaseAnonKey !== ''
+);
+
+if (!isConfigValid) {
+  console.warn('Supabase credentials missing or invalid. Storage features will be unavailable.');
 }
 
-export const supabase = (supabaseUrl && supabaseAnonKey) 
+export const supabase = isConfigValid 
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: false,
