@@ -8,7 +8,12 @@ export default defineConfig({
     alias: {
       'fs': 'path-browserify',
       'stream': 'stream-browserify',
+      'path': 'path-browserify',
+      'vm': 'vm-browserify'
     }
+  },
+  define: {
+    global: 'globalThis'
   },
   server: {
     host: '127.0.0.1',
