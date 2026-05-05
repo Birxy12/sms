@@ -10,7 +10,7 @@ import bdsLogo from '../../assets/bdslogo.jpg';
 import resultStamp from '../../assets/stamp.jpeg';
 
 const StudentResults = () => {
-const { currentStudent: loggedInStudent } = useStudentAuth();
+const { currentStudent: loggedInStudent, authError } = useStudentAuth();
 const { schoolName, schoolLogo, primaryColor, principalSignature, principalStamp } = useTheme();
 const printRef = useRef();
 
@@ -25,6 +25,7 @@ termEnds: '12/12/2025',
 nextTermBegins: '12/01/2026'
 });
 const [formTeacher, setFormTeacher] = useState('CLASS TEACHER');
+const [resultsError, setResultsError] = useState('');
 
 const location = useLocation();
 const searchParams = new URLSearchParams(location.search);
@@ -94,9 +95,16 @@ setLoading(false);
 useEffect(() => {
 const fetchResults = async () => {
 if (!selectedTermId || !regNum) return;
+if (authError) {
+setResultsError(authError);
+setStudentMarks(null);
+setLoading(false);
+return;
+}
 
 setLoading(true);
 try {
+setResultsError('');
 const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
 if (!selectedPub) return;
 
@@ -260,14 +268,19 @@ raw: foundMarksDoc
 });
 
 } catch (error) {
+if (error?.code === 'permission-denied') {
+setResultsError('Results are currently blocked by Firebase permissions. Please ask the administrator to enable Anonymous sign-in or update Firestore rules for student result access.');
+} else {
 console.error('Error fetching marks:', error);
+setResultsError('Unable to load your results right now.');
+}
 } finally {
 setLoading(false);
 }
 };
 
 fetchResults();
-}, [selectedTermId, publishedTerms, regNum, currentStudent]);
+}, [selectedTermId, publishedTerms, regNum, currentStudent, authError]);
 
 useEffect(() => {
 const fetchSchoolDates = async () => {
@@ -613,6 +626,18 @@ sub.total >= 40 ? 'Average' : 'Below Average'}
 );
 
 const renderScreenView = () => {
+if (resultsError) {
+return (
+<div className="card-white no-print" style={{ padding: '48px 32px', textAlign: 'center' }}>
+<div className="w-16 h-16 mx-auto mb-4 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center">
+<AlertCircle size={32} />
+</div>
+<h3 className="text-xl font-bold text-slate-800 mb-2">Results Unavailable</h3>
+<p className="text-slate-500">{resultsError}</p>
+</div>
+);
+}
+
 if (publishedTerms.length === 0) {
 return (
 <div className="card-white no-print" style={{ padding: '60px 40px', textAlign: 'center' }}>
