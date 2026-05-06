@@ -184,7 +184,7 @@ const ResultPublisher = () => {
                 <tr key={pub.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <p className="font-bold text-slate-800">{pub.examName}</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">{new Date(pub.publishedAt?.toMillis()).toLocaleDateString()}</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase">{new Date(pub.publishedAt?.toMillis ? pub.publishedAt.toMillis() : (new Date(pub.publishedAt).getTime())).toLocaleDateString()}</p>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-sm font-bold text-slate-600">

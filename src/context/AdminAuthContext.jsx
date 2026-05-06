@@ -52,7 +52,10 @@ export const AdminAuthProvider = ({ children }) => {
     // 2. Try Firestore lookup (either by Email or Staff ID)
     // Principal and Bursar accounts should be managed via Staff Management.
     try {
-      const { db } = await import('../lib/firebase');
+      const { db, auth } = await import('../lib/firebase');
+      const { signInAnonymously } = await import('firebase/auth');
+      await signInAnonymously(auth);
+
       const { collection, query, where, getDocs } = await import('firebase/firestore');
       
       const staffRef = collection(db, 'staff');
