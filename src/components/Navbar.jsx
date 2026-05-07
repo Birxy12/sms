@@ -99,8 +99,7 @@ const Navbar = () => {
         <img
           src={schoolLogo || bdsLogo}
           alt="Logo"
-          style={{ height: '64px', width: '64px', objectFit: 'contain' }}
-          className="transition-transform duration-500 group-hover:scale-110"
+          className="h-16 w-16 object-contain transition-transform duration-500 group-hover:scale-110"
         />
         <div className="absolute inset-0 bg-orange-500/0 group-hover:bg-orange-500/10 transition-colors duration-300" style={{ borderRadius: '4px' }} />
       </div>

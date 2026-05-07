@@ -142,6 +142,26 @@
   margin-bottom: 2.5rem;
 }
 
+@media (max-width: 768px) {
+  .home-hero-content {
+    padding: 4rem 1rem;
+    text-align: center;
+  }
+  .home-hero-title {
+    font-size: 2.5rem;
+  }
+  .home-hero-desc {
+    font-size: 1rem;
+    margin: 0 auto 2rem;
+  }
+  .home-hero-actions {
+    justify-content: center;
+  }
+  .home-hero-slider {
+    margin-top: 3rem;
+  }
+}
+
 .home-hero-actions {
   display: flex;
   flex-wrap: wrap;
@@ -319,6 +339,13 @@
   position: relative;
   z-index: 20;
   margin-top: -4rem;
+}
+
+@media (max-width: 768px) {
+  .home-stats {
+    margin-top: 0;
+    padding: 2rem 1rem;
+  }
 }
 
 .home-stats-grid {

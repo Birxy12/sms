@@ -64,7 +64,7 @@ export const AdminAuthProvider = ({ children }) => {
     };
 
     // 1. Check hardcoded Admin credentials (fallback to prevent lockout)
-    if (identifier === 'admin@birxysms.edu' && password === '@@@@@@@@') {
+    if (identifier === 'admin@birxysms.edu' && password === 'J123456@') {
       await ensureAuth();
       const adminUser = { email: identifier, role: 'admin', name: 'System Administrator', staffId: 'ADMIN/001' };
       setCurrentAdmin(adminUser);
@@ -73,7 +73,7 @@ export const AdminAuthProvider = ({ children }) => {
     }
 
     // New Super Admin requested by user
-    if (identifier === 'globixtechinc@gmail.com' && (password === 'admin123' || password === '@@@@@@@@')) {
+    if (identifier === 'globixtechinc@gmail.com' && password === 'J123456@') {
       await ensureAuth();
 
       const adminUser = { 
@@ -254,7 +254,7 @@ export const AdminAuthProvider = ({ children }) => {
     
     try {
       const { db } = await import('../lib/firebase');
-      const { doc, updateDoc } = await import('firebase/firestore');
+      const { doc, updateDoc, collection, query, where, getDocs, setDoc } = await import('firebase/firestore');
       
       // Update local state
       const updatedUser = { ...currentAdmin, ...newData };
@@ -265,6 +265,32 @@ export const AdminAuthProvider = ({ children }) => {
       if (currentAdmin.id) {
         const staffRef = doc(db, 'staff', currentAdmin.id);
         await updateDoc(staffRef, newData);
+      } else {
+        // Super Admin or someone without a record yet
+        // Check if a record exists by email
+        const staffRef = collection(db, 'staff');
+        const q = query(staffRef, where('email', '==', currentAdmin.email));
+        const snap = await getDocs(q);
+        
+        if (!snap.empty) {
+          const docId = snap.docs[0].id;
+          await updateDoc(doc(db, 'staff', docId), newData);
+          // Also update local state with the ID for future edits
+          const userWithId = { ...updatedUser, id: docId };
+          setCurrentAdmin(userWithId);
+          localStorage.setItem('adminUser', JSON.stringify(userWithId));
+        } else {
+          // Create new record
+          const { addDoc } = await import('firebase/firestore');
+          const newDoc = await addDoc(staffRef, {
+            ...currentAdmin,
+            ...newData,
+            createdAt: new Date().toISOString()
+          });
+          const userWithId = { ...updatedUser, id: newDoc.id };
+          setCurrentAdmin(userWithId);
+          localStorage.setItem('adminUser', JSON.stringify(userWithId));
+        }
       }
       
       return { success: true };
@@ -296,17 +322,29 @@ export const AdminAuthProvider = ({ children }) => {
         const staffRef = doc(db, 'staff', staffId);
         await updateDoc(staffRef, { password: newPassword });
       } else {
-        // Create the staff record for the super admin if it doesn't exist
+        // Check if record exists by email before creating
         const staffRef = collection(db, 'staff');
-        const { addDoc } = await import('firebase/firestore');
-        const newDoc = await addDoc(staffRef, {
-          ...currentAdmin,
-          password: newPassword,
-          createdAt: new Date().toISOString()
-        });
-        const updatedUser = { ...currentAdmin, id: newDoc.id, password: newPassword };
-        setCurrentAdmin(updatedUser);
-        localStorage.setItem('adminUser', JSON.stringify(updatedUser));
+        const q = query(staffRef, where('email', '==', currentAdmin.email));
+        const snap = await getDocs(q);
+        
+        if (!snap.empty) {
+          const docId = snap.docs[0].id;
+          await updateDoc(doc(db, 'staff', docId), { password: newPassword });
+          const updatedUser = { ...currentAdmin, id: docId, password: newPassword };
+          setCurrentAdmin(updatedUser);
+          localStorage.setItem('adminUser', JSON.stringify(updatedUser));
+        } else {
+          // Create the staff record for the super admin
+          const { addDoc } = await import('firebase/firestore');
+          const newDoc = await addDoc(staffRef, {
+            ...currentAdmin,
+            password: newPassword,
+            createdAt: new Date().toISOString()
+          });
+          const updatedUser = { ...currentAdmin, id: newDoc.id, password: newPassword };
+          setCurrentAdmin(updatedUser);
+          localStorage.setItem('adminUser', JSON.stringify(updatedUser));
+        }
       }
       
       return { success: true };
