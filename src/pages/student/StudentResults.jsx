@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { db } from '../../lib/firebase';
 import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
-import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../context/ThemeContext';
 import { Award, AlertCircle, Printer, Download, ChevronLeft, User } from 'lucide-react';
 import bdsLogo from '../../assets/bdslogo.jpg';
@@ -108,13 +107,10 @@ setResultsError('');
 const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
 if (!selectedPub) return;
 
-        // ── 1. Fetch ALL marks for this student by regNo only
-        const { data: marksData, error: marksError } = await supabase
-          .from('marks')
-          .select('*')
-          .eq('reg_no', regNum);
-          
-        if (marksError) throw marksError;
+        // ── 1. Fetch ALL marks for this student by regNo only from Firestore
+        const marksQuery = query(collection(db, 'marks'), where('reg_no', '==', regNum));
+        const marksSnap = await getDocs(marksQuery);
+        const marksData = marksSnap.docs.map(doc => doc.data());
 
         // Normalise term string for comparison (e.g. 'Second Term' === 'secondterm')
         const normTerm = (t = '') => t.toLowerCase().replace(/\s+/g, '');
@@ -130,13 +126,10 @@ if (!selectedPub) return;
           }
         });
 
-        // ── 2. Compute class standing: fetch all marks for class/session
-        const { data: allMarksData, error: allMarksError } = await supabase
-          .from('marks')
-          .select('*')
-          .eq('class_name', studentClass);
-          
-        if (allMarksError) throw allMarksError;
+        // ── 2. Compute class standing: fetch all marks for class/session from Firestore
+        const allMarksQuery = query(collection(db, 'marks'), where('class_name', '==', studentClass));
+        const allMarksSnap = await getDocs(allMarksQuery);
+        const allMarksData = allMarksSnap.docs.map(doc => doc.data());
 
         const studentTotals = {};
         (allMarksData || []).forEach(d => {

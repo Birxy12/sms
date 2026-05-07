@@ -4,7 +4,6 @@ import { collection, query, where, getDocs, doc, setDoc, writeBatch, orderBy } f
 import { Save, Search, User, BookOpen, AlertCircle, CheckCircle, Loader2, Download, Upload, Trash2 } from 'lucide-react';
 import { CLASS_LIST, getSubjectsForClass } from '../utils/subjectConfig';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { supabase } from '../lib/supabase';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 

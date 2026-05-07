@@ -3,7 +3,6 @@ import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { db } from '../lib/firebase';
 import { collection, doc, writeBatch, query, where, getDocs } from 'firebase/firestore';
-import { supabase } from '../lib/supabase';
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Download } from 'lucide-react';
 import { CLASS_LIST, getAllSubjects, getSubjectsForClass } from '../utils/subjectConfig';
 
@@ -14,7 +13,7 @@ const BulkUpload = ({ onComplete }) => {
   const [selectedClass, setSelectedClass] = useState('JSS1');
   const [selectedSession, setSelectedSession] = useState('2025/2026');
   const [selectedTerm, setSelectedTerm] = useState('Second Term');
-  
+
   const classesList = CLASS_LIST;
   const sessionsList = ['2024/2025', '2025/2026', '2026/2027'];
   const termsList = ['First Term', 'Second Term', 'Third Term'];
@@ -25,7 +24,7 @@ const BulkUpload = ({ onComplete }) => {
     try {
       const q = query(collection(db, 'students'), where('className', '==', selectedClass));
       const snap = await getDocs(q);
-      
+
       if (snap.empty) {
         setStatus({ type: 'error', message: `No students found in ${selectedClass} class.` });
         setLoading(false);
@@ -65,7 +64,7 @@ const BulkUpload = ({ onComplete }) => {
     try {
       const q = query(collection(db, 'students'), where('className', '==', selectedClass));
       const snap = await getDocs(q);
-      
+
       if (snap.empty) {
         setStatus({ type: 'error', message: `No students found in ${selectedClass} class.` });
         setLoading(false);
@@ -73,7 +72,7 @@ const BulkUpload = ({ onComplete }) => {
       }
 
       const subjects = getSubjectsForClass(selectedClass);
-      
+
       const rawData = [];
       snap.forEach(doc => {
         const d = doc.data();
@@ -154,7 +153,7 @@ const BulkUpload = ({ onComplete }) => {
           const ws = wb.Sheets[wsName];
           const data = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
           resolve(data);
-        } catch(err) { reject(err); }
+        } catch (err) { reject(err); }
       };
       reader.onerror = reject;
       reader.readAsBinaryString(file);
@@ -180,17 +179,17 @@ const BulkUpload = ({ onComplete }) => {
         };
 
         const headerRows = [data[6], data[7], data[8], data[9], data[10], data[11]];
-        
-        const rawRegNo   = String(findValueAfterLabel(headerRows, ['REG NO'])).trim();
+
+        const rawRegNo = String(findValueAfterLabel(headerRows, ['REG NO'])).trim();
         const studentName = String(findValueAfterLabel(headerRows, ['NAME'])).trim();
-        const sex        = String(findValueAfterLabel(headerRows, ['SEX'])).trim();
-        const average    = String(findValueAfterLabel(headerRows, ['AVERAGE'])).trim();
-        const position   = String(findValueAfterLabel(headerRows, ['POSITION'])).trim();
-        const dob        = String(findValueAfterLabel(headerRows, ['DATE OF BIRTH', 'D.O.B'])).trim();
-        const club       = String(findValueAfterLabel(headerRows, ['CLUB'])).trim();
-        const house      = String(findValueAfterLabel(headerRows, ['HOUSE'])).trim();
+        const sex = String(findValueAfterLabel(headerRows, ['SEX'])).trim();
+        const average = String(findValueAfterLabel(headerRows, ['AVERAGE'])).trim();
+        const position = String(findValueAfterLabel(headerRows, ['POSITION'])).trim();
+        const dob = String(findValueAfterLabel(headerRows, ['DATE OF BIRTH', 'D.O.B'])).trim();
+        const club = String(findValueAfterLabel(headerRows, ['CLUB'])).trim();
+        const house = String(findValueAfterLabel(headerRows, ['HOUSE'])).trim();
         const promoStatus = String(findValueAfterLabel(headerRows, ['PROMOTION STATUS', 'PROMOTION'])).trim();
-        const className  = selectedClass; // Force class from explicit UI selection
+        const className = selectedClass; // Force class from explicit UI selection
 
         if (!rawRegNo) {
           console.warn('Skipped file — no RegNo found:', file.name);
@@ -213,14 +212,14 @@ const BulkUpload = ({ onComplete }) => {
           const row = data[i];
           const rawSubjectName = (row[1] || '').trim();
           if (!rawSubjectName) continue;
-          
+
           let subjectName = rawSubjectName.toUpperCase();
-          
+
           // Skip if it looks like a behaviour/skill label
-          if (['ATTENTIVENESS','HONESTY','NEATNESS','POLITENESS','PUNCTUALITY',
-               'CONFIDENCE','ATTITUDE','LISTENING SKILLS','READING SKILLS',
-               'HOME WORK','HAND WRITING','SPOKEN ENGLISH','OUTDOOR GAMES',
-               'SKILLS','BEHAVIOURS','SUBJECTS'].includes(subjectName)) continue;
+          if (['ATTENTIVENESS', 'HONESTY', 'NEATNESS', 'POLITENESS', 'PUNCTUALITY',
+            'CONFIDENCE', 'ATTITUDE', 'LISTENING SKILLS', 'READING SKILLS',
+            'HOME WORK', 'HAND WRITING', 'SPOKEN ENGLISH', 'OUTDOOR GAMES',
+            'SKILLS', 'BEHAVIOURS', 'SUBJECTS'].includes(subjectName)) continue;
 
           // Normalize abbreviations to match global configuration
           if (subjectName === 'ENGLISH LANG.') subjectName = 'ENGLISH LANGUAGE';
@@ -249,8 +248,22 @@ const BulkUpload = ({ onComplete }) => {
         const session = selectedSession;
 
         // Save result to 'marks' collection in Firestore
-        const firebaseMarkRef = doc(collection(db, 'marks'), supabaseRecord.id);
-        await setDoc(firebaseMarkRef, supabaseRecord, { merge: true });
+        const safeSession = session.replace('/', '-');
+        const safeTerm = term.replace(/\s/g, '').toLowerCase();
+        const firestoreRecordId = `${docId}_${safeSession}_${safeTerm}`;
+        const firestoreRecord = {
+          id: firestoreRecordId,
+          reg_no: rawRegNo,
+          student_name: studentName,
+          class_name: className,
+          term: term,
+          session: session,
+          marks: marks,
+          updated_at: new Date().toISOString()
+        };
+
+        const firebaseMarkRef = doc(collection(db, 'marks'), firestoreRecordId);
+        await setDoc(firebaseMarkRef, firestoreRecord, { merge: true });
 
         // Also update student record with profile info in Firestore
         const batch = writeBatch(db);
@@ -271,7 +284,7 @@ const BulkUpload = ({ onComplete }) => {
         setStatus({ type: 'info', message: `Uploaded ${totalUploaded}/${files.length}: ${studentName || rawRegNo}` });
       }
       setStatus({ type: 'success', message: `Successfully uploaded results for ${totalUploaded} student(s)!` });
-      
+
       // Auto-publish result for this class/session/term
       await autoPublish();
 
@@ -289,7 +302,7 @@ const BulkUpload = ({ onComplete }) => {
       const { setDoc, doc } = await import('firebase/firestore');
       const pubId = `${selectedSession.replace('/', '-')}_${selectedTerm.replace(/\s/g, '').toLowerCase()}_${selectedClass.replace(/\s/g, '').toLowerCase()}`;
       const pubRef = doc(db, 'publications', pubId);
-      
+
       await setDoc(pubRef, {
         type: 'Result',
         examName: `${selectedTerm} Examination`,
@@ -299,7 +312,7 @@ const BulkUpload = ({ onComplete }) => {
         publishedAt: new Date().toISOString(),
         status: 'published'
       }, { merge: true });
-      
+
       console.log('Result auto-published for:', pubId);
     } catch (error) {
       console.error('Auto-publish failed:', error);
@@ -316,7 +329,7 @@ const BulkUpload = ({ onComplete }) => {
       if (type === 'students') {
         const headerRow = rawData[0] || [];
         const normalizedHeaders = headerRow.map(h => typeof h === 'string' ? h.trim().toUpperCase() : '');
-        
+
         const regNoIdx = normalizedHeaders.findIndex(h => h.includes('REG') && h.includes('NO'));
         const nameIdx = normalizedHeaders.findIndex(h => h.includes('NAME'));
         const sexIdx = normalizedHeaders.findIndex(h => h === 'SEX' || h === 'GENDER');
@@ -346,7 +359,7 @@ const BulkUpload = ({ onComplete }) => {
             updatedAt: new Date().toISOString()
           }, { merge: true });
           hasPending = true;
-          
+
           count++;
           setUploadProgress(Math.round((i / rawData.length) * 100));
 
@@ -359,7 +372,7 @@ const BulkUpload = ({ onComplete }) => {
       } else if (type === 'marksheet') {
         const validSubjects = getAllSubjects();
         const classSubjects = getSubjectsForClass(selectedClass).map(s => s.toUpperCase());
-        
+
         const studentRef = collection(db, 'students');
         const studentSnap = await getDocs(query(studentRef, where('className', '==', selectedClass)));
         const classStudents = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -371,7 +384,7 @@ const BulkUpload = ({ onComplete }) => {
           where('term', '==', selectedTerm)
         );
         const marksSnap = await getDocs(marksQuery);
-        
+
         const currentDbMarks = {};
         marksSnap.forEach(d => {
           const data = d.data();
@@ -393,7 +406,7 @@ const BulkUpload = ({ onComplete }) => {
           if (upper === 'PHY' || upper === 'PHYS') return 'PHYSICS';
           if (upper === 'CHEM' || upper === 'CHM') return 'CHEMISTRY';
           if (upper === 'MATH' || upper === 'MATHS') return 'MATHEMATICS';
-          
+
           const match = validSubjects.find(s => s === upper || s.includes(upper) || upper.includes(s));
           return match || upper;
         };
@@ -411,7 +424,7 @@ const BulkUpload = ({ onComplete }) => {
               found.push({ name: mapped, startIndex: c });
             }
           }
-          if (found.length >= 3) { 
+          if (found.length >= 3) {
             subjects = found;
             subjectRowIdx = r;
             break;
@@ -433,13 +446,13 @@ const BulkUpload = ({ onComplete }) => {
 
           let rawRegNo = String(row[0] || '').trim();
           let studentName = String(row[1] || '').trim();
-          
+
           if ((!rawRegNo || rawRegNo === '0' || rawRegNo === 'Roll No.') && !studentName) continue;
           if (rawRegNo.toUpperCase().includes('REG NO')) continue;
 
           let finalRegNo = '';
           let finalName = studentName;
-          
+
           if (rawRegNo && rawRegNo !== '0' && (rawRegNo.includes('/') || rawRegNo.includes('-'))) {
             finalRegNo = rawRegNo;
             matchedByReg++;
@@ -450,7 +463,7 @@ const BulkUpload = ({ onComplete }) => {
               matchedByName++;
             } else {
               failedMatch++;
-              continue; 
+              continue;
             }
           } else {
             continue;
@@ -466,11 +479,11 @@ const BulkUpload = ({ onComplete }) => {
             let cat1 = parseFloat(row[sIdx] || 0);
             let cat2 = parseFloat(row[sIdx + 1] || 0);
             let exam = parseFloat(row[sIdx + 2] || 0);
-            
+
             if (isNaN(row[sIdx]) || row[sIdx] === subject.name) {
-               cat1 = parseFloat(row[sIdx + 1] || 0);
-               cat2 = parseFloat(row[sIdx + 2] || 0);
-               exam = parseFloat(row[sIdx + 3] || 0);
+              cat1 = parseFloat(row[sIdx + 1] || 0);
+              cat2 = parseFloat(row[sIdx + 2] || 0);
+              exam = parseFloat(row[sIdx + 3] || 0);
             }
 
             const total = cat1 + cat2 + exam;
@@ -493,7 +506,7 @@ const BulkUpload = ({ onComplete }) => {
           // Calculate overall average based on policy (JSS: 15, SS1: 16, SS2/3: 9)
           const clsUpper = selectedClass.toUpperCase();
           let divisor = 15;
-          if (clsUpper.includes('JSS')) divisor = 15;
+          if (clsUpper.includes('JSS')) divisor = 16;
           else if (clsUpper.includes('SS1')) divisor = 16;
           else if (clsUpper.includes('SS2') || clsUpper.includes('SS3')) divisor = 9;
 
@@ -503,13 +516,13 @@ const BulkUpload = ({ onComplete }) => {
               totalScore += parseFloat(updatedMarksObj[key].total || 0);
             }
           });
-          
+
           const average = (totalScore / divisor).toFixed(1);
 
           const safeSession = selectedSession.replace('/', '-');
           const safeTerm = selectedTerm.replace(/\s/g, '').toLowerCase();
-          
-          const supaRecord = {
+
+          const firestoreRecord = {
             id: `${docId}_${safeSession}_${safeTerm}`,
             reg_no: finalRegNo,
             student_name: finalName,
@@ -522,8 +535,8 @@ const BulkUpload = ({ onComplete }) => {
             },
             updated_at: new Date().toISOString()
           };
-          
-          recordsToUpsert.push(supaRecord);
+
+          recordsToUpsert.push(firestoreRecord);
           hasPending = true;
 
           count++;
@@ -538,16 +551,17 @@ const BulkUpload = ({ onComplete }) => {
           recordsToUpsert.length = 0;
           hasPending = false;
 
-        console.log(`Matching results: Reg=${matchedByReg}, Name=${matchedByName}, Failed=${failedMatch}`);
-        if (failedMatch > 0) {
-           setStatus({ type: 'info', message: `Matched ${matchedByReg + matchedByName} students. ${failedMatch} could not be matched.` });
+          console.log(`Matching results: Reg=${matchedByReg}, Name=${matchedByName}, Failed=${failedMatch}`);
+          if (failedMatch > 0) {
+            setStatus({ type: 'info', message: `Matched ${matchedByReg + matchedByName} students. ${failedMatch} could not be matched.` });
+          }
         }
       }
 
       if (hasPending) {
         await batch.commit();
       }
-      
+
       setUploadProgress(100);
       setStatus({ type: 'success', message: `Successfully uploaded ${count} records to Firestore!` });
       await autoPublish();
@@ -560,176 +574,175 @@ const BulkUpload = ({ onComplete }) => {
     }
   };
 
-  return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-      <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-        <Upload className="w-5 h-5 text-indigo-600" />
-        Bulk Data Porter
-      </h3>
-
-      <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 mb-6">
-        <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <FileText className="text-indigo-600" size={20} />
-          Bulk Actions Configuration
+    return (
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+          <Upload className="w-5 h-5 text-indigo-600" />
+          Bulk Data Porter
         </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div>
-            <label className="block text-sm font-bold text-slate-600 uppercase tracking-wider mb-2">Academic Session</label>
-            <select 
-              value={selectedSession} 
-              onChange={(e) => setSelectedSession(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium bg-white"
-            >
-              {sessionsList.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-slate-600 uppercase tracking-wider mb-2">School Term</label>
-            <select 
-              value={selectedTerm} 
-              onChange={(e) => setSelectedTerm(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium bg-white"
-            >
-              {termsList.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-slate-600 uppercase tracking-wider mb-2">Target Class</label>
-            <select 
-              value={selectedClass} 
-              onChange={(e) => setSelectedClass(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium bg-white"
-            >
-              {classesList.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-        </div>
-        
-        <p className="text-sm text-slate-500 mb-4">
-          You are currently processing data for <strong>{selectedClass}</strong> in <strong>{selectedTerm}</strong> of the <strong>{selectedSession}</strong> session. 
-          Any bulk results uploaded will be automatically recorded under this exact period.
-        </p>
-        
-        <div className="flex flex-wrap gap-4">
-          <button 
-            onClick={handleDownloadRoster} 
-            disabled={loading}
-            className="flex items-center gap-2 bg-indigo-100 text-indigo-700 px-6 py-3 rounded-xl font-bold hover:bg-indigo-200 transition-all disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : <Download size={20} />}
-            Download {selectedClass} Roster Template
-          </button>
-          
-          <button 
-            onClick={handleDownloadTemplate} 
-            disabled={loading}
-            className="flex items-center gap-2 bg-teal-100 text-teal-700 px-6 py-3 rounded-xl font-bold hover:bg-teal-200 transition-all disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : <FileText size={20} />}
-            Download {selectedClass} Bulk Entry Template
-          </button>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Student List Upload */}
-        <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 hover:border-indigo-300 transition-colors text-center">
-          <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-          <h4 className="font-medium text-slate-700">Student List</h4>
-          <p className="text-sm text-slate-500 mb-4">Upload student_details.csv or .xlsx</p>
-          <input
-            type="file"
-            id="studentUpload"
-            className="hidden"
-            accept=".csv, .xlsx, .xls"
-            onChange={(e) => processFile(e, 'students')}
-            disabled={loading}
-          />
-          <label
-            htmlFor="studentUpload"
-            className="inline-block bg-slate-100 px-4 py-2 rounded-lg text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
-          >
-            {loading ? 'Processing...' : 'Browse Files'}
-          </label>
-        </div>
+        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 mb-6">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <FileText className="text-indigo-600" size={20} />
+            Bulk Actions Configuration
+          </h3>
 
-        {/* Marksheet Upload */}
-        <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 hover:border-teal-300 transition-colors text-center">
-          <Upload className="w-8 h-8 text-teal-500 mx-auto mb-2" />
-          <h4 className="font-medium text-slate-700">General Entry Sheet</h4>
-          <p className="text-sm text-slate-500 mb-4">Upload entry sheet like ss1e.xlsx</p>
-          <input
-            type="file"
-            id="marksheetUpload"
-            className="hidden"
-            accept=".csv, .xlsx, .xls"
-            onChange={(e) => processFile(e, 'marksheet')}
-            disabled={loading}
-          />
-          <label
-            htmlFor="marksheetUpload"
-            className="inline-block bg-teal-50 text-teal-700 px-4 py-2 rounded-lg text-sm font-bold cursor-pointer hover:bg-teal-100 transition-colors"
-          >
-            {loading ? 'Processing...' : 'Upload Entry Sheet'}
-          </label>
-        </div>
-
-        {/* Individual Result Sheets Upload */}
-        <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 hover:border-purple-300 transition-colors text-center md:col-span-2">
-          <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-          <h4 className="font-medium text-slate-700">Student Report Cards</h4>
-          <p className="text-sm text-slate-500 mb-1">Upload individual student result sheets (.xlsb / .xlsx)</p>
-          <p className="text-xs text-purple-600 font-semibold mb-4">✓ Accepts multiple files at once — select all sheets for a class together!</p>
-          <input
-            type="file"
-            id="resultSheetsUpload"
-            className="hidden"
-            accept=".xlsb, .xlsx, .xls"
-            multiple
-            onChange={processResultSheet}
-            disabled={loading}
-          />
-          <label
-            htmlFor="resultSheetsUpload"
-            className="inline-block bg-purple-100 text-purple-700 px-6 py-2.5 rounded-lg text-sm font-bold cursor-pointer hover:bg-purple-200 transition-colors"
-          >
-            {loading ? 'Uploading Results...' : 'Select Result Sheet(s)'}
-          </label>
-        </div>
-      </div>
-
-      {(loading || status.message) && (
-        <div className={`mt-6 p-4 rounded-xl flex flex-col gap-3 ${
-          status.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-          status.type === 'error' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
-          'bg-blue-50 text-blue-700 border border-blue-100'
-        }`}>
-          <div className="flex items-center gap-3">
-            {status.type === 'success' ? <CheckCircle className="w-5 h-5" /> : 
-             status.type === 'error' ? <AlertCircle className="w-5 h-5" /> : 
-             <Loader2 className="w-5 h-5 animate-spin" />}
-            <p className="text-sm font-medium">{status.message}</p>
-          </div>
-          
-          {loading && uploadProgress > 0 && uploadProgress < 100 && (
-            <div className="w-full mt-2">
-              <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest mb-1">
-                <span>Upload Progress</span>
-                <span>{uploadProgress}%</span>
-              </div>
-              <div className="h-1.5 w-full bg-blue-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-blue-600 transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div>
+              <label className="block text-sm font-bold text-slate-600 uppercase tracking-wider mb-2">Academic Session</label>
+              <select
+                value={selectedSession}
+                onChange={(e) => setSelectedSession(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium bg-white"
+              >
+                {sessionsList.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
+            <div>
+              <label className="block text-sm font-bold text-slate-600 uppercase tracking-wider mb-2">School Term</label>
+              <select
+                value={selectedTerm}
+                onChange={(e) => setSelectedTerm(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium bg-white"
+              >
+                {termsList.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-600 uppercase tracking-wider mb-2">Target Class</label>
+              <select
+                value={selectedClass}
+                onChange={(e) => setSelectedClass(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium bg-white"
+              >
+                {classesList.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
 
-export default BulkUpload;
+          <p className="text-sm text-slate-500 mb-4">
+            You are currently processing data for <strong>{selectedClass}</strong> in <strong>{selectedTerm}</strong> of the <strong>{selectedSession}</strong> session.
+            Any bulk results uploaded will be automatically recorded under this exact period.
+          </p>
+
+          <div className="flex flex-wrap gap-4">
+            <button
+              onClick={handleDownloadRoster}
+              disabled={loading}
+              className="flex items-center gap-2 bg-indigo-100 text-indigo-700 px-6 py-3 rounded-xl font-bold hover:bg-indigo-200 transition-all disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="animate-spin" size={20} /> : <Download size={20} />}
+              Download {selectedClass} Roster Template
+            </button>
+
+            <button
+              onClick={handleDownloadTemplate}
+              disabled={loading}
+              className="flex items-center gap-2 bg-teal-100 text-teal-700 px-6 py-3 rounded-xl font-bold hover:bg-teal-200 transition-all disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="animate-spin" size={20} /> : <FileText size={20} />}
+              Download {selectedClass} Bulk Entry Template
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Student List Upload */}
+          <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 hover:border-indigo-300 transition-colors text-center">
+            <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+            <h4 className="font-medium text-slate-700">Student List</h4>
+            <p className="text-sm text-slate-500 mb-4">Upload student_details.csv or .xlsx</p>
+            <input
+              type="file"
+              id="studentUpload"
+              className="hidden"
+              accept=".csv, .xlsx, .xls"
+              onChange={(e) => processFile(e, 'students')}
+              disabled={loading}
+            />
+            <label
+              htmlFor="studentUpload"
+              className="inline-block bg-slate-100 px-4 py-2 rounded-lg text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
+            >
+              {loading ? 'Processing...' : 'Browse Files'}
+            </label>
+          </div>
+
+          {/* Marksheet Upload */}
+          <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 hover:border-teal-300 transition-colors text-center">
+            <Upload className="w-8 h-8 text-teal-500 mx-auto mb-2" />
+            <h4 className="font-medium text-slate-700">General Entry Sheet</h4>
+            <p className="text-sm text-slate-500 mb-4">Upload entry sheet like ss1e.xlsx</p>
+            <input
+              type="file"
+              id="marksheetUpload"
+              className="hidden"
+              accept=".csv, .xlsx, .xls"
+              onChange={(e) => processFile(e, 'marksheet')}
+              disabled={loading}
+            />
+            <label
+              htmlFor="marksheetUpload"
+              className="inline-block bg-teal-50 text-teal-700 px-4 py-2 rounded-lg text-sm font-bold cursor-pointer hover:bg-teal-100 transition-colors"
+            >
+              {loading ? 'Processing...' : 'Upload Entry Sheet'}
+            </label>
+          </div>
+
+          {/* Individual Result Sheets Upload */}
+          <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 hover:border-purple-300 transition-colors text-center md:col-span-2">
+            <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+            <h4 className="font-medium text-slate-700">Student Report Cards</h4>
+            <p className="text-sm text-slate-500 mb-1">Upload individual student result sheets (.xlsb / .xlsx)</p>
+            <p className="text-xs text-purple-600 font-semibold mb-4">✓ Accepts multiple files at once — select all sheets for a class together!</p>
+            <input
+              type="file"
+              id="resultSheetsUpload"
+              className="hidden"
+              accept=".xlsb, .xlsx, .xls"
+              multiple
+              onChange={processResultSheet}
+              disabled={loading}
+            />
+            <label
+              htmlFor="resultSheetsUpload"
+              className="inline-block bg-purple-100 text-purple-700 px-6 py-2.5 rounded-lg text-sm font-bold cursor-pointer hover:bg-purple-200 transition-colors"
+            >
+              {loading ? 'Uploading Results...' : 'Select Result Sheet(s)'}
+            </label>
+          </div>
+        </div>
+
+        {(loading || status.message) && (
+          <div className={`mt-6 p-4 rounded-xl flex flex-col gap-3 ${status.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+              status.type === 'error' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                'bg-blue-50 text-blue-700 border border-blue-100'
+            }`}>
+            <div className="flex items-center gap-3">
+              {status.type === 'success' ? <CheckCircle className="w-5 h-5" /> :
+                status.type === 'error' ? <AlertCircle className="w-5 h-5" /> :
+                  <Loader2 className="w-5 h-5 animate-spin" />}
+              <p className="text-sm font-medium">{status.message}</p>
+            </div>
+
+            {loading && uploadProgress > 0 && uploadProgress < 100 && (
+              <div className="w-full mt-2">
+                <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest mb-1">
+                  <span>Upload Progress</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-blue-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-600 transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  export default BulkUpload;

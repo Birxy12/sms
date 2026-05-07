@@ -6,7 +6,6 @@ import marksheetCsv from '../assets/marksheet.csv?raw';
 import ss1MarksheetCsv from '../assets/ss1_marksheet.csv?raw';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
-import { supabase } from '../lib/supabase';
 import { CLASS_LIST, getSubjectsForClass } from '../utils/subjectConfig';
 import '../assets/Marksheet.css';
 
@@ -186,15 +185,15 @@ const Marksheet = ({ className: propClassName }) => {
         const studentsQuery = query(collection(db, 'students'), where('className', '==', currentClassName));
         const studentsSnapshot = await getDocs(studentsQuery);
         
-        // Fetch marks from Supabase
-        const { data: marksData, error: marksError } = await supabase
-          .from('marks')
-          .select('*')
-          .eq('session', selectedSession)
-          .eq('class_name', selectedClass)
-          .eq('term', selectedTerm);
-
-        if (marksError) throw marksError;
+        // Fetch marks from Firestore
+        const marksQuery = query(
+          collection(db, 'marks'),
+          where('session', '==', selectedSession),
+          where('class_name', '==', selectedClass),
+          where('term', '==', selectedTerm)
+        );
+        const marksSnapshot = await getDocs(marksQuery);
+        const marksData = marksSnapshot.docs.map(doc => doc.data());
         
         const dbMarks = {};
         (marksData || []).forEach(docData => {
