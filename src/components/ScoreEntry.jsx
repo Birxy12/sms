@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, doc, setDoc, writeBatch, orderBy } from 'firebase/firestore';
-import { Save, Search, User, BookOpen, AlertCircle, CheckCircle, Loader2, Download, Upload, Trash2 } from 'lucide-react';
+import { Save, Search, User, BookOpen, AlertCircle, CheckCircle, Loader2, Download, Upload, Trash2, FileText } from 'lucide-react';
 import { CLASS_LIST, getSubjectsForClass } from '../utils/subjectConfig';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
+import { compressMarks, expandMarks, MARKS_KEYS, STUDENT_KEYS } from '../utils/firestoreSchema';
 
 const ScoreEntry = () => {
   const { currentAdmin } = useAdminAuth();
@@ -81,7 +82,7 @@ const ScoreEntry = () => {
     setLoading(true);
     setStatus({ type: '', message: '' });
     try {
-      const q = query(collection(db, 'students'), where('className', '==', selectedClass));
+      const q = query(collection(db, 'students'), where(STUDENT_KEYS.className, '==', selectedClass));
       const querySnapshot = await getDocs(q);
       const studentList = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -93,9 +94,9 @@ const ScoreEntry = () => {
       // Fetch existing scores for this class/period/subject from Firestore
       const marksQuery = query(
         collection(db, 'marks'),
-        where('class_name', '==', selectedClass),
-        where('session', '==', selectedSession),
-        where('term', '==', selectedTerm)
+        where(MARKS_KEYS.className, '==', selectedClass),
+        where(MARKS_KEYS.session, '==', selectedSession),
+        where(MARKS_KEYS.term, '==', selectedTerm)
       );
       const marksSnap = await getDocs(marksQuery);
       
@@ -103,11 +104,11 @@ const ScoreEntry = () => {
       const newDbMarks = {};
       
       marksSnap.forEach(doc => {
-        const data = doc.data();
-        newDbMarks[data.reg_no] = data.marks || {};
+        const data = expandMarks(doc.data());
+        newDbMarks[data.regNo] = data.marks || {};
         const subjectMarks = data.marks?.[selectedSubject];
         if (subjectMarks) {
-          newScores[data.reg_no] = {
+          newScores[data.regNo] = {
             cat1: subjectMarks.cat1 || '0',
             cat2: subjectMarks.cat2 || '0',
             exam: subjectMarks.exam || '0'
@@ -160,6 +161,7 @@ const ScoreEntry = () => {
       const safeSession = selectedSession.replace('/', '-');
       const safeTerm = selectedTerm.replace(/\s/g, '').toLowerCase();
       
+      const batch = writeBatch(db);
       const recordsToUpsert = [];
 
       for (const student of students) {
@@ -198,25 +200,33 @@ const ScoreEntry = () => {
         if (currentDbMarks[student.regNo]) {
           // Document exists, update only the specific subject inside 'marks' map
           batch.update(markRef, {
-            [`marks.${selectedSubject}`]: subjectData,
-            updated_at: new Date().toISOString()
+            [`${MARKS_KEYS.marks}.${selectedSubject}`]: {
+              [MARKS_KEYS.cat1]: cat1,
+              [MARKS_KEYS.cat2]: cat2,
+              [MARKS_KEYS.exam]: exam,
+              [MARKS_KEYS.total]: total,
+              [MARKS_KEYS.percent]: total,
+              [MARKS_KEYS.grade]: grade
+            },
+            [MARKS_KEYS.updatedAt]: new Date().toISOString()
           });
         } else {
           // New document, set full structure
-          batch.set(markRef, {
-            id,
-            reg_no: student.regNo,
-            student_name: student.name,
-            class_name: selectedClass,
+          const firestoreRecord = compressMarks({
+            regNo: student.regNo,
+            studentName: student.name,
+            className: selectedClass,
             session: selectedSession,
             term: selectedTerm,
             marks: {
-              [selectedSubject]: subjectData
-            },
-            updated_at: new Date().toISOString()
+              [selectedSubject]: {
+                cat1, cat2, exam, total, percent: total, grade
+              }
+            }
           });
+          batch.set(markRef, firestoreRecord);
           // Optimistically add to currentDbMarks to avoid double sets in this session
-          currentDbMarks[student.regNo] = { [selectedSubject]: subjectData };
+          currentDbMarks[student.regNo] = { [selectedSubject]: { cat1, cat2, exam, total, percent: total, grade } };
         }
       }
 

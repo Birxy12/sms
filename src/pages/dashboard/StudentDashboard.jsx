@@ -4,6 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { db } from '../../lib/firebase';
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import { LayoutDashboard, Award, CreditCard, Calendar, Bell, ChevronRight, Inbox as InboxIcon, Trophy, Wallet, BookOpen, Library, MonitorCheck, AlertCircle } from 'lucide-react';
+import { MARKS_KEYS } from '../../utils/firestoreSchema';
 import { useNavigate } from 'react-router-dom';
 import PinSetupModal from '../../components/student/PinSetupModal';
 
@@ -41,7 +42,7 @@ const StudentDashboard = () => {
         const uniqueIds = new Set([...s1.docs, ...s2.docs, ...s3.docs].map(d => d.id));
         setInboxCount(uniqueIds.size);
 
-        const rSnap = await getDocs(query(collection(db, 'marks'), where('regNo', '==', regNum)));
+        const rSnap = await getDocs(query(collection(db, 'marks'), where(MARKS_KEYS.regNo, '==', regNum)));
         setResultsCount(rSnap.size);
       } catch (e) {
         if (e?.code === 'permission-denied') {

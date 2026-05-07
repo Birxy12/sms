@@ -5,6 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { Trophy, Medal, Star, Users, GraduationCap, ArrowRight, Loader2, Award } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/MainFooter';
+import { expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../../utils/firestoreSchema';
 import './LeaderboardPage.css';
 
 const LeaderboardPage = () => {
@@ -52,18 +53,18 @@ const LeaderboardPage = () => {
         // 1. Fetch all marks for this session/term
         const marksQuery = query(
           collection(db, 'marks'),
-          where('session', '==', selectedSession),
-          where('term', '==', selectedTerm)
+          where(MARKS_KEYS.session, '==', selectedSession),
+          where(MARKS_KEYS.term, '==', selectedTerm)
         );
         const marksSnap = await getDocs(marksQuery);
         
         const classRankings = {};
 
         marksSnap.forEach(docSnap => {
-          const data = docSnap.data();
+          const data = expandMarks(docSnap.data());
           const className = data.className;
           const regNo = data.regNo;
-          const marksData = data.marks || data.subjects || {};
+          const marksData = data.marks || {};
           
           let totalScore = 0;
           Object.values(marksData).forEach(m => {
@@ -102,7 +103,8 @@ const LeaderboardPage = () => {
         const studentsSnap = await getDocs(collection(db, 'students'));
         const studentsMap = {};
         studentsSnap.forEach(doc => {
-          studentsMap[doc.data().regNo] = doc.data();
+          const sData = expandStudent(doc.data());
+          studentsMap[sData.regNo] = sData;
         });
 
         classes.forEach(className => {

@@ -16,6 +16,22 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// Compressed Schema Keys
+const MARKS_KEYS = { regNo: 'r', studentName: 'n', className: 'c', session: 's', term: 't', marks: 'm', updatedAt: 'u', average: 'avg', overallTotal: 'ot', cat1: 'c1', cat2: 'c2', exam: 'ex', total: 'to', percent: 'pc', grade: 'gr' };
+const STUDENT_KEYS = { regNo: 'r', name: 'n', gender: 'g', className: 'c', dob: 'd', club: 'cl', house: 'h', updatedAt: 'u', photo: 'p' };
+
+function compressMarks(data) {
+  const m = { [MARKS_KEYS.regNo]: data.regNo, [MARKS_KEYS.studentName]: data.studentName, [MARKS_KEYS.className]: data.className, [MARKS_KEYS.session]: data.session, [MARKS_KEYS.term]: data.term, [MARKS_KEYS.updatedAt]: data.updatedAt, [MARKS_KEYS.marks]: {} };
+  Object.entries(data.marks).forEach(([subj, scores]) => {
+    m[MARKS_KEYS.marks][subj] = { [MARKS_KEYS.cat1]: scores.cat1, [MARKS_KEYS.cat2]: scores.cat2, [MARKS_KEYS.exam]: scores.exam, [MARKS_KEYS.total]: scores.total, [MARKS_KEYS.percent]: scores.percent, [MARKS_KEYS.grade]: scores.grade };
+  });
+  return m;
+}
+
+function compressStudent(data) {
+  return { [STUDENT_KEYS.regNo]: data.regNo, [STUDENT_KEYS.name]: data.name, [STUDENT_KEYS.gender]: data.gender, [STUDENT_KEYS.className]: data.className, [STUDENT_KEYS.updatedAt]: data.updatedAt };
+}
+
 async function pushStudents(filePath, className) {
   console.log(`Processing students for ${className} from ${filePath}...`);
   const workbook = XLSX.readFile(filePath);
@@ -37,13 +53,13 @@ async function pushStudents(filePath, className) {
     const docId = String(regNo).replace(/\//g, '-');
     const studentRef = doc(collection(db, 'students'), docId);
     
-    batch.set(studentRef, {
+    batch.set(studentRef, compressStudent({
       regNo: String(regNo),
       name: row[nameIdx] || 'Unknown',
       gender: row[sexIdx] || '',
       className: className,
       updatedAt: new Date().toISOString()
-    }, { merge: true });
+    }), { merge: true });
     
     count++;
     if (count % 400 === 0) {
@@ -99,7 +115,7 @@ async function pushMarksheet(filePath, className, session, term) {
     });
 
     const marksRef = doc(collection(db, 'marks'), `${docId}_${safeSession}_${safeTerm}`);
-    batch.set(marksRef, {
+    batch.set(marksRef, compressMarks({
       regNo: String(regNo),
       studentName: row[1] || 'Unknown',
       className: className,
@@ -107,7 +123,7 @@ async function pushMarksheet(filePath, className, session, term) {
       term: term,
       session: session,
       updatedAt: new Date().toISOString()
-    }, { merge: true });
+    }), { merge: true });
 
     count++;
     if (count % 400 === 0) {

@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { db } from '../lib/firebase';
-import { collection, doc, writeBatch, query, where, getDocs } from 'firebase/firestore';
+import { collection, doc, writeBatch, query, where, getDocs, setDoc } from 'firebase/firestore';
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Download } from 'lucide-react';
 import { CLASS_LIST, getAllSubjects, getSubjectsForClass } from '../utils/subjectConfig';
+import { compressMarks, compressStudent, expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../utils/firestoreSchema';
 
 const BulkUpload = ({ onComplete }) => {
   const [loading, setLoading] = useState(false);
@@ -33,7 +34,7 @@ const BulkUpload = ({ onComplete }) => {
 
       const rawData = [];
       snap.forEach(doc => {
-        const d = doc.data();
+        const d = expandStudent(doc.data());
         rawData.push({
           'REG NO': d.regNo,
           'STUDENT NAME': d.name,
@@ -62,7 +63,7 @@ const BulkUpload = ({ onComplete }) => {
     setLoading(true);
     setStatus({ type: 'info', message: `Generating bulk entry template for ${selectedClass}...` });
     try {
-      const q = query(collection(db, 'students'), where('className', '==', selectedClass));
+      const q = query(collection(db, 'students'), where(STUDENT_KEYS.className, '==', selectedClass));
       const snap = await getDocs(q);
 
       if (snap.empty) {
@@ -75,7 +76,7 @@ const BulkUpload = ({ onComplete }) => {
 
       const rawData = [];
       snap.forEach(doc => {
-        const d = doc.data();
+        const d = expandStudent(doc.data());
         const row = {
           'REG NO': d.regNo,
           'STUDENT NAME': d.name
@@ -251,16 +252,14 @@ const BulkUpload = ({ onComplete }) => {
         const safeSession = session.replace('/', '-');
         const safeTerm = term.replace(/\s/g, '').toLowerCase();
         const firestoreRecordId = `${docId}_${safeSession}_${safeTerm}`;
-        const firestoreRecord = {
-          id: firestoreRecordId,
-          reg_no: rawRegNo,
-          student_name: studentName,
-          class_name: className,
+        const firestoreRecord = compressMarks({
+          regNo: rawRegNo,
+          studentName: studentName,
+          className: className,
           term: term,
           session: session,
-          marks: marks,
-          updated_at: new Date().toISOString()
-        };
+          marks: marks
+        });
 
         const firebaseMarkRef = doc(collection(db, 'marks'), firestoreRecordId);
         await setDoc(firebaseMarkRef, firestoreRecord, { merge: true });
@@ -268,16 +267,15 @@ const BulkUpload = ({ onComplete }) => {
         // Also update student record with profile info in Firestore
         const batch = writeBatch(db);
         const studentRef = doc(collection(db, 'students'), docId);
-        batch.set(studentRef, {
+        batch.set(studentRef, compressStudent({
           regNo: rawRegNo,
           name: studentName,
           gender: sex,
           dob,
           club,
           house,
-          className,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
+          className
+        }), { merge: true });
 
         await batch.commit();
         totalUploaded++;
@@ -348,16 +346,15 @@ const BulkUpload = ({ onComplete }) => {
 
           const docId = rawRegNo.replace(/\//g, '-');
           const studentRef = doc(collection(db, 'students'), docId);
-          batch.set(studentRef, {
+          batch.set(studentRef, compressStudent({
             regNo: rawRegNo,
             name: nameIdx !== -1 ? (row[nameIdx] || 'Unknown') : 'Unknown',
             gender: sexIdx !== -1 ? (row[sexIdx] || '') : '',
             dob: dobIdx !== -1 ? (row[dobIdx] || '') : '',
             club: clubIdx !== -1 ? (row[clubIdx] || '') : '',
             house: houseIdx !== -1 ? (row[houseIdx] || '') : '',
-            className: selectedClass,
-            updatedAt: new Date().toISOString()
-          }, { merge: true });
+            className: selectedClass
+          }), { merge: true });
           hasPending = true;
 
           count++;
@@ -374,21 +371,21 @@ const BulkUpload = ({ onComplete }) => {
         const classSubjects = getSubjectsForClass(selectedClass).map(s => s.toUpperCase());
 
         const studentRef = collection(db, 'students');
-        const studentSnap = await getDocs(query(studentRef, where('className', '==', selectedClass)));
-        const classStudents = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const studentSnap = await getDocs(query(studentRef, where(STUDENT_KEYS.className, '==', selectedClass)));
+        const classStudents = studentSnap.docs.map(doc => expandStudent(doc.data()));
 
         const marksQuery = query(
           collection(db, 'marks'),
-          where('session', '==', selectedSession),
-          where('class_name', '==', selectedClass),
-          where('term', '==', selectedTerm)
+          where(MARKS_KEYS.session, '==', selectedSession),
+          where(MARKS_KEYS.className, '==', selectedClass),
+          where(MARKS_KEYS.term, '==', selectedTerm)
         );
         const marksSnap = await getDocs(marksQuery);
 
         const currentDbMarks = {};
         marksSnap.forEach(d => {
-          const data = d.data();
-          currentDbMarks[data.reg_no] = data.marks || {};
+          const data = expandMarks(d.data());
+          currentDbMarks[data.regNo] = data.marks || {};
         });
 
         const matchSubject = (raw) => {
@@ -522,19 +519,17 @@ const BulkUpload = ({ onComplete }) => {
           const safeSession = selectedSession.replace('/', '-');
           const safeTerm = selectedTerm.replace(/\s/g, '').toLowerCase();
 
-          const firestoreRecord = {
-            id: `${docId}_${safeSession}_${safeTerm}`,
-            reg_no: finalRegNo,
-            student_name: finalName,
-            class_name: selectedClass,
+          const firestoreRecord = compressMarks({
+            regNo: finalRegNo,
+            studentName: finalName,
+            className: selectedClass,
             term: selectedTerm,
             session: selectedSession,
             marks: {
               ...updatedMarksObj,
               _meta: { average, overallTotal: totalScore }
-            },
-            updated_at: new Date().toISOString()
-          };
+            }
+          });
 
           recordsToUpsert.push(firestoreRecord);
           hasPending = true;
@@ -568,7 +563,6 @@ const BulkUpload = ({ onComplete }) => {
             setStatus({ type: 'info', message: `Matched ${matchedByReg + matchedByName} students. ${failedMatch} could not be matched.` });
           }
         }
-      }
 
       if (hasPending) {
         await batch.commit();

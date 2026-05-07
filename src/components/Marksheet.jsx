@@ -7,6 +7,7 @@ import ss1MarksheetCsv from '../assets/ss1_marksheet.csv?raw';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 import { CLASS_LIST, getSubjectsForClass } from '../utils/subjectConfig';
+import { expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../utils/firestoreSchema';
 import '../assets/Marksheet.css';
 
 const Marksheet = ({ className: propClassName }) => {
@@ -182,29 +183,29 @@ const Marksheet = ({ className: propClassName }) => {
       setLoading(true);
       try {
         // 1. Try to fetch from Firestore first (for students)
-        const studentsQuery = query(collection(db, 'students'), where('className', '==', currentClassName));
+        const studentsQuery = query(collection(db, 'students'), where(STUDENT_KEYS.className, '==', currentClassName));
         const studentsSnapshot = await getDocs(studentsQuery);
         
         // Fetch marks from Firestore
         const marksQuery = query(
           collection(db, 'marks'),
-          where('session', '==', selectedSession),
-          where('class_name', '==', selectedClass),
-          where('term', '==', selectedTerm)
+          where(MARKS_KEYS.session, '==', selectedSession),
+          where(MARKS_KEYS.className, '==', selectedClass),
+          where(MARKS_KEYS.term, '==', selectedTerm)
         );
         const marksSnapshot = await getDocs(marksQuery);
-        const marksData = marksSnapshot.docs.map(doc => doc.data());
+        const marksData = marksSnapshot.docs.map(doc => expandMarks(doc.data()));
         
         const dbMarks = {};
         (marksData || []).forEach(docData => {
-          dbMarks[docData.reg_no] = docData.marks || {};
+          dbMarks[docData.regNo] = docData.marks || {};
         });
 
           // Set subjects based on class configuration (Dynamic Headers)
           const classSubjects = getSubjectsForClass(currentClassName);
           
           let studentList = studentsSnapshot.docs.map(doc => {
-            const sData = doc.data();
+            const sData = expandStudent(doc.data());
             const marks = dbMarks[sData.regNo] || {};
             
             let total = 0;
