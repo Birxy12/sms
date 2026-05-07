@@ -90,20 +90,20 @@ const ScoreEntry = () => {
       
       setStudents(studentList);
       
-      // Fetch existing scores for this class/period/subject from Supabase
-      const { data: marksData, error: marksError } = await supabase
-        .from('marks')
-        .select('*')
-        .eq('class_name', selectedClass)
-        .eq('session', selectedSession)
-        .eq('term', selectedTerm);
-
-      if (marksError) throw marksError;
+      // Fetch existing scores for this class/period/subject from Firestore
+      const marksQuery = query(
+        collection(db, 'marks'),
+        where('class_name', '==', selectedClass),
+        where('session', '==', selectedSession),
+        where('term', '==', selectedTerm)
+      );
+      const marksSnap = await getDocs(marksQuery);
       
       const newScores = {};
       const newDbMarks = {};
       
-      (marksData || []).forEach(data => {
+      marksSnap.forEach(doc => {
+        const data = doc.data();
         newDbMarks[data.reg_no] = data.marks || {};
         const subjectMarks = data.marks?.[selectedSubject];
         if (subjectMarks) {
@@ -210,8 +210,12 @@ const ScoreEntry = () => {
       }
 
       if (recordsToUpsert.length > 0) {
-        const { error } = await supabase.from('marks').upsert(recordsToUpsert);
-        if (error) throw error;
+        const batch = writeBatch(db);
+        for (const record of recordsToUpsert) {
+          const markRef = doc(collection(db, 'marks'), record.id);
+          batch.set(markRef, record, { merge: true });
+        }
+        await batch.commit();
       }
 
       setStatus({ type: 'success', message: 'All scores saved successfully!' });

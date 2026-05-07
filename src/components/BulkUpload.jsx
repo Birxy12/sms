@@ -248,23 +248,9 @@ const BulkUpload = ({ onComplete }) => {
         const term = selectedTerm;
         const session = selectedSession;
 
-        // Save result to 'marks' collection in Supabase
-        const supabaseRecord = {
-          id: `${docId}_${session.replace('/', '-')}_${term.replace(/\s/g,'').toLowerCase()}`,
-          reg_no: rawRegNo,
-          student_name: studentName,
-          class_name: className,
-          term,
-          session,
-          marks: {
-            ...marks,
-            _meta: { average, position, promotionStatus }
-          },
-          updated_at: new Date().toISOString()
-        };
-
-        const { error: supaError } = await supabase.from('marks').upsert(supabaseRecord);
-        if (supaError) throw supaError;
+        // Save result to 'marks' collection in Firestore
+        const firebaseMarkRef = doc(collection(db, 'marks'), supabaseRecord.id);
+        await setDoc(firebaseMarkRef, supabaseRecord, { merge: true });
 
         // Also update student record with profile info in Firestore
         const batch = writeBatch(db);
@@ -378,17 +364,18 @@ const BulkUpload = ({ onComplete }) => {
         const studentSnap = await getDocs(query(studentRef, where('className', '==', selectedClass)));
         const classStudents = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        const { data: existingMarksData, error: fetchErr } = await supabase
-          .from('marks')
-          .select('*')
-          .eq('session', selectedSession)
-          .eq('class_name', selectedClass)
-          .eq('term', selectedTerm);
-          
-        if (fetchErr) throw fetchErr;
+        const marksQuery = query(
+          collection(db, 'marks'),
+          where('session', '==', selectedSession),
+          where('class_name', '==', selectedClass),
+          where('term', '==', selectedTerm)
+        );
+        const marksSnap = await getDocs(marksQuery);
+        
         const currentDbMarks = {};
-        (existingMarksData || []).forEach(d => {
-          currentDbMarks[d.reg_no] = d.marks || {};
+        marksSnap.forEach(d => {
+          const data = d.data();
+          currentDbMarks[data.reg_no] = data.marks || {};
         });
 
         const matchSubject = (raw) => {
@@ -542,19 +529,14 @@ const BulkUpload = ({ onComplete }) => {
           count++;
           setUploadProgress(Math.round((i / rawData.length) * 100));
 
-          if (recordsToUpsert.length >= 200) {
-            const { error: upsertErr } = await supabase.from('marks').upsert(recordsToUpsert);
-            if (upsertErr) throw upsertErr;
-            recordsToUpsert.length = 0; // clear array
-            hasPending = false;
-          }
-        }
-        
-        if (recordsToUpsert.length > 0) {
-          const { error: upsertErr } = await supabase.from('marks').upsert(recordsToUpsert);
-          if (upsertErr) throw upsertErr;
+          const batchMarks = writeBatch(db);
+          recordsToUpsert.forEach(record => {
+            const markRef = doc(collection(db, 'marks'), record.id);
+            batchMarks.set(markRef, record, { merge: true });
+          });
+          await batchMarks.commit();
+          recordsToUpsert.length = 0;
           hasPending = false;
-        }
 
         console.log(`Matching results: Reg=${matchedByReg}, Name=${matchedByName}, Failed=${failedMatch}`);
         if (failedMatch > 0) {
