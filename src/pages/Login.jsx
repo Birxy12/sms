@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// Force reload
+import React, { useState } from 'react'; // Force reload
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { useStudentAuth } from '../context/StudentAuthContext';
@@ -147,6 +148,7 @@ const Login = () => {
     }
   };
 
+  const tabs = [
     { id: 'student', label: 'Student', icon: GraduationCap, color: 'indigo' },
     { id: 'teacher', label: 'Teacher', icon: UserCheck, color: 'rose' },
     { id: 'principal', label: 'Principal', icon: ShieldCheck, color: 'purple' },

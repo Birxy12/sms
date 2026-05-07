@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Re-trigger build
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { db } from '../lib/firebase';
