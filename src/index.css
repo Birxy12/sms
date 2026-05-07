@@ -328,6 +328,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* Utility Classes */
+.hidden { display: none; }
 .flex { display: flex; }
 .flex-col { flex-direction: column; }
 .items-center { align-items: center; }
