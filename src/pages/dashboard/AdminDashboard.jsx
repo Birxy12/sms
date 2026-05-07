@@ -202,7 +202,10 @@ const AdminDashboard = () => {
               <Eye size={14} /> Student View
             </button>
           </div>
-          <button className="btn-primary w-full md:w-auto px-6 py-2.5">Generate MIS Report</button>
+          <button className="btn-glow flex items-center gap-2">
+            <Download size={18} />
+            Generate MIS Report
+          </button>
         </div>
       </div>
 
@@ -229,21 +232,21 @@ const AdminDashboard = () => {
         <div className="animate-in fade-in space-y-6">
           {/* Site Health */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-2">
-            <div className="card-white flex items-center gap-4">
+            <div className="card-premium p-6 flex items-center gap-4">
               <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><Server size={24} /></div>
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">System Status</p>
                 <h4 className="text-lg font-black text-slate-800">Online & Active</h4>
               </div>
             </div>
-            <div className="card-white flex items-center gap-4">
+            <div className="card-premium p-6 flex items-center gap-4">
               <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><Database size={24} /></div>
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Database Sync</p>
                 <h4 className="text-lg font-black text-slate-800">Real-time (12ms)</h4>
               </div>
             </div>
-            <div className="card-white flex items-center gap-4">
+            <div className="card-premium p-6 flex items-center gap-4">
               <div className="p-3 bg-teal-50 text-teal-600 rounded-xl"><Activity size={24} /></div>
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Server Load</p>
@@ -259,7 +262,7 @@ const AdminDashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="card-white lg:col-span-2">
+            <div className="card-premium lg:col-span-2">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-bold text-slate-800">Academic Performance (Avg. Grades)</h3>
                 <div className="flex gap-2">
@@ -288,7 +291,7 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            <div className="card-white">
+            <div className="card-premium">
               <h3 className="text-lg font-bold text-slate-800 mb-6 text-center">Student Demographics</h3>
               <div className="relative w-48 h-48 mx-auto mb-6">
                 <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
@@ -325,7 +328,7 @@ const AdminDashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="card-white lg:col-span-2 overflow-hidden">
+            <div className="card-premium lg:col-span-2 overflow-hidden">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-bold text-slate-800">Enrollment Growth (2026)</h3>
               </div>
@@ -350,7 +353,7 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            <div className="card-white">
+            <div className="card-premium">
               <h3 className="text-lg font-bold text-slate-800 mb-4">Recent Activities</h3>
               <div className="space-y-4">
                 {recentActivities.map(activity => (
@@ -371,7 +374,7 @@ const AdminDashboard = () => {
       {/* Academics Tab */}
       {activeTab === 'Academics' && (
         <div className="animate-in fade-in space-y-6">
-          <div className="card-white">
+          <div className="card-premium">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <h3 className="text-xl font-bold text-slate-800 m-0">Comprehensive Class Marksheet</h3>
               <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -387,7 +390,7 @@ const AdminDashboard = () => {
             </div>
             <Marksheet className={selectedClass} />
           </div>
-          <div className="card-white">
+          <div className="card-premium">
             <ScoreEntry />
           </div>
         </div>
@@ -428,7 +431,7 @@ const AdminDashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <button 
               onClick={() => navigate('/admin/students')}
-              className="card-white flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
             >
               <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><Users size={24} /></div>
               <div>
@@ -438,7 +441,7 @@ const AdminDashboard = () => {
             </button>
             <button 
               onClick={() => navigate('/staff')}
-              className="card-white flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
             >
               <div className="p-3 bg-rose-50 text-rose-600 rounded-xl"><Briefcase size={24} /></div>
               <div>
@@ -448,7 +451,7 @@ const AdminDashboard = () => {
             </button>
             <button 
               onClick={() => navigate('/admin/classes')}
-              className="card-white flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
             >
               <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><Layers size={24} /></div>
               <div>

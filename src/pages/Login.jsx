@@ -270,39 +270,47 @@ const Login = () => {
                 {loginStep === 'id' ? (
                   <>
                     {/* Reg No */}
-                    <div className="input-field-container">
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="field-label">Registration Number</label>
-                        <div className="relative group">
-                          <HelpCircle size={14} className="text-slate-300 cursor-help" onMouseEnter={() => setHoveredField('regNo')} onMouseLeave={() => setHoveredField(null)} />
-                          {hoveredField === 'regNo' && <div className="field-tooltip">{getTooltipContent('regNo')}</div>}
-                        </div>
-                      </div>
-                      <div className="input-group-advanced">
-                        <User size={18} className="input-icon" />
-                        <input type="text" name="regNo" placeholder="e.g. BDS/24/001" value={formData.regNo} onChange={handleInputChange} required className="auth-input-advanced" />
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                        <User size={12} className="text-indigo-500" />
+                        Registration Number
+                      </label>
+                      <div className="relative group">
+                        <input 
+                          type="text" 
+                          name="regNo" 
+                          placeholder="e.g. BDS/24/001" 
+                          value={formData.regNo} 
+                          onChange={handleInputChange} 
+                          required 
+                          className="input-premium pl-12" 
+                        />
+                        <User size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                       </div>
                     </div>
                     {/* Class */}
-                    <div className="input-field-container">
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="field-label">Academic Class</label>
-                        <div className="relative group">
-                          <HelpCircle size={14} className="text-slate-300 cursor-help" onMouseEnter={() => setHoveredField('className')} onMouseLeave={() => setHoveredField(null)} />
-                          {hoveredField === 'className' && <div className="field-tooltip">{getTooltipContent('className')}</div>}
-                        </div>
-                      </div>
-                      <div className="input-group-advanced">
-                        <SchoolIcon size={18} className="input-icon" />
-                        <select name="className" value={formData.className} onChange={handleInputChange} required className="auth-input-advanced pr-10">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                        <SchoolIcon size={12} className="text-indigo-500" />
+                        Academic Class
+                      </label>
+                      <div className="relative group">
+                        <select 
+                          name="className" 
+                          value={formData.className} 
+                          onChange={handleInputChange} 
+                          required 
+                          className="input-premium pl-12 appearance-none"
+                        >
                           <option value="">Choose Class</option>
                           {['JSS1','JSS2','JSS3','SS1','SS2 ART','SS2 SCIENCE','SS3 ART','SS3 SCIENCE'].map(c => (
                             <option key={c} value={c}>{c}</option>
                           ))}
                         </select>
+                        <SchoolIcon size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                       </div>
                     </div>
-                    <button type="submit" onClick={handleLogin} disabled={loading} className={`auth-btn-advanced ${accentColor}`}>
+                    <button type="submit" disabled={loading} className="btn-glow w-full flex items-center justify-center gap-2">
                       {loading ? <Loader2 size={22} className="animate-spin" /> : <><ArrowRight size={20} /> Continue</>}
                     </button>
                   </>
@@ -400,17 +408,22 @@ const Login = () => {
             ) : staffLoginMode === 'phone' ? (
               <motion.div key="staff-phone" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-5">
                 {/* Phone */}
-                <div className="input-field-container">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="field-label">Phone Number</label>
-                    <div className="relative group">
-                      <HelpCircle size={14} className="text-slate-300 cursor-help" onMouseEnter={() => setHoveredField('phone')} onMouseLeave={() => setHoveredField(null)} />
-                      {hoveredField === 'phone' && <div className="field-tooltip">{getTooltipContent('phone')}</div>}
-                    </div>
-                  </div>
-                  <div className="input-group-advanced">
-                    <Phone size={18} className="input-icon" />
-                    <input type="tel" name="phone" placeholder="e.g. 08012345678" value={formData.phone} onChange={handleInputChange} required className="auth-input-advanced" />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                    <Phone size={12} className="text-indigo-500" />
+                    Phone Number
+                  </label>
+                  <div className="relative group">
+                    <input 
+                      type="tel" 
+                      name="phone" 
+                      placeholder="e.g. 08012345678" 
+                      value={formData.phone} 
+                      onChange={handleInputChange} 
+                      required 
+                      className="input-premium pl-12" 
+                    />
+                    <Phone size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                   </div>
                 </div>
                 {/* Password */}
@@ -431,17 +444,22 @@ const Login = () => {
             ) : (
               <motion.div key="staff-email" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-5">
                 {/* Email / Staff ID */}
-                <div className="input-field-container">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="field-label">Email or Staff ID</label>
-                    <div className="relative group">
-                      <HelpCircle size={14} className="text-slate-300 cursor-help" onMouseEnter={() => setHoveredField('email')} onMouseLeave={() => setHoveredField(null)} />
-                      {hoveredField === 'email' && <div className="field-tooltip">{getTooltipContent('email')}</div>}
-                    </div>
-                  </div>
-                  <div className="input-group-advanced">
-                    <Mail size={18} className="input-icon" />
-                    <input type="text" name="email" placeholder={loginType === 'teacher' ? 'e.g. bds/staff/001' : 'Email Address'} value={formData.email} onChange={handleInputChange} required className="auth-input-advanced" />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                    <Mail size={12} className="text-indigo-500" />
+                    Email or Staff ID
+                  </label>
+                  <div className="relative group">
+                    <input 
+                      type="text" 
+                      name="email" 
+                      placeholder={loginType === 'teacher' ? 'e.g. bds/staff/001' : 'Email Address'} 
+                      value={formData.email} 
+                      onChange={handleInputChange} 
+                      required 
+                      className="input-premium pl-12" 
+                    />
+                    <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                   </div>
                 </div>
                 {/* Password */}

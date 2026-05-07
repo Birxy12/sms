@@ -22,13 +22,13 @@ const MainFooter = () => {
   const displayLogo = schoolLogo || bdsLogo;
 
   const quickLinks = [
+    { to: '/check-result', label: 'Check Result' },
     { to: '/about', label: 'About Us' },
     { to: '/blog', label: 'School Blog' },
     { to: '/leaderboard', label: 'Leaderboard' },
     { to: '/contact', label: 'Support Hub' },
     { to: '/privacy', label: 'Privacy Policy' },
     { to: '/terms', label: 'Terms of Service' },
-    { to: '/careers', label: 'Careers' },
   ];
 
   const getDashboardPath = () => {

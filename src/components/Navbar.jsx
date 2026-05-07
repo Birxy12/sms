@@ -29,8 +29,8 @@ const Navbar = () => {
   const displayName = user?.name || user?.['STUDENT NAME'] || user?.email?.split('@')[0] || 'User';
   const userRole = isStudent ? 'Student' : 'Staff';
 
-  const navLinks = [
     { name: 'Home', path: '/' },
+    { name: 'Check Result', path: '/check-result' },
     { name: 'About Us', path: '/about' },
     { name: 'Blog', path: '/blog' },
     { name: 'Leaderboard', path: '/leaderboard' },
@@ -138,6 +138,7 @@ const Navbar = () => {
             style={{
               color: active ? '#ffffff' : textColor,
               animationDelay: `${i * 75}ms`,
+              fontFamily: 'var(--font-heading)'
             }}
           >
             {active && (

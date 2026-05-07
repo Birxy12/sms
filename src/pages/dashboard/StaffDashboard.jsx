@@ -53,7 +53,7 @@ const StaffDashboard = () => {
 
       <div className="tab-content min-h-[600px] tab-content-animate" key={activeTab}>
         {activeTab === 'schedule' && (
-          <div className="card-white">
+          <div className="card-premium p-6 md:p-8">
             <h3 className="text-xl font-black text-slate-800 mb-6">Today's Academic Schedule</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -89,7 +89,7 @@ const StaffDashboard = () => {
         )}
 
         {activeTab === 'marksheet' && (
-          <div className="card-white">
+          <div className="card-premium p-6 md:p-8">
             <h3 className="text-xl font-black text-slate-800 mb-6">Master Marksheet Summary</h3>
             <Marksheet />
           </div>

@@ -125,138 +125,162 @@ const Register = () => {
 
         <form onSubmit={handleRegister} className="auth-form">
           <div className="space-y-4">
-            <div className="input-group">
-              <User size={18} className="input-icon" />
-              <input 
-                type="text" 
-                name="name"
-                placeholder="Full Name" 
-                value={formData.name}
-                onChange={handleInputChange}
-                required
-                className="auth-input"
-              />
-            </div>
-            <div className="input-group">
-              <Mail size={18} className="input-icon" />
-              <input 
-                type="email" 
-                name="email"
-                placeholder="Email Address (Optional)" 
-                value={formData.email}
-                onChange={handleInputChange}
-                className="auth-input"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="input-group">
-                <School size={18} className="input-icon" />
-                <select 
-                  name="className"
-                  value={formData.className}
-                  onChange={handleInputChange}
-                  required
-                  className="auth-input"
-                >
-                  <option value="">Select Class</option>
-                  {['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'].map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="input-group">
-                <Hash size={18} className="input-icon" />
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
+              <div className="relative group">
                 <input 
                   type="text" 
-                  name="regNo"
-                  placeholder="Reg Number (Auto)" 
-                  value={formData.regNo}
-                  readOnly
-                  className="auth-input bg-slate-50 cursor-not-allowed"
+                  name="name"
+                  placeholder="e.g. John Doe" 
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  required
+                  className="input-premium pl-12"
                 />
+                <User size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
               </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="input-group pl-10 pr-4 py-3 bg-slate-50 rounded-xl border-2 border-transparent focus-within:border-indigo-500 transition-all flex items-center gap-2">
-                <label className="text-xs font-bold text-slate-400 uppercase min-w-[40px]">DOB</label>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address (Optional)</label>
+              <div className="relative group">
                 <input 
-                  type="date" 
-                  name="dob"
-                  value={formatDateForInput(formData.dob)}
+                  type="email" 
+                  name="email"
+                  placeholder="parent@example.com" 
+                  value={formData.email}
                   onChange={handleInputChange}
-                  required
-                  className="bg-transparent w-full outline-none font-semibold text-slate-700"
+                  className="input-premium pl-12"
                 />
+                <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
               </div>
-              <div className="input-group">
-                <select 
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleInputChange}
-                  required
-                  className="auth-input pl-4"
-                >
-                  <option value="">Select Gender</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Academic Class</label>
+                <div className="relative group">
+                  <select 
+                    name="className"
+                    value={formData.className}
+                    onChange={handleInputChange}
+                    required
+                    className="input-premium pl-12 appearance-none"
+                  >
+                    <option value="">Select Class</option>
+                    {['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  <School size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Reg Number (Auto)</label>
+                <div className="relative group">
+                  <input 
+                    type="text" 
+                    name="regNo"
+                    placeholder="BDS/..." 
+                    value={formData.regNo}
+                    readOnly
+                    className="input-premium pl-12 bg-slate-50 cursor-not-allowed"
+                  />
+                  <Hash size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 transition-colors" />
+                </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="input-group">
-                <select 
-                  name="club"
-                  value={formData.club}
-                  onChange={handleInputChange}
-                  required
-                  className="auth-input pl-4"
-                >
-                  <option value="">Select Club</option>
-                  {['Jet', 'Dancing', 'Singing', 'Debate', 'Drama', 'Art'].map(club => (
-                    <option key={club} value={club}>{club}</option>
-                  ))}
-                </select>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date of Birth</label>
+                <div className="relative group">
+                  <input 
+                    type="date" 
+                    name="dob"
+                    value={formatDateForInput(formData.dob)}
+                    onChange={handleInputChange}
+                    required
+                    className="input-premium"
+                  />
+                </div>
               </div>
-              <div className="input-group">
-                <select 
-                  name="house"
-                  value={formData.house}
-                  onChange={handleInputChange}
-                  required
-                  className="auth-input pl-4"
-                >
-                  <option value="">Select House</option>
-                  {['Alamanda', 'Blue Bell', 'Cherry', 'Rose'].map(house => (
-                    <option key={house} value={house}>{house}</option>
-                  ))}
-                </select>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Gender</label>
+                <div className="relative group">
+                  <select 
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleInputChange}
+                    required
+                    className="input-premium appearance-none"
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                  </select>
+                </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="input-group">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Club Interest</label>
+                <div className="relative group">
+                  <select 
+                    name="club"
+                    value={formData.club}
+                    onChange={handleInputChange}
+                    required
+                    className="input-premium appearance-none"
+                  >
+                    <option value="">Select Club</option>
+                    {['Jet', 'Dancing', 'Singing', 'Debate', 'Drama', 'Art'].map(club => (
+                      <option key={club} value={club}>{club}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assigned House</label>
+                <div className="relative group">
+                  <select 
+                    name="house"
+                    value={formData.house}
+                    onChange={handleInputChange}
+                    required
+                    className="input-premium appearance-none"
+                  >
+                    <option value="">Select House</option>
+                    {['Alamanda', 'Blue Bell', 'Cherry', 'Rose'].map(house => (
+                      <option key={house} value={house}>{house}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Parent's Full Name</label>
                 <input 
                   type="text" 
                   name="parentName"
-                  placeholder="Parent's Full Name" 
+                  placeholder="e.g. Michael Smith" 
                   value={formData.parentName}
                   onChange={handleInputChange}
                   required
-                  className="auth-input pl-4"
+                  className="input-premium"
                 />
               </div>
-              <div className="input-group">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Parent's Phone</label>
                 <input 
                   type="text" 
                   name="parentPhone"
-                  placeholder="Parent's Phone Number" 
+                  placeholder="e.g. 08012345678" 
                   value={formData.parentPhone}
                   onChange={handleInputChange}
                   required
-                  className="auth-input pl-4"
+                  className="input-premium"
                 />
               </div>
             </div>
@@ -268,9 +292,9 @@ const Register = () => {
             </motion.div>
           )}
 
-          <button type="submit" disabled={loading} className="auth-submit-btn btn-student">
+          <button type="submit" disabled={loading} className="btn-glow w-full flex items-center justify-center gap-2">
             {loading ? <Loader2 size={20} className="animate-spin" /> : (
-              <>Register Now <ArrowRight size={20} /></>
+              <>Complete Registration <ArrowRight size={20} /></>
             )}
           </button>
         </form>

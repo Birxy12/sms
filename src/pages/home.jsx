@@ -179,9 +179,9 @@ const Home = () => {
                 Welcome to {schoolName || 'Our School'}
               </div>
 
-              <h1 className="home-hero-title">
+              <h1 className="home-hero-title text-gradient">
                 {landingContent.heroHeadline}
-                <span className="home-hero-title-accent">Since 2011</span>
+                <span className="home-hero-title-accent">Est. 2011</span>
               </h1>
 
               <p className="home-hero-desc">
@@ -189,13 +189,13 @@ const Home = () => {
               </p>
 
               <div className="home-hero-actions">
-                <button onClick={() => navigate('/check-result')} className="home-btn-primary">
+                <button onClick={() => navigate('/check-result')} className="btn-glow flex items-center gap-2 group">
                   Check Result
-                  <Search size={18} />
+                  <Search size={20} className="group-hover:rotate-12 transition-transform" />
                 </button>
-                <button onClick={() => navigate('/login')} className="home-btn-secondary">
-                  <LogIn size={18} />
-                  Portal Login
+                <button onClick={() => navigate('/login')} className="bg-white text-slate-900 border-2 border-slate-100 px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm active:scale-95">
+                  <LogIn size={20} />
+                  Portal Access
                 </button>
               </div>
 
