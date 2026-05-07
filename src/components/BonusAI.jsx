@@ -1,14 +1,39 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Send, X, Bot, User, Minimize2, Sparkles } from 'lucide-react';
+import { CLASS_LIST, getSubjectsForClass, getAllSubjects } from '../utils/subjectConfig';
 
 const BonusAI = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hello! I'm Bonus AI, your BDS Portal assistant. How can I help you today?" }
+    { role: 'assistant', content: "Hello! I'm Bonus AI, your BDS Portal assistant. I've been updated with full knowledge of our school's curriculum and features. How can I help you today?" }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+
+  const SCHOOL_KNOWLEDGE = {
+    subjects: {
+      all: getAllSubjects(),
+      byClass: CLASS_LIST.reduce((acc, cls) => {
+        acc[cls] = getSubjectsForClass(cls);
+        return acc;
+      }, {})
+    },
+    features: {
+      results: "You can view academic results in the 'Student Results' section. Admins publish these from the Marksheet management area.",
+      cbt: "Computer Based Testing (CBT) is available for online examinations. Students can access it from their dashboard, and teachers can manage questions in the CBT Management area.",
+      fees: "The 'Student Fees' module allows you to track payments and generate receipts.",
+      idcard: "Students can generate and download their digital ID cards from the 'ID Card' section of their profile.",
+      assignments: "Teachers post assignments which students can download and submit through the 'Assignments' tab.",
+      notes: "E-notes and study materials are available in the 'Student Notes' section."
+    },
+    general: {
+      name: "Bonus Dominus Secondary School (BDS)",
+      motto: "Excellence in Learning and Character",
+      location: "Main Campus, BDS Portal Digital Infrastructure",
+      education: "We provide high-quality secondary education focusing on both Arts and Sciences, with a strong emphasis on character development and technical proficiency."
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -17,6 +42,48 @@ const BonusAI = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const generateResponse = (userMsg) => {
+    const msg = userMsg.toLowerCase();
+    
+    // 1. Check for specific classes and subjects
+    for (const cls of CLASS_LIST) {
+      if (msg.includes(cls.toLowerCase())) {
+        const subjects = SCHOOL_KNOWLEDGE.subjects.byClass[cls];
+        return `For ${cls}, we offer the following subjects: ${subjects.join(', ')}. Is there a specific subject you'd like to know more about?`;
+      }
+    }
+
+    // 2. Check for general subject inquiries
+    if (msg.includes('subject') || msg.includes('course') || msg.includes('offer')) {
+      return `We offer a wide range of subjects across Junior and Senior levels. For JSS students, we have core subjects like Mathematics, English, and Basic Science. Senior students can specialize in Art or Science streams. Which class level are you interested in?`;
+    }
+
+    // 3. Check for specific features
+    if (msg.includes('result')) return SCHOOL_KNOWLEDGE.features.results;
+    if (msg.includes('cbt') || msg.includes('exam') || msg.includes('test')) return SCHOOL_KNOWLEDGE.features.cbt;
+    if (msg.includes('fee') || msg.includes('pay') || msg.includes('receipt')) return SCHOOL_KNOWLEDGE.features.fees;
+    if (msg.includes('id card') || msg.includes('identity')) return SCHOOL_KNOWLEDGE.features.idcard;
+    if (msg.includes('assignment')) return SCHOOL_KNOWLEDGE.features.assignments;
+    if (msg.includes('note') || msg.includes('study')) return SCHOOL_KNOWLEDGE.features.notes;
+
+    // 4. General school info
+    if (msg.includes('who are you') || msg.includes('what is bds')) return `I am Bonus AI, the digital assistant for ${SCHOOL_KNOWLEDGE.general.name}. ${SCHOOL_KNOWLEDGE.general.education}`;
+    if (msg.includes('motto')) return `Our school motto is: "${SCHOOL_KNOWLEDGE.general.motto}".`;
+    if (msg.includes('location') || msg.includes('where')) return `We are located at ${SCHOOL_KNOWLEDGE.general.location}.`;
+
+    // 5. Educational/Broad questions (Fallback)
+    if (msg.includes('education') || msg.includes('learn')) {
+      return "Education at BDS is designed to be holistic. We cover Science, Arts, and Technical subjects to ensure our students are well-prepared for higher education and future careers.";
+    }
+
+    // 6. Default
+    if (msg.includes('hello') || msg.includes('hi') || msg.includes('hey')) {
+      return "Hello! I'm Bonus AI. I can tell you about our subjects, help you navigate the portal, or explain how to use features like CBT and Results. What's on your mind?";
+    }
+
+    return "I'm not quite sure about that specific query, but I can definitely help with subjects, results, fees, or any other school portal feature. Try asking about a specific class like 'JSS1 subjects'!";
+  };
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -27,24 +94,11 @@ const BonusAI = () => {
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsTyping(true);
 
-    // Mock AI Response logic
     setTimeout(() => {
-      let response = "I'm not sure about that. I can help with school dates, results, and general navigation.";
-      
-      const lowerMsg = userMessage.toLowerCase();
-      if (lowerMsg.includes('hello') || lowerMsg.includes('hi')) {
-        response = "Hi there! I'm ready to assist you with anything related to BDSPORTAL.";
-      } else if (lowerMsg.includes('term') || lowerMsg.includes('date')) {
-        response = "You can find academic term dates in the Content CMS under 'School Dates' if you're an admin, or check the 'Student Results' page for upcoming term info.";
-      } else if (lowerMsg.includes('result')) {
-        response = "Results are usually published by the admin. Once published, you can see them in the 'Results' tab of your dashboard.";
-      } else if (lowerMsg.includes('cbt')) {
-        response = "The Computer Based Test (CBT) system allows you to take exams online. Make sure you have a stable connection before starting.";
-      }
-
+      const response = generateResponse(userMessage);
       setMessages(prev => [...prev, { role: 'assistant', content: response }]);
       setIsTyping(false);
-    }, 1000);
+    }, 800);
   };
 
   return (
@@ -144,6 +198,42 @@ const BonusAI = () => {
             )}
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Quick Suggestions */}
+          {!isTyping && messages.length < 4 && (
+            <div style={{ 
+              padding: '0.5rem 1.25rem', 
+              display: 'flex', 
+              gap: '8px', 
+              overflowX: 'auto', 
+              background: 'white',
+              scrollbarWidth: 'none'
+            }}>
+              {['JSS1 Subjects', 'How to check results?', 'What is CBT?'].map(txt => (
+                <button
+                  key={txt}
+                  onClick={() => {
+                    setInput(txt);
+                    // Trigger handleSend manually or just set input and let user click send
+                    // For better UX, we'll just set it and focus the input
+                  }}
+                  style={{
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    border: '1px solid var(--primary)',
+                    background: 'var(--primary-light)',
+                    color: 'var(--primary)',
+                    fontSize: '0.75rem',
+                    fontWeight: 'bold',
+                    whiteSpace: 'nowrap',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {txt}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Input area */}
           <form onSubmit={handleSend} style={{ 
