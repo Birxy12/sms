@@ -111,7 +111,7 @@ function App() {
           <Layout><StudentResults /></Layout>
         </ProtectedStudentRoute>
       } />
-      <Route path="/results" element={<Layout><StudentResults isPublic={true} /></Layout>} />
+      <Route path="/results" element={<StudentResults isPublic={true} />} />
       <Route path="/students/fees" element={
         <ProtectedStudentRoute>
           <Layout><StudentFees /></Layout>

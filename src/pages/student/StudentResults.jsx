@@ -4,10 +4,11 @@ import { useStudentAuth } from '../../context/StudentAuthContext';
 import { db } from '../../lib/firebase';
 import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
-import { Award, AlertCircle, Printer, Download, ChevronLeft, User } from 'lucide-react';
+import { Award, AlertCircle, Printer, Download, ChevronLeft, User, ArrowLeft } from 'lucide-react';
 import bdsLogo from '../../assets/bdslogo.jpg';
 import resultStamp from '../../assets/stamp.jpeg';
 import { expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../../utils/firestoreSchema';
+import Navbar from '../../components/Navbar';
 
 const StudentResults = ({ isPublic }) => {
 const { currentStudent: loggedInStudent, authError } = useStudentAuth();
@@ -787,17 +788,31 @@ sub.grade.startsWith('C') ? 'bg-amber-500 text-white shadow-amber-200' :
 const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
 
 return (
-<div className="dashboard-wrapper">
+<div className={isPublic ? "min-h-screen bg-slate-50 flex flex-col" : "dashboard-wrapper"}>
+{isPublic && <Navbar />}
+
+<div className={isPublic ? "flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full" : ""}>
 {isPrinting ? (
 renderPrintView()
 ) : (
 <>
+{isPublic && (
+<div className="mb-8 flex items-center justify-between no-print">
+<button 
+onClick={() => window.history.back()}
+className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-black text-xs uppercase tracking-widest transition-colors"
+>
+<ArrowLeft size={16} /> Back to Search
+</button>
+</div>
+)}
+
 <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4 no-print">
 <div>
 <h2 style={{ fontWeight: '900', fontSize: '28px', marginBottom: '8px', color: '#1e293b' }}>Report Card</h2>
 <p style={{ color: '#64748b', fontSize: '14px' }}>Official termly academic performance summary.</p>
 </div>
-<div className="flex items-center gap-4 md:gap-8">
+<div className="flex flex-wrap items-center gap-4 md:gap-8">
 <div className="flex flex-col items-end">
 <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white shadow-xl bg-slate-50 mb-1">
 {currentStudent?.photo || currentStudent?.photoURL ? (
@@ -830,8 +845,8 @@ className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-2x
 </>
 )}
 </div>
+</div>
 );
 };
 
 export default StudentResults;
-
