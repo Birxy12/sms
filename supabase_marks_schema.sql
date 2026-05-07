@@ -14,9 +14,9 @@ CREATE TABLE public.marks (
 ALTER TABLE public.marks ENABLE ROW LEVEL SECURITY;
 
 -- Create basic policies (adjust as needed for your application)
-CREATE POLICY "Allow read access for all authenticated users" ON public.marks
-  FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Allow read access for all users" ON public.marks
+  FOR SELECT TO anon USING (true);
 
-CREATE POLICY "Allow insert/update for admins/teachers" ON public.marks
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow insert/update for all users" ON public.marks
+  FOR ALL TO anon USING (true) WITH CHECK (true);
 -- Note: Replace 'USING (true)' with actual role checks (e.g. auth.jwt()->>'role' = 'admin') for production security.
