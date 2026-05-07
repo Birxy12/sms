@@ -21,16 +21,15 @@ const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 // Initialize Firestore with settings to mitigate common errors and support multi-tab persistence
 let db;
 try {
-  // Use initializeFirestore to ensure specific settings are applied
   db = initializeFirestore(app, {
     localCache: persistentLocalCache({
       tabManager: persistentMultipleTabManager()
     }),
-    experimentalForceLongPolling: true, // Mitigates QUIC/Network issues
+    experimentalForceLongPolling: true,
     useFetchStreams: false,
   });
 } catch (e) {
-  // If already initialized, get the existing instance
+  console.warn("Firestore initialization failed, falling back to default:", e);
   db = getFirestore(app);
 }
 const auth = getAuth(app);

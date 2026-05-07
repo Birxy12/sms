@@ -9,17 +9,63 @@ export const AdminAuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check local storage for persisted admin session
-    const savedAdmin = localStorage.getItem('adminUser');
-    if (savedAdmin) {
-      setCurrentAdmin(JSON.parse(savedAdmin));
-    }
-    setLoading(false);
+    const initAuth = async () => {
+      const savedAdmin = localStorage.getItem('adminUser');
+      if (savedAdmin) {
+        setCurrentAdmin(JSON.parse(savedAdmin));
+        
+        try {
+          const { signInAnonymously, onAuthStateChanged } = await import('firebase/auth');
+          const { auth } = await import('../lib/firebase');
+          
+          // Re-establish Firebase anonymous auth
+          if (!auth.currentUser) {
+            await signInAnonymously(auth);
+          }
+          
+          // Wait for auth to be truly ready
+          await new Promise(resolve => {
+            const unsubscribe = onAuthStateChanged(auth, (user) => {
+              if (user) {
+                unsubscribe();
+                resolve();
+              }
+            });
+            // Timeout after 5s just in case
+            setTimeout(() => {
+              unsubscribe();
+              resolve();
+            }, 5000);
+          });
+        } catch (e) {
+          console.warn('Silent anonymous auth failed:', e);
+        }
+      }
+      setLoading(false);
+    };
+
+    initAuth();
   }, []);
 
   const login = async (identifier, password) => {
+    // Helper: ensure Firebase anonymous auth is active so Firestore rules pass
+    const ensureAuth = async () => {
+      try {
+        const { signInAnonymously } = await import('firebase/auth');
+        const { auth } = await import('../lib/firebase');
+        const { getAuth } = await import('firebase/auth');
+        const currentAuth = getAuth();
+        if (!currentAuth.currentUser) {
+          await signInAnonymously(auth);
+        }
+      } catch (e) {
+        console.warn('Anonymous auth failed:', e);
+      }
+    };
+
     // 1. Check hardcoded Admin credentials (fallback to prevent lockout)
     if (identifier === 'admin@birxysms.edu' && password === '@@@@@@@@') {
+      await ensureAuth();
       const adminUser = { email: identifier, role: 'admin', name: 'System Administrator', staffId: 'ADMIN/001' };
       setCurrentAdmin(adminUser);
       localStorage.setItem('adminUser', JSON.stringify(adminUser));
@@ -28,13 +74,7 @@ export const AdminAuthProvider = ({ children }) => {
 
     // New Super Admin requested by user
     if (identifier === 'globixtechinc@gmail.com' && (password === 'admin123' || password === '@@@@@@@@')) {
-      try {
-        const { signInAnonymously } = await import('firebase/auth');
-        const { auth } = await import('../lib/firebase');
-        await signInAnonymously(auth);
-      } catch (authError) {
-        console.error('Anonymous auth failed:', authError);
-      }
+      await ensureAuth();
 
       const adminUser = { 
         email: identifier, 

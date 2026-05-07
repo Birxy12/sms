@@ -7,6 +7,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { Award, AlertCircle, Printer, Download, ChevronLeft, User } from 'lucide-react';
 import bdsLogo from '../../assets/bdslogo.jpg';
 import resultStamp from '../../assets/stamp.jpeg';
+import { expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../../utils/firestoreSchema';
 
 const StudentResults = () => {
 const { currentStudent: loggedInStudent, authError } = useStudentAuth();
@@ -36,11 +37,16 @@ const currentStudent = adminFetchedStudent || loggedInStudent;
 useEffect(() => {
 if (adminRegNo) {
 const fetchAdminStudent = async () => {
-const q = query(collection(db, 'students'), where('regNo', '==', adminRegNo));
-const snap = await getDocs(q);
-if (!snap.empty) {
-setAdminFetchedStudent(snap.docs[0].data());
-}
+  let q = query(collection(db, 'students'), where(STUDENT_KEYS.regNo, '==', adminRegNo));
+  let snap = await getDocs(q);
+  if (snap.empty) {
+    // fallback to legacy
+    q = query(collection(db, 'students'), where('regNo', '==', adminRegNo));
+    snap = await getDocs(q);
+  }
+  if (!snap.empty) {
+    setAdminFetchedStudent(expandStudent(snap.docs[0].data()));
+  }
 };
 fetchAdminStudent();
 }
@@ -108,9 +114,14 @@ const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
 if (!selectedPub) return;
 
         // ── 1. Fetch ALL marks for this student by regNo only from Firestore
-        const marksQuery = query(collection(db, 'marks'), where('reg_no', '==', regNum));
-        const marksSnap = await getDocs(marksQuery);
-        const marksData = marksSnap.docs.map(doc => doc.data());
+        let marksQuery = query(collection(db, 'marks'), where(MARKS_KEYS.regNo, '==', regNum));
+        let marksSnap = await getDocs(marksQuery);
+        // Fallback to legacy key if empty
+        if (marksSnap.empty) {
+          marksQuery = query(collection(db, 'marks'), where('reg_no', '==', regNum));
+          marksSnap = await getDocs(marksQuery);
+        }
+        const marksData = marksSnap.docs.map(doc => expandMarks(doc.data()));
 
         // Normalise term string for comparison (e.g. 'Second Term' === 'secondterm')
         const normTerm = (t = '') => t.toLowerCase().replace(/\s+/g, '');
@@ -127,9 +138,14 @@ if (!selectedPub) return;
         });
 
         // ── 2. Compute class standing: fetch all marks for class/session from Firestore
-        const allMarksQuery = query(collection(db, 'marks'), where('class_name', '==', studentClass));
-        const allMarksSnap = await getDocs(allMarksQuery);
-        const allMarksData = allMarksSnap.docs.map(doc => doc.data());
+        let allMarksQuery = query(collection(db, 'marks'), where(MARKS_KEYS.className, '==', studentClass));
+        let allMarksSnap = await getDocs(allMarksQuery);
+        // Fallback to legacy key
+        if (allMarksSnap.empty) {
+          allMarksQuery = query(collection(db, 'marks'), where('class_name', '==', studentClass));
+          allMarksSnap = await getDocs(allMarksQuery);
+        }
+        const allMarksData = allMarksSnap.docs.map(doc => expandMarks(doc.data()));
 
         const studentTotals = {};
         (allMarksData || []).forEach(d => {
@@ -138,7 +154,7 @@ if (!selectedPub) return;
             normTerm(d.term) === normTerm(selectedPub.term) ||
             selectedPub.term.toLowerCase().includes((d.term || '').toLowerCase());
           if (sessionMatch && termMatch) {
-            const reg = d.reg_no;
+            const reg = d.regNo;
             const marksDataObj = d.marks || {};
             let sum = 0;
             if (marksDataObj._meta && marksDataObj._meta.overallTotal) {
@@ -168,8 +184,13 @@ if (!selectedPub) return;
         }
 
         // ── 3. Class population
-        const classPopQuery = query(collection(db, 'students'), where('className', '==', studentClass));
-        const classPopSnap = await getDocs(classPopQuery);
+        let classPopQuery = query(collection(db, 'students'), where(STUDENT_KEYS.className, '==', studentClass));
+        let classPopSnap = await getDocs(classPopQuery);
+        // Fallback to legacy key
+        if (classPopSnap.empty) {
+          classPopQuery = query(collection(db, 'students'), where('className', '==', studentClass));
+          classPopSnap = await getDocs(classPopQuery);
+        }
 
         setClassStats({
           position: posStr,

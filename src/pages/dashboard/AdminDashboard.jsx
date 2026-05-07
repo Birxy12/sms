@@ -79,6 +79,8 @@ const AdminDashboard = () => {
     
     if (viewMode === 'admin') {
       const fetchStats = async () => {
+        if (!currentAdmin) return;
+        
         try {
           // Fetch students
           const studentSnap = await getDocs(collection(db, 'students'));
@@ -89,27 +91,40 @@ const AdminDashboard = () => {
           let others = 0;
           
           studentSnap.forEach(doc => {
-            const mGender = (doc.data().gender || '').toLowerCase();
+            const data = doc.data();
+            const mGender = (data.gender || '').toLowerCase();
             if (mGender === 'm' || mGender === 'male') male++;
             else if (mGender === 'f' || mGender === 'female' || mGender === 'girl') female++;
             else others++;
           });
 
-          // Fetch staff
-          const staffSnap = await getDocs(collection(db, 'staff'));
-          if (!isMounted) return;
+          // Fetch staff (Requires Auth)
+          let staffSize = 0;
+          try {
+            const staffSnap = await getDocs(collection(db, 'staff'));
+            staffSize = staffSnap.size;
+          } catch (staffErr) {
+            console.warn('Could not fetch staff stats:', staffErr.message);
+          }
 
           // Fetch subjects
-          const subjectSnap = await getDocs(collection(db, 'subjects'));
-          if (!isMounted) return;
+          let subjectSize = 0;
+          try {
+            const subjectSnap = await getDocs(collection(db, 'subjects'));
+            subjectSize = subjectSnap.size;
+          } catch (subErr) {
+            console.warn('Could not fetch subjects stats:', subErr.message);
+          }
 
-          setRealStats(prev => ({
-            ...prev,
-            students: studentSnap.size,
-            teachers: staffSnap.size,
-            subjects: subjectSnap.size,
-            demographics: { male, female, others }
-          }));
+          if (isMounted) {
+            setRealStats(prev => ({
+              ...prev,
+              students: studentSnap.size,
+              teachers: staffSize,
+              subjects: subjectSize,
+              demographics: { male, female, others }
+            }));
+          }
         } catch (error) {
           console.error('Error fetching dashboard stats:', error);
         }

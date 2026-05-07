@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { STUDENT_KEYS, expandStudent } from '../utils/firestoreSchema';
 
 const StudentAuthContext = createContext();
 
@@ -86,16 +87,28 @@ export const StudentAuthProvider = ({ children }) => {
   const login = async (regNo, className) => {
     try {
       const studentsRef = collection(db, 'students');
-      const q = query(
-        studentsRef, 
-        where('regNo', '==', regNo.trim().toUpperCase()), 
-        where('className', '==', className.trim())
+      // Query using compressed keys - try both compressed and legacy format
+      let q = query(
+        studentsRef,
+        where(STUDENT_KEYS.regNo, '==', regNo.trim().toUpperCase()),
+        where(STUDENT_KEYS.className, '==', className.trim())
       );
       
-      const querySnapshot = await getDocs(q);
+      let querySnapshot = await getDocs(q);
+
+      // Fallback: try legacy uncompressed keys if no results
+      if (querySnapshot.empty) {
+        q = query(
+          studentsRef,
+          where('regNo', '==', regNo.trim().toUpperCase()),
+          where('className', '==', className.trim())
+        );
+        querySnapshot = await getDocs(q);
+      }
       
       if (!querySnapshot.empty) {
-        const studentData = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+        const rawData = querySnapshot.docs[0].data();
+        const studentData = { id: querySnapshot.docs[0].id, ...expandStudent(rawData) };
         
         // Check if student has a PIN set
         if (studentData.pin) {
@@ -165,16 +178,26 @@ export const StudentAuthProvider = ({ children }) => {
   const resetPin = async (regNo, className, answer, newPin) => {
     try {
       const studentsRef = collection(db, 'students');
-      const q = query(
-        studentsRef, 
-        where('regNo', '==', regNo.trim().toUpperCase()), 
-        where('className', '==', className.trim())
+      let q = query(
+        studentsRef,
+        where(STUDENT_KEYS.regNo, '==', regNo.trim().toUpperCase()),
+        where(STUDENT_KEYS.className, '==', className.trim())
       );
-      const snap = await getDocs(q);
+      let snap = await getDocs(q);
+
+      // Fallback to legacy keys
+      if (snap.empty) {
+        q = query(
+          studentsRef,
+          where('regNo', '==', regNo.trim().toUpperCase()),
+          where('className', '==', className.trim())
+        );
+        snap = await getDocs(q);
+      }
       
       if (snap.empty) return { success: false, message: 'Student not found.' };
       
-      const studentData = snap.docs[0].data();
+      const studentData = expandStudent(snap.docs[0].data());
       const studentId = snap.docs[0].id;
 
       if (studentData.securityAnswer !== answer.toLowerCase().trim()) {
