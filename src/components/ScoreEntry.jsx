@@ -13,6 +13,7 @@ const ScoreEntry = () => {
   const [selectedSubject, setSelectedSubject] = useState(() => localStorage.getItem('scoreEntry_subject') || '');
   const [selectedSession, setSelectedSession] = useState(() => localStorage.getItem('scoreEntry_session') || '2025/2026');
   const [selectedTerm, setSelectedTerm] = useState(() => localStorage.getItem('scoreEntry_term') || 'Second Term');
+  const [selectedFile, setSelectedFile] = useState(null);
   const [students, setStudents] = useState([]);
   const [scores, setScores] = useState(() => {
     try {
@@ -256,7 +257,13 @@ const ScoreEntry = () => {
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const processUploadedFile = () => {
+    if (!selectedFile) return;
 
     setUploading(true);
     setStatus({ type: 'info', message: 'Processing entry sheet...' });
@@ -308,6 +315,7 @@ const ScoreEntry = () => {
         });
 
         setScores(newScores);
+        setSelectedFile(null); // Clear file after successful process
         setStatus({ 
           type: unmatched.length === 0 ? 'success' : 'info', 
           message: `Successfully matched ${matched} students. ${unmatched.length > 0 ? `Could not find: ${unmatched.slice(0,3).join(', ')}${unmatched.length > 3 ? '...' : ''}` : ''}` 
@@ -319,7 +327,7 @@ const ScoreEntry = () => {
         setUploading(false);
       }
     };
-    reader.readAsBinaryString(file);
+    reader.readAsBinaryString(selectedFile);
   };
 
   const handleClearScores = () => {
@@ -352,9 +360,26 @@ const ScoreEntry = () => {
                 disabled={uploading}
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-bold hover:bg-indigo-100 transition-all"
               >
-                {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-                Upload Sheet
+                <Upload size={16} />
+                {selectedFile ? 'Change File' : 'Select Sheet'}
               </button>
+
+              {selectedFile && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-2 rounded-lg border border-slate-200">
+                    {selectedFile.name}
+                  </span>
+                  <button 
+                    onClick={processUploadedFile}
+                    disabled={uploading}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100"
+                  >
+                    {uploading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                    Process File
+                  </button>
+                </div>
+              )}
+
               <button 
                 onClick={handleClearScores}
                 className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 rounded-lg text-sm font-bold hover:bg-rose-100 transition-all"
