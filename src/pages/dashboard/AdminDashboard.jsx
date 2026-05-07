@@ -75,45 +75,51 @@ const AdminDashboard = () => {
   });
 
   useEffect(() => {
-    let unsubs = [];
+    let isMounted = true;
     
     if (viewMode === 'admin') {
-      try {
-        const unsubStudents = onSnapshot(collection(db, 'students'), (snap) => {
+      const fetchStats = async () => {
+        try {
+          // Fetch students
+          const studentSnap = await getDocs(collection(db, 'students'));
+          if (!isMounted) return;
+
           let male = 0;
           let female = 0;
           let others = 0;
           
-          snap.forEach(doc => {
+          studentSnap.forEach(doc => {
             const mGender = (doc.data().gender || '').toLowerCase();
             if (mGender === 'm' || mGender === 'male') male++;
             else if (mGender === 'f' || mGender === 'female' || mGender === 'girl') female++;
             else others++;
           });
 
+          // Fetch staff
+          const staffSnap = await getDocs(collection(db, 'staff'));
+          if (!isMounted) return;
+
+          // Fetch subjects
+          const subjectSnap = await getDocs(collection(db, 'subjects'));
+          if (!isMounted) return;
+
           setRealStats(prev => ({
             ...prev,
-            students: snap.size,
+            students: studentSnap.size,
+            teachers: staffSnap.size,
+            subjects: subjectSnap.size,
             demographics: { male, female, others }
           }));
-        }, (error) => console.error("Students listener error:", error));
+        } catch (error) {
+          console.error('Error fetching dashboard stats:', error);
+        }
+      };
 
-        const unsubStaff = onSnapshot(collection(db, 'staff'), (snap) => {
-          setRealStats(prev => ({ ...prev, teachers: snap.size }));
-        }, (error) => console.error("Staff listener error:", error));
-
-        const unsubSubjects = onSnapshot(collection(db, 'subjects'), (snap) => {
-          setRealStats(prev => ({ ...prev, subjects: snap.size }));
-        }, (error) => console.error("Subjects listener error:", error));
-
-        unsubs.push(unsubStudents, unsubStaff, unsubSubjects);
-      } catch (error) {
-        console.error('Error attaching dashboard listeners:', error);
-      }
+      fetchStats();
     }
 
     return () => {
-      unsubs.forEach(unsub => unsub && unsub());
+      isMounted = false;
     };
   }, [viewMode]);
 

@@ -21,10 +21,7 @@ const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 // Initialize Firestore with settings to mitigate common errors and support multi-tab persistence
 let db;
 try {
-  // Try to get the existing instance first to avoid "Firestore has already been initialized" error
-  db = getFirestore(app);
-} catch (e) {
-  // If no instance exists, initialize with specific settings
+  // Use initializeFirestore to ensure specific settings are applied
   db = initializeFirestore(app, {
     localCache: persistentLocalCache({
       tabManager: persistentMultipleTabManager()
@@ -32,6 +29,9 @@ try {
     experimentalForceLongPolling: true, // Mitigates QUIC/Network issues
     useFetchStreams: false,
   });
+} catch (e) {
+  // If already initialized, get the existing instance
+  db = getFirestore(app);
 }
 const auth = getAuth(app);
 const storage = getStorage(app);
