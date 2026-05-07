@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { db } from '../lib/firebase';
 import { collection, doc, writeBatch, query, where, getDocs } from 'firebase/firestore';
+import { supabase } from '../lib/supabase';
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Download } from 'lucide-react';
 import { CLASS_LIST, getAllSubjects, getSubjectsForClass } from '../utils/subjectConfig';
 
@@ -247,23 +248,26 @@ const BulkUpload = ({ onComplete }) => {
         const term = selectedTerm;
         const session = selectedSession;
 
-        // Save result to 'marks' collection
-        const marksRef = doc(collection(db, 'marks'), `${docId}_${session.replace('/', '-')}_${term.replace(/\s/g,'').toLowerCase()}`);
-        const batch = writeBatch(db);
-        batch.set(marksRef, {
-          regNo: rawRegNo,
-          studentName,
-          className,
+        // Save result to 'marks' collection in Supabase
+        const supabaseRecord = {
+          id: `${docId}_${session.replace('/', '-')}_${term.replace(/\s/g,'').toLowerCase()}`,
+          reg_no: rawRegNo,
+          student_name: studentName,
+          class_name: className,
           term,
           session,
-          average,
-          position,
-          promotionStatus: promoStatus,
-          marks,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
+          marks: {
+            ...marks,
+            _meta: { average, position, promotionStatus }
+          },
+          updated_at: new Date().toISOString()
+        };
 
-        // Also update student record with profile info
+        const { error: supaError } = await supabase.from('marks').upsert(supabaseRecord);
+        if (supaError) throw supaError;
+
+        // Also update student record with profile info in Firestore
+        const batch = writeBatch(db);
         const studentRef = doc(collection(db, 'students'), docId);
         batch.set(studentRef, {
           regNo: rawRegNo,
@@ -374,6 +378,19 @@ const BulkUpload = ({ onComplete }) => {
         const studentSnap = await getDocs(query(studentRef, where('className', '==', selectedClass)));
         const classStudents = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+        const { data: existingMarksData, error: fetchErr } = await supabase
+          .from('marks')
+          .select('*')
+          .eq('session', selectedSession)
+          .eq('class_name', selectedClass)
+          .eq('term', selectedTerm);
+          
+        if (fetchErr) throw fetchErr;
+        const currentDbMarks = {};
+        (existingMarksData || []).forEach(d => {
+          currentDbMarks[d.reg_no] = d.marks || {};
+        });
+
         const matchSubject = (raw) => {
           if (!raw) return null;
           let upper = raw.toString().toUpperCase().trim();
@@ -421,6 +438,7 @@ const BulkUpload = ({ onComplete }) => {
         let matchedByReg = 0;
         let matchedByName = 0;
         let failedMatch = 0;
+        const recordsToUpsert = [];
 
         for (let i = subjectRowIdx + 1; i < rawData.length; i++) {
           const row = rawData[i];
@@ -452,14 +470,9 @@ const BulkUpload = ({ onComplete }) => {
           }
 
           const docId = finalRegNo.replace(/\//g, '-');
-          const updateData = {
-            regNo: finalRegNo,
-            studentName: finalName,
-            className: selectedClass,
-            term: selectedTerm,
-            session: selectedSession,
-            updatedAt: new Date().toISOString()
-          };
+
+          const existingMarks = currentDbMarks[finalRegNo] || {};
+          const updatedMarksObj = { ...existingMarks };
 
           subjects.forEach(subject => {
             const sIdx = subject.startIndex;
@@ -485,7 +498,7 @@ const BulkUpload = ({ onComplete }) => {
             else if (total >= 35) grade = 'E8';
             else grade = 'F9';
 
-            updateData[`marks.${subject.name}`] = {
+            updatedMarksObj[subject.name] = {
               cat1, cat2, exam, total, percent: total, grade
             };
           });
@@ -493,44 +506,53 @@ const BulkUpload = ({ onComplete }) => {
           // Calculate overall average based on policy (JSS: 15, SS1: 16, SS2/3: 9)
           const clsUpper = selectedClass.toUpperCase();
           let divisor = 15;
-          if (clsUpper.includes('JSS')) {
-            divisor = 15;
-          } else if (clsUpper.includes('SS1')) {
-            divisor = 16;
-          } else if (clsUpper.includes('SS2') || clsUpper.includes('SS3')) {
-            divisor = 9;
-          }
+          if (clsUpper.includes('JSS')) divisor = 15;
+          else if (clsUpper.includes('SS1')) divisor = 16;
+          else if (clsUpper.includes('SS2') || clsUpper.includes('SS3')) divisor = 9;
 
-          // Calculate total of all subjects present in this updateData
           let totalScore = 0;
-          Object.keys(updateData).forEach(key => {
-            if (key.startsWith('marks.') && updateData[key].total) {
-              totalScore += parseFloat(updateData[key].total || 0);
+          Object.keys(updatedMarksObj).forEach(key => {
+            if (updatedMarksObj[key].total && key !== '_meta') {
+              totalScore += parseFloat(updatedMarksObj[key].total || 0);
             }
           });
           
-          updateData.average = (totalScore / divisor).toFixed(1);
-          updateData.overallTotal = totalScore;
+          const average = (totalScore / divisor).toFixed(1);
 
           const safeSession = selectedSession.replace('/', '-');
           const safeTerm = selectedTerm.replace(/\s/g, '').toLowerCase();
-          const marksRef = doc(collection(db, 'marks'), `${docId}_${safeSession}_${safeTerm}`);
           
-          batch.set(marksRef, updateData, { merge: true });
+          const supaRecord = {
+            id: `${docId}_${safeSession}_${safeTerm}`,
+            reg_no: finalRegNo,
+            student_name: finalName,
+            class_name: selectedClass,
+            term: selectedTerm,
+            session: selectedSession,
+            marks: {
+              ...updatedMarksObj,
+              _meta: { average, overallTotal: totalScore }
+            },
+            updated_at: new Date().toISOString()
+          };
+          
+          recordsToUpsert.push(supaRecord);
           hasPending = true;
 
           count++;
           setUploadProgress(Math.round((i / rawData.length) * 100));
 
-          if (count % 200 === 0) {
-            await batch.commit();
-            batch = writeBatch(db); 
+          if (recordsToUpsert.length >= 200) {
+            const { error: upsertErr } = await supabase.from('marks').upsert(recordsToUpsert);
+            if (upsertErr) throw upsertErr;
+            recordsToUpsert.length = 0; // clear array
             hasPending = false;
           }
         }
         
-        if (hasPending) {
-          await batch.commit();
+        if (recordsToUpsert.length > 0) {
+          const { error: upsertErr } = await supabase.from('marks').upsert(recordsToUpsert);
+          if (upsertErr) throw upsertErr;
           hasPending = false;
         }
 

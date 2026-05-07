@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { db } from '../../lib/firebase';
 import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
+import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../context/ThemeContext';
 import { Award, AlertCircle, Printer, Download, ChevronLeft, User } from 'lucide-react';
 import bdsLogo from '../../assets/bdslogo.jpg';
@@ -108,166 +108,174 @@ setResultsError('');
 const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
 if (!selectedPub) return;
 
-// ── 1. Fetch ALL marks for this student by regNo only (no composite index needed)
-const marksQuery = query(
-collection(db, 'marks'),
-where('regNo', '==', regNum)
-);
-const marksSnap = await getDocs(marksQuery);
+        // ── 1. Fetch ALL marks for this student by regNo only
+        const { data: marksData, error: marksError } = await supabase
+          .from('marks')
+          .select('*')
+          .eq('reg_no', regNum);
+          
+        if (marksError) throw marksError;
 
-// Normalise term string for comparison (e.g. 'Second Term' === 'secondterm')
-const normTerm = (t = '') => t.toLowerCase().replace(/\s+/g, '');
+        // Normalise term string for comparison (e.g. 'Second Term' === 'secondterm')
+        const normTerm = (t = '') => t.toLowerCase().replace(/\s+/g, '');
 
-let foundMarksDoc = null;
-marksSnap.forEach(docSnap => {
-const d = docSnap.data();
-const sessionMatch = d.session === selectedPub.session;
-const termMatch =
-normTerm(d.term) === normTerm(selectedPub.term) ||
-selectedPub.term.toLowerCase().includes((d.term || '').toLowerCase());
-if (sessionMatch && termMatch) {
-foundMarksDoc = d;
-}
-});
+        let foundMarksDoc = null;
+        (marksData || []).forEach(d => {
+          const sessionMatch = d.session === selectedPub.session;
+          const termMatch =
+            normTerm(d.term) === normTerm(selectedPub.term) ||
+            selectedPub.term.toLowerCase().includes((d.term || '').toLowerCase());
+          if (sessionMatch && termMatch) {
+            foundMarksDoc = d;
+          }
+        });
 
-// ── 2. Compute class standing: fetch all marks for class/session (single field index)
-const allMarksQuery = query(
-collection(db, 'marks'),
-where('className', '==', studentClass)
-);
-const allMarksSnap = await getDocs(allMarksQuery);
+        // ── 2. Compute class standing: fetch all marks for class/session
+        const { data: allMarksData, error: allMarksError } = await supabase
+          .from('marks')
+          .select('*')
+          .eq('class_name', studentClass);
+          
+        if (allMarksError) throw allMarksError;
 
-const studentTotals = {};
-allMarksSnap.forEach(docSnap => {
-const d = docSnap.data();
-const sessionMatch = d.session === selectedPub.session;
-const termMatch =
-normTerm(d.term) === normTerm(selectedPub.term) ||
-selectedPub.term.toLowerCase().includes((d.term || '').toLowerCase());
-if (sessionMatch && termMatch) {
-const reg = d.regNo;
-const marksData = d.marks || d.subjects || {};
-let sum = 0;
-Object.values(marksData).forEach(m => { sum += parseFloat(m.total || 0); });
-studentTotals[reg] = (studentTotals[reg] || 0) + sum;
-}
-});
+        const studentTotals = {};
+        (allMarksData || []).forEach(d => {
+          const sessionMatch = d.session === selectedPub.session;
+          const termMatch =
+            normTerm(d.term) === normTerm(selectedPub.term) ||
+            selectedPub.term.toLowerCase().includes((d.term || '').toLowerCase());
+          if (sessionMatch && termMatch) {
+            const reg = d.reg_no;
+            const marksDataObj = d.marks || {};
+            let sum = 0;
+            if (marksDataObj._meta && marksDataObj._meta.overallTotal) {
+               sum = marksDataObj._meta.overallTotal;
+            } else {
+               Object.keys(marksDataObj).forEach(k => { 
+                 if (k !== '_meta' && marksDataObj[k] && marksDataObj[k].total) {
+                    sum += parseFloat(marksDataObj[k].total || 0); 
+                 }
+               });
+            }
+            studentTotals[reg] = (studentTotals[reg] || 0) + sum;
+          }
+        });
 
-const sortedStudents = Object.entries(studentTotals)
-.sort((a, b) => b[1] - a[1])
-.map(entry => entry[0]);
+        const sortedStudents = Object.entries(studentTotals)
+          .sort((a, b) => b[1] - a[1])
+          .map(entry => entry[0]);
 
-// Position: use stored value if present, else calculate
-let posStr = foundMarksDoc?.position || '';
-if (!posStr || posStr === '0' || posStr === 'N/A') {
-const pos = sortedStudents.indexOf(regNum) + 1;
-const suffixes = ["th", "st", "nd", "rd"];
-const v = pos % 100;
-posStr = pos > 0 ? pos + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]) : 'N/A';
-}
+        // Position: use stored value if present, else calculate
+        let posStr = foundMarksDoc?.marks?._meta?.position || '';
+        if (!posStr || posStr === '0' || posStr === 'N/A') {
+          const pos = sortedStudents.indexOf(regNum) + 1;
+          const suffixes = ["th", "st", "nd", "rd"];
+          const v = pos % 100;
+          posStr = pos > 0 ? pos + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]) : 'N/A';
+        }
 
-// ── 3. Class population
-const classPopQuery = query(collection(db, 'students'), where('className', '==', studentClass));
-const classPopSnap = await getDocs(classPopQuery);
+        // ── 3. Class population
+        const classPopQuery = query(collection(db, 'students'), where('className', '==', studentClass));
+        const classPopSnap = await getDocs(classPopQuery);
 
-setClassStats({
-position: posStr,
-population: foundMarksDoc?.classPopulation || classPopSnap.size
-});
+        setClassStats({
+          position: posStr,
+          population: classPopSnap.size
+        });
 
-// ── 4. Build subject list for this class
-const subjectsQuery = query(collection(db, 'subjects'), where('class', '==', studentClass));
-const subjectsSnap = await getDocs(subjectsQuery);
-const classSubjects = subjectsSnap.docs.map(d => d.data().name);
+        // ── 4. Build subject list for this class
+        const subjectsQuery = query(collection(db, 'subjects'), where('class', '==', studentClass));
+        const subjectsSnap = await getDocs(subjectsQuery);
+        const classSubjects = subjectsSnap.docs.map(d => d.data().name);
 
-const rawMarks = foundMarksDoc?.marks || foundMarksDoc?.subjects || {};
-let subjectList = classSubjects.length > 0 ? classSubjects : Object.keys(rawMarks);
+        const rawMarks = foundMarksDoc?.marks || {};
+        let subjectList = classSubjects.length > 0 ? classSubjects : Object.keys(rawMarks).filter(k => k !== '_meta');
 
-// Deduplicate subject list (case-insensitive)
-const seen = new Set();
-subjectList = subjectList.filter(subj => {
-  const upper = subj.toUpperCase().trim();
-  if (seen.has(upper)) return false;
-  seen.add(upper);
-  return true;
-});
+        // Deduplicate subject list (case-insensitive)
+        const seen = new Set();
+        subjectList = subjectList.filter(subj => {
+          const upper = subj.toUpperCase().trim();
+          if (seen.has(upper)) return false;
+          seen.add(upper);
+          return true;
+        });
 
-if (!foundMarksDoc && subjectList.length === 0) {
-// No marks found at all – show empty state rather than all-zero rows
-setStudentMarks(null);
-setLoading(false);
-return;
-}
+        if (!foundMarksDoc && subjectList.length === 0) {
+          // No marks found at all – show empty state rather than all-zero rows
+          setStudentMarks(null);
+          setLoading(false);
+          return;
+        }
 
-let totalScore = 0;
-let subjectCount = 0;
+        let totalScore = 0;
+        let subjectCount = 0;
 
-const processedMarks = subjectList.map(subjectName => {
-// Case-insensitive lookup
-const dbKey = Object.keys(rawMarks).find(
-k => k.toUpperCase() === subjectName.toUpperCase()
-) || subjectName;
-const sm = rawMarks[dbKey] || {};
-const cat1 = parseFloat(sm.cat1 || sm.ca1 || 0);
-const cat2 = parseFloat(sm.cat2 || sm.ca2 || 0);
-const exam = parseFloat(sm.exam || 0);
-const total = parseFloat(sm.total || (cat1 + cat2 + exam));
+        const processedMarks = subjectList.map(subjectName => {
+          // Case-insensitive lookup
+          const dbKey = Object.keys(rawMarks).find(
+            k => k.toUpperCase() === subjectName.toUpperCase()
+          ) || subjectName;
+          const sm = rawMarks[dbKey] || {};
+          const cat1 = parseFloat(sm.cat1 || sm.ca1 || 0);
+          const cat2 = parseFloat(sm.cat2 || sm.ca2 || 0);
+          const exam = parseFloat(sm.exam || 0);
+          const total = parseFloat(sm.total || (cat1 + cat2 + exam));
 
-if (total > 0) {
-totalScore += total;
-subjectCount++;
-}
+          if (total > 0) {
+            totalScore += total;
+            subjectCount++;
+          }
 
-let grade = sm.grade;
-if (!grade && total > 0) {
-if (total >= 75) grade = 'A';
-else if (total >= 70) grade = 'B1';
-else if (total >= 65) grade = 'B2';
-else if (total >= 60) grade = 'B3';
-else if (total >= 50) grade = 'C4';
-else if (total >= 45) grade = 'C5';
-else if (total >= 40) grade = 'D7';
-else if (total >= 35) grade = 'E8';
-else grade = 'F9';
-}
+          let grade = sm.grade;
+          if (!grade && total > 0) {
+            if (total >= 75) grade = 'A';
+            else if (total >= 70) grade = 'B1';
+            else if (total >= 65) grade = 'B2';
+            else if (total >= 60) grade = 'B3';
+            else if (total >= 50) grade = 'C4';
+            else if (total >= 45) grade = 'C5';
+            else if (total >= 40) grade = 'D7';
+            else if (total >= 35) grade = 'E8';
+            else grade = 'F9';
+          }
 
-return {
-subject: subjectName,
-cat1,
-cat2,
-exam,
-total,
-grade: grade || (total > 0 ? 'F9' : '-')
-};
-});
+          return {
+            subject: subjectName,
+            cat1,
+            cat2,
+            exam,
+            total,
+            grade: grade || (total > 0 ? 'F9' : '-')
+          };
+        });
 
-// Only show subjects that have been offered (total > 0)
-const displaySubjects = processedMarks.filter(s => s.total > 0);
+        // Only show subjects that have been offered (total > 0)
+        const displaySubjects = processedMarks.filter(s => s.total > 0);
 
-// Calculate average based on school policy: SS2/3 Art/Science (9 subjects), JSS (15 subjects), SS1 (16 subjects)
-const cls = (currentStudent?.className || '').toUpperCase();
-let divisor = 16; // Default
-if (cls.includes('JSS')) {
-  divisor = 15;
-} else if (cls.includes('SS1')) {
-  divisor = 16;
-} else if (
-  (cls.includes('SS2') || cls.includes('SS3')) && 
-  (cls.includes('ART') || cls.includes('SCIENCE'))
-) {
-  divisor = 9;
-} else if (cls.includes('SS2') || cls.includes('SS3')) {
-  divisor = 9; // Fallback for other SS2/3 departments if any
-}
+        // Calculate average based on school policy: SS2/3 Art/Science (9 subjects), JSS (15 subjects), SS1 (16 subjects)
+        const cls = (currentStudent?.className || '').toUpperCase();
+        let divisor = 16; // Default
+        if (cls.includes('JSS')) {
+          divisor = 15;
+        } else if (cls.includes('SS1')) {
+          divisor = 16;
+        } else if (
+          (cls.includes('SS2') || cls.includes('SS3')) && 
+          (cls.includes('ART') || cls.includes('SCIENCE'))
+        ) {
+          divisor = 9;
+        } else if (cls.includes('SS2') || cls.includes('SS3')) {
+          divisor = 9; // Fallback for other SS2/3 departments if any
+        }
 
-setStudentMarks({
-subjects: displaySubjects.sort((a, b) => a.subject.localeCompare(b.subject)),
-overallTotal: totalScore,
-average: (totalScore / divisor).toFixed(1),
-raw: foundMarksDoc
-});
+        setStudentMarks({
+          subjects: displaySubjects.sort((a, b) => a.subject.localeCompare(b.subject)),
+          overallTotal: totalScore,
+          average: (totalScore / divisor).toFixed(1),
+          raw: foundMarksDoc
+        });
 
-} catch (error) {
+      } catch (error) {
 if (error?.code === 'permission-denied') {
 setResultsError('Results are currently blocked by Firebase permissions. Please ask the administrator to enable Anonymous sign-in or update Firestore rules for student result access.');
 } else {

@@ -6,6 +6,7 @@ import marksheetCsv from '../assets/marksheet.csv?raw';
 import ss1MarksheetCsv from '../assets/ss1_marksheet.csv?raw';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { supabase } from '../lib/supabase';
 import { CLASS_LIST, getSubjectsForClass } from '../utils/subjectConfig';
 import '../assets/Marksheet.css';
 
@@ -181,19 +182,23 @@ const Marksheet = ({ className: propClassName }) => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // 1. Try to fetch from Firestore first
+        // 1. Try to fetch from Firestore first (for students)
         const studentsQuery = query(collection(db, 'students'), where('className', '==', currentClassName));
         const studentsSnapshot = await getDocs(studentsQuery);
         
-        const marksQuery = query(collection(db, 'marks'), where('session', '==', selectedSession));
-        const marksSnapshot = await getDocs(marksQuery);
+        // Fetch marks from Supabase
+        const { data: marksData, error: marksError } = await supabase
+          .from('marks')
+          .select('*')
+          .eq('session', selectedSession)
+          .eq('class_name', selectedClass)
+          .eq('term', selectedTerm);
+
+        if (marksError) throw marksError;
         
         const dbMarks = {};
-        marksSnapshot.docs.forEach(doc => {
-          const docData = doc.data();
-          if (docData.className === selectedClass && docData.term === selectedTerm) {
-            dbMarks[docData.regNo] = docData.marks || docData.subjects || {};
-          }
+        (marksData || []).forEach(docData => {
+          dbMarks[docData.reg_no] = docData.marks || {};
         });
 
           // Set subjects based on class configuration (Dynamic Headers)

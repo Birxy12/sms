@@ -4,6 +4,7 @@ import { collection, query, where, getDocs, doc, setDoc, writeBatch, orderBy } f
 import { Save, Search, User, BookOpen, AlertCircle, CheckCircle, Loader2, Download, Upload, Trash2 } from 'lucide-react';
 import { CLASS_LIST, getSubjectsForClass } from '../utils/subjectConfig';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { supabase } from '../lib/supabase';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 
@@ -22,6 +23,7 @@ const ScoreEntry = () => {
       return {};
     }
   });
+  const [currentDbMarks, setCurrentDbMarks] = useState({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
@@ -88,22 +90,24 @@ const ScoreEntry = () => {
       
       setStudents(studentList);
       
-      // Fetch existing scores for this class/period/subject
-      const marksQuery = query(
-        collection(db, 'marks'), 
-        where('className', '==', selectedClass),
-        where('session', '==', selectedSession),
-        where('term', '==', selectedTerm)
-      );
+      // Fetch existing scores for this class/period/subject from Supabase
+      const { data: marksData, error: marksError } = await supabase
+        .from('marks')
+        .select('*')
+        .eq('class_name', selectedClass)
+        .eq('session', selectedSession)
+        .eq('term', selectedTerm);
+
+      if (marksError) throw marksError;
       
-      const marksSnap = await getDocs(marksQuery);
       const newScores = {};
+      const newDbMarks = {};
       
-      marksSnap.docs.forEach(doc => {
-        const data = doc.data();
+      (marksData || []).forEach(data => {
+        newDbMarks[data.reg_no] = data.marks || {};
         const subjectMarks = data.marks?.[selectedSubject];
         if (subjectMarks) {
-          newScores[data.regNo] = {
+          newScores[data.reg_no] = {
             cat1: subjectMarks.cat1 || '0',
             cat2: subjectMarks.cat2 || '0',
             exam: subjectMarks.exam || '0'
@@ -112,6 +116,7 @@ const ScoreEntry = () => {
       });
       
       setScores(newScores);
+      setCurrentDbMarks(newDbMarks);
     } catch (error) {
       console.error('Error fetching students and scores:', error);
       setStatus({ type: 'error', message: 'Failed to load student list and scores.' });
@@ -152,10 +157,11 @@ const ScoreEntry = () => {
     setStatus({ type: 'info', message: 'Saving scores to Firestore...' });
 
     try {
-      const batch = writeBatch(db);
       const safeSession = selectedSession.replace('/', '-');
       const safeTerm = selectedTerm.replace(/\s/g, '').toLowerCase();
       
+      const recordsToUpsert = [];
+
       for (const student of students) {
         const studentScores = scores[student.regNo] || {};
         if (Object.keys(studentScores).length === 0) continue;
@@ -166,7 +172,7 @@ const ScoreEntry = () => {
         const total = cat1 + cat2 + exam;
 
         const sanitizedRegNo = student.regNo.replace(/\//g, '-');
-        const marksRef = doc(collection(db, 'marks'), `${sanitizedRegNo}_${safeSession}_${safeTerm}`);
+        const id = `${sanitizedRegNo}_${safeSession}_${safeTerm}`;
         
         let grade = 'F9';
         if (total >= 75) grade = 'A';
@@ -178,13 +184,17 @@ const ScoreEntry = () => {
         else if (total >= 40) grade = 'D7';
         else if (total >= 35) grade = 'E8';
 
-        batch.set(marksRef, {
-          regNo: student.regNo,
-          studentName: student.name,
-          className: selectedClass,
+        const existingMarks = currentDbMarks[student.regNo] || {};
+
+        recordsToUpsert.push({
+          id: id,
+          reg_no: student.regNo,
+          student_name: student.name,
+          class_name: selectedClass,
           session: selectedSession,
           term: selectedTerm,
           marks: {
+            ...existingMarks,
             [selectedSubject]: {
               cat1: cat1,
               cat2: cat2,
@@ -194,11 +204,16 @@ const ScoreEntry = () => {
               grade,
               updatedAt: new Date().toISOString()
             }
-          }
-        }, { merge: true });
+          },
+          updated_at: new Date().toISOString()
+        });
       }
 
-      await batch.commit();
+      if (recordsToUpsert.length > 0) {
+        const { error } = await supabase.from('marks').upsert(recordsToUpsert);
+        if (error) throw error;
+      }
+
       setStatus({ type: 'success', message: 'All scores saved successfully!' });
       // Refresh scores from DB to ensure UI is in sync
       fetchStudents();
