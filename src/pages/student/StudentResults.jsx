@@ -9,7 +9,7 @@ import bdsLogo from '../../assets/bdslogo.jpg';
 import resultStamp from '../../assets/stamp.jpeg';
 import { expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../../utils/firestoreSchema';
 
-const StudentResults = () => {
+const StudentResults = ({ isPublic }) => {
 const { currentStudent: loggedInStudent, authError } = useStudentAuth();
 const { schoolName, schoolLogo, primaryColor, principalSignature, principalStamp } = useTheme();
 const printRef = useRef();
@@ -30,9 +30,11 @@ const [resultsError, setResultsError] = useState('');
 const location = useLocation();
 const searchParams = new URLSearchParams(location.search);
 const adminRegNo = searchParams.get('regNo');
+const publicPin = searchParams.get('pin');
 
 const [adminFetchedStudent, setAdminFetchedStudent] = useState(null);
 const currentStudent = adminFetchedStudent || loggedInStudent;
+const [pinVerified, setPinVerified] = useState(false);
 
 useEffect(() => {
 if (adminRegNo) {
@@ -45,12 +47,29 @@ const fetchAdminStudent = async () => {
     snap = await getDocs(q);
   }
   if (!snap.empty) {
-    setAdminFetchedStudent(expandStudent(snap.docs[0].data()));
+    const sData = snap.docs[0].data();
+    
+    // If it's a public access, we MUST verify the PIN here too for security
+    if (isPublic) {
+      const isAdminBypass = publicPin === '@@@@@@';
+      if (!isAdminBypass && sData.pin !== publicPin) {
+        setResultsError('Unauthorized access. Invalid PIN.');
+        setLoading(false);
+        return;
+      }
+      setPinVerified(true);
+    }
+    
+    setAdminFetchedStudent(expandStudent(sData));
   }
 };
 fetchAdminStudent();
+} else if (isPublic && !loggedInStudent) {
+  // If public but no regNo or logged in student, it's invalid
+  setResultsError('Please use the Result Checker to access this page.');
+  setLoading(false);
 }
-}, [adminRegNo]);
+}, [adminRegNo, isPublic, publicPin, loggedInStudent]);
 
 const regNum = currentStudent?.regNo || currentStudent?.['REG NO'] || currentStudent?.REGNO || '';
 const studentClass = currentStudent?.className || currentStudent?.classId || '';

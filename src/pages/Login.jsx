@@ -150,7 +150,7 @@ const Login = () => {
     { id: 'student', label: 'Student', icon: GraduationCap, color: 'indigo' },
     { id: 'teacher', label: 'Teacher', icon: UserCheck, color: 'rose' },
     { id: 'principal', label: 'Principal', icon: ShieldCheck, color: 'purple' },
-    { id: 'bursar', label: 'Bursar', icon: Wallet, color: 'emerald' },
+    { id: 'bursar', label: 'Bursar', icon: bank, color: 'emerald' },
     { id: 'admin', label: 'Admin', icon: ShieldCheck, color: 'blue' },
   ];
 

@@ -77,8 +77,8 @@ const Home = () => {
   }, []);
 
   useEffect(() => {
-    const total = (landingContent.heroImages && landingContent.heroImages.length > 0) 
-      ? landingContent.heroImages.length 
+    const total = (landingContent.heroImages && landingContent.heroImages.length > 0)
+      ? landingContent.heroImages.length
       : 2;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % total);
@@ -117,7 +117,7 @@ const Home = () => {
           const approvedTestimonies = allTestimonies
             .filter(t => t.approved === true)
             .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          
+
           if (approvedTestimonies.length > 0) {
             setTestimonials(approvedTestimonies);
           }
@@ -132,7 +132,7 @@ const Home = () => {
   const handleTestimonySubmit = async (e) => {
     e.preventDefault();
     if (!testimonyForm.name || !testimonyForm.content) return;
-    
+
     setSubmitting(true);
     try {
       await addDoc(collection(db, 'testimonies'), {
@@ -151,9 +151,9 @@ const Home = () => {
   };
 
   const quickLinks = [
+    { label: 'Check Result', href: '/check-result', icon: <Search size={16} /> },
     { label: 'About Us', href: '/about', icon: <BookOpen size={16} /> },
     { label: 'Admissions Info', href: '/contact', icon: <GraduationCap size={16} /> },
-    { label: 'Contact', href: '/contact', icon: <Phone size={16} /> },
     { label: 'Portal Login', href: '/login', icon: <LogIn size={16} /> }
   ];
 
@@ -181,7 +181,7 @@ const Home = () => {
 
               <h1 className="home-hero-title">
                 {landingContent.heroHeadline}
-                <span className="home-hero-title-accent">Since 2002</span>
+                <span className="home-hero-title-accent">Since 2011</span>
               </h1>
 
               <p className="home-hero-desc">
@@ -189,9 +189,9 @@ const Home = () => {
               </p>
 
               <div className="home-hero-actions">
-                <button onClick={() => navigate('/about')} className="home-btn-primary">
-                  Learn More
-                  <ArrowRight size={18} />
+                <button onClick={() => navigate('/check-result')} className="home-btn-primary">
+                  Check Result
+                  <Search size={18} />
                 </button>
                 <button onClick={() => navigate('/login')} className="home-btn-secondary">
                   <LogIn size={18} />
@@ -227,9 +227,9 @@ const Home = () => {
                     transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
                     className="absolute inset-0"
                   >
-                    <img 
-                      src={(landingContent.heroImages && landingContent.heroImages.length > 0) 
-                        ? landingContent.heroImages[currentSlide % landingContent.heroImages.length] 
+                    <img
+                      src={(landingContent.heroImages && landingContent.heroImages.length > 0)
+                        ? landingContent.heroImages[currentSlide % landingContent.heroImages.length]
                         : [h1, h3][currentSlide % 2]}
                       alt={`Campus life ${currentSlide + 1}`}
                       className="w-full h-full object-cover"
@@ -263,7 +263,7 @@ const Home = () => {
       <section className="home-showcase" style={{ marginTop: '-4rem' }}>
         <div className="home-stats-grid">
           {stats.map((s, i) => (
-            <motion.div 
+            <motion.div
               key={i}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -313,7 +313,7 @@ const Home = () => {
 
           <div className="home-features-grid">
             {features.map((f, i) => (
-              <motion.div 
+              <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -412,7 +412,7 @@ const Home = () => {
 
               <div className="space-y-6">
                 {testimonials.map((t, i) => (
-                  <motion.div 
+                  <motion.div
                     key={i}
                     initial={{ opacity: 0, x: -30 }}
                     whileInView={{ opacity: 1, x: 0 }}
@@ -421,7 +421,7 @@ const Home = () => {
                     className="home-testimonial-card"
                   >
                     <div className="home-testimonial-stars">
-                      {[1,2,3,4,5].map(star => (
+                      {[1, 2, 3, 4, 5].map(star => (
                         <Star key={star} size={14} className="text-orange-400 fill-orange-400" />
                       ))}
                     </div>
@@ -461,38 +461,38 @@ const Home = () => {
                 <form className="space-y-5" onSubmit={handleTestimonySubmit}>
                   <div className="home-form-group">
                     <label className="home-form-label">Full Name</label>
-                    <input 
-                      type="text" 
-                      placeholder="Your full name" 
-                      className="home-form-input" 
+                    <input
+                      type="text"
+                      placeholder="Your full name"
+                      className="home-form-input"
                       value={testimonyForm.name}
-                      onChange={e => setTestimonyForm({...testimonyForm, name: e.target.value})}
+                      onChange={e => setTestimonyForm({ ...testimonyForm, name: e.target.value })}
                       required
                     />
                   </div>
                   <div className="home-form-group">
                     <label className="home-form-label">Email Address</label>
-                    <input 
-                      type="email" 
-                      placeholder="your@email.com" 
-                      className="home-form-input" 
+                    <input
+                      type="email"
+                      placeholder="your@email.com"
+                      className="home-form-input"
                       value={testimonyForm.email}
-                      onChange={e => setTestimonyForm({...testimonyForm, email: e.target.value})}
+                      onChange={e => setTestimonyForm({ ...testimonyForm, email: e.target.value })}
                     />
                   </div>
                   <div className="home-form-group">
                     <label className="home-form-label">Your Testimony</label>
-                    <textarea 
-                      rows="4" 
-                      placeholder="How has our school helped you?" 
+                    <textarea
+                      rows="4"
+                      placeholder="How has our school helped you?"
                       className="home-form-textarea"
                       value={testimonyForm.content}
-                      onChange={e => setTestimonyForm({...testimonyForm, content: e.target.value})}
+                      onChange={e => setTestimonyForm({ ...testimonyForm, content: e.target.value })}
                       required
                     ></textarea>
                   </div>
                   <button type="submit" disabled={submitting} className="home-form-submit">
-                    {submitting ? 'Submitting...' : submitSuccess ? 'Submitted for Review!' : 'Submit Testimony'} 
+                    {submitting ? 'Submitting...' : submitSuccess ? 'Submitted for Review!' : 'Submit Testimony'}
                     {!submitting && !submitSuccess && <ArrowRight size={18} />}
                     {submitSuccess && <CheckCircle size={18} />}
                   </button>
@@ -523,7 +523,7 @@ const Home = () => {
               Start Your Journey to <span className="home-cta-title-accent">Greatness</span>
             </h2>
             <p className="home-cta-desc">
-              Join {schoolName || 'Our School'} and give your child the gift of world-class education. 
+              Join {schoolName || 'Our School'} and give your child the gift of world-class education.
               Limited slots available for the upcoming academic session.
             </p>
             <div className="home-cta-actions">
@@ -546,9 +546,9 @@ const Home = () => {
         <div className="home-contact-bar-inner">
           <div className="home-contact-grid">
             {[
-              { icon: <Phone size={20} />, label: 'Call Us', value: '+234 800 123 4567', color: 'blue' },
-              { icon: <Mail size={20} />, label: 'Email Us', value: 'info@school.edu.ng', color: 'emerald' },
-              { icon: <MapPin size={20} />, label: 'Visit Us', value: '123 Education Lane, Lagos', color: 'orange' }
+              { icon: <Phone size={20} />, label: 'Call Us', value: '+234 906 620 2949', color: 'blue' },
+              { icon: <Mail size={20} />, label: 'Email Us', value: 'bonusdominusschools5a@gmail.com', color: 'emerald' },
+              { icon: <MapPin size={20} />, label: 'Visit Us', value: '5A John Uzoanya layout amuzukwu, Abia', color: 'orange' }
             ].map((item, i) => (
               <motion.div
                 key={i}

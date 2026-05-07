@@ -32,6 +32,7 @@ import MessageHub from './pages/dashboard/MessageHub';
 import PrincipalDashboard from './pages/dashboard/PrincipalDashboard';
 import BursarDashboard from './pages/dashboard/BursarDashboard';
 import StaffRegister from './pages/StaffRegister';
+import CheckResult from './pages/public/CheckResult';
 import { useStudentAuth } from './context/StudentAuthContext';
 import { useAdminAuth } from './context/AdminAuthContext';
 import BonusAI from './components/BonusAI';
@@ -82,6 +83,7 @@ function App() {
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/blog" element={<BlogPage />} />
       <Route path="/leaderboard" element={<LeaderboardPage />} />
+      <Route path="/check-result" element={<CheckResult />} />
       
       {/* Student Dashboard – individual section routes (Protected) */}
       <Route path="/students" element={
@@ -109,6 +111,7 @@ function App() {
           <Layout><StudentResults /></Layout>
         </ProtectedStudentRoute>
       } />
+      <Route path="/results" element={<Layout><StudentResults isPublic={true} /></Layout>} />
       <Route path="/students/fees" element={
         <ProtectedStudentRoute>
           <Layout><StudentFees /></Layout>
