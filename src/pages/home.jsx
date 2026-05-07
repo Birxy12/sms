@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Star, LogIn, Users, Trophy, GraduationCap, Shield, BookOpen, Award, MapPin, Phone, Mail, ChevronRight, Quote, Sparkles } from 'lucide-react';
+import { ArrowRight, Star, LogIn, Users, Trophy, GraduationCap, Shield, BookOpen, Award, MapPin, Phone, Mail, ChevronRight, Quote, Sparkles, Search, CheckCircle } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { db } from '../lib/firebase';
 import { doc, getDoc, collection, addDoc, query, where, getDocs, orderBy } from 'firebase/firestore';
@@ -173,40 +173,46 @@ const Home = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7 }}
+              className="relative z-20"
             >
-              <div className="home-hero-badge">
-                <Sparkles size={14} />
-                Welcome to {schoolName || 'Our School'}
-              </div>
+              <div className="glass-morphism p-8 md:p-12 rounded-[2.5rem] border-white/20 shadow-2xl relative overflow-hidden group">
+                {/* Decorative background glow */}
+                <div className="absolute -top-24 -left-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl group-hover:bg-primary/30 transition-all duration-700" />
+                
+                <div className="home-hero-badge relative z-10 mb-6">
+                  <Sparkles size={14} />
+                  Welcome to {schoolName || 'Our School'}
+                </div>
 
-              <h1 className="home-hero-title text-gradient">
-                {landingContent.heroHeadline}
-                <span className="home-hero-title-accent">Est. 2011</span>
-              </h1>
+                <h1 className="home-hero-title text-gradient relative z-10 mb-6 !leading-[1.1]">
+                  {landingContent.heroHeadline}
+                  <div className="text-sm font-black text-primary/60 tracking-[0.3em] uppercase mt-4 block">Est. 2011 • Academic Excellence</div>
+                </h1>
 
-              <p className="home-hero-desc">
-                {landingContent.heroSubtext}
-              </p>
+                <p className="home-hero-desc relative z-10 text-slate-600 mb-10 max-w-lg leading-relaxed">
+                  {landingContent.heroSubtext}
+                </p>
 
-              <div className="home-hero-actions">
-                <button onClick={() => navigate('/check-result')} className="btn-glow flex items-center gap-2 group">
-                  Check Result
-                  <Search size={20} className="group-hover:rotate-12 transition-transform" />
-                </button>
-                <button onClick={() => navigate('/login')} className="bg-white text-slate-900 border-2 border-slate-100 px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm active:scale-95">
-                  <LogIn size={20} />
-                  Portal Access
-                </button>
-              </div>
+                <div className="home-hero-actions relative z-10 flex flex-wrap gap-4">
+                  <button onClick={() => navigate('/check-result')} className="btn-glow flex items-center gap-3 px-10 py-5 rounded-2xl group active:scale-95 transition-all">
+                    <span>Check Result</span>
+                    <Search size={22} className="group-hover:rotate-12 transition-transform" />
+                  </button>
+                  <button onClick={() => navigate('/login')} className="bg-white/80 backdrop-blur-md text-slate-900 border-2 border-slate-200/50 px-10 py-5 rounded-2xl font-black flex items-center gap-3 hover:bg-white hover:border-primary/30 transition-all shadow-sm active:scale-95">
+                    <LogIn size={22} className="text-primary" />
+                    Portal Access
+                  </button>
+                </div>
 
-              {/* Quick Links */}
-              <div className="flex flex-wrap gap-3 mt-8">
-                {quickLinks.map((link, idx) => (
-                  <Link key={idx} to={link.href} className="home-quick-link">
-                    {link.icon}
-                    {link.label}
-                  </Link>
-                ))}
+                {/* Quick Links with improved styling */}
+                <div className="flex flex-wrap gap-4 mt-12 relative z-10 pt-8 border-t border-slate-100/50">
+                  {quickLinks.map((link, idx) => (
+                    <Link key={idx} to={link.href} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-primary transition-colors py-2 px-4 rounded-xl bg-slate-50/50 border border-transparent hover:border-primary/10 hover:bg-white">
+                      {React.cloneElement(link.icon, { size: 14 })}
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </motion.div>
 

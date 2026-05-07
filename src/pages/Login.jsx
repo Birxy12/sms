@@ -6,7 +6,8 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 import { 
   User, Mail, Lock, GraduationCap, 
   ShieldCheck, ArrowRight, ChevronLeft, Loader2,
-  AlertCircle, HelpCircle, UserCheck, Wallet, Phone
+  AlertCircle, HelpCircle, UserCheck, Wallet, Phone,
+  Landmark, School, CheckCircle, Search
 } from 'lucide-react';
 import './Auth.css';
 import bdsLogo from '../assets/bdslogo.jpg';
@@ -146,11 +147,10 @@ const Login = () => {
     }
   };
 
-  const tabs = [
     { id: 'student', label: 'Student', icon: GraduationCap, color: 'indigo' },
     { id: 'teacher', label: 'Teacher', icon: UserCheck, color: 'rose' },
     { id: 'principal', label: 'Principal', icon: ShieldCheck, color: 'purple' },
-    { id: 'bursar', label: 'Bursar', icon: bank, color: 'emerald' },
+    { id: 'bursar', label: 'Bursar', icon: Landmark, color: 'emerald' },
     { id: 'admin', label: 'Admin', icon: ShieldCheck, color: 'blue' },
   ];
 
@@ -291,7 +291,7 @@ const Login = () => {
                     {/* Class */}
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                        <SchoolIcon size={12} className="text-indigo-500" />
+                        <School size={12} className="text-indigo-500" />
                         Academic Class
                       </label>
                       <div className="relative group">
@@ -307,7 +307,7 @@ const Login = () => {
                             <option key={c} value={c}>{c}</option>
                           ))}
                         </select>
-                        <SchoolIcon size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                          <School size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                       </div>
                     </div>
                     <button type="submit" disabled={loading} className="btn-glow w-full flex items-center justify-center gap-2">

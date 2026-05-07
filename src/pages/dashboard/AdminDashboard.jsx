@@ -9,7 +9,7 @@ import BulkUpload from '../../components/BulkUpload';
 import ScoreEntry from '../../components/ScoreEntry';
 import StaffDashboard from './StaffDashboard';
 import StudentDashboard from './StudentDashboard';
-import { Users, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock } from 'lucide-react';
+import { Users, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 const AdminDashboard = () => {
   const { currentAdmin, changePassword } = useAdminAuth();

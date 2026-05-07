@@ -182,8 +182,9 @@ a {
 }
 
 .card-white:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--primary-light);
+  transform: translateY(-4px);
 }
 
 .card-premium {
@@ -221,29 +222,33 @@ input:focus, select:focus, textarea:focus {
 
 /* Buttons */
 .btn-primary {
-  background: var(--primary);
-  color: white;
-  padding: 0.75rem 1.5rem;
-  border-radius: var(--radius-md);
-  font-weight: 800;
-  border: none;
-  cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+  gap: 0.75rem;
+  background: var(--primary);
+  color: white;
+  padding: 0.875rem 1.75rem;
+  border-radius: var(--radius-lg);
+  font-weight: 800;
+  font-family: var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px -3px hsla(var(--primary-h), var(--primary-s), var(--primary-l), 0.4);
 }
 
 .btn-primary:hover {
   background: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px hsla(var(--primary-h), var(--primary-s), var(--primary-l), 0.5);
 }
 
 .btn-primary:active {
-  transform: translateY(0);
+  transform: translateY(1px);
 }
 
 /* Advanced Components */

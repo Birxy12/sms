@@ -29,6 +29,7 @@ const Navbar = () => {
   const displayName = user?.name || user?.['STUDENT NAME'] || user?.email?.split('@')[0] || 'User';
   const userRole = isStudent ? 'Student' : 'Staff';
 
+  const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Check Result', path: '/check-result' },
     { name: 'About Us', path: '/about' },
