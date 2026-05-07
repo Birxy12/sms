@@ -366,6 +366,10 @@ const BulkUpload = ({ onComplete }) => {
             hasPending = false;
           }
         }
+        if (hasPending) {
+          await batch.commit();
+          hasPending = false;
+        }
       } else if (type === 'marksheet') {
         const validSubjects = getAllSubjects();
         const classSubjects = getSubjectsForClass(selectedClass).map(s => s.toUpperCase());
@@ -558,14 +562,10 @@ const BulkUpload = ({ onComplete }) => {
           await finalBatch.commit();
         }
 
-          console.log(`Matching results: Reg=${matchedByReg}, Name=${matchedByName}, Failed=${failedMatch}`);
-          if (failedMatch > 0) {
-            setStatus({ type: 'info', message: `Matched ${matchedByReg + matchedByName} students. ${failedMatch} could not be matched.` });
-          }
+        console.log(`Matching results: Reg=${matchedByReg}, Name=${matchedByName}, Failed=${failedMatch}`);
+        if (failedMatch > 0) {
+          setStatus({ type: 'info', message: `Matched ${matchedByReg + matchedByName} students. ${failedMatch} could not be matched.` });
         }
-
-      if (hasPending) {
-        await batch.commit();
       }
 
       setUploadProgress(100);
