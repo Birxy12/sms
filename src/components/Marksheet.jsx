@@ -45,7 +45,7 @@ const Marksheet = ({ className: propClassName }) => {
     setStatus({ type: 'info', message: 'Publishing results to student portals...' });
 
     try {
-      const pubId = `${selectedSession.replace('/', '-')}_${selectedTerm.replace(/\\s/g, '').toLowerCase()}_${selectedClass.replace(/\\s/g, '').toLowerCase()}`;
+      const pubId = `${selectedSession.replace('/', '-')}_${selectedTerm.replace(/\s/g, '').toLowerCase()}_${selectedClass.replace(/\s/g, '').toLowerCase()}`;
       const pubRef = doc(db, 'publications', pubId);
       
       await setDoc(pubRef, {

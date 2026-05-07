@@ -173,6 +173,7 @@ const ScoreEntry = () => {
 
         const sanitizedRegNo = student.regNo.replace(/\//g, '-');
         const id = `${sanitizedRegNo}_${safeSession}_${safeTerm}`;
+        const markRef = doc(collection(db, 'marks'), id);
         
         let grade = 'F9';
         if (total >= 75) grade = 'A';
@@ -184,37 +185,42 @@ const ScoreEntry = () => {
         else if (total >= 40) grade = 'D7';
         else if (total >= 35) grade = 'E8';
 
-        const existingMarks = currentDbMarks[student.regNo] || {};
+        const subjectData = {
+          cat1,
+          cat2,
+          exam,
+          total,
+          percent: total,
+          grade,
+          updatedAt: new Date().toISOString()
+        };
 
-        recordsToUpsert.push({
-          id: id,
-          reg_no: student.regNo,
-          student_name: student.name,
-          class_name: selectedClass,
-          session: selectedSession,
-          term: selectedTerm,
-          marks: {
-            ...existingMarks,
-            [selectedSubject]: {
-              cat1: cat1,
-              cat2: cat2,
-              exam,
-              total,
-              percent: total,
-              grade,
-              updatedAt: new Date().toISOString()
-            }
-          },
-          updated_at: new Date().toISOString()
-        });
+        if (currentDbMarks[student.regNo]) {
+          // Document exists, update only the specific subject inside 'marks' map
+          batch.update(markRef, {
+            [`marks.${selectedSubject}`]: subjectData,
+            updated_at: new Date().toISOString()
+          });
+        } else {
+          // New document, set full structure
+          batch.set(markRef, {
+            id,
+            reg_no: student.regNo,
+            student_name: student.name,
+            class_name: selectedClass,
+            session: selectedSession,
+            term: selectedTerm,
+            marks: {
+              [selectedSubject]: subjectData
+            },
+            updated_at: new Date().toISOString()
+          });
+          // Optimistically add to currentDbMarks to avoid double sets in this session
+          currentDbMarks[student.regNo] = { [selectedSubject]: subjectData };
+        }
       }
 
-      if (recordsToUpsert.length > 0) {
-        const batch = writeBatch(db);
-        for (const record of recordsToUpsert) {
-          const markRef = doc(collection(db, 'marks'), record.id);
-          batch.set(markRef, record, { merge: true });
-        }
+      if (students.length > 0) {
         await batch.commit();
       }
 

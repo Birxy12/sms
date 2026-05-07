@@ -538,18 +538,30 @@ const BulkUpload = ({ onComplete }) => {
 
           recordsToUpsert.push(firestoreRecord);
           hasPending = true;
-
           count++;
-          setUploadProgress(Math.round((i / rawData.length) * 100));
 
-          const batchMarks = writeBatch(db);
+          if (count % 450 === 0) {
+            const batchMarks = writeBatch(db);
+            recordsToUpsert.forEach(record => {
+              const markRef = doc(collection(db, 'marks'), record.id);
+              batchMarks.set(markRef, record, { merge: true });
+            });
+            await batchMarks.commit();
+            recordsToUpsert.length = 0;
+            hasPending = false;
+          }
+
+          setUploadProgress(Math.round((i / rawData.length) * 100));
+        }
+
+        if (hasPending && recordsToUpsert.length > 0) {
+          const finalBatch = writeBatch(db);
           recordsToUpsert.forEach(record => {
             const markRef = doc(collection(db, 'marks'), record.id);
-            batchMarks.set(markRef, record, { merge: true });
+            finalBatch.set(markRef, record, { merge: true });
           });
-          await batchMarks.commit();
-          recordsToUpsert.length = 0;
-          hasPending = false;
+          await finalBatch.commit();
+        }
 
           console.log(`Matching results: Reg=${matchedByReg}, Name=${matchedByName}, Failed=${failedMatch}`);
           if (failedMatch > 0) {
