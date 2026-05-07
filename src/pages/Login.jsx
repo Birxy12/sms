@@ -1,4 +1,4 @@
-// Force reload
+// Force build re-trigger for syntax verification
 import React, { useState } from 'react'; // Force reload
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
