@@ -4,7 +4,7 @@ import { Menu, Bell, LogIn, User, LogOut } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useStudentAuth } from '../context/StudentAuthContext';
-import bdsLogo from '../assets/bdslogo.jpg';
+import brandlogo from '../assets/bdslogo.jpg';
 import './navbar.css';
 
 const Navbar = () => {
@@ -95,13 +95,12 @@ const Navbar = () => {
   // ─── Render Helpers ──────────────────────────────────────────────
   const Logo = () => (
     <Link to="/" className="flex items-center gap-3 group">
-      <div className="relative overflow-hidden" style={{ borderRadius: '4px' }}>
+      <div className="relative overflow-hidden flex-shrink-0" style={{ borderRadius: '50%', height: '64px', width: '64px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
         <img
-          src={schoolLogo || bdsLogo}
+          src={schoolLogo || brandlogo}
           alt="Logo"
-          className="h-16 w-16 object-contain transition-transform duration-500 group-hover:scale-110"
+          className="h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-orange-500/0 group-hover:bg-orange-500/10 transition-colors duration-300" style={{ borderRadius: '4px' }} />
       </div>
       <div className="flex flex-col">
         <span
@@ -129,21 +128,17 @@ const Navbar = () => {
             key={link.name}
             to={link.path}
             className={`
-              relative px-4 py-2 rounded-full text-sm font-bold transition-all duration-300
+              relative px-4 py-2 rounded-full text-sm font-bold
               ${active
-                ? 'text-white'
+                ? 'text-white bg-orange-600 shadow-lg shadow-orange-500/30'
                 : 'hover:text-orange-600'
               }
             `}
             style={{
               color: active ? '#ffffff' : textColor,
-              animationDelay: `${i * 75}ms`,
               fontFamily: 'var(--font-heading)'
             }}
           >
-            {active && (
-              <span className="absolute inset-0 bg-orange-600 rounded-full shadow-lg shadow-orange-500/30 animate-scaleIn" />
-            )}
             <span className="relative z-10">{link.name}</span>
           </Link>
         );
@@ -218,7 +213,7 @@ const Navbar = () => {
     if (!isMobileMenuOpen) return null;
 
     return (
-      <div className="md:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-2xl border-t border-slate-100 shadow-2xl animate-slideDown">
+      <div className="md:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-2xl border-t border-slate-100 shadow-2xl">
         <div className="px-5 py-6 space-y-2 max-h-[calc(100vh-5rem)] overflow-y-auto">
           {/* User Card */}
           {user && (
@@ -293,7 +288,7 @@ const Navbar = () => {
   return (
     <>
       <nav
-        className="sticky top-0 left-0 right-0 z-50 transition-all duration-500 ease-out"
+        className="sticky top-0 left-0 right-0 z-50"
         style={getNavStyle()}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
