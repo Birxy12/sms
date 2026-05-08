@@ -30,75 +30,91 @@ const BlogPage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans mesh-bg">
       <Navbar />
 
       {/* Header */}
-      <div className="bg-slate-900 text-white py-20 text-center px-4 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-           <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-500 via-transparent to-transparent opacity-60"></div>
+      <section className="pt-32 pb-20 px-6">
+        <div className="max-w-7xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <div className="badge-premium mb-6">
+              <FileText size={14} />
+              Strategic Intelligence
+            </div>
+            <h1 className="text-5xl lg:text-7xl font-black text-slate-900 mb-8 uppercase tracking-tighter">
+              Campus <span className="text-gradient">Briefings</span>
+            </h1>
+            <p className="text-xl text-slate-500 leading-relaxed max-w-2xl mx-auto font-medium">
+              The authoritative source for academic updates, institutional breakthroughs, and community insights.
+            </p>
+          </motion.div>
         </div>
-        <div className="relative z-10 max-w-3xl mx-auto">
-          <div className="inline-block px-4 py-1.5 rounded-full bg-white/10 text-sm font-bold tracking-widest uppercase mb-6 backdrop-blur-md flex items-center gap-2 mx-auto w-fit">
-            <FileText size={16} /> Campus News
-          </div>
-          <h1 className="text-4xl md:text-6xl font-black tracking-tight mb-6">School Blog & Updates</h1>
-          <p className="text-lg md:text-xl text-slate-300">Stay informed on the latest events, achievements, and announcements.</p>
-        </div>
-      </div>
+      </section>
 
-      <div className="max-w-7xl mx-auto px-4 py-16">
+      <div className="max-w-7xl mx-auto px-6 pb-32">
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
              {[1, 2, 3].map(i => (
-               <div key={i} className="h-96 animate-pulse bg-slate-200 rounded-3xl"></div>
+               <div key={i} className="h-96 animate-pulse bg-white rounded-[3rem] shadow-sm"></div>
              ))}
           </div>
         ) : posts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
             {posts.map((post) => (
-              <div key={post.id} className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden group hover:shadow-xl transition-all duration-300 flex flex-col">
-                <div className="h-48 overflow-hidden relative">
+              <motion.div 
+                key={post.id} 
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="bg-white rounded-[3rem] shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden group hover:shadow-2xl transition-all duration-500 flex flex-col"
+              >
+                <div className="h-64 overflow-hidden relative">
                   {post.imageUrl ? (
-                     <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                     <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
                   ) : (
-                    <div className="w-full h-full bg-slate-100 flex items-center justify-center">
-                      <FileText size={48} className="text-slate-300" />
+                    <div className="w-full h-full bg-slate-50 flex items-center justify-center">
+                      <FileText size={48} className="text-slate-200" />
                     </div>
                   )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent"></div>
                   {post.category && (
-                    <span className="absolute top-4 left-4 bg-white/90 backdrop-blur text-indigo-700 text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm">
+                    <span className="absolute top-6 left-6 bg-white text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-xl shadow-lg">
                       {post.category}
                     </span>
                   )}
                 </div>
                 
-                <div className="p-8 flex flex-col flex-grow">
-                  <div className="flex items-center gap-4 text-xs font-bold text-slate-500 mb-4">
-                    <span className="flex items-center gap-1.5"><Calendar size={14} /> {new Date(post.createdAt).toLocaleDateString()}</span>
-                    <span className="flex items-center gap-1.5"><User size={14} /> {post.author || 'Admin'}</span>
+                <div className="p-10 flex flex-col flex-grow">
+                  <div className="flex items-center gap-6 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">
+                    <span className="flex items-center gap-2"><Calendar size={14} className="text-indigo-500" /> {new Date(post.createdAt).toLocaleDateString()}</span>
+                    <span className="flex items-center gap-2"><User size={14} className="text-indigo-500" /> {post.author || 'Admin'}</span>
                   </div>
-                  <h3 className="text-xl font-black text-slate-800 mb-3 line-clamp-2 leading-tight group-hover:text-indigo-600 transition-colors">
+                  <h3 className="text-2xl font-black text-slate-800 mb-4 line-clamp-2 leading-tight tracking-tight group-hover:text-indigo-600 transition-colors uppercase">
                     {post.title}
                   </h3>
-                  <p className="text-slate-500 mb-6 line-clamp-3 text-sm leading-relaxed flex-grow">
-                     {post.excerpt || (post.content ? post.content.replace(/<[^>]*>?/gm, '').substring(0, 120) + '...' : 'No content available')}
+                  <p className="text-slate-500 mb-8 line-clamp-3 text-sm leading-relaxed font-medium flex-grow">
+                     {post.excerpt || (post.content ? post.content.replace(/<[^>]*>?/gm, '').substring(0, 150) + '...' : 'Transmission pending further briefing.')}
                   </p>
-                  <button className="text-indigo-600 font-bold flex items-center gap-1 text-sm group-hover:gap-2 transition-all mt-auto w-fit">
-                    Read Full Article <ChevronRight size={16} />
+                  <button className="flex items-center gap-3 text-xs font-black text-indigo-600 uppercase tracking-[0.2em] group-hover:gap-6 transition-all mt-auto w-fit">
+                    Full Briefing <ChevronRight size={18} />
                   </button>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-20 bg-white rounded-3xl border border-slate-200 border-dashed">
-            <FileText size={48} className="mx-auto text-slate-300 mb-4" />
-            <h3 className="text-xl font-bold text-slate-700">No Posts Yet</h3>
-            <p className="text-slate-500">Check back later for updates and school news!</p>
+          <div className="text-center py-32 enterprise-card bg-white border-dashed border-2 border-slate-200">
+            <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center text-slate-200 mx-auto mb-8">
+              <FileText size={40} />
+            </div>
+            <h3 className="text-2xl font-black text-slate-400 uppercase tracking-tighter mb-2">No Active Briefings</h3>
+            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Awaiting tactical updates from administration.</p>
           </div>
         )}
-        </div>
+      </div>
       <Footer />
     </div>
   );

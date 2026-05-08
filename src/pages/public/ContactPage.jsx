@@ -49,97 +49,122 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="contact-page">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans mesh-bg">
       <Navbar />
 
-      <header className="contact-hero">
-        <div className="hero-content">
-          <h1>Let's Connect</h1>
-          <p>Have questions about admissions, fees, or our programs? Our team is ready to provide the answers you need.</p>
+      <section className="pt-32 pb-20 px-6">
+        <div className="max-w-7xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <div className="badge-premium mb-6">
+              <Mail size={14} />
+              Global Communications
+            </div>
+            <h1 className="text-5xl lg:text-7xl font-black text-slate-900 mb-8 uppercase tracking-tighter">
+              Let's Start a <br />
+              <span className="text-gradient">Conversation</span>
+            </h1>
+            <p className="text-xl text-slate-500 leading-relaxed max-w-2xl mx-auto font-medium">
+              Connect with our administrative teams and academic leaders to discuss your future at {schoolName}.
+            </p>
+          </motion.div>
         </div>
-      </header>
+      </section>
 
-      <main className="contact-grid">
-        <aside className="info-sidebar">
-          {loading ? (
-             <div className="info-card animate-pulse" style={{ height: '300px' }}></div>
-          ) : (
-            <>
-              <div className="info-card">
-                <div className="icon-wrapper" style={{ backgroundColor: '#eef2ff' }}>
-                  <MapPin className="text-indigo-600" />
+      <main className="max-w-7xl mx-auto px-6 pb-32">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+          {/* Info Sidebar */}
+          <aside className="lg:col-span-4 space-y-6">
+            {loading ? (
+               <div className="h-[600px] bg-white rounded-[3rem] animate-pulse"></div>
+            ) : (
+              <>
+                <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/40 group hover:shadow-2xl transition-all">
+                  <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 mb-8 group-hover:rotate-12 transition-transform">
+                    <MapPin size={24} />
+                  </div>
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Global Headquarters</h4>
+                  <p className="text-xl font-black text-slate-800 tracking-tight leading-snug">{contactData?.address}</p>
                 </div>
-                <h4>Our Campus</h4>
-                <p>{contactData?.address}</p>
-              </div>
 
-              <div className="info-card">
-                <div className="icon-wrapper" style={{ backgroundColor: '#ecfdf5' }}>
-                  <Phone className="text-emerald-600" />
+                <div className="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl group">
+                  <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center text-indigo-400 mb-8 group-hover:scale-110 transition-transform">
+                    <Phone size={24} />
+                  </div>
+                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Direct Hotline</h4>
+                  <p className="text-xl font-black tracking-tight">{contactData?.phone}</p>
                 </div>
-                <h4>Direct Contact</h4>
-                <p>{contactData?.phone}</p>
-              </div>
 
-              <div className="info-card">
-                <div className="icon-wrapper" style={{ backgroundColor: '#eff6ff' }}>
-                  <Mail className="text-blue-600" />
+                <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/40 group">
+                  <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-8 group-hover:rotate-12 transition-transform">
+                    <Mail size={24} />
+                  </div>
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Digital Correspondence</h4>
+                  <p className="text-xl font-black text-slate-800 tracking-tight">{contactData?.email}</p>
                 </div>
-                <h4>Email Support</h4>
-                <p>{contactData?.email}</p>
-              </div>
 
-              <div className="info-card">
-                <div className="icon-wrapper" style={{ backgroundColor: '#fffbeb' }}>
-                  <Clock className="text-amber-600" />
+                <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/40 group">
+                  <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 mb-8 group-hover:rotate-12 transition-transform">
+                    <Clock size={24} />
+                  </div>
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Institutional Hours</h4>
+                  <p className="text-xl font-black text-slate-800 tracking-tight">{contactData?.hours}</p>
                 </div>
-                <h4>Office Hours</h4>
-                <p>{contactData?.hours}</p>
+              </>
+            )}
+          </aside>
+
+          {/* Contact Form */}
+          <section className="lg:col-span-8">
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="enterprise-card bg-white p-12 lg:p-16"
+            >
+              <div className="mb-12">
+                <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tighter mb-4">Transmission Interface</h3>
+                <p className="text-slate-400 font-bold text-sm tracking-widest uppercase">Secure digital communication for institutional inquiries.</p>
               </div>
-            </>
-          )}
-        </aside>
+              
+              <form className="space-y-8" onSubmit={(e) => { e.preventDefault(); alert("Secure message transmitted successfully."); }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Full Legal Name</label>
+                    <input type="text" placeholder="John Doe" className="input-premium" required />
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Corporate Email</label>
+                    <input type="email" placeholder="john@example.com" className="input-premium" required />
+                  </div>
+                </div>
 
-        <section className="contact-form-container">
-          <div className="form-header">
-            <h3>Send a Message</h3>
-            <p>Fill out the form below and we'll reach out within 24 hours.</p>
-          </div>
-          
-          <form className="contact-form" onSubmit={(e) => { e.preventDefault(); alert("Message sent successfully!"); }}>
-            <div className="input-row">
-              <div className="input-group">
-                <label>Full Name</label>
-                <input type="text" placeholder="John Doe" required />
-              </div>
-              <div className="input-group">
-                <label>Email Address</label>
-                <input type="email" placeholder="john@example.com" required />
-              </div>
-            </div>
+                <div className="space-y-3">
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Inquiry Vector</label>
+                  <select className="input-premium appearance-none">
+                    <option>Strategic Admissions</option>
+                    <option>Financial Consultation</option>
+                    <option>Executive Support</option>
+                    <option>Talent Acquisition</option>
+                  </select>
+                </div>
 
-            <div className="input-group">
-              <label>Inquiry Subject</label>
-              <select>
-                <option>Admissions Inquiry</option>
-                <option>Tuition & Fees</option>
-                <option>General Support</option>
-                <option>Careers</option>
-              </select>
-            </div>
+                <div className="space-y-3">
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Detailed Briefing</label>
+                  <textarea placeholder="Describe the nature of your inquiry with precision..." rows="6" className="input-premium" required></textarea>
+                </div>
 
-            <div className="input-group">
-              <label>Your Message</label>
-              <textarea placeholder="Describe how we can help you..." rows="5" required></textarea>
-            </div>
-
-            <button type="submit" className="submit-btn" style={{ background: primaryColor }}>
-              <Send size={18} /> Send Message
-            </button>
-          </form>
-        </section>
+                <button type="submit" className="btn-glow w-full flex items-center justify-center gap-4 group">
+                  <span className="text-sm font-black uppercase tracking-[0.2em]">Transmit Briefing</span>
+                  <Send size={20} className="group-hover:translate-x-2 group-hover:-translate-y-1 transition-transform" />
+                </button>
+              </form>
+            </motion.div>
+          </section>
+        </div>
       </main>
-
       <Footer />
     </div>
   );
