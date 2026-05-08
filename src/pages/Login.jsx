@@ -8,12 +8,11 @@ import { useTheme } from '../context/ThemeContext';
 import { 
   GraduationCap, ShieldCheck, ArrowRight, ChevronLeft, Loader2,
   AlertCircle, HelpCircle, Phone, Lock, Mail, User, 
-  School, CheckCircle, Crown, Wallet, Eye, EyeOff
+  School, CheckCircle, Crown, Wallet, Eye, EyeOff, ChevronDown
 } from 'lucide-react';
 import './Auth.css';
 import bdsLogo from '../assets/bdslogo.jpg';
 
-/* ── Google G Icon ── */
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -23,13 +22,21 @@ const GoogleIcon = () => (
   </svg>
 );
 
-/* ── Role Configurations ── */
 const ROLES = [
   { id: 'student', label: 'Student', icon: GraduationCap, color: '#4f46e5' },
   { id: 'teacher', label: 'Teacher', icon: School, color: '#059669' },
   { id: 'principal', label: 'Principal', icon: Crown, color: '#d97706' },
   { id: 'bursar', label: 'Bursar', icon: Wallet, color: '#dc2626' },
   { id: 'admin', label: 'Admin', icon: ShieldCheck, color: '#7c3aed' },
+];
+
+const CLASS_OPTIONS = [
+  'Grade 1A', 'Grade 1B', 'Grade 2A', 'Grade 2B',
+  'Grade 3A', 'Grade 3B', 'Grade 4A', 'Grade 4B',
+  'Grade 5A', 'Grade 5B', 'Grade 6A', 'Grade 6B',
+  'JSS 1A', 'JSS 1B', 'JSS 2A', 'JSS 2B',
+  'JSS 3A', 'JSS 3B', 'SSS 1A', 'SSS 1B',
+  'SSS 2A', 'SSS 2B', 'SSS 3A', 'SSS 3B'
 ];
 
 const Login = () => {
@@ -110,6 +117,10 @@ const Login = () => {
 
   const handlePinSubmit = async (e) => {
     e.preventDefault();
+    if (formData.pin.length !== 6) {
+      setError('PIN must be exactly 6 digits');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -128,13 +139,17 @@ const Login = () => {
 
   const handleForgotPin = async (e) => {
     e.preventDefault();
+    if (formData.newPin.length !== 6) {
+      setError('New PIN must be exactly 6 digits');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
       const result = await studentAuth.resetPin(formData.securityAnswer, formData.newPin);
       if (result.success) {
         setLoginStep('pin');
-        setError('PIN reset successfully. Please enter your new PIN.');
+        setError('PIN reset successfully. Please enter your new 6-digit PIN.');
       } else {
         setError(result.message || 'Failed to reset PIN');
       }
@@ -162,7 +177,7 @@ const Login = () => {
     }
   };
 
-  const InputField = ({ label, name, type = 'text', placeholder, icon: Icon, required = true }) => (
+  const InputField = ({ label, name, type = 'text', placeholder, icon: Icon, required = true, maxLength, pattern, inputMode }) => (
     <div className="input-wrapper">
       <label className="input-label">
         <Icon size={14} />
@@ -176,6 +191,9 @@ const Login = () => {
           onChange={handleInputChange}
           placeholder={placeholder}
           required={required}
+          maxLength={maxLength}
+          pattern={pattern}
+          inputMode={inputMode}
           className="modern-input"
         />
         {type === 'password' && (
@@ -191,6 +209,30 @@ const Login = () => {
     </div>
   );
 
+  const SelectField = ({ label, name, options, icon: Icon, required = true }) => (
+    <div className="input-wrapper">
+      <label className="input-label">
+        <Icon size={14} />
+        {label}
+      </label>
+      <div className="input-container select-container">
+        <select
+          name={name}
+          value={formData[name]}
+          onChange={handleInputChange}
+          required={required}
+          className="modern-input select-input"
+        >
+          <option value="" disabled>Select your class</option>
+          {options.map((opt) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+        <ChevronDown size={16} className="select-chevron" />
+      </div>
+    </div>
+  );
+
   return (
     <div className="auth-page">
       <motion.div 
@@ -199,7 +241,6 @@ const Login = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       >
-        {/* Single Small Logo Header */}
         <div className="auth-header">
           <motion.div 
             className="logo-badge"
@@ -213,7 +254,6 @@ const Login = () => {
           <p className="subtitle">Enterprise Portal</p>
         </div>
 
-        {/* Role Selector */}
         <div className="role-selector">
           <p className="role-label">Select Role</p>
           <div className="role-grid">
@@ -261,8 +301,18 @@ const Login = () => {
             >
               {isStudent ? (
                 <form onSubmit={handleLogin} className="auth-form">
-                  <InputField label="Reg Number" name="regNo" placeholder="BDS/2024/001" icon={User} />
-                  <InputField label="Class" name="className" placeholder="Grade 10A" icon={School} />
+                  <InputField
+                    label="Registration Number"
+                    name="regNo"
+                    placeholder="BDS/2024/001"
+                    icon={User}
+                  />
+                  <SelectField
+                    label="Class"
+                    name="className"
+                    options={CLASS_OPTIONS}
+                    icon={School}
+                  />
                   
                   <motion.button
                     type="submit"
@@ -348,12 +398,50 @@ const Login = () => {
                 <p>{securityQuestion}</p>
               </div>
 
-              <InputField label="PIN" name="pin" type="password" placeholder="••••" icon={Lock} />
+              <div className="input-wrapper">
+                <label className="input-label">
+                  <Lock size={14} />
+                  Enter 6-Digit PIN
+                </label>
+                <div className="pin-inputs">
+                  {[0, 1, 2, 3, 4, 5].map((i) => (
+                    <input
+                      key={i}
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={1}
+                      className="pin-digit"
+                      value={formData.pin[i] || ''}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        if (val.length <= 1) {
+                          const newPin = formData.pin.split('');
+                          newPin[i] = val;
+                          const joined = newPin.join('').slice(0, 6);
+                          setFormData({ ...formData, pin: joined });
+                          setError('');
+                          if (val && i < 5) {
+                            const next = e.target.parentElement?.nextElementSibling?.querySelector('input');
+                            next?.focus();
+                          }
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Backspace' && !formData.pin[i] && i > 0) {
+                          const prev = e.target.parentElement?.previousElementSibling?.querySelector('input');
+                          prev?.focus();
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
 
               <motion.button
                 type="submit"
                 className="submit-btn"
-                disabled={loading}
+                disabled={loading || formData.pin.length !== 6}
                 whileHover={{ y: -1 }}
                 whileTap={{ scale: 0.98 }}
                 style={{ background: currentRole.color }}
@@ -385,13 +473,52 @@ const Login = () => {
                 <p>Reset your PIN</p>
               </div>
 
-              <InputField label={securityQuestion} name="securityAnswer" placeholder="Answer" icon={HelpCircle} />
-              <InputField label="New PIN" name="newPin" type="password" placeholder="4 digits" icon={Lock} />
+              <InputField label={securityQuestion} name="securityAnswer" placeholder="Your answer" icon={HelpCircle} />
+              
+              <div className="input-wrapper">
+                <label className="input-label">
+                  <Lock size={14} />
+                  New 6-Digit PIN
+                </label>
+                <div className="pin-inputs">
+                  {[0, 1, 2, 3, 4, 5].map((i) => (
+                    <input
+                      key={i}
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={1}
+                      className="pin-digit"
+                      value={formData.newPin[i] || ''}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        if (val.length <= 1) {
+                          const newPinArr = formData.newPin.split('');
+                          newPinArr[i] = val;
+                          const joined = newPinArr.join('').slice(0, 6);
+                          setFormData({ ...formData, newPin: joined });
+                          setError('');
+                          if (val && i < 5) {
+                            const next = e.target.parentElement?.nextElementSibling?.querySelector('input');
+                            next?.focus();
+                          }
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Backspace' && !formData.newPin[i] && i > 0) {
+                          const prev = e.target.parentElement?.previousElementSibling?.querySelector('input');
+                          prev?.focus();
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
 
               <motion.button
                 type="submit"
                 className="submit-btn"
-                disabled={loading}
+                disabled={loading || formData.newPin.length !== 6}
                 whileHover={{ y: -1 }}
                 whileTap={{ scale: 0.98 }}
                 style={{ background: currentRole.color }}
