@@ -1,15 +1,14 @@
-// Force build re-trigger for syntax verification
-import React, { useState } from 'react'; // Force reload
+// src/pages/Login.jsx
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { useStudentAuth } from '../context/StudentAuthContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { 
-  User, Mail, Lock, GraduationCap, 
-  ShieldCheck, ArrowRight, ChevronLeft, Loader2,
-  AlertCircle, HelpCircle, Phone,
-  School, CheckCircle
+  GraduationCap, ShieldCheck, ArrowRight, ChevronLeft, Loader2,
+  AlertCircle, HelpCircle, Phone, Lock, Mail, User, 
+  School, CheckCircle, Crown, Wallet, Landmark, Eye, EyeOff
 } from 'lucide-react';
 import './Auth.css';
 import bdsLogo from '../assets/bdslogo.jpg';
@@ -24,10 +23,20 @@ const GoogleIcon = () => (
   </svg>
 );
 
+/* ── Role Configurations ── */
+const ROLES = [
+  { id: 'student', label: 'Student', icon: GraduationCap, color: '#4f46e5', gradient: 'from-indigo-500 to-purple-600' },
+  { id: 'teacher', label: 'Teacher', icon: School, color: '#059669', gradient: 'from-emerald-500 to-teal-600' },
+  { id: 'principal', label: 'Principal', icon: Crown, color: '#d97706', gradient: 'from-amber-500 to-orange-600' },
+  { id: 'bursar', label: 'Bursar', icon: Wallet, color: '#dc2626', gradient: 'from-rose-500 to-red-600' },
+  { id: 'admin', label: 'Admin', icon: ShieldCheck, color: '#7c3aed', gradient: 'from-violet-500 to-purple-600' },
+];
+
 const Login = () => {
-  const [loginType, setLoginType] = useState('student');
-  const [staffLoginMode, setStaffLoginMode] = useState('email'); // 'email' | 'phone'
-  const [loginStep, setLoginStep] = useState('id'); // 'id', 'pin', 'forgot_pin'
+  const [selectedRole, setSelectedRole] = useState('student');
+  const [loginStep, setLoginStep] = useState('credentials'); // 'credentials', 'pin', 'forgot_pin'
+  const [staffMode, setStaffMode] = useState('email'); // 'email' | 'phone'
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ 
     regNo: '', className: '', email: '', password: '', phone: '',
     pin: '', securityAnswer: '', newPin: '' 
@@ -36,14 +45,14 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [hoveredField, setHoveredField] = useState(null);
 
   const navigate = useNavigate();
   const studentAuth = useStudentAuth();
   const adminAuth = useAdminAuth();
   const { schoolName } = useTheme();
 
-  const isStaff = loginType !== 'student';
+  const currentRole = ROLES.find(r => r.id === selectedRole);
+  const isStudent = selectedRole === 'student';
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -51,10 +60,14 @@ const Login = () => {
   };
 
   const navigateByRole = (role) => {
-    if (role === 'admin') navigate('/admin');
-    else if (role === 'principal') navigate('/principal');
-    else if (role === 'bursar') navigate('/finance');
-    else navigate('/teachers');
+    const routes = {
+      admin: '/admin',
+      principal: '/principal',
+      bursar: '/finance',
+      teacher: '/teachers',
+      student: '/student'
+    };
+    navigate(routes[role] || '/');
   };
 
   const handleLogin = async (e) => {
@@ -62,7 +75,7 @@ const Login = () => {
     setLoading(true);
     setError('');
     try {
-      if (loginType === 'student') {
+      if (isStudent) {
         const result = await studentAuth.login(formData.regNo, formData.className);
         if (result.success) {
           if (result.requirePin) {
@@ -75,16 +88,15 @@ const Login = () => {
           setError(result.message || 'Login failed');
         }
       } else {
-        // Staff login (email or phone)
+        // Staff login
         let result;
-        if (staffLoginMode === 'email') {
-          result = await adminAuth.login(formData.email, formData.password);
+        if (staffMode === 'email') {
+          result = await adminAuth.login(formData.email, formData.password, selectedRole);
         } else {
-          result = await adminAuth.loginWithPhone(formData.phone, formData.password);
+          result = await adminAuth.loginWithPhone(formData.phone, formData.password, selectedRole);
         }
-        
         if (result.success) {
-          navigateByRole(result.role);
+          navigateByRole(selectedRole);
         } else {
           setError(result.message || 'Login failed');
         }
@@ -120,10 +132,7 @@ const Login = () => {
     setLoading(true);
     setError('');
     try {
-      const result = await studentAuth.resetPin(
-        formData.securityAnswer,
-        formData.newPin
-      );
+      const result = await studentAuth.resetPin(formData.securityAnswer, formData.newPin);
       if (result.success) {
         setLoginStep('pin');
         setError('PIN reset successfully. Please enter your new PIN.');
@@ -154,170 +163,322 @@ const Login = () => {
     }
   };
 
-  // ─── Render ───
+  // ─── Floating Logos Background ───
+  const FloatingLogos = () => (
+    <div className="floating-logos-container">
+      {[...Array(8)].map((_, i) => (
+        <div key={i} className={`floating-logo logo-${i + 1}`}>
+          <img src={bdsLogo} alt="" />
+        </div>
+      ))}
+    </div>
+  );
+
+  // ─── Role Selector ───
+  const RoleSelector = () => (
+    <div className="role-selector">
+      <p className="role-label">Select your role</p>
+      <div className="role-grid">
+        {ROLES.map((role) => {
+          const Icon = role.icon;
+          const isActive = selectedRole === role.id;
+          return (
+            <motion.button
+              key={role.id}
+              type="button"
+              className={`role-card ${isActive ? 'active' : ''}`}
+              onClick={() => {
+                setSelectedRole(role.id);
+                setLoginStep('credentials');
+                setError('');
+              }}
+              whileHover={{ y: -4, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <div 
+                className="role-icon-wrapper"
+                style={{ 
+                  background: isActive ? role.color : '#f1f5f9',
+                  color: isActive ? '#fff' : '#64748b'
+                }}
+              >
+                <Icon size={22} strokeWidth={2.5} />
+              </div>
+              <span className="role-name">{role.label}</span>
+              {isActive && (
+                <motion.div 
+                  className="role-indicator"
+                  layoutId="activeRole"
+                  style={{ background: role.color }}
+                />
+              )}
+            </motion.button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  // ─── Input Field Component ───
+  const InputField = ({ label, name, type = 'text', placeholder, icon: Icon, required = true }) => (
+    <div className="input-wrapper">
+      <label className="input-label">
+        <Icon size={14} />
+        {label}
+      </label>
+      <div className="input-container">
+        <input
+          type={type === 'password' && showPassword ? 'text' : type}
+          name={name}
+          value={formData[name]}
+          onChange={handleInputChange}
+          placeholder={placeholder}
+          required={required}
+          className="modern-input"
+        />
+        {type === 'password' && (
+          <button
+            type="button"
+            className="password-toggle"
+            onClick={() => setShowPassword(!showPassword)}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="auth-page">
+      <FloatingLogos />
+      
       <motion.div 
         className="auth-card"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
       >
         {/* Header */}
         <div className="auth-header">
-          <img src={bdsLogo} alt="School Logo" className="auth-logo" />
-          <h1>{schoolName || 'School Management System'}</h1>
-          <p>Welcome back! Please sign in to continue.</p>
+          <motion.div 
+            className="logo-glow"
+            animate={{ 
+              boxShadow: [
+                `0 0 20px ${currentRole.color}40`,
+                `0 0 40px ${currentRole.color}60`,
+                `0 0 20px ${currentRole.color}40`
+              ]
+            }}
+            transition={{ duration: 3, repeat: Infinity }}
+          >
+            <img src={bdsLogo} alt="School Logo" className="auth-logo" />
+          </motion.div>
+          <h1>{schoolName || 'Bright Day School'}</h1>
+          <p className="subtitle">Enterprise Management Portal</p>
         </div>
 
-        {/* Login Type Toggle */}
-        <div className="login-type-toggle">
-          <button
-            className={loginType === 'student' ? 'active' : ''}
-            onClick={() => {
-              setLoginType('student');
-              setLoginStep('id');
-              setError('');
-            }}
-          >
-            <GraduationCap size={18} />
-            Student
-          </button>
-          <button
-            className={loginType === 'staff' ? 'active' : ''}
-            onClick={() => {
-              setLoginType('staff');
-              setStaffLoginMode('email');
-              setError('');
-            }}
-          >
-            <ShieldCheck size={18} />
-            Staff
-          </button>
-        </div>
+        <RoleSelector />
 
         <AnimatePresence mode="wait">
-          {/* ─── STUDENT LOGIN ─── */}
-          {loginType === 'student' && loginStep === 'id' && (
-            <motion.form
-              key="student-id"
+          {/* ─── CREDENTIALS STEP ─── */}
+          {loginStep === 'credentials' && (
+            <motion.div
+              key="credentials"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              onSubmit={handleLogin}
-              className="auth-form"
+              transition={{ duration: 0.3 }}
             >
-              <div className="form-group">
-                <label>
-                  <User size={16} />
-                  Registration Number
-                </label>
-                <input
-                  type="text"
-                  name="regNo"
-                  value={formData.regNo}
-                  onChange={handleInputChange}
-                  placeholder="Enter registration number"
-                  required
-                />
-              </div>
+              {isStudent ? (
+                /* ─── Student Login ─── */
+                <form onSubmit={handleLogin} className="auth-form">
+                  <InputField
+                    label="Registration Number"
+                    name="regNo"
+                    placeholder="e.g., BDS/2024/001"
+                    icon={User}
+                  />
+                  <InputField
+                    label="Class Name"
+                    name="className"
+                    placeholder="e.g., Grade 10A"
+                    icon={School}
+                  />
+                  
+                  <motion.button
+                    type="submit"
+                    className="submit-btn"
+                    disabled={loading}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    style={{ 
+                      background: `linear-gradient(135deg, ${currentRole.color}, ${currentRole.color}dd)`,
+                      boxShadow: `0 12px 24px -6px ${currentRole.color}50`
+                    }}
+                  >
+                    {loading ? (
+                      <Loader2 className="spin" size={20} />
+                    ) : (
+                      <>
+                        Continue <ArrowRight size={18} />
+                      </>
+                    )}
+                  </motion.button>
 
-              <div className="form-group">
-                <label>
-                  <School size={16} />
-                  Class Name
-                </label>
-                <input
-                  type="text"
-                  name="className"
-                  value={formData.className}
-                  onChange={handleInputChange}
-                  placeholder="e.g., Grade 10A"
-                  required
-                />
-              </div>
+                  <div className="divider">
+                    <span>or continue with</span>
+                  </div>
 
-              <button type="submit" className="auth-btn primary" disabled={loading}>
-                {loading ? <Loader2 className="spin" size={20} /> : <ArrowRight size={20} />}
-                Continue
-              </button>
+                  <motion.button
+                    type="button"
+                    className="google-btn"
+                    onClick={handleGoogleLogin}
+                    disabled={googleLoading}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {googleLoading ? (
+                      <Loader2 className="spin" size={18} />
+                    ) : (
+                      <>
+                        <GoogleIcon />
+                        Google Sign In
+                      </>
+                    )}
+                  </motion.button>
+                </form>
+              ) : (
+                /* ─── Staff Login ─── */
+                <form onSubmit={handleLogin} className="auth-form">
+                  {/* Staff Mode Toggle */}
+                  <div className="staff-mode-toggle">
+                    <button
+                      type="button"
+                      className={staffMode === 'email' ? 'active' : ''}
+                      onClick={() => setStaffMode('email')}
+                    >
+                      <Mail size={14} /> Email
+                    </button>
+                    <button
+                      type="button"
+                      className={staffMode === 'phone' ? 'active' : ''}
+                      onClick={() => setStaffMode('phone')}
+                    >
+                      <Phone size={14} /> Phone
+                    </button>
+                  </div>
 
-              <div className="divider">
-                <span>or</span>
-              </div>
+                  {staffMode === 'email' ? (
+                    <InputField
+                      label="Email Address"
+                      name="email"
+                      type="email"
+                      placeholder="staff@school.edu"
+                      icon={Mail}
+                    />
+                  ) : (
+                    <InputField
+                      label="Phone Number"
+                      name="phone"
+                      type="tel"
+                      placeholder="+234 800 000 0000"
+                      icon={Phone}
+                    />
+                  )}
 
-              <button
-                type="button"
-                className="auth-btn google"
-                onClick={handleGoogleLogin}
-                disabled={googleLoading}
-              >
-                {googleLoading ? <Loader2 className="spin" size={20} /> : <GoogleIcon />}
-                Sign in with Google
-              </button>
-            </motion.form>
+                  <InputField
+                    label="Password"
+                    name="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    icon={Lock}
+                  />
+
+                  <div className="form-options">
+                    <label className="remember-me">
+                      <input type="checkbox" />
+                      <span>Remember me</span>
+                    </label>
+                    <Link to="/forgot-password" className="forgot-link">
+                      Forgot password?
+                    </Link>
+                  </div>
+
+                  <motion.button
+                    type="submit"
+                    className="submit-btn"
+                    disabled={loading}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    style={{ 
+                      background: `linear-gradient(135deg, ${currentRole.color}, ${currentRole.color}dd)`,
+                      boxShadow: `0 12px 24px -6px ${currentRole.color}50`
+                    }}
+                  >
+                    {loading ? (
+                      <Loader2 className="spin" size={20} />
+                    ) : (
+                      <>
+                        Sign In as {currentRole.label}
+                        <ArrowRight size={18} />
+                      </>
+                    )}
+                  </motion.button>
+                </form>
+              )}
+            </motion.div>
           )}
 
-          {/* ─── STUDENT PIN STEP ─── */}
-          {loginType === 'student' && loginStep === 'pin' && (
+          {/* ─── PIN STEP ─── */}
+          {loginStep === 'pin' && (
             <motion.form
-              key="student-pin"
+              key="pin"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               onSubmit={handlePinSubmit}
               className="auth-form"
             >
-              <button
-                type="button"
-                className="back-btn"
-                onClick={() => setLoginStep('id')}
-              >
-                <ChevronLeft size={16} />
-                Back
+              <button type="button" className="back-btn" onClick={() => setLoginStep('credentials')}>
+                <ChevronLeft size={16} /> Back to login
               </button>
 
-              <div className="security-info">
+              <div className="security-banner">
                 <HelpCircle size={20} />
                 <p>{securityQuestion}</p>
               </div>
 
-              <div className="form-group">
-                <label>
-                  <Lock size={16} />
-                  Enter PIN
-                </label>
-                <input
-                  type="password"
-                  name="pin"
-                  value={formData.pin}
-                  onChange={handleInputChange}
-                  placeholder="Enter your 4-digit PIN"
-                  maxLength={4}
-                  required
-                />
-              </div>
+              <InputField
+                label="Enter PIN"
+                name="pin"
+                type="password"
+                placeholder="••••"
+                icon={Lock}
+              />
 
-              <button type="submit" className="auth-btn primary" disabled={loading}>
-                {loading ? <Loader2 className="spin" size={20} /> : <CheckCircle size={20} />}
-                Verify
-              </button>
-
-              <button
-                type="button"
-                className="text-link"
-                onClick={() => {
-                  setLoginStep('forgot_pin');
-                  setFormData({ ...formData, pin: '' });
+              <motion.button
+                type="submit"
+                className="submit-btn"
+                disabled={loading}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                style={{ 
+                  background: `linear-gradient(135deg, ${currentRole.color}, ${currentRole.color}dd)`,
+                  boxShadow: `0 12px 24px -6px ${currentRole.color}50`
                 }}
               >
-                Forgot PIN?
+                {loading ? <Loader2 className="spin" size={20} /> : <><CheckCircle size={18} /> Verify</>}
+              </motion.button>
+
+              <button type="button" className="text-link" onClick={() => setLoginStep('forgot_pin')}>
+                Forgot your PIN?
               </button>
             </motion.form>
           )}
 
           {/* ─── FORGOT PIN ─── */}
-          {loginType === 'student' && loginStep === 'forgot_pin' && (
+          {loginStep === 'forgot_pin' && (
             <motion.form
               key="forgot-pin"
               initial={{ opacity: 0, x: 20 }}
@@ -326,143 +487,43 @@ const Login = () => {
               onSubmit={handleForgotPin}
               className="auth-form"
             >
-              <button
-                type="button"
-                className="back-btn"
-                onClick={() => setLoginStep('pin')}
-              >
-                <ChevronLeft size={16} />
-                Back
+              <button type="button" className="back-btn" onClick={() => setLoginStep('pin')}>
+                <ChevronLeft size={16} /> Back
               </button>
 
-              <div className="security-info">
+              <div className="security-banner alert">
                 <AlertCircle size={20} />
                 <p>Answer your security question to reset PIN</p>
               </div>
 
-              <div className="form-group">
-                <label>
-                  <HelpCircle size={16} />
-                  {securityQuestion}
-                </label>
-                <input
-                  type="text"
-                  name="securityAnswer"
-                  value={formData.securityAnswer}
-                  onChange={handleInputChange}
-                  placeholder="Your answer"
-                  required
-                />
-              </div>
+              <InputField
+                label={securityQuestion}
+                name="securityAnswer"
+                placeholder="Your answer"
+                icon={HelpCircle}
+              />
 
-              <div className="form-group">
-                <label>
-                  <Lock size={16} />
-                  New PIN
-                </label>
-                <input
-                  type="password"
-                  name="newPin"
-                  value={formData.newPin}
-                  onChange={handleInputChange}
-                  placeholder="Enter new 4-digit PIN"
-                  maxLength={4}
-                  required
-                />
-              </div>
+              <InputField
+                label="New PIN"
+                name="newPin"
+                type="password"
+                placeholder="Enter new 4-digit PIN"
+                icon={Lock}
+              />
 
-              <button type="submit" className="auth-btn primary" disabled={loading}>
-                {loading ? <Loader2 className="spin" size={20} /> : <CheckCircle size={20} />}
-                Reset PIN
-              </button>
-            </motion.form>
-          )}
-
-          {/* ─── STAFF LOGIN ─── */}
-          {loginType === 'staff' && (
-            <motion.form
-              key="staff-login"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              onSubmit={handleLogin}
-              className="auth-form"
-            >
-              {/* Staff login mode toggle */}
-              <div className="staff-mode-toggle">
-                <button
-                  type="button"
-                  className={staffLoginMode === 'email' ? 'active' : ''}
-                  onClick={() => setStaffLoginMode('email')}
-                >
-                  <Mail size={14} />
-                  Email
-                </button>
-                <button
-                  type="button"
-                  className={staffLoginMode === 'phone' ? 'active' : ''}
-                  onClick={() => setStaffLoginMode('phone')}
-                >
-                  <Phone size={14} />
-                  Phone
-                </button>
-              </div>
-
-              {staffLoginMode === 'email' ? (
-                <div className="form-group">
-                  <label>
-                    <Mail size={16} />
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="staff@school.edu"
-                    required
-                  />
-                </div>
-              ) : (
-                <div className="form-group">
-                  <label>
-                    <Phone size={16} />
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="+234..."
-                    required
-                  />
-                </div>
-              )}
-
-              <div className="form-group">
-                <label>
-                  <Lock size={16} />
-                  Password
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  placeholder="Enter password"
-                  required
-                />
-              </div>
-
-              <button type="submit" className="auth-btn primary" disabled={loading}>
-                {loading ? <Loader2 className="spin" size={20} /> : <ArrowRight size={20} />}
-                Sign In
-              </button>
-
-              <Link to="/forgot-password" className="text-link">
-                Forgot password?
-              </Link>
+              <motion.button
+                type="submit"
+                className="submit-btn"
+                disabled={loading}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                style={{ 
+                  background: `linear-gradient(135deg, ${currentRole.color}, ${currentRole.color}dd)`,
+                  boxShadow: `0 12px 24px -6px ${currentRole.color}50`
+                }}
+              >
+                {loading ? <Loader2 className="spin" size={20} /> : <><CheckCircle size={18} /> Reset PIN</>}
+              </motion.button>
             </motion.form>
           )}
         </AnimatePresence>
@@ -472,9 +533,9 @@ const Login = () => {
           {error && (
             <motion.div
               className="auth-error"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, y: -10, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              exit={{ opacity: 0, y: -10, height: 0 }}
             >
               <AlertCircle size={16} />
               {error}
@@ -484,7 +545,8 @@ const Login = () => {
 
         {/* Footer */}
         <div className="auth-footer">
-          <p>Don't have an account? <Link to="/register">Contact administration</Link></p>
+          <p>Protected by enterprise-grade security</p>
+          <p className="copyright">© {new Date().getFullYear()} {schoolName || 'Bright Day School'}</p>
         </div>
       </motion.div>
     </div>
