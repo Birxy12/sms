@@ -71,97 +71,93 @@ const CheckResult = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Navbar />
-      
-      <main className="flex-1 flex items-center justify-center p-6 py-20 relative overflow-hidden">
-        {/* Animated Background Elements */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <motion.div 
-            animate={{ 
-              scale: [1, 1.2, 1],
-              rotate: [0, 90, 0],
-              opacity: [0.03, 0.05, 0.03]
-            }}
-            transition={{ duration: 20, repeat: Infinity }}
-            className="absolute -top-20 -left-20 w-96 h-96 rounded-full border-[40px] border-indigo-500"
-          />
-          <motion.div 
-            animate={{ 
-              scale: [1, 1.1, 1],
-              x: [0, 50, 0],
-              opacity: [0.02, 0.04, 0.02]
-            }}
-            transition={{ duration: 15, repeat: Infinity }}
-            className="absolute -bottom-20 -right-20 w-[500px] h-[500px] rounded-full bg-indigo-500"
-          />
+    <div className="min-h-screen bg-background text-on-surface font-body-md selection:bg-primary-container selection:text-on-primary-container overflow-x-hidden flex flex-col">
+      {/* TopAppBar Shell (Suppressed Navigation Links for Transactional Focus) */}
+      <header className="bg-white/70 backdrop-blur-xl dark:bg-surface-container/70 fixed top-0 w-full z-50 border-b border-surface-variant/30 shadow-sm">
+        <div className="flex items-center justify-between px-margin-mobile md:px-gutter h-20 w-full max-w-container-max-width mx-auto">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-primary font-headline-md">school</span>
+            <span className="font-headline-md text-headline-md font-bold text-primary">{schoolName || 'Bonus Dominus Schools'}</span>
+          </div>
+          <button className="bg-primary text-on-primary px-6 py-2.5 rounded-full font-label-md hover:bg-primary/90 transition-all active:scale-95 shadow-sm">
+            Portal Access
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content Canvas */}
+      <main className="flex-grow pt-32 pb-section-padding bg-mesh relative flex items-center justify-center">
+        {/* Background Decorations */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-3xl"></div>
+          <div className="absolute top-[20%] -right-[5%] w-[30%] h-[30%] bg-tertiary/5 rounded-full blur-3xl"></div>
         </div>
 
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md relative z-10"
-        >
-          {/* Brand/Title */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-3xl shadow-xl shadow-indigo-100 border border-indigo-50 mb-4">
-              <ShieldCheck size={32} className="text-indigo-600" />
+        <div className="relative z-10 w-full max-w-[520px] px-margin-mobile">
+          {/* Header Section */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center text-center mb-10"
+          >
+            <div className="w-16 h-16 bg-white rounded-2xl shadow-lg flex items-center justify-center mb-6 border border-outline-variant/30">
+              <ShieldCheck size={32} className="text-primary" />
             </div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">
-              Result <span className="text-indigo-600">Checker</span>
-            </h1>
-            <p className="text-slate-500 font-bold text-sm mt-2 uppercase tracking-widest">
-              Secure Academic Access Portal
-            </p>
-          </div>
+            <h1 className="font-display-lg text-display-lg text-primary tracking-tight mb-2 uppercase">Result Checker</h1>
+            <p className="font-body-lg text-on-surface-variant max-w-[320px]">Secure Academic Access Portal</p>
+          </motion.div>
 
           {/* Form Card */}
-          <div className="bg-white rounded-[2rem] shadow-2xl shadow-slate-200/50 border border-slate-100 p-8 md:p-10 relative overflow-hidden">
-            {/* Design accents */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-bl-full -mr-16 -mt-16" />
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-surface-container-lowest rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-outline-variant/20 p-8 md:p-10 relative overflow-hidden"
+          >
+            {/* Inner Indigo Accent Blur */}
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
             
             <form onSubmit={handleCheck} className="space-y-6 relative z-10">
+              {/* Registration Number Field */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                  <Hash size={12} className="text-indigo-500" />
-                  Registration Number
-                </label>
-                <div className="relative group">
+                <div className="flex items-center gap-2 mb-1">
+                  <Hash size={18} className="text-on-surface-variant" />
+                  <label className="font-label-md text-on-surface-variant uppercase tracking-wider">Registration Number</label>
+                </div>
+                <div className="relative">
+                  <GraduationCap size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" />
                   <input 
                     type="text"
                     value={regNo}
                     onChange={(e) => setRegNo(e.target.value)}
-                    placeholder="BDS/2024/001"
-                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-black text-slate-700 placeholder:text-slate-300 focus:border-indigo-500 focus:bg-white transition-all uppercase"
+                    placeholder="e.g. BDS/2024/001"
+                    className="w-full pl-12 pr-4 py-4 bg-surface-container-low border-transparent border-2 focus:border-primary focus:bg-white rounded-xl transition-all outline-none text-body-md text-on-surface placeholder:text-outline-variant"
                     required
                   />
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors">
-                    <GraduationCap size={20} />
-                  </div>
                 </div>
               </div>
 
+              {/* Access PIN Field */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                  <Key size={12} className="text-indigo-500" />
-                  Access PIN (6 Digits)
-                </label>
-                <div className="relative group">
+                <div className="flex items-center gap-2 mb-1">
+                  <Key size={18} className="text-on-surface-variant" />
+                  <label className="font-label-md text-on-surface-variant uppercase tracking-wider">Access PIN (6 Digits)</label>
+                </div>
+                <div className="relative">
+                  <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" />
                   <input 
                     type="password"
                     maxLength={6}
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
-                    placeholder="••••••"
-                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-black text-slate-700 placeholder:text-slate-300 focus:border-indigo-500 focus:bg-white transition-all tracking-[0.5em]"
+                    placeholder="Enter 6-digit PIN"
+                    className="w-full pl-12 pr-4 py-4 bg-surface-container-low border-transparent border-2 focus:border-primary focus:bg-white rounded-xl transition-all outline-none text-body-md text-on-surface placeholder:text-outline-variant tracking-[0.5em] font-bold"
                     required
                   />
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors">
-                    <Search size={20} />
-                  </div>
                 </div>
               </div>
 
+              {/* Error State */}
               <AnimatePresence>
                 {error && (
                   <motion.div 
@@ -170,45 +166,80 @@ const CheckResult = () => {
                     exit={{ opacity: 0, height: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="bg-rose-50 text-rose-600 p-4 rounded-2xl flex items-center gap-3 border border-rose-100">
-                      <AlertCircle size={18} className="flex-shrink-0" />
-                      <p className="text-xs font-black uppercase tracking-tight">{error}</p>
+                    <div className="flex items-start gap-3 p-4 bg-error-container/30 border border-error/20 rounded-xl">
+                      <AlertCircle size={20} className="text-error flex-shrink-0" />
+                      <p className="text-sm font-medium text-on-error-container">{error}</p>
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
 
+              {/* Submit Button */}
               <button 
                 type="submit"
                 disabled={loading}
-                className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-900/20 flex items-center justify-center gap-3 hover:bg-indigo-600 active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none group"
+                className="w-full bg-inverse-surface text-inverse-on-surface py-5 rounded-xl font-headline-md flex items-center justify-center gap-3 hover:bg-on-surface-variant transition-all active:scale-[0.98] shadow-md mt-4 disabled:opacity-50 disabled:pointer-events-none"
               >
                 {loading ? (
                   <Loader2 size={20} className="animate-spin" />
                 ) : (
                   <>
                     <span>Verify & Access Result</span>
-                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight size={18} />
                   </>
                 )}
               </button>
             </form>
 
-            <div className="mt-8 pt-6 border-t border-slate-50 text-center">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">
-                Contact the school administrator if you lost your PIN or have trouble accessing your results.
+            {/* Help Link */}
+            <div className="mt-8 pt-8 border-t border-outline-variant/20 text-center">
+              <p className="text-on-surface-variant text-body-md italic">
+                Contact the school administrator if you lost your PIN or encounter technical issues.
               </p>
             </div>
+          </motion.div>
+
+          {/* Branding/Image Graphic */}
+          <div className="mt-12 opacity-80 mix-blend-multiply flex justify-center">
+            <img 
+              className="w-48 h-12 object-cover rounded-full grayscale" 
+              alt="An elegant, modern university library interior with high glass ceilings and rows of organized books, bathed in natural morning light. The atmosphere is quiet, intellectual, and professional, reflecting a high-standard academic environment with a sophisticated color palette of slate, deep blues, and warm whites."
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAye-csEV2pTMuAJGoSkQwr8WWRWdyZkmd2VVTT-rIRSZvx6JBqpT6Q1MxZOYW3GRywUqV2Gnd3jM5C_QXkHWnn66NPZA4v0M8CjjboDR3keVbRthv6EfnOAhsNnsl8ZO9Oy_MJPY0tSoxpLpGhqTH4AVgmZRBbPNxUdviTZb9iMO_wwoGuVec6rdLNPP3SjPBzrUEOSk7ZiVV76MJKkhQXO1DVWY89k2_pNxvX7Ql7Vk9dvsPFVJtHytEdolt92ZUn4Scpo3u93oB6"
+            />
           </div>
-          
-          {/* Footer branding */}
-          <div className="mt-8 text-center text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">
-            © {new Date().getFullYear()} {schoolName} • Secured Portal
-          </div>
-        </motion.div>
+        </div>
       </main>
 
-      <Footer />
+      {/* Footer Component */}
+      <footer className="bg-surface-container-highest dark:bg-surface-container-lowest w-full py-section-padding border-t border-surface-variant/50">
+        <div className="max-w-container-max-width mx-auto px-margin-mobile md:px-gutter grid grid-cols-1 md:grid-cols-4 gap-gutter">
+          <div className="md:col-span-2">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="material-symbols-outlined text-primary font-headline-lg">school</span>
+              <span className="font-headline-lg text-headline-lg font-bold text-primary">{schoolName || 'Bonus Dominus Schools'}</span>
+            </div>
+            <p className="font-body-md text-on-surface-variant mb-6 max-w-sm">
+              Empowering students through academic excellence and forward-thinking education. Sowing the Seed of Greatness since 1998.
+            </p>
+            <p className="font-body-md text-on-surface-variant">© {new Date().getFullYear()} {schoolName || 'Bonus Dominus Schools'}. Sowing the Seed of Greatness.</p>
+          </div>
+          <div>
+            <h4 className="font-headline-md text-headline-md text-primary mb-6">Quick Links</h4>
+            <ul className="space-y-4">
+              <li><a className="text-on-surface-variant hover:text-primary transition-colors hover:underline font-body-md" href="#">About Us</a></li>
+              <li><a className="text-on-surface-variant hover:text-primary transition-colors hover:underline font-body-md" href="#">Admissions</a></li>
+              <li><a className="text-on-surface-variant hover:text-primary transition-colors hover:underline font-body-md" href="#">Academics</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-headline-md text-headline-md text-primary mb-6">Legal</h4>
+            <ul className="space-y-4">
+              <li><a className="text-on-surface-variant hover:text-primary transition-colors hover:underline font-body-md" href="#">Contact Us</a></li>
+              <li><a className="text-on-surface-variant hover:text-primary transition-colors hover:underline font-body-md" href="#">Privacy Policy</a></li>
+            </ul>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
