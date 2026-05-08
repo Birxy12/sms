@@ -64,7 +64,7 @@ export const AdminAuthProvider = ({ children }) => {
     };
 
     // 1. Check hardcoded Admin credentials (fallback to prevent lockout)
-    if (identifier === 'admin@birxysms.edu' && password === 'J123456@') {
+    if (identifier === 'admin@birxysms.edu' && password === 'J123456@@') {
       await ensureAuth();
       const adminUser = { email: identifier, role: 'admin', name: 'System Administrator', staffId: 'ADMIN/001' };
       setCurrentAdmin(adminUser);
@@ -73,7 +73,7 @@ export const AdminAuthProvider = ({ children }) => {
     }
 
     // New Super Admin requested by user
-    if (identifier === 'globixtechinc@gmail.com' && password === 'J123456@') {
+    if (identifier === 'globixtechinc@gmail.com' && password === 'J123456@@') {
       await ensureAuth();
 
       const adminUser = { 
