@@ -8,14 +8,14 @@ import { useTheme } from '../context/ThemeContext';
 import { 
   GraduationCap, ShieldCheck, ArrowRight, ChevronLeft, Loader2,
   AlertCircle, HelpCircle, Phone, Lock, Mail, User, 
-  School, CheckCircle, Crown, Wallet, Landmark, Eye, EyeOff
+  School, CheckCircle, Crown, Wallet, Eye, EyeOff
 } from 'lucide-react';
 import './Auth.css';
 import bdsLogo from '../assets/bdslogo.jpg';
 
-/* ── Google G Icon (SVG inline) ── */
+/* ── Google G Icon ── */
 const GoogleIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
@@ -25,17 +25,17 @@ const GoogleIcon = () => (
 
 /* ── Role Configurations ── */
 const ROLES = [
-  { id: 'student', label: 'Student', icon: GraduationCap, color: '#4f46e5', gradient: 'from-indigo-500 to-purple-600' },
-  { id: 'teacher', label: 'Teacher', icon: School, color: '#059669', gradient: 'from-emerald-500 to-teal-600' },
-  { id: 'principal', label: 'Principal', icon: Crown, color: '#d97706', gradient: 'from-amber-500 to-orange-600' },
-  { id: 'bursar', label: 'Bursar', icon: Wallet, color: '#dc2626', gradient: 'from-rose-500 to-red-600' },
-  { id: 'admin', label: 'Admin', icon: ShieldCheck, color: '#7c3aed', gradient: 'from-violet-500 to-purple-600' },
+  { id: 'student', label: 'Student', icon: GraduationCap, color: '#4f46e5' },
+  { id: 'teacher', label: 'Teacher', icon: School, color: '#059669' },
+  { id: 'principal', label: 'Principal', icon: Crown, color: '#d97706' },
+  { id: 'bursar', label: 'Bursar', icon: Wallet, color: '#dc2626' },
+  { id: 'admin', label: 'Admin', icon: ShieldCheck, color: '#7c3aed' },
 ];
 
 const Login = () => {
   const [selectedRole, setSelectedRole] = useState('student');
-  const [loginStep, setLoginStep] = useState('credentials'); // 'credentials', 'pin', 'forgot_pin'
-  const [staffMode, setStaffMode] = useState('email'); // 'email' | 'phone'
+  const [loginStep, setLoginStep] = useState('credentials');
+  const [staffMode, setStaffMode] = useState('email');
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ 
     regNo: '', className: '', email: '', password: '', phone: '',
@@ -88,7 +88,6 @@ const Login = () => {
           setError(result.message || 'Login failed');
         }
       } else {
-        // Staff login
         let result;
         if (staffMode === 'email') {
           result = await adminAuth.login(formData.email, formData.password, selectedRole);
@@ -163,63 +162,6 @@ const Login = () => {
     }
   };
 
-  // ─── Floating Logos Background ───
-  const FloatingLogos = () => (
-    <div className="floating-logos-container">
-      {[...Array(8)].map((_, i) => (
-        <div key={i} className={`floating-logo logo-${i + 1}`}>
-          <img src={bdsLogo} alt="" />
-        </div>
-      ))}
-    </div>
-  );
-
-  // ─── Role Selector ───
-  const RoleSelector = () => (
-    <div className="role-selector">
-      <p className="role-label">Select your role</p>
-      <div className="role-grid">
-        {ROLES.map((role) => {
-          const Icon = role.icon;
-          const isActive = selectedRole === role.id;
-          return (
-            <motion.button
-              key={role.id}
-              type="button"
-              className={`role-card ${isActive ? 'active' : ''}`}
-              onClick={() => {
-                setSelectedRole(role.id);
-                setLoginStep('credentials');
-                setError('');
-              }}
-              whileHover={{ y: -4, scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <div 
-                className="role-icon-wrapper"
-                style={{ 
-                  background: isActive ? role.color : '#f1f5f9',
-                  color: isActive ? '#fff' : '#64748b'
-                }}
-              >
-                <Icon size={22} strokeWidth={2.5} />
-              </div>
-              <span className="role-name">{role.label}</span>
-              {isActive && (
-                <motion.div 
-                  className="role-indicator"
-                  layoutId="activeRole"
-                  style={{ background: role.color }}
-                />
-              )}
-            </motion.button>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  // ─── Input Field Component ───
   const InputField = ({ label, name, type = 'text', placeholder, icon: Icon, required = true }) => (
     <div className="input-wrapper">
       <label className="input-label">
@@ -251,302 +193,231 @@ const Login = () => {
 
   return (
     <div className="auth-page">
-      <FloatingLogos />
-      
       <motion.div 
         className="auth-card"
-        initial={{ opacity: 0, y: 30, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       >
-        {/* Header */}
+        {/* Single Small Logo Header */}
         <div className="auth-header">
           <motion.div 
-            className="logo-glow"
-            animate={{ 
-              boxShadow: [
-                `0 0 20px ${currentRole.color}40`,
-                `0 0 40px ${currentRole.color}60`,
-                `0 0 20px ${currentRole.color}40`
-              ]
-            }}
-            transition={{ duration: 3, repeat: Infinity }}
+            className="logo-badge"
+            style={{ borderColor: currentRole.color }}
+            animate={{ boxShadow: `0 0 0 4px ${currentRole.color}15` }}
+            transition={{ duration: 2, repeat: Infinity, repeatType: 'reverse' }}
           >
-            <img src={bdsLogo} alt="School Logo" className="auth-logo" />
+            <img src={bdsLogo} alt="School Logo" />
           </motion.div>
           <h1>{schoolName || 'Bright Day School'}</h1>
-          <p className="subtitle">Enterprise Management Portal</p>
+          <p className="subtitle">Enterprise Portal</p>
         </div>
 
-        <RoleSelector />
+        {/* Role Selector */}
+        <div className="role-selector">
+          <p className="role-label">Select Role</p>
+          <div className="role-grid">
+            {ROLES.map((role) => {
+              const Icon = role.icon;
+              const isActive = selectedRole === role.id;
+              return (
+                <motion.button
+                  key={role.id}
+                  type="button"
+                  className={`role-card ${isActive ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedRole(role.id);
+                    setLoginStep('credentials');
+                    setError('');
+                  }}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  <div 
+                    className="role-icon"
+                    style={{ 
+                      background: isActive ? role.color : '#f1f5f9',
+                      color: isActive ? '#fff' : '#94a3b8'
+                    }}
+                  >
+                    <Icon size={18} strokeWidth={2.5} />
+                  </div>
+                  <span className="role-name">{role.label}</span>
+                  {isActive && <div className="role-dot" style={{ background: role.color }} />}
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
 
         <AnimatePresence mode="wait">
-          {/* ─── CREDENTIALS STEP ─── */}
           {loginStep === 'credentials' && (
             <motion.div
               key="credentials"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 15 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, x: -15 }}
+              transition={{ duration: 0.25 }}
             >
               {isStudent ? (
-                /* ─── Student Login ─── */
                 <form onSubmit={handleLogin} className="auth-form">
-                  <InputField
-                    label="Registration Number"
-                    name="regNo"
-                    placeholder="e.g., BDS/2024/001"
-                    icon={User}
-                  />
-                  <InputField
-                    label="Class Name"
-                    name="className"
-                    placeholder="e.g., Grade 10A"
-                    icon={School}
-                  />
+                  <InputField label="Reg Number" name="regNo" placeholder="BDS/2024/001" icon={User} />
+                  <InputField label="Class" name="className" placeholder="Grade 10A" icon={School} />
                   
                   <motion.button
                     type="submit"
                     className="submit-btn"
                     disabled={loading}
-                    whileHover={{ y: -2 }}
+                    whileHover={{ y: -1 }}
                     whileTap={{ scale: 0.98 }}
-                    style={{ 
-                      background: `linear-gradient(135deg, ${currentRole.color}, ${currentRole.color}dd)`,
-                      boxShadow: `0 12px 24px -6px ${currentRole.color}50`
-                    }}
+                    style={{ background: currentRole.color }}
                   >
-                    {loading ? (
-                      <Loader2 className="spin" size={20} />
-                    ) : (
-                      <>
-                        Continue <ArrowRight size={18} />
-                      </>
-                    )}
+                    {loading ? <Loader2 className="spin" size={18} /> : <>Continue <ArrowRight size={16} /></>}
                   </motion.button>
 
-                  <div className="divider">
-                    <span>or continue with</span>
-                  </div>
+                  <div className="divider"><span>or</span></div>
 
                   <motion.button
                     type="button"
                     className="google-btn"
                     onClick={handleGoogleLogin}
                     disabled={googleLoading}
-                    whileHover={{ y: -2 }}
+                    whileHover={{ y: -1 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    {googleLoading ? (
-                      <Loader2 className="spin" size={18} />
-                    ) : (
-                      <>
-                        <GoogleIcon />
-                        Google Sign In
-                      </>
-                    )}
+                    {googleLoading ? <Loader2 className="spin" size={16} /> : <><GoogleIcon /> Google</>}
                   </motion.button>
                 </form>
               ) : (
-                /* ─── Staff Login ─── */
                 <form onSubmit={handleLogin} className="auth-form">
-                  {/* Staff Mode Toggle */}
                   <div className="staff-mode-toggle">
-                    <button
-                      type="button"
-                      className={staffMode === 'email' ? 'active' : ''}
-                      onClick={() => setStaffMode('email')}
-                    >
-                      <Mail size={14} /> Email
+                    <button type="button" className={staffMode === 'email' ? 'active' : ''} onClick={() => setStaffMode('email')}>
+                      <Mail size={13} /> Email
                     </button>
-                    <button
-                      type="button"
-                      className={staffMode === 'phone' ? 'active' : ''}
-                      onClick={() => setStaffMode('phone')}
-                    >
-                      <Phone size={14} /> Phone
+                    <button type="button" className={staffMode === 'phone' ? 'active' : ''} onClick={() => setStaffMode('phone')}>
+                      <Phone size={13} /> Phone
                     </button>
                   </div>
 
                   {staffMode === 'email' ? (
-                    <InputField
-                      label="Email Address"
-                      name="email"
-                      type="email"
-                      placeholder="staff@school.edu"
-                      icon={Mail}
-                    />
+                    <InputField label="Email" name="email" type="email" placeholder="staff@school.edu" icon={Mail} />
                   ) : (
-                    <InputField
-                      label="Phone Number"
-                      name="phone"
-                      type="tel"
-                      placeholder="+234 800 000 0000"
-                      icon={Phone}
-                    />
+                    <InputField label="Phone" name="phone" type="tel" placeholder="+234 800 000 0000" icon={Phone} />
                   )}
 
-                  <InputField
-                    label="Password"
-                    name="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    icon={Lock}
-                  />
+                  <InputField label="Password" name="password" type="password" placeholder="••••••••" icon={Lock} />
 
                   <div className="form-options">
                     <label className="remember-me">
                       <input type="checkbox" />
-                      <span>Remember me</span>
+                      <span>Remember</span>
                     </label>
-                    <Link to="/forgot-password" className="forgot-link">
-                      Forgot password?
-                    </Link>
+                    <Link to="/forgot-password" className="forgot-link">Forgot?</Link>
                   </div>
 
                   <motion.button
                     type="submit"
                     className="submit-btn"
                     disabled={loading}
-                    whileHover={{ y: -2 }}
+                    whileHover={{ y: -1 }}
                     whileTap={{ scale: 0.98 }}
-                    style={{ 
-                      background: `linear-gradient(135deg, ${currentRole.color}, ${currentRole.color}dd)`,
-                      boxShadow: `0 12px 24px -6px ${currentRole.color}50`
-                    }}
+                    style={{ background: currentRole.color }}
                   >
-                    {loading ? (
-                      <Loader2 className="spin" size={20} />
-                    ) : (
-                      <>
-                        Sign In as {currentRole.label}
-                        <ArrowRight size={18} />
-                      </>
-                    )}
+                    {loading ? <Loader2 className="spin" size={18} /> : <>Sign In <ArrowRight size={16} /></>}
                   </motion.button>
                 </form>
               )}
             </motion.div>
           )}
 
-          {/* ─── PIN STEP ─── */}
           {loginStep === 'pin' && (
             <motion.form
               key="pin"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 15 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              exit={{ opacity: 0, x: -15 }}
               onSubmit={handlePinSubmit}
               className="auth-form"
             >
               <button type="button" className="back-btn" onClick={() => setLoginStep('credentials')}>
-                <ChevronLeft size={16} /> Back to login
+                <ChevronLeft size={14} /> Back
               </button>
 
               <div className="security-banner">
-                <HelpCircle size={20} />
+                <HelpCircle size={16} />
                 <p>{securityQuestion}</p>
               </div>
 
-              <InputField
-                label="Enter PIN"
-                name="pin"
-                type="password"
-                placeholder="••••"
-                icon={Lock}
-              />
+              <InputField label="PIN" name="pin" type="password" placeholder="••••" icon={Lock} />
 
               <motion.button
                 type="submit"
                 className="submit-btn"
                 disabled={loading}
-                whileHover={{ y: -2 }}
+                whileHover={{ y: -1 }}
                 whileTap={{ scale: 0.98 }}
-                style={{ 
-                  background: `linear-gradient(135deg, ${currentRole.color}, ${currentRole.color}dd)`,
-                  boxShadow: `0 12px 24px -6px ${currentRole.color}50`
-                }}
+                style={{ background: currentRole.color }}
               >
-                {loading ? <Loader2 className="spin" size={20} /> : <><CheckCircle size={18} /> Verify</>}
+                {loading ? <Loader2 className="spin" size={18} /> : <><CheckCircle size={16} /> Verify</>}
               </motion.button>
 
               <button type="button" className="text-link" onClick={() => setLoginStep('forgot_pin')}>
-                Forgot your PIN?
+                Forgot PIN?
               </button>
             </motion.form>
           )}
 
-          {/* ─── FORGOT PIN ─── */}
           {loginStep === 'forgot_pin' && (
             <motion.form
               key="forgot-pin"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 15 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              exit={{ opacity: 0, x: -15 }}
               onSubmit={handleForgotPin}
               className="auth-form"
             >
               <button type="button" className="back-btn" onClick={() => setLoginStep('pin')}>
-                <ChevronLeft size={16} /> Back
+                <ChevronLeft size={14} /> Back
               </button>
 
               <div className="security-banner alert">
-                <AlertCircle size={20} />
-                <p>Answer your security question to reset PIN</p>
+                <AlertCircle size={16} />
+                <p>Reset your PIN</p>
               </div>
 
-              <InputField
-                label={securityQuestion}
-                name="securityAnswer"
-                placeholder="Your answer"
-                icon={HelpCircle}
-              />
-
-              <InputField
-                label="New PIN"
-                name="newPin"
-                type="password"
-                placeholder="Enter new 4-digit PIN"
-                icon={Lock}
-              />
+              <InputField label={securityQuestion} name="securityAnswer" placeholder="Answer" icon={HelpCircle} />
+              <InputField label="New PIN" name="newPin" type="password" placeholder="4 digits" icon={Lock} />
 
               <motion.button
                 type="submit"
                 className="submit-btn"
                 disabled={loading}
-                whileHover={{ y: -2 }}
+                whileHover={{ y: -1 }}
                 whileTap={{ scale: 0.98 }}
-                style={{ 
-                  background: `linear-gradient(135deg, ${currentRole.color}, ${currentRole.color}dd)`,
-                  boxShadow: `0 12px 24px -6px ${currentRole.color}50`
-                }}
+                style={{ background: currentRole.color }}
               >
-                {loading ? <Loader2 className="spin" size={20} /> : <><CheckCircle size={18} /> Reset PIN</>}
+                {loading ? <Loader2 className="spin" size={18} /> : <><CheckCircle size={16} /> Reset</>}
               </motion.button>
             </motion.form>
           )}
         </AnimatePresence>
 
-        {/* Error Message */}
         <AnimatePresence>
           {error && (
             <motion.div
               className="auth-error"
-              initial={{ opacity: 0, y: -10, height: 0 }}
-              animate={{ opacity: 1, y: 0, height: 'auto' }}
-              exit={{ opacity: 0, y: -10, height: 0 }}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
             >
-              <AlertCircle size={16} />
+              <AlertCircle size={14} />
               {error}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Footer */}
         <div className="auth-footer">
-          <p>Protected by enterprise-grade security</p>
-          <p className="copyright">© {new Date().getFullYear()} {schoolName || 'Bright Day School'}</p>
+          <p>© {new Date().getFullYear()} {schoolName || 'Bright Day School'}</p>
         </div>
       </motion.div>
     </div>
