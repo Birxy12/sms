@@ -13,7 +13,6 @@
   box-sizing: border-box;
 }
 
-/* ─── Card ─── */
 .auth-card {
   width: 100%;
   max-width: 420px;
@@ -178,6 +177,8 @@
   outline: none;
   box-sizing: border-box;
   font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .modern-input:focus {
@@ -191,16 +192,31 @@
   font-weight: 500;
 }
 
-.input-container::before {
-  content: '';
+/* ─── Select Input ─── */
+.select-container {
+  position: relative;
+}
+
+.select-input {
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+
+.select-input option {
+  font-weight: 500;
+  padding: 0.5rem;
+}
+
+.select-chevron {
   position: absolute;
-  left: 0.875rem;
+  right: 0.875rem;
   top: 50%;
   transform: translateY(-50%);
   color: #94a3b8;
   pointer-events: none;
 }
 
+/* ─── Password Toggle ─── */
 .password-toggle {
   position: absolute;
   right: 0.75rem;
@@ -219,6 +235,41 @@
 
 .password-toggle:hover {
   color: #64748b;
+}
+
+/* ─── PIN Inputs ─── */
+.pin-inputs {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.25rem;
+}
+
+.pin-digit {
+  width: 48px;
+  height: 56px;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.75rem;
+  outline: none;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.pin-digit:focus {
+  background: white;
+  border-color: #cbd5e1;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.06);
+}
+
+.pin-digit::-webkit-outer-spin-button,
+.pin-digit::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 /* ─── Staff Mode Toggle ─── */
@@ -496,5 +547,18 @@
 
   .role-name {
     font-size: 0.5625rem;
+  }
+
+  .pin-digit {
+    width: 40px;
+    height: 48px;
+    font-size: 1.125rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .pin-digit {
+    width: 36px;
+    height: 44px;
   }
 }
