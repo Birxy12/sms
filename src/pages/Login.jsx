@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { useStudentAuth } from '../context/StudentAuthContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { 
   User, Mail, Lock, GraduationCap, 
   ShieldCheck, ArrowRight, ChevronLeft, Loader2,
@@ -40,6 +41,7 @@ const Login = () => {
   const navigate = useNavigate();
   const studentAuth = useStudentAuth();
   const adminAuth = useAdminAuth();
+  const { schoolName } = useTheme();
 
   const isStaff = loginType !== 'student';
 
