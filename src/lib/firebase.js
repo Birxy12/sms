@@ -19,6 +19,7 @@ const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 
 // Initialize Firestore with settings to mitigate common errors and support multi-tab persistence
+// Initialize Firestore with settings to support multi-tab persistence
 let db;
 try {
   db = initializeFirestore(app, {
@@ -29,7 +30,9 @@ try {
     useFetchStreams: false,
   });
 } catch (e) {
-  console.warn("Firestore initialization failed, falling back to default:", e);
+  console.warn("Firestore initialization with persistence failed. Falling back to default instance.", e);
+  // If persistence fails (common after version upgrades or manual cache clears), 
+  // we use the default Firestore instance which typically uses memory cache as fallback.
   db = getFirestore(app);
 }
 const auth = getAuth(app);

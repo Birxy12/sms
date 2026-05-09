@@ -286,21 +286,8 @@ if (!selectedPub) return;
         // Only show subjects that have been offered (total > 0)
         const displaySubjects = processedMarks.filter(s => s.total > 0);
 
-        // Calculate average based on school policy: SS2/3 Art/Science (9 subjects), JSS (15 subjects), SS1 (16 subjects)
-        const cls = (currentStudent?.className || '').toUpperCase();
-        let divisor = 16; // Default
-        if (cls.includes('JSS')) {
-          divisor = 15;
-        } else if (cls.includes('SS1')) {
-          divisor = 16;
-        } else if (
-          (cls.includes('SS2') || cls.includes('SS3')) && 
-          (cls.includes('ART') || cls.includes('SCIENCE'))
-        ) {
-          divisor = 9;
-        } else if (cls.includes('SS2') || cls.includes('SS3')) {
-          divisor = 9; // Fallback for other SS2/3 departments if any
-        }
+        // Calculate average based on number of subjects actually offered
+        const divisor = displaySubjects.length > 0 ? displaySubjects.length : 1;
 
         setStudentMarks({
           subjects: displaySubjects.sort((a, b) => a.subject.localeCompare(b.subject)),
@@ -382,13 +369,19 @@ return;
 // Dynamic import to handle potential install lag
 const html2pdf = (await import('html2pdf.js')).default;
 
-const opt = {
-margin: 0,
-filename: `${currentStudent?.name || 'Student'}-Report-Card-${selectedPub?.term || ''}.pdf`,
-image: { type: 'jpeg', quality: 0.98 },
-html2canvas: { scale: 3, useCORS: true, logging: false, letterRendering: true },
-jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-};
+        const opt = {
+          margin: [10, 10],
+          filename: `${currentStudent?.name || 'Student'}-Report-Card.pdf`,
+          image: { type: 'jpeg', quality: 1.0 },
+          html2canvas: { 
+            scale: 4, 
+            useCORS: true, 
+            logging: false, 
+            letterRendering: true,
+            allowTaint: true 
+          },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
 
 await html2pdf().set(opt).from(element).save();
 } catch (err) {
@@ -747,10 +740,11 @@ className="w-full sm:w-auto px-4 py-3 rounded-xl border-2 border-slate-100 outli
 <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Subject</th>
 <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">CAT 1 (20)</th>
 <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">CAT 2 (20)</th>
-<th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Exam (60)</th>
-<th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Total (100)</th>
-<th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Grade</th>
-</tr>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Exam (60)</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Total (100)</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Grade</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Remarks</th>
+              </tr>
 </thead>
 <tbody className="divide-y divide-slate-100">
 {studentMarks.subjects.map((sub, idx) => (
@@ -764,16 +758,26 @@ className="w-full sm:w-auto px-4 py-3 rounded-xl border-2 border-slate-100 outli
 {sub.total}
 </div>
 </td>
-<td className="px-6 py-4 text-center">
-<span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl text-sm font-black shadow-sm ${
-sub.grade.startsWith('A') ? 'bg-emerald-500 text-white shadow-emerald-200' :
-sub.grade.startsWith('B') ? 'bg-indigo-500 text-white shadow-indigo-200' :
-sub.grade.startsWith('C') ? 'bg-amber-500 text-white shadow-amber-200' :
-'bg-rose-500 text-white shadow-rose-200'
-}`}>
-{sub.grade}
-</span>
-</td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl text-sm font-black shadow-sm ${
+                      sub.grade.startsWith('A') ? 'bg-emerald-500 text-white shadow-emerald-200' :
+                      sub.grade.startsWith('B') ? 'bg-indigo-500 text-white shadow-indigo-200' :
+                      sub.grade.startsWith('C') ? 'bg-amber-500 text-white shadow-amber-200' :
+                      'bg-rose-500 text-white shadow-rose-200'
+                    }`}>
+                      {sub.grade}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`text-[10px] font-bold uppercase ${
+                      sub.total >= 50 ? 'text-emerald-600' : 'text-rose-600'
+                    }`}>
+                      {sub.total >= 75 ? 'Excellent' :
+                       sub.total >= 60 ? 'Very Good' :
+                       sub.total >= 50 ? 'Good' :
+                       sub.total >= 40 ? 'Average' : 'Below Average'}
+                    </span>
+                  </td>
 </tr>
 ))}
 </tbody>

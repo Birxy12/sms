@@ -1,10 +1,11 @@
-// src/pages/Login.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { useStudentAuth } from '../context/StudentAuthContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { db } from '../lib/firebase';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { 
   GraduationCap, ShieldCheck, ArrowRight, ChevronLeft, Loader2,
   AlertCircle, HelpCircle, Phone, Lock, Mail, User, 
@@ -30,13 +31,8 @@ const ROLES = [
   { id: 'admin', label: 'Admin', icon: ShieldCheck, color: '#7c3aed' },
 ];
 
-const CLASS_OPTIONS = [
-  'Grade 1A', 'Grade 1B', 'Grade 2A', 'Grade 2B',
-  'Grade 3A', 'Grade 3B', 'Grade 4A', 'Grade 4B',
-  'Grade 5A', 'Grade 5B', 'Grade 6A', 'Grade 6B',
-  'JSS 1A', 'JSS 1B', 'JSS 2A', 'JSS 2B',
-  'JSS 3A', 'JSS 3B', 'SSS 1A', 'SSS 1B',
-  'SSS 2A', 'SSS 2B', 'SSS 3A', 'SSS 3B'
+const DEFAULT_CLASS_OPTIONS = [
+  'JSS 1', 'JSS 2', 'JSS 3', 'SSS 1', 'SSS 2', 'SSS 3'
 ];
 
 const Login = () => {
@@ -44,6 +40,7 @@ const Login = () => {
   const [loginStep, setLoginStep] = useState('credentials');
   const [staffMode, setStaffMode] = useState('email');
   const [showPassword, setShowPassword] = useState(false);
+  const [classOptions, setClassOptions] = useState(DEFAULT_CLASS_OPTIONS);
   const [formData, setFormData] = useState({ 
     regNo: '', className: '', email: '', password: '', phone: '',
     pin: '', securityAnswer: '', newPin: '' 
@@ -52,6 +49,24 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const classesSnap = await getDocs(collection(db, 'classes'));
+        if (!classesSnap.empty) {
+          const fetchedClasses = classesSnap.docs
+            .map(doc => doc.id)
+            .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+          setClassOptions(fetchedClasses);
+        }
+      } catch (err) {
+        console.error("Error fetching classes:", err);
+        // Fallback to default options already in state
+      }
+    };
+    fetchClasses();
+  }, []);
 
   const navigate = useNavigate();
   const studentAuth = useStudentAuth();
@@ -194,6 +209,7 @@ const Login = () => {
           maxLength={maxLength}
           pattern={pattern}
           inputMode={inputMode}
+          autoFocus={name === 'regNo' || name === 'email'}
           className="modern-input"
         />
         {type === 'password' && (
@@ -304,13 +320,13 @@ const Login = () => {
                   <InputField
                     label="Registration Number"
                     name="regNo"
-                    placeholder="BDS/2024/001"
+                    placeholder="e.g. BDS/2024/001"
                     icon={User}
                   />
                   <SelectField
                     label="Class"
                     name="className"
-                    options={CLASS_OPTIONS}
+                    options={classOptions}
                     icon={School}
                   />
                   
@@ -350,12 +366,12 @@ const Login = () => {
                   </div>
 
                   {staffMode === 'email' ? (
-                    <InputField label="Email" name="email" type="email" placeholder="staff@school.edu" icon={Mail} />
+                    <InputField label="Email" name="email" type="email" placeholder="e.g. staff@school.edu" icon={Mail} />
                   ) : (
-                    <InputField label="Phone" name="phone" type="tel" placeholder="+234 800 000 0000" icon={Phone} />
+                    <InputField label="Phone" name="phone" type="tel" placeholder="e.g. 08012345678" icon={Phone} />
                   )}
 
-                  <InputField label="Password" name="password" type="password" placeholder="••••••••" icon={Lock} />
+                  <InputField label="Password" name="password" type="password" placeholder="Enter your password" icon={Lock} />
 
                   <div className="form-options">
                     <label className="remember-me">
@@ -407,12 +423,14 @@ const Login = () => {
                   {[0, 1, 2, 3, 4, 5].map((i) => (
                     <input
                       key={i}
+                      id={`pin-${i}`}
                       type="password"
                       inputMode="numeric"
                       pattern="[0-9]*"
                       maxLength={1}
                       className="pin-digit"
                       value={formData.pin[i] || ''}
+                      autoFocus={i === 0}
                       onChange={(e) => {
                         const val = e.target.value.replace(/\D/g, '');
                         if (val.length <= 1) {
@@ -422,15 +440,13 @@ const Login = () => {
                           setFormData({ ...formData, pin: joined });
                           setError('');
                           if (val && i < 5) {
-                            const next = e.target.parentElement?.nextElementSibling?.querySelector('input');
-                            next?.focus();
+                            document.getElementById(`pin-${i + 1}`)?.focus();
                           }
                         }
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Backspace' && !formData.pin[i] && i > 0) {
-                          const prev = e.target.parentElement?.previousElementSibling?.querySelector('input');
-                          prev?.focus();
+                          document.getElementById(`pin-${i - 1}`)?.focus();
                         }
                       }}
                     />
