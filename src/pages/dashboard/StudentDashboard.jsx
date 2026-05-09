@@ -6,7 +6,7 @@ import { collection, query, getDocs, where, limit, orderBy } from 'firebase/fire
 import { 
   LayoutDashboard, Award, CreditCard, Calendar, Bell, ChevronRight, 
   Inbox as InboxIcon, Trophy, Wallet, BookOpen, Library, MonitorCheck, 
-  AlertCircle, Star, ArrowUpRight, Clock, User, Zap
+  AlertCircle, Star, ArrowUpRight, Clock, User, Zap, GraduationCap
 } from 'lucide-react';
 import { MARKS_KEYS } from '../../utils/firestoreSchema';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +22,7 @@ const StudentDashboard = () => {
   const className   = currentStudent?.className || 'N/A';
   const regNum      = currentStudent?.regNo || '';
 
+  const [activeTab, setActiveTab]       = useState('overview');
   const [inboxCount, setInboxCount]     = useState(0);
   const [resultsCount, setResultsCount] = useState(0);
   const [avgScore, setAvgScore]         = useState(0);
@@ -87,6 +88,13 @@ const StudentDashboard = () => {
     { label: 'Attendance', value: '94%', icon: Calendar, color: '#ec4899', trend: 'Excellent' },
   ];
 
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard, color: '#6366f1' },
+    { id: 'academic', label: 'Academic', icon: GraduationCap, color: '#10b981' },
+    { id: 'notices', label: 'Notices', icon: Bell, color: '#f59e0b' },
+    { id: 'finance', label: 'Finance', icon: CreditCard, color: '#ec4899' },
+  ];
+
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -144,134 +152,183 @@ const StudentDashboard = () => {
                 </div>
                 <div className="flex gap-3">
                   <button onClick={() => navigate('/students/profile')} className="px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl font-bold transition-all text-sm">
-                    View Profile
-                  </button>
-                  <button onClick={() => navigate('/students/results')} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold shadow-lg shadow-indigo-500/30 transition-all text-sm">
-                    Quick Results
+                    Profile Settings
                   </button>
                 </div>
               </div>
             </motion.div>
 
-            {/* Error Message */}
-            {dashboardError && (
-              <motion.div variants={item} className="flex items-center gap-3 p-4 bg-rose-50 border border-rose-100 text-rose-600 rounded-2xl font-bold">
-                <AlertCircle size={20} />
-                {dashboardError}
-              </motion.div>
-            )}
-
-            {/* Metrics Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {mainStats.map((stat, idx) => (
-                <motion.div 
-                  key={idx} 
-                  variants={item}
-                  whileHover={{ y: -5 }}
-                  className="bg-white p-6 rounded-[1.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all"
+            {/* Premium Tab Bar */}
+            <motion.div variants={item} className="flex bg-white p-2 rounded-2xl border border-slate-100 shadow-sm overflow-x-auto no-scrollbar">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-sm transition-all whitespace-nowrap ${
+                    activeTab === tab.id 
+                    ? 'bg-slate-900 text-white shadow-lg' 
+                    : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                  }`}
                 >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="p-3 rounded-2xl" style={{ backgroundColor: `${stat.color}15` }}>
-                      <stat.icon size={24} style={{ color: stat.color }} />
-                    </div>
-                    <span className={`text-xs font-black px-2 py-1 rounded-lg ${stat.trend.includes('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-500'}`}>
-                      {stat.trend}
-                    </span>
-                  </div>
-                  <h3 className="text-3xl font-black text-slate-800 mb-1">{stat.value}</h3>
-                  <p className="text-sm font-bold text-slate-400 uppercase tracking-wide">{stat.label}</p>
-                </motion.div>
+                  <tab.icon size={18} style={{ color: activeTab === tab.id ? 'white' : tab.color }} />
+                  {tab.label}
+                </button>
               ))}
-            </div>
+            </motion.div>
 
-            {/* Main Content Sections */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              
-              {/* Quick Actions */}
-              <motion.div variants={item} className="lg:col-span-2 space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-black text-slate-800">Quick Portal Access</h2>
-                  <span className="text-sm font-bold text-indigo-600">6 Available Modules</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {/* Tab Content */}
+            <motion.div 
+              key={activeTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-8"
+            >
+              {activeTab === 'overview' && (
+                <>
+                  {/* Metrics Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {mainStats.map((stat, idx) => (
+                      <div key={idx} className="bg-white p-6 rounded-[1.5rem] border border-slate-100 shadow-sm">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="p-3 rounded-2xl" style={{ backgroundColor: `${stat.color}15` }}>
+                            <stat.icon size={24} style={{ color: stat.color }} />
+                          </div>
+                          <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${stat.trend.includes('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-500'}`}>
+                            {stat.trend}
+                          </span>
+                        </div>
+                        <h3 className="text-3xl font-black text-slate-800 mb-1">{stat.value}</h3>
+                        <p className="text-sm font-bold text-slate-400 uppercase tracking-wide">{stat.label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 space-y-6">
+                      <div className="bg-white p-8 rounded-[2rem] border border-slate-100">
+                        <h3 className="text-xl font-black text-slate-800 mb-6">Recent Academic Performance</h3>
+                        <div className="space-y-6">
+                          <div className="p-6 bg-slate-50 rounded-2xl flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600">
+                                <Award size={24} />
+                              </div>
+                              <div>
+                                <p className="font-black text-slate-800">Current Term Progress</p>
+                                <p className="text-xs text-slate-400 font-bold uppercase">Based on latest assessment</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-2xl font-black text-indigo-600">{avgScore}%</p>
+                              <p className="text-[10px] font-black text-slate-400 uppercase">Class Average</p>
+                            </div>
+                          </div>
+                          <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${avgScore}%` }} className="h-full bg-indigo-500" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-indigo-600 p-8 rounded-[2rem] text-white flex flex-col justify-between">
+                      <div>
+                        <Star className="mb-4 text-indigo-200" />
+                        <h3 className="text-xl font-black mb-2">Student Excellence</h3>
+                        <p className="text-indigo-100 text-sm leading-relaxed">Keep maintaining high scores to unlock advanced school honors and awards.</p>
+                      </div>
+                      <button onClick={() => navigate('/students/results')} className="mt-8 w-full py-4 bg-white text-indigo-600 rounded-2xl font-black text-sm shadow-xl">
+                        View Honors
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'academic' && (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {[
-                    { label: 'Inbox', icon: InboxIcon, color: '#6366f1', path: '/students/inbox', desc: 'School updates' },
-                    { label: 'Results', icon: Trophy, color: '#10b981', path: '/students/results', desc: 'Exam records' },
-                    { label: 'CBT', icon: MonitorCheck, color: '#f59e0b', path: '/students/cbt', desc: 'Online testing' },
-                    { label: 'Fees', icon: CreditCard, color: '#ec4899', path: '/students/fees', desc: 'Tuition portal' },
-                    { label: 'Lessons', icon: BookOpen, color: '#2563eb', path: '/students/notes', desc: 'Study material' },
-                    { label: 'Work', icon: Library, color: '#8b5cf6', path: '/students/assignments', desc: 'Assignments' },
-                  ].map((action, idx) => (
+                    { label: 'Exam Results', icon: Trophy, color: '#10b981', path: '/students/results', desc: 'Detailed score breakdown' },
+                    { label: 'CBT Portal', icon: MonitorCheck, color: '#f59e0b', path: '/students/cbt', desc: 'Computer based tests' },
+                    { label: 'Study Notes', icon: BookOpen, color: '#6366f1', path: '/students/notes', desc: 'Course materials' },
+                    { label: 'Assignments', icon: Library, color: '#8b5cf6', path: '/students/assignments', desc: 'Pending homework' },
+                  ].map((module, idx) => (
                     <button 
                       key={idx}
-                      onClick={() => navigate(action.path)}
-                      className="group p-6 bg-white border border-slate-100 rounded-3xl text-left hover:border-indigo-500 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all space-y-3"
+                      onClick={() => navigate(module.path)}
+                      className="p-8 bg-white border border-slate-100 rounded-[2rem] text-left hover:shadow-2xl hover:shadow-slate-200/50 transition-all space-y-4"
                     >
-                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ backgroundColor: `${action.color}15` }}>
-                        <action.icon size={22} style={{ color: action.color }} />
+                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: `${module.color}15` }}>
+                        <module.icon size={28} style={{ color: module.color }} />
                       </div>
                       <div>
-                        <p className="font-black text-slate-800">{action.label}</p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">{action.desc}</p>
+                        <p className="text-lg font-black text-slate-800">{module.label}</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">{module.desc}</p>
                       </div>
                     </button>
                   ))}
                 </div>
-              </motion.div>
+              )}
 
-              {/* Sidebar Content */}
-              <div className="space-y-8">
-                {/* Announcements */}
-                <motion.div variants={item} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden relative">
-                  <div className="absolute top-0 right-0 p-4 opacity-5">
-                    <Bell size={80} />
+              {activeTab === 'notices' && (
+                <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden">
+                  <div className="p-8 border-b border-slate-50 flex justify-between items-center">
+                    <h3 className="text-xl font-black text-slate-800">School Notifications</h3>
+                    <div className="bg-amber-100 text-amber-600 px-3 py-1 rounded-full text-[10px] font-black uppercase">
+                      {inboxCount} New Alerts
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-black text-slate-800">Alerts</h3>
-                    <button onClick={() => navigate('/students/inbox')} className="p-2 hover:bg-slate-50 rounded-xl transition-all">
-                      <ArrowUpRight size={20} className="text-slate-400" />
-                    </button>
-                  </div>
-                  <div className="space-y-6">
+                  <div className="divide-y divide-slate-50">
                     {recentNotifications.length > 0 ? recentNotifications.map((notif, idx) => (
-                      <div key={idx} className="flex gap-4 group cursor-pointer" onClick={() => navigate('/students/inbox')}>
-                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-indigo-50 transition-colors">
-                          <Clock size={16} className="text-slate-400 group-hover:text-indigo-500" />
+                      <div key={idx} className="p-8 flex gap-6 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => navigate('/students/inbox')}>
+                        <div className="w-12 h-12 bg-white border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400">
+                          <Bell size={20} />
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-700 line-clamp-1">{notif.title || 'Broadcast'}</p>
-                          <p className="text-xs text-slate-400 font-medium">{notif.createdAt?.seconds ? new Date(notif.createdAt.seconds * 1000).toLocaleDateString() : 'Today'}</p>
+                          <p className="text-sm font-black text-slate-800 mb-1">{notif.title || 'Official Announcement'}</p>
+                          <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed mb-3">{notif.message}</p>
+                          <div className="flex items-center gap-4 text-[10px] font-black text-slate-400 uppercase">
+                            <span className="flex items-center gap-1"><Clock size={12} /> {notif.createdAt?.seconds ? new Date(notif.createdAt.seconds * 1000).toLocaleDateString() : 'Today'}</span>
+                            <span className="flex items-center gap-1"><User size={12} /> Administration</span>
+                          </div>
                         </div>
                       </div>
                     )) : (
-                      <p className="text-sm font-bold text-slate-400 text-center py-4 italic">No recent alerts</p>
+                      <div className="p-20 text-center">
+                        <p className="text-slate-400 font-bold">Your inbox is empty</p>
+                      </div>
                     )}
                   </div>
-                </motion.div>
+                </div>
+              )}
 
-                {/* Performance Card */}
-                <motion.div variants={item} className="bg-indigo-600 p-8 rounded-[2rem] text-white shadow-xl shadow-indigo-500/30">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Award className="text-indigo-200" size={24} />
-                    <h3 className="text-lg font-black tracking-tight">Performance</h3>
+              {activeTab === 'finance' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="bg-white p-8 rounded-[2rem] border border-slate-100 flex flex-col justify-between">
+                    <div>
+                      <div className="w-16 h-16 bg-pink-100 rounded-3xl flex items-center justify-center text-pink-600 mb-6">
+                        <Wallet size={32} />
+                      </div>
+                      <h3 className="text-2xl font-black text-slate-800 mb-2">School Fees Balance</h3>
+                      <p className="text-slate-400 font-bold mb-8">Summary of your current financial standing.</p>
+                      <div className="text-4xl font-black text-slate-900 mb-2">₦60,000.00</div>
+                      <div className="text-xs font-black text-rose-500 uppercase">Outstanding Balance</div>
+                    </div>
+                    <button onClick={() => navigate('/students/fees')} className="mt-10 py-5 bg-slate-900 text-white rounded-3xl font-black text-sm shadow-xl">
+                      Make Payment Now
+                    </button>
                   </div>
-                  <p className="text-sm font-medium text-indigo-100 mb-6">You are in the top 15% of your class this term.</p>
-                  <div className="h-2 w-full bg-indigo-400/30 rounded-full overflow-hidden mb-3">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${avgScore}%` }}
-                      transition={{ duration: 1.5, ease: "easeOut" }}
-                      className="h-full bg-white rounded-full"
-                    />
+                  <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 border-dashed flex flex-col items-center justify-center text-center">
+                    <div className="w-20 h-20 bg-white rounded-full shadow-sm flex items-center justify-center text-slate-300 mb-6">
+                      <CreditCard size={40} />
+                    </div>
+                    <h3 className="text-lg font-black text-slate-800 mb-2">Payment Receipts</h3>
+                    <p className="text-sm text-slate-400 font-medium max-w-[200px]">View and download all your previous payment receipts.</p>
+                    <button className="mt-6 text-sm font-black text-indigo-600">View History →</button>
                   </div>
-                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-indigo-200">
-                    <span>Rank: {avgScore > 70 ? 'Excellent' : 'Good'}</span>
-                    <span>{avgScore}% Completion</span>
-                  </div>
-                </motion.div>
-              </div>
+                </div>
+              )}
+            </motion.div>
 
-            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -286,8 +286,17 @@ if (!selectedPub) return;
         // Only show subjects that have been offered (total > 0)
         const displaySubjects = processedMarks.filter(s => s.total > 0);
 
-        // Calculate average based on number of subjects actually offered
-        const divisor = displaySubjects.length > 0 ? displaySubjects.length : 1;
+        // Calculate average based on strict school policy: 
+        // JSS1-3 (16), SS1 (16), SS2/3 Art/Science (9)
+        const cls = (currentStudent?.className || '').toUpperCase();
+        let divisor = displaySubjects.length > 0 ? displaySubjects.length : 1; // Fallback
+        
+        if (cls.includes('JSS') || cls.includes('SS1') || cls.includes('SS 1')) {
+          divisor = 16;
+        } else if ((cls.includes('SS2') || cls.includes('SS3') || cls.includes('SS 2') || cls.includes('SS 3')) && 
+                   (cls.includes('ART') || cls.includes('SCIENCE'))) {
+          divisor = 9;
+        }
 
         setStudentMarks({
           subjects: displaySubjects.sort((a, b) => a.subject.localeCompare(b.subject)),
