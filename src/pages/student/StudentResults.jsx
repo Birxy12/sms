@@ -48,12 +48,14 @@ const fetchAdminStudent = async () => {
     snap = await getDocs(q);
   }
   if (!snap.empty) {
-    const sData = snap.docs[0].data();
+    const sDataRaw = snap.docs[0].data();
+    const sDataExpanded = expandStudent(sDataRaw);
     
     // If it's a public access, we MUST verify the PIN here too for security
     if (isPublic) {
       const isAdminBypass = publicPin === '@@@@@@' || publicPin === '001100';
-      if (!isAdminBypass && sData.pin !== publicPin) {
+      const storedPin = sDataExpanded.pin || sDataRaw.pin || '';
+      if (!isAdminBypass && storedPin !== publicPin) {
         setResultsError('Unauthorized access. Invalid PIN.');
         setLoading(false);
         return;
@@ -61,7 +63,7 @@ const fetchAdminStudent = async () => {
       setPinVerified(true);
     }
     
-    setAdminFetchedStudent(expandStudent(sData));
+    setAdminFetchedStudent(sDataExpanded);
   }
 };
 fetchAdminStudent();

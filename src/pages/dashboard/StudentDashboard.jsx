@@ -8,7 +8,7 @@ import {
   Inbox as InboxIcon, Trophy, Wallet, BookOpen, Library, MonitorCheck, 
   AlertCircle, Star, ArrowUpRight, Clock, User, Zap, GraduationCap
 } from 'lucide-react';
-import { MARKS_KEYS } from '../../utils/firestoreSchema';
+import { MARKS_KEYS, expandMarks } from '../../utils/firestoreSchema';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import PinSetupModal from '../../components/student/PinSetupModal';
@@ -31,7 +31,10 @@ const StudentDashboard = () => {
   const [recentNotifications, setRecentNotifications] = useState([]);
 
   useEffect(() => {
-    if (!currentStudent) return;
+    if (!currentStudent || !regNum) {
+      if (!loading && !currentStudent) setLoading(false);
+      return;
+    }
     
     const loadData = async () => {
       try {
@@ -52,21 +55,40 @@ const StudentDashboard = () => {
         setInboxCount(new Set(allNotifs.map(n => n.id)).size);
 
         // 2. Fetch Results & Calculate Average
-        const rSnap = await getDocs(query(collection(db, 'marks'), where(MARKS_KEYS.regNo, '==', regNum)));
+        // Try compressed key first
+        let marksQuery = query(collection(db, 'marks'), where(MARKS_KEYS.regNo, '==', regNum));
+        let rSnap = await getDocs(marksQuery);
+        
+        // Fallback to legacy key if empty
+        if (rSnap.empty) {
+          marksQuery = query(collection(db, 'marks'), where('reg_no', '==', regNum));
+          rSnap = await getDocs(marksQuery);
+        }
+
         setResultsCount(rSnap.size);
         
         if (!rSnap.empty) {
-          const latestResult = rSnap.docs[0].data();
+          // Sort by session/term to get latest
+          const allResults = rSnap.docs.map(doc => expandMarks(doc.data()));
+          // Sort logic: latest session, latest term (simplified)
+          allResults.sort((a, b) => (b.session || '').localeCompare(a.session || ''));
+          
+          const latestResult = allResults[0];
           const marks = latestResult.marks || {};
           let total = 0;
           let count = 0;
-          Object.keys(marks).forEach(k => {
-            if (k !== '_meta' && marks[k].total) {
-              total += parseFloat(marks[k].total);
-              count++;
-            }
-          });
-          if (count > 0) setAvgScore((total / count).toFixed(1));
+
+          if (marks._meta && marks._meta.average) {
+            setAvgScore(marks._meta.average);
+          } else {
+            Object.keys(marks).forEach(k => {
+              if (k !== '_meta' && marks[k].total) {
+                total += parseFloat(marks[k].total);
+                count++;
+              }
+            });
+            if (count > 0) setAvgScore((total / count).toFixed(1));
+          }
         }
       } catch (e) {
         console.error("Dashboard error:", e);

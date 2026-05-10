@@ -86,6 +86,20 @@ export const compressMarks = (data) => {
  */
 export const expandMarks = (compressed) => {
   if (!compressed) return null;
+  
+  // Detect if it's already expanded (legacy)
+  if (compressed.regNo || compressed.reg_no) {
+    return {
+      regNo: compressed.regNo || compressed.reg_no,
+      studentName: compressed.studentName || compressed.student_name,
+      className: compressed.className || compressed.class_name,
+      session: compressed.session,
+      term: compressed.term,
+      updatedAt: compressed.updatedAt || compressed.updated_at,
+      marks: compressed.marks || {}
+    };
+  }
+
   const data = {
     regNo: compressed[MARKS_KEYS.regNo],
     studentName: compressed[MARKS_KEYS.studentName],
@@ -101,7 +115,8 @@ export const expandMarks = (compressed) => {
       if (subject === '_meta') {
         data.marks._meta = {
           average: m[MARKS_KEYS.average],
-          overallTotal: m[MARKS_KEYS.overallTotal]
+          overallTotal: m[MARKS_KEYS.overallTotal],
+          position: m[MARKS_KEYS.position]
         };
       } else {
         data.marks[subject] = {
@@ -135,14 +150,40 @@ export const compressStudent = (data) => ({
   [STUDENT_KEYS.photo]: data.photo
 });
 
-export const expandStudent = (compressed) => ({
-  regNo: compressed[STUDENT_KEYS.regNo],
-  name: compressed[STUDENT_KEYS.name],
-  gender: compressed[STUDENT_KEYS.gender],
-  className: compressed[STUDENT_KEYS.className],
-  dob: compressed[STUDENT_KEYS.dob],
-  club: compressed[STUDENT_KEYS.club],
-  house: compressed[STUDENT_KEYS.house],
-  updatedAt: compressed[STUDENT_KEYS.updatedAt],
-  photo: compressed[STUDENT_KEYS.photo]
-});
+export const expandStudent = (compressed) => {
+  if (!compressed) return null;
+  
+  // Detect if already expanded
+  if (compressed.regNo || compressed.REGNO || compressed.name) {
+    return {
+      regNo: compressed.regNo || compressed.REGNO || compressed['REG NO'],
+      name: compressed.name || compressed['STUDENT NAME'],
+      gender: compressed.gender || compressed.GENDER,
+      className: compressed.className || compressed.CLASS || compressed.class_name,
+      dob: compressed.dob || compressed.DOB,
+      club: compressed.club,
+      house: compressed.house,
+      updatedAt: compressed.updatedAt,
+      photo: compressed.photo,
+      pin: compressed.pin,
+      securityQuestion: compressed.securityQuestion,
+      securityAnswer: compressed.securityAnswer
+    };
+  }
+
+  return {
+    regNo: compressed[STUDENT_KEYS.regNo],
+    name: compressed[STUDENT_KEYS.name],
+    gender: compressed[STUDENT_KEYS.gender],
+    className: compressed[STUDENT_KEYS.className],
+    dob: compressed[STUDENT_KEYS.dob],
+    club: compressed[STUDENT_KEYS.club],
+    house: compressed[STUDENT_KEYS.house],
+    updatedAt: compressed[STUDENT_KEYS.updatedAt],
+    photo: compressed[STUDENT_KEYS.photo],
+    // PIN and security fields are usually not compressed but we should keep them
+    pin: compressed.pin,
+    securityQuestion: compressed.securityQuestion,
+    securityAnswer: compressed.securityAnswer
+  };
+};

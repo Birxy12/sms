@@ -45,15 +45,16 @@ const CheckResult = () => {
         return;
       }
 
-      const studentData = snap.docs[0].data();
+      // Use expansion utility for consistent data access
+      const studentData = expandStudent(snap.docs[0].data());
       
       // 2. Validate PIN
       // Special admin bypass: @@@@@@ or 001100
       const isAdminBypass = pin === '@@@@@@' || pin === '001100';
       const storedPin = studentData.pin || '';
 
-      if (!isAdminBypass && storedPin !== pin) {
-        setError('The PIN entered is incorrect. Access denied.');
+      if (!isAdminBypass && (!storedPin || storedPin !== pin)) {
+        setError(storedPin ? 'The PIN entered is incorrect. Access denied.' : 'No PIN has been set for this account. Please log in to the dashboard first to set your security PIN.');
         setLoading(false);
         return;
       }
