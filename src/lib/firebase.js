@@ -30,9 +30,11 @@ try {
     useFetchStreams: false,
   });
 } catch (e) {
-  console.warn("Firestore initialization with persistence failed. Falling back to default instance.", e);
-  // If persistence fails (common after version upgrades or manual cache clears), 
-  // we use the default Firestore instance which typically uses memory cache as fallback.
+  if (e.code === 'failed-precondition') {
+    console.warn("Firestore persistence already enabled in another tab.");
+  } else {
+    console.error("Firestore persistence failed:", e);
+  }
   db = getFirestore(app);
 }
 const auth = getAuth(app);
