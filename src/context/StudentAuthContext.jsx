@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+
 import { STUDENT_KEYS, expandStudent } from '../utils/firestoreSchema';
 
 const StudentAuthContext = createContext();
@@ -57,11 +58,29 @@ export const StudentAuthProvider = ({ children }) => {
   const [pendingStudent, setPendingStudent] = useState(null);
   const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(true);
+  // authReady = true only after Firebase confirms a real Auth user is present
+  const [authReady, setAuthReady] = useState(false);
 
-  // Load student on mount
+  // Load student on mount and establish Firebase Auth
   useEffect(() => {
+    let unsubscribeAuth = null;
+
     const initAuth = async () => {
       const storedStudent = localStorage.getItem('currentStudent');
+
+      // Subscribe to Firebase auth state — this is the source of truth for
+      // whether Firestore will accept reads. Only set authReady when confirmed.
+      const { auth } = await import('../lib/firebase');
+      const { onAuthStateChanged } = await import('firebase/auth');
+
+      unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+        if (user) {
+          setAuthReady(true);
+        } else {
+          setAuthReady(false);
+        }
+      });
+
       if (storedStudent) {
         try {
           const studentData = JSON.parse(storedStudent);
@@ -78,10 +97,20 @@ export const StudentAuthProvider = ({ children }) => {
           console.error('Stored student session could not be restored:', error);
           localStorage.removeItem('currentStudent');
         }
+      } else {
+        // No stored student — still try to get anonymous auth so Firestore
+        // rules are satisfied for public reads
+        await ensureStudentFirebaseAuth();
       }
+
       setLoading(false);
     };
+
     initAuth();
+
+    return () => {
+      if (unsubscribeAuth) unsubscribeAuth();
+    };
   }, []);
 
   const login = async (regNo, className) => {
@@ -246,7 +275,7 @@ export const StudentAuthProvider = ({ children }) => {
 
   return (
     <StudentAuthContext.Provider value={{ 
-      currentStudent, pendingStudent, login, verifyPin, setPin, resetPin, logout, updateProfile, loading, authError 
+      currentStudent, pendingStudent, login, verifyPin, setPin, resetPin, logout, updateProfile, loading, authError, authReady
     }}>
       {!loading && children}
     </StudentAuthContext.Provider>

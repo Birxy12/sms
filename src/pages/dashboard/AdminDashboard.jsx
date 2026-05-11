@@ -12,7 +12,7 @@ import StudentDashboard from './StudentDashboard';
 import { Users, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 const AdminDashboard = () => {
-  const { currentAdmin, changePassword } = useAdminAuth();
+  const { currentAdmin, changePassword, authReady } = useAdminAuth();
   const [viewMode, setViewMode] = useState('admin'); // admin, staff, student
   const [selectedClass, setSelectedClass] = useState('JSS1');
   const [activeTab, setActiveTab] = useState('Overview');
@@ -80,6 +80,7 @@ const AdminDashboard = () => {
     if (viewMode === 'admin') {
       const fetchStats = async () => {
         if (!currentAdmin) return;
+        if (!authReady) return; // Don't query Firestore until auth is confirmed
         
         try {
           // Fetch students
@@ -136,7 +137,7 @@ const AdminDashboard = () => {
     return () => {
       isMounted = false;
     };
-  }, [viewMode]);
+  }, [viewMode, authReady]);
 
   const stats = [
     { title: 'Total Students', value: realStats.students.toLocaleString(), icon: GraduationCap, color: '#ff6b00' },

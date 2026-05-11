@@ -7,44 +7,64 @@ const AdminAuthContext = createContext();
 export const AdminAuthProvider = ({ children }) => {
   const [currentAdmin, setCurrentAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
+  // authReady = true only after onAuthStateChanged confirms Firebase has a user
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
+    let unsubscribeAuth = null;
+
     const initAuth = async () => {
       const savedAdmin = localStorage.getItem('adminUser');
-      if (savedAdmin) {
-        setCurrentAdmin(JSON.parse(savedAdmin));
-        
-        try {
-          const { signInAnonymously, onAuthStateChanged } = await import('firebase/auth');
-          const { auth } = await import('../lib/firebase');
-          
+
+      try {
+        const { signInAnonymously, onAuthStateChanged } = await import('firebase/auth');
+        const { auth } = await import('../lib/firebase');
+
+        // Listen for auth state — sets authReady once confirmed
+        unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+          setAuthReady(!!user);
+        });
+
+        if (savedAdmin) {
+          setCurrentAdmin(JSON.parse(savedAdmin));
           // Re-establish Firebase anonymous auth
           if (!auth.currentUser) {
             await signInAnonymously(auth);
           }
-          
+
           // Wait for auth to be truly ready
           await new Promise(resolve => {
-            const unsubscribe = onAuthStateChanged(auth, (user) => {
+            const unsub = onAuthStateChanged(auth, (user) => {
               if (user) {
-                unsubscribe();
+                unsub();
                 resolve();
               }
             });
             // Timeout after 5s just in case
             setTimeout(() => {
-              unsubscribe();
+              unsub();
               resolve();
             }, 5000);
           });
-        } catch (e) {
-          console.warn('Silent anonymous auth failed:', e);
+        } else {
+          // No stored admin — still sign in anonymously so public Firestore
+          // reads (e.g. students collection) work without hitting permission errors
+          if (!auth.currentUser) {
+            await signInAnonymously(auth).catch(() => {});
+          }
         }
+      } catch (e) {
+        console.warn('Silent anonymous auth failed:', e);
       }
+
       setLoading(false);
     };
 
     initAuth();
+
+    return () => {
+      if (unsubscribeAuth) unsubscribeAuth();
+    };
   }, []);
 
   const login = async (identifier, password) => {
@@ -363,7 +383,8 @@ export const AdminAuthProvider = ({ children }) => {
     logout,
     updateProfile,
     changePassword,
-    loading
+    loading,
+    authReady
   };
 
 

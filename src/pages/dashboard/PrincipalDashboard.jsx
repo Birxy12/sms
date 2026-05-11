@@ -3,8 +3,10 @@ import { db } from '../../lib/firebase';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Users, BookOpen, PenTool, DollarSign, ArrowUpRight, GraduationCap, BarChart, TrendingUp, UserCheck, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAdminAuth } from '../../context/AdminAuthContext';
 
 const PrincipalDashboard = () => {
+  const { authReady } = useAdminAuth();
   const [stats, setStats] = useState({
     totalStudents: 0,
     maleStudents: 0,
@@ -22,6 +24,7 @@ const PrincipalDashboard = () => {
   });
 
   useEffect(() => {
+    if (!authReady) return; // Wait for Firebase auth before reading staff collection
     const fetchDashboardData = async () => {
       try {
         // 1. Get Fee Settings for expected fees
@@ -79,7 +82,7 @@ const PrincipalDashboard = () => {
       }
     };
     fetchDashboardData();
-  }, []);
+  }, [authReady]);
 
   const collectionPercentage = Math.round((finances.collectedFee / finances.expectedFee) * 100) || 0;
 

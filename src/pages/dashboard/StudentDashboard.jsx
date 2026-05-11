@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import PinSetupModal from '../../components/student/PinSetupModal';
 
 const StudentDashboard = () => {
-  const { currentStudent, authError } = useStudentAuth();
+  const { currentStudent, authError, authReady } = useStudentAuth();
   const { primaryColor } = useTheme();
   const navigate = useNavigate();
 
@@ -35,6 +35,8 @@ const StudentDashboard = () => {
       if (!loading && !currentStudent) setLoading(false);
       return;
     }
+    // Wait until Firebase auth is confirmed before reading Firestore
+    if (!authReady) return;
     
     const loadData = async () => {
       try {
@@ -101,7 +103,7 @@ const StudentDashboard = () => {
     };
     
     loadData();
-  }, [currentStudent, className, regNum]);
+  }, [currentStudent, className, regNum, authReady]);
 
   const mainStats = [
     { label: 'GPA Average', value: `${avgScore}%`, icon: Zap, color: '#6366f1', trend: '+2.4%' },
