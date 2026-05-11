@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -37,34 +37,57 @@ export const ThemeProvider = ({ children }) => {
   // Track whether a user has explicitly changed a setting (prevents write-on-mount)
   const hasUserEdited = React.useRef(false);
 
-  // 1. Initial Load from Firestore — read only, no write
+  // 1. Initial Load from Firestore — wait for Firebase auth before reading
   useEffect(() => {
-    const loadBranding = async () => {
+    let unsubscribeAuth = null;
+
+    const initBranding = async () => {
       try {
-        const docSnap = await getDoc(doc(db, 'settings', 'branding'));
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data.schoolName) setSchoolName(data.schoolName);
-          if (data.primaryColor) setPrimaryColor(data.primaryColor);
-          if (data.secondaryColor) setSecondaryColor(data.secondaryColor);
-          if (data.schoolLogo) setSchoolLogo(data.schoolLogo);
-          if (data.navbarBg) setNavbarBg(data.navbarBg);
-          if (data.footerBg) setFooterBg(data.footerBg);
-          if (data.navbarTextColor) setNavbarTextColor(data.navbarTextColor);
-          if (data.footerTextColor) setFooterTextColor(data.footerTextColor);
-          if (data.principalSignature) setPrincipalSignature(data.principalSignature);
-          if (data.principalStamp) setPrincipalStamp(data.principalStamp);
-          if (data.bursarSignature) setBursarSignature(data.bursarSignature);
-          if (data.bursarStamp) setBursarStamp(data.bursarStamp);
+        const { auth } = await import('../lib/firebase');
+        const { onAuthStateChanged, signInAnonymously } = await import('firebase/auth');
+
+        // Ensure we have an authenticated session before hitting Firestore
+        if (!auth.currentUser) {
+          await signInAnonymously(auth).catch(() => {});
         }
+
+        // Subscribe and load once confirmed
+        unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+          if (!user) return; // still waiting
+          try {
+            const docSnap = await getDoc(doc(db, 'settings', 'branding'));
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              if (data.schoolName) setSchoolName(data.schoolName);
+              if (data.primaryColor) setPrimaryColor(data.primaryColor);
+              if (data.secondaryColor) setSecondaryColor(data.secondaryColor);
+              if (data.schoolLogo) setSchoolLogo(data.schoolLogo);
+              if (data.navbarBg) setNavbarBg(data.navbarBg);
+              if (data.footerBg) setFooterBg(data.footerBg);
+              if (data.navbarTextColor) setNavbarTextColor(data.navbarTextColor);
+              if (data.footerTextColor) setFooterTextColor(data.footerTextColor);
+              if (data.principalSignature) setPrincipalSignature(data.principalSignature);
+              if (data.principalStamp) setPrincipalStamp(data.principalStamp);
+              if (data.bursarSignature) setBursarSignature(data.bursarSignature);
+              if (data.bursarStamp) setBursarStamp(data.bursarStamp);
+            }
+          } catch (e) {
+            console.warn('Could not load branding from Firestore. Using local defaults.', e.code || e.message);
+          } finally {
+            setLoading(false);
+            // Only need the first confirmed auth event
+            if (unsubscribeAuth) { unsubscribeAuth(); unsubscribeAuth = null; }
+          }
+        });
       } catch (e) {
-        // Offline or network error — silently continue with local defaults
-        console.warn("Could not load branding from Firestore. Using local defaults.", e.code || e.message);
-      } finally {
+        console.warn('ThemeContext auth init failed:', e.message);
         setLoading(false);
       }
     };
-    loadBranding();
+
+    initBranding();
+
+    return () => { if (unsubscribeAuth) unsubscribeAuth(); };
   }, []);
 
   // 2. Apply CSS Variables whenever colors change (no Firestore call here)

@@ -29,6 +29,7 @@ const AdminDashboard = () => {
   const [controlsStatus, setControlsStatus] = useState('');
 
   useEffect(() => {
+    if (!authReady) return; // Wait for Firebase auth before reading Firestore
     const fetchControls = async () => {
       try {
         const snap = await getDoc(doc(db, 'settings', 'student_permissions'));
@@ -38,7 +39,7 @@ const AdminDashboard = () => {
       } catch (e) { console.error('Error fetching system controls:', e); }
     };
     fetchControls();
-  }, []);
+  }, [authReady]);
 
   const handleToggleControl = async (key, value) => {
     const updated = { ...systemControls, [key]: value };

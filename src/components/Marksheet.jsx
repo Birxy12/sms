@@ -8,10 +8,12 @@ import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 import { CLASS_LIST, getSubjectsForClass } from '../utils/subjectConfig';
 import { expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../utils/firestoreSchema';
+import { useAdminAuth } from '../context/AdminAuthContext';
 import '../assets/Marksheet.css';
 
 const Marksheet = ({ className: propClassName }) => {
   const { primaryColor } = useTheme();
+  const { authReady } = useAdminAuth();
   const [data, setData] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -179,6 +181,7 @@ const Marksheet = ({ className: propClassName }) => {
   };
 
   useEffect(() => {
+    if (!authReady) return; // Wait until Firebase auth is confirmed
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -298,7 +301,7 @@ const Marksheet = ({ className: propClassName }) => {
     };
 
     fetchData();
-  }, [selectedClass, selectedSession, selectedTerm]);
+  }, [selectedClass, selectedSession, selectedTerm, authReady]);
 
   const filteredData = data.filter(student => 
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
