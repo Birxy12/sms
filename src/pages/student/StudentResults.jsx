@@ -11,7 +11,7 @@ import { expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../../util
 import Navbar from '../../components/Navbar';
 
 const StudentResults = ({ isPublic }) => {
-const { currentStudent: loggedInStudent, authError } = useStudentAuth();
+const { currentStudent: loggedInStudent, authError, authReady } = useStudentAuth();
 const { schoolName, schoolLogo, primaryColor, principalSignature, principalStamp } = useTheme();
 const printRef = useRef();
 
@@ -121,7 +121,7 @@ setLoading(false);
 
 useEffect(() => {
 const fetchResults = async () => {
-if (!selectedTermId || !regNum) return;
+if (!authReady || !selectedTermId || !regNum) return;
 if (authError) {
 setResultsError(authError);
 setStudentMarks(null);
@@ -320,7 +320,7 @@ setLoading(false);
 };
 
 fetchResults();
-}, [selectedTermId, publishedTerms, regNum, currentStudent, authError]);
+}, [selectedTermId, publishedTerms, regNum, currentStudent, authError, authReady]);
 
 useEffect(() => {
 const fetchSchoolDates = async () => {
