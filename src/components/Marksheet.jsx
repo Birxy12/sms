@@ -186,17 +186,34 @@ const Marksheet = ({ className: propClassName }) => {
       setLoading(true);
       try {
         // 1. Try to fetch from Firestore first (for students)
-        const studentsQuery = query(collection(db, 'students'), where(STUDENT_KEYS.className, '==', currentClassName));
-        const studentsSnapshot = await getDocs(studentsQuery);
+        let studentsQuery = query(collection(db, 'students'), where(STUDENT_KEYS.className, '==', currentClassName));
+        let studentsSnapshot = await getDocs(studentsQuery);
+        if (studentsSnapshot.empty) {
+          studentsQuery = query(collection(db, 'students'), where('className', '==', currentClassName));
+          studentsSnapshot = await getDocs(studentsQuery);
+          if (studentsSnapshot.empty) {
+            studentsQuery = query(collection(db, 'students'), where('CLASS', '==', currentClassName));
+            studentsSnapshot = await getDocs(studentsQuery);
+          }
+        }
         
         // Fetch marks from Firestore
-        const marksQuery = query(
+        let marksQuery = query(
           collection(db, 'marks'),
           where(MARKS_KEYS.session, '==', selectedSession),
           where(MARKS_KEYS.className, '==', selectedClass),
           where(MARKS_KEYS.term, '==', selectedTerm)
         );
-        const marksSnapshot = await getDocs(marksQuery);
+        let marksSnapshot = await getDocs(marksQuery);
+        if (marksSnapshot.empty) {
+          marksQuery = query(
+            collection(db, 'marks'),
+            where('session', '==', selectedSession),
+            where('class_name', '==', selectedClass),
+            where('term', '==', selectedTerm)
+          );
+          marksSnapshot = await getDocs(marksQuery);
+        }
         const marksData = marksSnapshot.docs.map(doc => expandMarks(doc.data()));
         
         const dbMarks = {};

@@ -82,8 +82,16 @@ const ScoreEntry = () => {
     setLoading(true);
     setStatus({ type: '', message: '' });
     try {
-      const q = query(collection(db, 'students'), where(STUDENT_KEYS.className, '==', selectedClass));
-      const querySnapshot = await getDocs(q);
+      let q = query(collection(db, 'students'), where(STUDENT_KEYS.className, '==', selectedClass));
+      let querySnapshot = await getDocs(q);
+      if (querySnapshot.empty) {
+        q = query(collection(db, 'students'), where('className', '==', selectedClass));
+        querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) {
+          q = query(collection(db, 'students'), where('CLASS', '==', selectedClass));
+          querySnapshot = await getDocs(q);
+        }
+      }
       const studentList = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -92,13 +100,31 @@ const ScoreEntry = () => {
       setStudents(studentList);
       
       // Fetch existing scores for this class/period/subject from Firestore
-      const marksQuery = query(
+      let marksQuery = query(
         collection(db, 'marks'),
         where(MARKS_KEYS.className, '==', selectedClass),
         where(MARKS_KEYS.session, '==', selectedSession),
         where(MARKS_KEYS.term, '==', selectedTerm)
       );
-      const marksSnap = await getDocs(marksQuery);
+      let marksSnap = await getDocs(marksQuery);
+      if (marksSnap.empty) {
+        marksQuery = query(
+          collection(db, 'marks'),
+          where('class_name', '==', selectedClass),
+          where('session', '==', selectedSession),
+          where('term', '==', selectedTerm)
+        );
+        marksSnap = await getDocs(marksQuery);
+        if (marksSnap.empty) {
+          marksQuery = query(
+            collection(db, 'marks'),
+            where('className', '==', selectedClass),
+            where('session', '==', selectedSession),
+            where('term', '==', selectedTerm)
+          );
+          marksSnap = await getDocs(marksQuery);
+        }
+      }
       
       const newScores = {};
       const newDbMarks = {};

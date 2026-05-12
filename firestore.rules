@@ -2,41 +2,61 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper: Is the user authenticated via Firebase Auth?
+    // ========== HELPERS ==========
+    
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Helper: Is the user the specific super admin?
-    // Requires Email/Password or Google Auth for email field
+    function hasEmail() {
+      return isAuthenticated() && request.auth.token.email != null;
+    }
+
     function isSuperAdmin() {
-      return isAuthenticated() && (
+      return hasEmail() && (
         request.auth.token.email == 'globixtechinc@gmail.com' ||
         request.auth.token.email == 'admin@birxysms.edu'
       );
     }
 
-    // Helper: Is the user a staff member?
-    function isStaff() {
-      return isAuthenticated(); // For now, allow any auth'd user to be staff if we use anonymous auth as bridge
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // 1. Staff Records: Only Super Admin can manage staff list
+    // ========== USERS (for role management) ==========
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isSuperAdmin();
+      allow create: if isAuthenticated();
+      allow update: if isOwner(userId) || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ========== STAFF ==========
     match /staff/{id} {
       allow read: if isAuthenticated();
-      allow write: if isSuperAdmin();
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
 
-    // 2. Student Records: Public read for login, auth'd write
+    // ========== STUDENTS ==========
     match /students/{id} {
-      allow read: if true; 
-      allow write: if isAuthenticated();
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isSuperAdmin();
     }
 
-    // 3. CBT System
+    // ========== CBT SYSTEM ==========
     match /cbtExams/{id} {
       allow read: if true;
-      allow write: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.createdBy == request.auth.uid || isSuperAdmin()
+      );
+      allow delete: if isSuperAdmin() || (
+        resource.data.createdBy == request.auth.uid
+      );
     }
 
     match /cbtSubmissions/{id} {
@@ -45,7 +65,7 @@ service cloud.firestore {
       allow update, delete: if isSuperAdmin();
     }
 
-    // 4. Academic Marks
+    // ========== MARKS ==========
     match /marks/{id} {
       allow read, write: if isAuthenticated();
     }
@@ -53,21 +73,62 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
-    // 5. General Collections
-    match /subjects/{id} { allow read: if true; allow write: if isAuthenticated(); }
-    match /publications/{id} { allow read: if true; allow write: if isAuthenticated(); }
-    match /testimonies/{id} { allow read: if true; allow write: if isAuthenticated(); }
-    match /settings/{id} { allow read: if true; allow write: if isAuthenticated(); }
-    match /posts/{id} { allow read: if true; allow write: if isAuthenticated(); }
-    match /assignments/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
-    match /notes/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
-    match /notifications/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
-    match /schools/{id} { allow read: if true; allow write: if isSuperAdmin(); }
-    match /classes/{id} { allow read: if true; allow write: if isAuthenticated(); }
+    // ========== SCHOOL DATA ==========
+    match /schools/{id} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
 
-    // Default: Authenticated users can read/write other things
+    match /classes/{id} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /subjects/{id} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // ========== CONTENT ==========
+    match /posts/{id} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /publications/{id} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /testimonies/{id} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // ========== ACADEMIC ==========
+    match /assignments/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    match /notes/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    match /notifications/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // ========== FALLBACK ==========
     match /{document=**} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if false;
     }
   }
 }

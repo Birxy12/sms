@@ -9,6 +9,7 @@ import BulkUpload from '../../components/BulkUpload';
 import ScoreEntry from '../../components/ScoreEntry';
 import StaffDashboard from './StaffDashboard';
 import StudentDashboard from './StudentDashboard';
+import { expandStudent } from '../../utils/firestoreSchema';
 import { Users, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 const AdminDashboard = () => {
@@ -93,7 +94,7 @@ const AdminDashboard = () => {
           let others = 0;
           
           studentSnap.forEach(doc => {
-            const data = doc.data();
+            const data = expandStudent(doc.data());
             const mGender = (data.gender || '').toLowerCase();
             if (mGender === 'm' || mGender === 'male') male++;
             else if (mGender === 'f' || mGender === 'female' || mGender === 'girl') female++;

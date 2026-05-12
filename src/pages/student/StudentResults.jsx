@@ -142,6 +142,10 @@ if (!selectedPub) return;
         if (marksSnap.empty) {
           marksQuery = query(collection(db, 'marks'), where('reg_no', '==', regNum));
           marksSnap = await getDocs(marksQuery);
+          if (marksSnap.empty) {
+            marksQuery = query(collection(db, 'marks'), where('regNo', '==', regNum));
+            marksSnap = await getDocs(marksQuery);
+          }
         }
         const marksData = marksSnap.docs.map(doc => expandMarks(doc.data()));
 
@@ -166,6 +170,10 @@ if (!selectedPub) return;
         if (allMarksSnap.empty) {
           allMarksQuery = query(collection(db, 'marks'), where('class_name', '==', studentClass));
           allMarksSnap = await getDocs(allMarksQuery);
+          if (allMarksSnap.empty) {
+            allMarksQuery = query(collection(db, 'marks'), where('className', '==', studentClass));
+            allMarksSnap = await getDocs(allMarksQuery);
+          }
         }
         const allMarksData = allMarksSnap.docs.map(doc => expandMarks(doc.data()));
 
@@ -212,6 +220,10 @@ if (!selectedPub) return;
         if (classPopSnap.empty) {
           classPopQuery = query(collection(db, 'students'), where('className', '==', studentClass));
           classPopSnap = await getDocs(classPopQuery);
+          if (classPopSnap.empty) {
+            classPopQuery = query(collection(db, 'students'), where('CLASS', '==', studentClass));
+            classPopSnap = await getDocs(classPopQuery);
+          }
         }
 
         setClassStats({
