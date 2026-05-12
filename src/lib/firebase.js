@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getFirestore } from "firebase/firestore";
+import { initializeFirestore, memoryLocalCache, getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
@@ -23,11 +23,7 @@ const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 let db;
 try {
   db = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager()
-    }),
-    experimentalForceLongPolling: true,
-    useFetchStreams: false,
+    localCache: memoryLocalCache()
   });
 } catch (e) {
   if (e.code === 'failed-precondition') {
