@@ -45,11 +45,11 @@ export const STUDENT_KEYS = {
  */
 export const compressMarks = (data) => {
   const compressed = {
-    [MARKS_KEYS.regNo]: data.regNo || data.reg_no,
-    [MARKS_KEYS.studentName]: data.studentName || data.student_name,
-    [MARKS_KEYS.className]: data.className || data.class_name,
-    [MARKS_KEYS.session]: data.session,
-    [MARKS_KEYS.term]: data.term,
+    [MARKS_KEYS.regNo]: data.regNo || data.reg_no || "",
+    [MARKS_KEYS.studentName]: data.studentName || data.student_name || "",
+    [MARKS_KEYS.className]: data.className || data.class_name || "",
+    [MARKS_KEYS.session]: data.session || "",
+    [MARKS_KEYS.term]: data.term || "",
     [MARKS_KEYS.updatedAt]: data.updatedAt || data.updated_at || new Date().toISOString(),
     [MARKS_KEYS.marks]: {}
   };
@@ -57,23 +57,24 @@ export const compressMarks = (data) => {
   if (data.marks) {
     Object.entries(data.marks).forEach(([subject, m]) => {
       if (subject === '_meta') {
-        compressed[MARKS_KEYS.marks]._meta = {
-          [MARKS_KEYS.average]: m.average,
-          [MARKS_KEYS.overallTotal]: m.overallTotal
-        };
-      } else {
-        compressed[MARKS_KEYS.marks][subject] = {
-          [MARKS_KEYS.cat1]: m.cat1,
-          [MARKS_KEYS.cat2]: m.cat2,
-          [MARKS_KEYS.exam]: m.exam,
-          [MARKS_KEYS.total]: m.total,
-          [MARKS_KEYS.percent]: m.percent,
-          [MARKS_KEYS.grade]: m.grade,
-          [MARKS_KEYS.remarks]: m.remarks,
-          [MARKS_KEYS.position]: m.position,
-          [MARKS_KEYS.min]: m.min,
-          [MARKS_KEYS.max]: m.max
-        };
+        const metaObj = {};
+        if (m.average !== undefined) metaObj[MARKS_KEYS.average] = m.average;
+        if (m.overallTotal !== undefined) metaObj[MARKS_KEYS.overallTotal] = m.overallTotal;
+        if (m.position !== undefined) metaObj[MARKS_KEYS.position] = m.position;
+        compressed[MARKS_KEYS.marks]._meta = metaObj;
+      } else if (m) {
+        const subObj = {};
+        if (m.cat1 !== undefined) subObj[MARKS_KEYS.cat1] = m.cat1;
+        if (m.cat2 !== undefined) subObj[MARKS_KEYS.cat2] = m.cat2;
+        if (m.exam !== undefined) subObj[MARKS_KEYS.exam] = m.exam;
+        if (m.total !== undefined) subObj[MARKS_KEYS.total] = m.total;
+        if (m.percent !== undefined) subObj[MARKS_KEYS.percent] = m.percent;
+        if (m.grade !== undefined) subObj[MARKS_KEYS.grade] = m.grade;
+        if (m.remarks !== undefined) subObj[MARKS_KEYS.remarks] = m.remarks;
+        if (m.position !== undefined) subObj[MARKS_KEYS.position] = m.position;
+        if (m.min !== undefined) subObj[MARKS_KEYS.min] = m.min;
+        if (m.max !== undefined) subObj[MARKS_KEYS.max] = m.max;
+        compressed[MARKS_KEYS.marks][subject] = subObj;
       }
     });
   }

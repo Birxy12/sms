@@ -616,3 +616,51 @@ body.dark-mode .top-header input {
 body.dark-mode .theme-toggle-btn:hover {
   background-color: rgba(255, 255, 255, 0.08);
 }
+
+/* Ensure that in dark mode, light/white backgrounds have black text/icons and dark backgrounds have white text/icons */
+body.dark-mode [class*="bg-slate-900"],
+body.dark-mode [class*="bg-slate-800"],
+body.dark-mode [class*="bg-slate-950"],
+body.dark-mode [class*="bg-gray-900"],
+body.dark-mode [class*="bg-gray-800"],
+body.dark-mode [class*="bg-indigo-950"],
+body.dark-mode [class*="bg-indigo-900"],
+body.dark-mode .bg-secondary,
+body.dark-mode .bg-primary,
+body.dark-mode .top-header,
+body.dark-mode .card-premium,
+body.dark-mode .card-white,
+body.dark-mode .stat-card {
+  color: #f8fafc !important;
+}
+
+body.dark-mode [class*="bg-slate-900"] svg,
+body.dark-mode [class*="bg-slate-800"] svg,
+body.dark-mode [class*="bg-slate-950"] svg,
+body.dark-mode [class*="bg-gray-900"] svg,
+body.dark-mode [class*="bg-gray-800"] svg,
+body.dark-mode [class*="bg-indigo-950"] svg,
+body.dark-mode [class*="bg-indigo-900"] svg,
+body.dark-mode .bg-secondary svg,
+body.dark-mode .bg-primary svg,
+body.dark-mode .top-header svg,
+body.dark-mode .card-premium svg,
+body.dark-mode .card-white svg,
+body.dark-mode .stat-card svg {
+  color: #f8fafc !important;
+  stroke: #f8fafc !important;
+}
+
+/* Light/white container text and icon colors in dark mode (if any elements stay light) */
+body.dark-mode .keep-white,
+body.dark-mode [style*="background-color: #ffffff"],
+body.dark-mode [style*="background-color: rgb(255, 255, 255)"],
+body.dark-mode [style*="background-color: white"] {
+  color: #0f172a !important;
+}
+body.dark-mode .keep-white svg,
+body.dark-mode [style*="background-color: #ffffff"] svg,
+body.dark-mode [style*="background-color: rgb(255, 255, 255)"] svg {
+  color: #0f172a !important;
+  stroke: #0f172a !important;
+}

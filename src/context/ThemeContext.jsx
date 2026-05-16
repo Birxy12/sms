@@ -35,7 +35,8 @@ export const ThemeProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('darkMode') === 'true';
+    const saved = localStorage.getItem('darkMode');
+    return saved === null ? true : saved === 'true';
   });
 
   const toggleDarkMode = () => {
