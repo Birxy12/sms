@@ -34,6 +34,26 @@ export const ThemeProvider = ({ children }) => {
   const [whiteColor] = useState('#ffffff');
   const [loading, setLoading] = useState(true);
 
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem('darkMode') === 'true';
+  });
+
+  const toggleDarkMode = () => {
+    setDarkMode(prev => {
+      const next = !prev;
+      localStorage.setItem('darkMode', next);
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  }, [darkMode]);
+
   // Track whether a user has explicitly changed a setting (prevents write-on-mount)
   const hasUserEdited = React.useRef(false);
 
@@ -161,7 +181,9 @@ export const ThemeProvider = ({ children }) => {
       principalStamp, setPrincipalStamp: handleSet(setPrincipalStamp),
       bursarSignature, setBursarSignature: handleSet(setBursarSignature),
       bursarStamp, setBursarStamp: handleSet(setBursarStamp),
-      whiteColor
+      whiteColor,
+      darkMode,
+      toggleDarkMode
     }}>
       {!loading && children}
     </ThemeContext.Provider>
@@ -183,7 +205,9 @@ export const useTheme = () => {
       principalSignature: null,
       principalStamp: null,
       bursarSignature: null,
-      bursarStamp: null
+      bursarStamp: null,
+      darkMode: false,
+      toggleDarkMode: () => {}
     };
   }
   return context;

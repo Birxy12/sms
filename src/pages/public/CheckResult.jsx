@@ -8,10 +8,11 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/MainFooter';
 import { expandStudent, STUDENT_KEYS } from '../../utils/firestoreSchema';
 import { motion, AnimatePresence } from 'framer-motion';
+import brandLogo from '../../assets/bdslogo.jpg';
 
 const CheckResult = () => {
   const navigate = useNavigate();
-  const { primaryColor, schoolName, schoolLogo } = useTheme();
+  const { primaryColor, schoolName, schoolLogo, darkMode } = useTheme();
   const [regNo, setRegNo] = useState('');
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
@@ -70,17 +71,33 @@ const CheckResult = () => {
     }
   };
 
+  const logoUrl = schoolLogo || brandLogo;
+
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans">
+    <div className={`min-h-screen ${darkMode ? 'bg-slate-900' : 'bg-slate-50'} flex flex-col font-sans transition-colors duration-300`}>
       <Navbar />
 
       <main className="flex-1 flex items-center justify-center relative py-20 px-4 overflow-hidden">
         {/* Enterprise Background Accents */}
         <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
-          <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-50 rounded-full blur-3xl opacity-60"></div>
-          <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-slate-100 rounded-full blur-3xl opacity-60"></div>
+          <div className={`absolute top-[-10%] right-[-10%] w-[500px] h-[500px] ${darkMode ? 'bg-indigo-950/20' : 'bg-indigo-50'} rounded-full blur-3xl opacity-60`}></div>
+          <div className={`absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] ${darkMode ? 'bg-slate-950/20' : 'bg-slate-100'} rounded-full blur-3xl opacity-60`}></div>
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] pointer-events-none"></div>
         </div>
+
+        {/* Transparent School Logo Background Watermark */}
+        {logoUrl && (
+          <div 
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] pointer-events-none opacity-[0.04] select-none z-0"
+            style={{
+              backgroundImage: `url(${logoUrl})`,
+              backgroundSize: 'contain',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              filter: darkMode ? 'grayscale(100%) brightness(150%) contrast(120%)' : 'grayscale(100%) contrast(120%)'
+            }}
+          />
+        )}
 
         <div className="w-full max-w-md relative z-10">
           <motion.div 
@@ -88,7 +105,7 @@ const CheckResult = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-10"
           >
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-3xl shadow-xl shadow-indigo-100 border border-slate-100 mb-6 group transition-transform hover:scale-105">
+            <div className={`inline-flex items-center justify-center w-20 h-20 bg-white rounded-3xl border border-slate-100 mb-6 group transition-all duration-300 hover:scale-105 hover:border-indigo-500 ${darkMode ? 'shadow-lg shadow-slate-950/50' : 'shadow-xl shadow-indigo-100'}`}>
               <ShieldCheck size={40} className="text-indigo-600" />
             </div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-2 uppercase">Result Portal</h1>
@@ -99,7 +116,7 @@ const CheckResult = () => {
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
-            className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/60 border border-slate-100 p-10 md:p-12 relative"
+            className={`bg-white rounded-[2.5rem] border border-slate-100 p-10 md:p-12 relative ${darkMode ? 'shadow-2xl shadow-slate-950/80' : 'shadow-2xl shadow-slate-200/60'}`}
           >
             <form onSubmit={handleCheck} className="space-y-8">
               {/* Registration Number Field */}

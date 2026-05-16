@@ -468,7 +468,9 @@ const Marksheet = ({ className: propClassName }) => {
                 <td style={tdStyle}>{student.rollNo}</td>
                 <td style={{ ...tdStyle, fontWeight: '600' }}>{student.name}</td>
                  {subjects.map((subject, sIdx) => {
-                  const sMarks = student.marks[subject.name] || { cat1: 0, cat2: 0, exam: 0, total: 0, percent: 0, grade: 'F' };
+                  const upperSubj = subject.name.toUpperCase().trim();
+                  const mKey = Object.keys(student.marks || {}).find(k => k.toUpperCase().trim() === upperSubj);
+                  const sMarks = (mKey && student.marks[mKey]) || { cat1: 0, cat2: 0, exam: 0, total: 0, percent: 0, grade: 'F' };
                   return (
                     <React.Fragment key={`${student.rollNo}-${subject.name}-${sIdx}`}>
                       <td style={tdStyle}>{sMarks.cat1 || '-'}</td>

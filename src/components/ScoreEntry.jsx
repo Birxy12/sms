@@ -188,7 +188,6 @@ const ScoreEntry = () => {
       const safeTerm = selectedTerm.replace(/\s/g, '').toLowerCase();
       
       const batch = writeBatch(db);
-      const recordsToUpsert = [];
 
       for (const student of students) {
         const studentScores = scores[student.regNo] || {};
@@ -213,47 +212,63 @@ const ScoreEntry = () => {
         else if (total >= 40) grade = 'D7';
         else if (total >= 35) grade = 'E8';
 
-        const subjectData = {
-          cat1,
-          cat2,
-          exam,
-          total,
-          percent: total,
-          grade,
-          updatedAt: new Date().toISOString()
+        // Fetch existing marks map
+        const existingMarks = currentDbMarks[student.regNo] || {};
+
+        // Merge the current subject's marks into the full marks object
+        const updatedMarksObj = {
+          ...existingMarks,
+          [selectedSubject]: {
+            cat1,
+            cat2,
+            exam,
+            total,
+            percent: total,
+            grade
+          }
         };
 
-        if (currentDbMarks[student.regNo]) {
-          // Document exists, update only the specific subject inside 'marks' map
-          batch.update(markRef, {
-            [`${MARKS_KEYS.marks}.${selectedSubject}`]: {
-              [MARKS_KEYS.cat1]: cat1,
-              [MARKS_KEYS.cat2]: cat2,
-              [MARKS_KEYS.exam]: exam,
-              [MARKS_KEYS.total]: total,
-              [MARKS_KEYS.percent]: total,
-              [MARKS_KEYS.grade]: grade
-            },
-            [MARKS_KEYS.updatedAt]: new Date().toISOString()
-          });
-        } else {
-          // New document, set full structure
-          const firestoreRecord = compressMarks({
-            regNo: student.regNo,
-            studentName: student.name,
-            className: selectedClass,
-            session: selectedSession,
-            term: selectedTerm,
-            marks: {
-              [selectedSubject]: {
-                cat1, cat2, exam, total, percent: total, grade
-              }
-            }
-          });
-          batch.set(markRef, firestoreRecord);
-          // Optimistically add to currentDbMarks to avoid double sets in this session
-          currentDbMarks[student.regNo] = { [selectedSubject]: { cat1, cat2, exam, total, percent: total, grade } };
+        // Recalculate average and overallTotal based on class level policy
+        const clsUpper = selectedClass.toUpperCase();
+        let divisor = 0;
+        if (clsUpper.includes('JSS') || clsUpper.includes('SS1') || clsUpper.includes('SS 1')) {
+          divisor = 16;
+        } else if ((clsUpper.includes('SS2') || clsUpper.includes('SS3') || clsUpper.includes('SS 2') || clsUpper.includes('SS 3')) && 
+                   (clsUpper.includes('ART') || clsUpper.includes('SCIENCE'))) {
+          divisor = 9;
         }
+
+        let totalScore = 0;
+        let activeSubjectsCount = 0;
+        Object.keys(updatedMarksObj).forEach(key => {
+          if (key !== '_meta' && updatedMarksObj[key] && updatedMarksObj[key].total !== undefined) {
+            totalScore += parseFloat(updatedMarksObj[key].total || 0);
+            activeSubjectsCount++;
+          }
+        });
+
+        const finalDivisor = divisor || activeSubjectsCount || 1;
+        const average = (totalScore / finalDivisor).toFixed(1);
+
+        updatedMarksObj._meta = {
+          average: parseFloat(average),
+          overallTotal: totalScore
+        };
+
+        // Compress and save (merge: true handles creating/updating seamlessly)
+        const firestoreRecord = compressMarks({
+          regNo: student.regNo,
+          studentName: student.name,
+          className: selectedClass,
+          session: selectedSession,
+          term: selectedTerm,
+          marks: updatedMarksObj
+        });
+
+        batch.set(markRef, firestoreRecord, { merge: true });
+        
+        // Optimistically update local state cache to avoid double sets or outdated meta
+        currentDbMarks[student.regNo] = updatedMarksObj;
       }
 
       if (students.length > 0) {

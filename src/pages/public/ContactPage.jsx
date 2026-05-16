@@ -4,6 +4,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
 import { MapPin, Phone, Mail, Clock, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/MainFooter';
 import './ContactPage.css';

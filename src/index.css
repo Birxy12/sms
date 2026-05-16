@@ -505,3 +505,110 @@ input:focus, select:focus, textarea:focus {
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
+
+/* =========================================
+   PREMIUM GLOBAL DARK MODE OVERRIDES
+   ========================================= */
+body.dark-mode {
+  --bg-primary: #1e293b;        /* Slate 800 */
+  --bg-secondary: #0f172a;      /* Slate 900 */
+  --bg-tertiary: #334155;       /* Slate 700 */
+  
+  --text-main: #f8fafc;         /* Slate 50 */
+  --text-muted: #94a3b8;        /* Slate 400 */
+  --text-inverse: #0f172a;      /* Slate 900 */
+  
+  --secondary: #f8fafc;
+  --border-color: #334155;      /* Slate 700 */
+  
+  --sidebar-bg: #020617;        /* Very dark Slate */
+  --sidebar-text: #94a3b8;
+  --sidebar-active: #ffffff;
+  
+  --glass-bg: rgba(15, 23, 42, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.05);
+
+  --slate-50: #0f172a;
+  --slate-100: #1e293b;
+  --slate-200: #334155;
+  --slate-400: #94a3b8;
+  --slate-500: #cbd5e1;
+  --slate-600: #e2e8f0;
+  --slate-700: #f1f5f9;
+  --slate-800: #f8fafc;
+  --slate-900: #ffffff;
+
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-main) !important;
+}
+
+/* Force override common utilities */
+body.dark-mode .bg-white { background-color: var(--bg-primary) !important; color: var(--text-main) !important; }
+body.dark-mode .bg-slate-50 { background-color: var(--bg-secondary) !important; }
+body.dark-mode .bg-slate-100 { background-color: var(--bg-tertiary) !important; }
+body.dark-mode .bg-indigo-50 { background-color: var(--bg-tertiary) !important; }
+body.dark-mode .border { border-color: var(--border-color) !important; }
+body.dark-mode .border-b { border-bottom-color: var(--border-color) !important; }
+body.dark-mode .border-slate-100 { border-color: var(--border-color) !important; }
+body.dark-mode .border-slate-200 { border-color: var(--border-color) !important; }
+
+/* Invert input borders and text */
+body.dark-mode input, 
+body.dark-mode select, 
+body.dark-mode textarea {
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+
+/* Invert text colors */
+body.dark-mode .text-slate-900 { color: var(--text-main) !important; }
+body.dark-mode .text-slate-800 { color: var(--text-main) !important; }
+body.dark-mode .text-slate-700 { color: var(--text-muted) !important; }
+body.dark-mode .text-slate-600 { color: var(--text-muted) !important; }
+body.dark-mode .text-slate-500 { color: var(--text-muted) !important; }
+
+/* Invert modern tabs and cards */
+body.dark-mode .modern-tab-item {
+  color: var(--text-muted) !important;
+}
+body.dark-mode .modern-tab-item.active {
+  background-color: var(--bg-tertiary) !important;
+  color: var(--primary) !important;
+}
+body.dark-mode .modern-tabs-container {
+  background: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+body.dark-mode .card-white {
+  background-color: var(--bg-primary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+body.dark-mode .stat-card {
+  background-color: var(--bg-primary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+body.dark-mode .top-header {
+  background-color: rgba(15, 23, 42, 0.9) !important;
+  border-bottom-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+body.dark-mode .top-header input {
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+
+/* Theme toggle button hover effects */
+.theme-toggle-btn {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.theme-toggle-btn:hover {
+  transform: scale(1.15) rotate(15deg);
+  background-color: rgba(0, 0, 0, 0.05);
+}
+body.dark-mode .theme-toggle-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}

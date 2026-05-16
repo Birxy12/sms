@@ -139,21 +139,22 @@ const LeaderboardPage = () => {
     <div className="leaderboard-page">
       <Navbar />
       
-      <header className="leaderboard-hero">
-        <div className="leaderboard-hero-content">
-          <div className="leaderboard-badge">
+      {/* Hero Section */}
+      <header className="lb-hero">
+        <div className="lb-hero-inner">
+          <div className="lb-hero-badge">
             <Trophy size={14} />
             Academic Excellence
           </div>
-          <h1 className="leaderboard-title">
-            Wall of <span className="leaderboard-title-accent">Fame</span>
+          <h1 className="lb-hero-title">
+            Wall of <span style={{ color: primaryColor || '#ea580c' }}>Fame</span>
           </h1>
-          <p className="leaderboard-desc">
-            Celebrating the brightest minds and top academic performers across all classes at {schoolName}.
+          <p className="lb-hero-desc">
+            Celebrating the brightest minds and top academic performers across all classes at {schoolName || 'our school'}.
           </p>
           
           {availableTerms.length > 1 && (
-            <div className="leaderboard-filters">
+            <div className="lb-filter">
               <select 
                 value={`${selectedSession}|${selectedTerm}`}
                 onChange={(e) => {
@@ -161,10 +162,12 @@ const LeaderboardPage = () => {
                   setSelectedSession(session);
                   setSelectedTerm(term);
                 }}
-                className="leaderboard-select"
+                className="lb-select"
               >
                 {availableTerms.map(t => (
-                  <option key={t.id} value={`${t.session}|${t.term}`}>{t.examName} ({t.session})</option>
+                  <option key={t.id} value={`${t.session}|${t.term}`}>
+                    {t.examName} ({t.session})
+                  </option>
                 ))}
               </select>
             </div>
@@ -172,62 +175,86 @@ const LeaderboardPage = () => {
         </div>
       </header>
 
-      <main className="leaderboard-main">
+      {/* Main Content */}
+      <main className="lb-main">
         {loading ? (
-          <div className="leaderboard-loading">
-            <Loader2 className="animate-spin" size={48} />
+          <div className="lb-loading">
+            <Loader2 className="lb-spin" size={40} />
             <p>Gathering the stars...</p>
           </div>
         ) : leaderboardData.length > 0 ? (
-          <div className="leaderboard-grid">
-            {leaderboardData.map((classData, idx) => (
-              <section key={classData.className} className="class-section">
-                <div className="class-header">
-                  <div className="class-icon">
-                    <GraduationCap size={20} />
+          <div className="lb-content">
+            {leaderboardData.map((classData) => (
+              <section key={classData.className} className="lb-class">
+                {/* Class Header */}
+                <div className="lb-class-header">
+                  <div className="lb-class-icon">
+                    <GraduationCap size={18} />
                   </div>
-                  <h2 className="class-name">{classData.className}</h2>
-                  <div className="class-line"></div>
+                  <h2 className="lb-class-name">{classData.className}</h2>
+                  <div className="lb-class-line" />
                 </div>
 
-                <div className="top-students-row">
-                  {classData.students.map((student, sIdx) => (
-                    <div key={student.regNo} className={`student-leader-card rank-${student.rank}`}>
-                      <div className="rank-badge">
-                        {student.rank === 1 ? <Trophy size={16} /> : <Medal size={16} />}
+                {/* Students Grid */}
+                <div className="lb-students">
+                  {classData.students.map((student) => (
+                    <div 
+                      key={student.regNo} 
+                      className={`lb-card lb-rank-${student.rank}`}
+                    >
+                      {/* Rank Badge */}
+                      <div className="lb-rank-badge">
+                        {student.rank === 1 ? (
+                          <Trophy size={14} />
+                        ) : (
+                          <Medal size={14} />
+                        )}
                         <span>#{student.rank}</span>
                       </div>
-                      
-                      <div className="student-avatar-container">
+
+                      {/* Avatar */}
+                      <div className="lb-avatar-wrap">
                         {student.studentInfo.photo ? (
-                          <img src={student.studentInfo.photo} alt={student.studentInfo.name} className="student-avatar" />
+                          <img 
+                            src={student.studentInfo.photo} 
+                            alt={student.studentInfo.name} 
+                            className="lb-avatar-img" 
+                          />
                         ) : (
-                          <div className="student-avatar-placeholder">
-                            {student.studentInfo.name[0]}
+                          <div className="lb-avatar-fallback">
+                            {student.studentInfo.name?.[0] || '?'}
                           </div>
                         )}
-                        <div className={`rank-glow rank-${student.rank}`}></div>
+                        {student.rank === 1 && (
+                          <div className="lb-crown">
+                            <Star size={12} fill="currentColor" />
+                          </div>
+                        )}
                       </div>
 
-                      <div className="student-details">
-                        <h3 className="student-name">{student.studentInfo.name}</h3>
-                        <p className="student-reg">{student.regNo}</p>
-                        
-                        <div className="score-stats">
-                          <div className="stat-box">
-                            <span className="stat-label">Total Score</span>
-                            <span className="stat-value">{student.totalScore}</span>
+                      {/* Info */}
+                      <div className="lb-info">
+                        <h3 className="lb-student-name">
+                          {student.studentInfo.name}
+                        </h3>
+                        <p className="lb-reg-no">{student.regNo}</p>
+
+                        <div className="lb-stats">
+                          <div className="lb-stat">
+                            <span className="lb-stat-label">Total</span>
+                            <span className="lb-stat-value">{student.totalScore}</span>
                           </div>
-                          <div className="stat-divider"></div>
-                          <div className="stat-box">
-                            <span className="stat-label">Average</span>
-                            <span className="stat-value">{student.average}%</span>
+                          <div className="lb-stat-divider" />
+                          <div className="lb-stat">
+                            <span className="lb-stat-label">Avg</span>
+                            <span className="lb-stat-value">{student.average}%</span>
                           </div>
                         </div>
                       </div>
 
+                      {/* Champion Tag */}
                       {student.rank === 1 && (
-                        <div className="top-performer-tag">
+                        <div className="lb-champion">
                           <Star size={10} fill="currentColor" />
                           Class Champion
                         </div>
@@ -239,8 +266,8 @@ const LeaderboardPage = () => {
             ))}
           </div>
         ) : (
-          <div className="leaderboard-empty">
-            <Award size={64} />
+          <div className="lb-empty">
+            <Award size={56} />
             <h2>No Rankings Yet</h2>
             <p>Leaderboard data will appear once results are published for the current session.</p>
           </div>

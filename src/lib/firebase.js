@@ -23,7 +23,9 @@ const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 let db;
 try {
   db = initializeFirestore(app, {
-    localCache: memoryLocalCache()
+    localCache: memoryLocalCache(),
+    experimentalForceLongPolling: true,
+    useFetchStreams: false,
   });
 } catch (e) {
   if (e.code === 'failed-precondition') {

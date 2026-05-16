@@ -535,7 +535,12 @@ const BulkUpload = ({ onComplete }) => {
             }
           });
 
-          recordsToUpsert.push(firestoreRecord);
+          const firestoreRecordId = `${docId}_${safeSession}_${safeTerm}`;
+
+          recordsToUpsert.push({
+            id: firestoreRecordId,
+            data: firestoreRecord
+          });
           hasPending = true;
           count++;
 
@@ -543,7 +548,7 @@ const BulkUpload = ({ onComplete }) => {
             const batchMarks = writeBatch(db);
             recordsToUpsert.forEach(record => {
               const markRef = doc(collection(db, 'marks'), record.id);
-              batchMarks.set(markRef, record, { merge: true });
+              batchMarks.set(markRef, record.data, { merge: true });
             });
             await batchMarks.commit();
             recordsToUpsert.length = 0;
@@ -557,7 +562,7 @@ const BulkUpload = ({ onComplete }) => {
           const finalBatch = writeBatch(db);
           recordsToUpsert.forEach(record => {
             const markRef = doc(collection(db, 'marks'), record.id);
-            finalBatch.set(markRef, record, { merge: true });
+            finalBatch.set(markRef, record.data, { merge: true });
           });
           await finalBatch.commit();
         }
