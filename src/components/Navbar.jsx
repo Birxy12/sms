@@ -59,7 +59,7 @@ const Navbar = () => {
     { name: 'About', path: '/about', icon: BookOpen },
     { name: 'Blog', path: '/blog', icon: Newspaper },
     { name: 'Leaderboard', path: '/leaderboard', icon: Award },
-    { name: 'Contact', path: '/contact', icon: Phone },
+    { name: 'Contact us', path: '/contact', icon: Phone },
   ];
 
   const handleLogout = async () => {
