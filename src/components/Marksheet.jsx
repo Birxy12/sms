@@ -318,6 +318,16 @@ const Marksheet = ({ className: propClassName }) => {
     };
 
     fetchData();
+
+    // Listen for scoresUpdated event to auto refresh the marksheet
+    const handleScoresUpdated = () => {
+      fetchData();
+    };
+    window.addEventListener('scoresUpdated', handleScoresUpdated);
+
+    return () => {
+      window.removeEventListener('scoresUpdated', handleScoresUpdated);
+    };
   }, [selectedClass, selectedSession, selectedTerm, authReady]);
 
   const filteredData = data.filter(student => 

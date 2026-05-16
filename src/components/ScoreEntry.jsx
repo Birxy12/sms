@@ -276,6 +276,8 @@ const ScoreEntry = () => {
       }
 
       setStatus({ type: 'success', message: 'All scores saved successfully!' });
+      // Dispatch custom event to auto refresh the marksheet
+      window.dispatchEvent(new Event('scoresUpdated'));
       // Refresh scores from DB to ensure UI is in sync
       fetchStudents();
       // Clear local cache after successful save
@@ -582,10 +584,11 @@ const ScoreEntry = () => {
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-2 bg-indigo-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50"
+                    className="flex items-center gap-2 bg-slate-900 text-white px-8 py-3 rounded-xl font-semibold hover:bg-black transition-all disabled:opacity-50"
+                    style={{ backgroundColor: '#000000', color: '#ffffff' }}
                   >
                     {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                    Save All Scores
+                    Save
                   </button>
                 </div>
               </div>
