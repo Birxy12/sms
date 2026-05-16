@@ -34,7 +34,38 @@ const LeaderboardPage = () => {
           setSelectedSession(terms[0].session);
           setSelectedTerm(terms[0].term);
         } else {
-          setLoading(false);
+          // Robust Fallback: Scan marks collection directly to find recent sessions/terms so leaderboard ALWAYS shows data
+          const marksSnap = await getDocs(collection(db, 'marks'));
+          if (!marksSnap.empty) {
+            const uniqueTermsMap = {};
+            marksSnap.forEach(docSnap => {
+              const data = expandMarks(docSnap.data());
+              if (data && data.session && data.term) {
+                const key = `${data.session}|${data.term}`;
+                const termLabel = data.term.toLowerCase().includes('first') ? 'First Term' :
+                                  data.term.toLowerCase().includes('second') ? 'Second Term' :
+                                  data.term.toLowerCase().includes('third') ? 'Third Term' : `${data.term} Term`;
+                uniqueTermsMap[key] = {
+                  session: data.session,
+                  term: data.term,
+                  examName: termLabel
+                };
+              }
+            });
+            const fallbackTerms = Object.values(uniqueTermsMap).map((t, idx) => ({
+              id: `fallback-${idx}`,
+              ...t
+            }));
+            if (fallbackTerms.length > 0) {
+              setAvailableTerms(fallbackTerms);
+              setSelectedSession(fallbackTerms[0].session);
+              setSelectedTerm(fallbackTerms[0].term);
+            } else {
+              setLoading(false);
+            }
+          } else {
+            setLoading(false);
+          }
         }
       } catch (error) {
         console.error('Error fetching publications:', error);
@@ -62,26 +93,34 @@ const LeaderboardPage = () => {
 
         marksSnap.forEach(docSnap => {
           const data = expandMarks(docSnap.data());
+          if (!data) return;
+          
           const className = data.className;
           const regNo = data.regNo;
           const marksData = data.marks || {};
           
-          let totalScore = 0;
-          Object.values(marksData).forEach(m => {
-            totalScore += parseFloat(m.total || 0);
-          });
+          // Read precalculated meta overallTotal/average from compressed _meta field
+          const meta = marksData._meta || {};
+          let totalScore = parseFloat(meta.overallTotal || 0);
+          let averageScore = parseFloat(meta.average || 0);
 
-          // Correct divisor based on school policy
-          let divisor = 15; // JSS
-          const cls = (className || '').toUpperCase();
-          if (cls.includes('JSS')) {
-            divisor = 15;
-          } else if (cls.includes('SS1')) {
-            divisor = 16;
-          } else if ((cls.includes('SS2') || cls.includes('SS3')) && (cls.includes('ART') || cls.includes('SCIENCE'))) {
-            divisor = 9;
-          } else if (cls.includes('SS2') || cls.includes('SS3')) {
-            divisor = 9; // Fallback
+          if (totalScore === 0) {
+            // Fallback: manually calculate total score if _meta is missing or zero
+            Object.keys(marksData).forEach(key => {
+              if (key !== '_meta' && marksData[key]) {
+                totalScore += parseFloat(marksData[key].total || marksData[key].to || 0);
+              }
+            });
+            
+            // Correct divisor based on class policy
+            let divisor = 15;
+            const cls = (className || '').toUpperCase();
+            if (cls.includes('JSS') || cls.includes('SS1')) {
+              divisor = 16;
+            } else if ((cls.includes('SS2') || cls.includes('SS3')) && (cls.includes('ART') || cls.includes('SCIENCE'))) {
+              divisor = 9;
+            }
+            averageScore = parseFloat((totalScore / divisor).toFixed(1));
           }
 
           if (!classRankings[className]) {
@@ -91,7 +130,7 @@ const LeaderboardPage = () => {
           classRankings[className].push({
             regNo,
             totalScore,
-            average: data.average || (totalScore / divisor).toFixed(1)
+            average: averageScore.toFixed(1)
           });
         });
 
@@ -104,7 +143,9 @@ const LeaderboardPage = () => {
         const studentsMap = {};
         studentsSnap.forEach(doc => {
           const sData = expandStudent(doc.data());
-          studentsMap[sData.regNo] = sData;
+          if (sData) {
+            studentsMap[sData.regNo] = sData;
+          }
         });
 
         classes.forEach(className => {

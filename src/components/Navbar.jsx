@@ -70,7 +70,7 @@ const Navbar = () => {
   };
 
   const handleProfileClick = () => {
-    navigate(isStudent ? '/students/profile' : '/profile');
+    navigate(isStudent ? '/students' : '/profile');
     setIsMobileMenuOpen(false);
   };
 
@@ -122,7 +122,7 @@ const Navbar = () => {
                       className={`nav-item ${active ? 'nav-item--active' : ''}`}
                       style={{ color: active ? accentColor : textColor }}
                     >
-                      <Icon size={15} strokeWidth={2.5} />
+                      <Icon size={15} strokeWidth={2.5} className="desktop-icon-hide" />
                       <span>{link.name}</span>
                       {active && <span className="nav-dot" />}
                     </Link>
@@ -137,7 +137,7 @@ const Navbar = () => {
             </div>
 
             {/* Right: User or Login */}
-            <div className="nav-right" style={{ display: 'flex', alignItems: 'center' }}>
+            <div className="nav-right">
               {/* Dark Mode Toggle Button */}
               <button 
                 onClick={toggleDarkMode} 
@@ -183,7 +183,7 @@ const Navbar = () => {
             </div>
 
             {/* Mobile Toggle */}
-            <div className="mobile-toggle-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="mobile-toggle-wrap">
               {/* Mobile Dark Mode Toggle */}
               <button 
                 onClick={toggleDarkMode} 

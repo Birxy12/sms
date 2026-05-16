@@ -87,7 +87,7 @@ const Login = () => {
       principal: '/principal',
       bursar: '/finance',
       teacher: '/teachers',
-      student: '/student'
+      student: '/students'
     };
     navigate(routes[role] || '/');
   };
@@ -104,7 +104,7 @@ const Login = () => {
             setSecurityQuestion(result.securityQuestion);
             setLoginStep('pin');
           } else {
-            navigate('/student');
+            navigate('/students');
           }
         } else {
           setError(result.message || 'Login failed');
@@ -141,7 +141,7 @@ const Login = () => {
     try {
       const result = await studentAuth.verifyPin(formData.pin);
       if (result.success) {
-        navigate('/student');
+        navigate('/students');
       } else {
         setError(result.message || 'Invalid PIN');
       }
@@ -181,7 +181,7 @@ const Login = () => {
     try {
       const result = await studentAuth.googleLogin();
       if (result.success) {
-        navigate('/student');
+        navigate('/students');
       } else {
         setError(result.message || 'Google login failed');
       }
