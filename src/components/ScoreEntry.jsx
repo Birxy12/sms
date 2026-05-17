@@ -6,7 +6,7 @@ import { CLASS_LIST, getSubjectsForClass } from '../utils/subjectConfig';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
-import { compressMarks, expandMarks, MARKS_KEYS, STUDENT_KEYS } from '../utils/firestoreSchema';
+import { compressMarks, expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../utils/firestoreSchema';
 
 const ScoreEntry = () => {
   const { currentAdmin } = useAdminAuth();
