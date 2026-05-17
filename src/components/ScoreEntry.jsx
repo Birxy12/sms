@@ -92,10 +92,13 @@ const ScoreEntry = () => {
           querySnapshot = await getDocs(q);
         }
       }
-      const studentList = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })).sort((a, b) => a.name.localeCompare(b.name));
+      const studentList = querySnapshot.docs.map(doc => {
+        const data = expandStudent(doc.data());
+        return {
+          id: doc.id,
+          ...data
+        };
+      }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       
       setStudents(studentList);
       
@@ -132,7 +135,12 @@ const ScoreEntry = () => {
       marksSnap.forEach(doc => {
         const data = expandMarks(doc.data());
         newDbMarks[data.regNo] = data.marks || {};
-        const subjectMarks = data.marks?.[selectedSubject];
+        
+        // Case-insensitive subject key matching
+        const upperSubj = selectedSubject.toUpperCase().trim();
+        const mKey = Object.keys(data.marks || {}).find(k => k.toUpperCase().trim() === upperSubj);
+        
+        const subjectMarks = mKey ? data.marks[mKey] : null;
         if (subjectMarks) {
           newScores[data.regNo] = {
             cat1: subjectMarks.cat1 || '0',
@@ -213,7 +221,14 @@ const ScoreEntry = () => {
         else if (total >= 35) grade = 'E8';
 
         // Fetch existing marks map
-        const existingMarks = currentDbMarks[student.regNo] || {};
+        const existingMarks = { ...(currentDbMarks[student.regNo] || {}) };
+        
+        // Find if there is an existing subject key with a different case, and remove it to avoid duplicates
+        const upperSubj = selectedSubject.toUpperCase().trim();
+        const existingKey = Object.keys(existingMarks).find(k => k.toUpperCase().trim() === upperSubj);
+        if (existingKey) {
+          delete existingMarks[existingKey];
+        }
 
         // Merge the current subject's marks into the full marks object
         const updatedMarksObj = {
