@@ -12,8 +12,33 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 import '../assets/Marksheet.css';
 
 const Marksheet = ({ className: propClassName }) => {
-  const { primaryColor } = useTheme();
+  const { primaryColor, darkMode } = useTheme();
   const { authReady } = useAdminAuth();
+
+  const thStyle = {
+    padding: '12px 16px',
+    textAlign: 'left',
+    fontWeight: '600',
+    color: darkMode ? '#cbd5e1' : '#475569',
+    borderBottom: darkMode ? '2px solid #334155' : '2px solid #e2e8f0',
+    whiteSpace: 'nowrap'
+  };
+
+  const subThStyle = {
+    padding: '8px 16px',
+    textAlign: 'center',
+    fontWeight: '500',
+    color: darkMode ? '#94a3b8' : '#64748b',
+    fontSize: '12px',
+    borderBottom: darkMode ? '1px solid #334155' : '1px solid #e2e8f0'
+  };
+
+  const tdStyle = {
+    padding: '12px 16px',
+    textAlign: 'center',
+    color: darkMode ? '#e2e8f0' : '#1e293b',
+    whiteSpace: 'nowrap'
+  };
   const [data, setData] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -351,31 +376,31 @@ const Marksheet = ({ className: propClassName }) => {
     <div className="marksheet-container">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Session</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Session</label>
           <select
             value={selectedSession}
             onChange={(e) => setSelectedSession(e.target.value)}
-            className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+            className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
           >
             {sessions.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Term</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Term</label>
           <select
             value={selectedTerm}
             onChange={(e) => setSelectedTerm(e.target.value)}
-            className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+            className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
           >
             {terms.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Class</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Class</label>
           <select
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
-            className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+            className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
           >
             {classes.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
@@ -422,7 +447,14 @@ const Marksheet = ({ className: propClassName }) => {
             placeholder="Search student by name or registration number..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '8px', border: '1px solid #ddd' }}
+            style={{ 
+              width: '100%', 
+              padding: '12px 12px 12px 40px', 
+              borderRadius: '8px', 
+              border: darkMode ? '1px solid #475569' : '1px solid #ddd',
+              backgroundColor: darkMode ? '#1e293b' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#1e293b'
+            }}
           />
         </div>
         <div className="action-btns" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
@@ -442,24 +474,25 @@ const Marksheet = ({ className: propClassName }) => {
       <div className="marksheet-table-wrapper" style={{ 
         overflow: 'auto', 
         maxHeight: '700px', 
-        background: 'white', 
+        background: darkMode ? '#1e293b' : 'white', 
         borderRadius: '12px', 
-        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' 
+        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+        border: darkMode ? '1px solid #334155' : '1px solid #e2e8f0'
       }}>
         <table className="marksheet-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
           <thead>
-            <tr style={{ backgroundColor: '#f8fafc' }}>
+            <tr style={{ backgroundColor: darkMode ? '#0f172a' : '#f8fafc' }}>
               <th rowSpan="2" style={thStyle}>Roll No.</th>
               <th rowSpan="2" style={thStyle}>Student Name</th>
               {subjects.map((subject, sIdx) => (
-                <th key={`${subject.name}-${sIdx}`} colSpan="6" style={{ ...thStyle, textAlign: 'center', borderBottom: '1px solid #e2e8f0' }}>
+                <th key={`${subject.name}-${sIdx}`} colSpan="6" style={{ ...thStyle, textAlign: 'center', borderBottom: darkMode ? '1px solid #334155' : '1px solid #e2e8f0' }}>
                   {subject.name}
                 </th>
               ))}
               <th rowSpan="2" style={thStyle}>Total</th>
               <th rowSpan="2" style={thStyle}>Rank</th>
             </tr>
-            <tr style={{ backgroundColor: '#f8fafc' }}>
+            <tr style={{ backgroundColor: darkMode ? '#0f172a' : '#f8fafc' }}>
               {subjects.map((subject, sIdx) => (
                 <React.Fragment key={`${subject.name}-${sIdx}-headers`}>
                   <th style={subThStyle}>CAT</th>
@@ -474,7 +507,10 @@ const Marksheet = ({ className: propClassName }) => {
           </thead>
           <tbody>
             {filteredData.map((student, idx) => (
-              <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+              <tr key={idx} style={{ 
+                borderBottom: darkMode ? '1px solid #334155' : '1px solid #f1f5f9',
+                backgroundColor: idx % 2 === 0 ? (darkMode ? '#1e293b' : 'white') : (darkMode ? '#0f172a80' : '#f8fafc')
+              }}>
                 <td style={tdStyle}>{student.rollNo}</td>
                 <td style={{ ...tdStyle, fontWeight: '600' }}>{student.name}</td>
                  {subjects.map((subject, sIdx) => {
@@ -503,8 +539,8 @@ const Marksheet = ({ className: propClassName }) => {
                   <span style={{ 
                     padding: '4px 8px', 
                     borderRadius: '4px', 
-                    backgroundColor: student.rank === '1st' ? '#fef3c7' : '#f1f5f9',
-                    color: student.rank === '1st' ? '#92400e' : '#475569',
+                    backgroundColor: student.rank === '1st' ? (darkMode ? '#78350f' : '#fef3c7') : (darkMode ? '#475569' : '#f1f5f9'),
+                    color: student.rank === '1st' ? (darkMode ? '#fef3c7' : '#92400e') : (darkMode ? '#cbd5e1' : '#475569'),
                     fontWeight: '600'
                   }}>
                     {student.rank}
@@ -524,30 +560,4 @@ const Marksheet = ({ className: propClassName }) => {
     </div>
   );
 };
-
-const thStyle = {
-  padding: '12px 16px',
-  textAlign: 'left',
-  fontWeight: '600',
-  color: '#475569',
-  borderBottom: '2px solid #e2e8f0',
-  whiteSpace: 'nowrap'
-};
-
-const subThStyle = {
-  padding: '8px 16px',
-  textAlign: 'center',
-  fontWeight: '500',
-  color: '#64748b',
-  fontSize: '12px',
-  borderBottom: '1px solid #e2e8f0'
-};
-
-const tdStyle = {
-  padding: '12px 16px',
-  textAlign: 'center',
-  color: '#1e293b',
-  whiteSpace: 'nowrap'
-};
-
 export default Marksheet;

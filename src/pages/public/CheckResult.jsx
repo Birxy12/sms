@@ -105,18 +105,18 @@ const CheckResult = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-10"
           >
-            <div className={`inline-flex items-center justify-center w-20 h-20 bg-white rounded-3xl border border-slate-100 mb-6 group transition-all duration-300 hover:scale-105 hover:border-indigo-500 ${darkMode ? 'shadow-lg shadow-slate-950/50' : 'shadow-xl shadow-indigo-100'}`}>
+            <div className={`inline-flex items-center justify-center w-20 h-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 mb-6 group transition-all duration-300 hover:scale-105 hover:border-indigo-500 ${darkMode ? 'shadow-lg shadow-slate-950/50' : 'shadow-xl shadow-indigo-100'}`}>
               <ShieldCheck size={40} className="text-indigo-600" />
             </div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-2 uppercase">Result Portal</h1>
-            <p className="text-slate-500 font-bold text-sm tracking-widest uppercase">Secure Academic Verification</p>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-2 uppercase">Result Portal</h1>
+            <p className="text-slate-500 dark:text-slate-400 font-bold text-sm tracking-widest uppercase">Secure Academic Verification</p>
           </motion.div>
 
           <motion.div 
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
-            className={`bg-white rounded-[2.5rem] border border-slate-100 p-10 md:p-12 relative ${darkMode ? 'shadow-2xl shadow-slate-950/80' : 'shadow-2xl shadow-slate-200/60'}`}
+            className={`bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 p-10 md:p-12 relative ${darkMode ? 'shadow-2xl shadow-slate-950/80' : 'shadow-2xl shadow-slate-200/60'}`}
           >
             <form onSubmit={handleCheck} className="space-y-8">
               {/* Registration Number Field */}
@@ -206,8 +206,8 @@ const CheckResult = () => {
               </button>
             </form>
 
-            <div className="mt-10 pt-8 border-t border-slate-50 text-center">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-loose">
+            <div className="mt-10 pt-8 border-t border-slate-50 dark:border-slate-700 text-center">
+              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-loose">
                 Confidentiality Notice:<br />
                 Your academic records are protected by end-to-end encryption.
               </p>
