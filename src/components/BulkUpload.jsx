@@ -7,6 +7,13 @@ import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Download } from 'l
 import { CLASS_LIST, getAllSubjects, getSubjectsForClass } from '../utils/subjectConfig';
 import { compressMarks, compressStudent, expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../utils/firestoreSchema';
 
+const getOrdinal = (n) => {
+  if (isNaN(n) || n <= 0) return 'N/A';
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
+
 const BulkUpload = ({ onComplete }) => {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
@@ -244,6 +251,25 @@ const BulkUpload = ({ onComplete }) => {
           };
         }
 
+        // Calculate overall total score and subjects count
+        let overallTotal = 0;
+        let validSubjectsCount = 0;
+        Object.keys(marks).forEach(key => {
+          if (marks[key] && marks[key].total) {
+            overallTotal += parseFloat(marks[key].total || 0);
+            validSubjectsCount++;
+          }
+        });
+
+        const parsedAverage = parseFloat(average);
+        const finalAverage = !isNaN(parsedAverage) ? parsedAverage : (validSubjectsCount > 0 ? (overallTotal / validSubjectsCount) : 0);
+
+        marks._meta = {
+          average: parseFloat(finalAverage.toFixed(1)),
+          overallTotal: overallTotal,
+          position: position ? position.trim() : 'N/A'
+        };
+
         // Use explicit session and term selected from the UI
         const term = selectedTerm;
         const session = selectedSession;
@@ -440,6 +466,7 @@ const BulkUpload = ({ onComplete }) => {
         let matchedByName = 0;
         let failedMatch = 0;
         const recordsToUpsert = [];
+        const parsedStudents = [];
 
         for (let i = subjectRowIdx + 1; i < rawData.length; i++) {
           const row = rawData[i];
@@ -469,8 +496,6 @@ const BulkUpload = ({ onComplete }) => {
           } else {
             continue;
           }
-
-          const docId = finalRegNo.replace(/\//g, '-');
 
           const existingMarks = currentDbMarks[finalRegNo] || {};
           const updatedMarksObj = { ...existingMarks };
@@ -520,18 +545,48 @@ const BulkUpload = ({ onComplete }) => {
 
           const average = (totalScore / divisor).toFixed(1);
 
+          parsedStudents.push({
+            finalRegNo,
+            finalName,
+            updatedMarksObj,
+            totalScore: parseFloat(totalScore),
+            average: parseFloat(average)
+          });
+        }
+
+        // Sort parsed students by totalScore descending
+        parsedStudents.sort((a, b) => b.totalScore - a.totalScore);
+
+        // Assign tie-aware ranks (Standard Competition / Skip Ranking)
+        let rank = 1;
+        parsedStudents.forEach((student, idx) => {
+          if (idx > 0 && student.totalScore < parsedStudents[idx - 1].totalScore) {
+            rank = idx + 1;
+          }
+          student.position = student.totalScore > 0 ? getOrdinal(rank) : 'N/A';
+        });
+
+        // Convert parsed students to compressed firestore records and upsert in batches
+        let hasPending = false;
+        for (let i = 0; i < parsedStudents.length; i++) {
+          const student = parsedStudents[i];
+          const docId = student.finalRegNo.replace(/\//g, '-');
           const safeSession = selectedSession.replace('/', '-');
           const safeTerm = selectedTerm.replace(/\s/g, '').toLowerCase();
 
           const firestoreRecord = compressMarks({
-            regNo: finalRegNo,
-            studentName: finalName,
+            regNo: student.finalRegNo,
+            studentName: student.finalName,
             className: selectedClass,
             term: selectedTerm,
             session: selectedSession,
             marks: {
-              ...updatedMarksObj,
-              _meta: { average, overallTotal: totalScore }
+              ...student.updatedMarksObj,
+              _meta: { 
+                average: student.average, 
+                overallTotal: student.totalScore,
+                position: student.position
+              }
             }
           });
 
@@ -555,7 +610,7 @@ const BulkUpload = ({ onComplete }) => {
             hasPending = false;
           }
 
-          setUploadProgress(Math.round((i / rawData.length) * 100));
+          setUploadProgress(Math.round((i / parsedStudents.length) * 100));
         }
 
         if (hasPending && recordsToUpsert.length > 0) {

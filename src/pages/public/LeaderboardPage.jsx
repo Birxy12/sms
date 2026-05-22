@@ -82,12 +82,21 @@ const LeaderboardPage = () => {
       setLoading(true);
       try {
         // 1. Fetch all marks for this session/term
-        const marksQuery = query(
+        let marksQuery = query(
           collection(db, 'marks'),
           where(MARKS_KEYS.session, '==', selectedSession),
           where(MARKS_KEYS.term, '==', selectedTerm)
         );
-        const marksSnap = await getDocs(marksQuery);
+        let marksSnap = await getDocs(marksQuery);
+        
+        if (marksSnap.empty) {
+          marksQuery = query(
+            collection(db, 'marks'),
+            where('session', '==', selectedSession),
+            where('term', '==', selectedTerm)
+          );
+          marksSnap = await getDocs(marksQuery);
+        }
         
         const classRankings = {};
 
@@ -150,9 +159,18 @@ const LeaderboardPage = () => {
 
         classes.forEach(className => {
           const sorted = classRankings[className].sort((a, b) => b.totalScore - a.totalScore);
-          const top2 = sorted.slice(0, 2).map((s, idx) => ({
+
+          // Assign tie-aware ranks (Standard Competition / Skip Ranking)
+          let rank = 1;
+          sorted.forEach((s, idx) => {
+            if (idx > 0 && s.totalScore < sorted[idx - 1].totalScore) {
+              rank = idx + 1;
+            }
+            s.rank = rank;
+          });
+
+          const top2 = sorted.slice(0, 2).map(s => ({
             ...s,
-            rank: idx + 1,
             className,
             studentInfo: studentsMap[s.regNo] || { name: 'Unknown Student' }
           }));

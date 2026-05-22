@@ -200,17 +200,30 @@ if (!selectedPub) return;
           }
         });
 
+        // Tie-aware standard competition (skip) ranking
         const sortedStudents = Object.entries(studentTotals)
-          .sort((a, b) => b[1] - a[1])
-          .map(entry => entry[0]);
+          .sort((a, b) => b[1] - a[1]);
 
-        // Position: use stored value if present, else calculate
+        // Position: use stored value if present, else calculate dynamically
         let posStr = foundMarksDoc?.marks?._meta?.position || '';
         if (!posStr || posStr === '0' || posStr === 'N/A') {
-          const pos = sortedStudents.indexOf(regNum) + 1;
-          const suffixes = ["th", "st", "nd", "rd"];
-          const v = pos % 100;
-          posStr = pos > 0 ? pos + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]) : 'N/A';
+          const getOrdinal = (n) => {
+            if (isNaN(n) || n <= 0) return 'N/A';
+            const s = ["th", "st", "nd", "rd"];
+            const v = n % 100;
+            return n + (s[(v - 20) % 10] || s[v] || s[0]);
+          };
+          let rank = 1;
+          posStr = 'N/A';
+          for (let i = 0; i < sortedStudents.length; i++) {
+            if (i > 0 && sortedStudents[i][1] < sortedStudents[i - 1][1]) {
+              rank = i + 1;
+            }
+            if (sortedStudents[i][0] === regNum) {
+              posStr = sortedStudents[i][1] > 0 ? getOrdinal(rank) : 'N/A';
+              break;
+            }
+          }
         }
 
         // ── 3. Class population
