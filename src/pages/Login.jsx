@@ -175,6 +175,50 @@ const Login = () => {
     }
   };
 
+  const handleForgotPinSendToInbox = async () => {
+    if (!formData.regNo || !formData.className) {
+      setError('Please enter your Registration Number and Class first.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const result = await studentAuth.forgotPinSendToInbox(formData.regNo, formData.className);
+      if (result.success) {
+        setError(result.message);
+      } else {
+        setError(result.message || 'Failed to send PIN.');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!formData.email) {
+      setError('Please enter your email address');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const result = await adminAuth.forgotPassword(formData.email);
+      if (result.success) {
+        setLoginStep('credentials');
+        setError(result.message); // Success message
+      } else {
+        setError(result.message || 'Failed to reset password');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     setError('');
@@ -378,7 +422,7 @@ const Login = () => {
                       <input type="checkbox" />
                       <span>Remember</span>
                     </label>
-                    <Link to="/forgot-password" className="forgot-link">Forgot?</Link>
+                    <button type="button" className="text-link forgot-link" onClick={() => setLoginStep('forgot_password')}>Forgot?</button>
                   </div>
 
                   <motion.button
@@ -394,6 +438,39 @@ const Login = () => {
                 </form>
               )}
             </motion.div>
+          )}
+
+          {loginStep === 'forgot_password' && (
+            <motion.form
+              key="forgot-password"
+              initial={{ opacity: 0, x: 15 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -15 }}
+              onSubmit={handleForgotPassword}
+              className="auth-form"
+            >
+              <button type="button" className="back-btn" onClick={() => setLoginStep('credentials')}>
+                <ChevronLeft size={14} /> Back
+              </button>
+
+              <div className="security-banner alert">
+                <AlertCircle size={16} />
+                <p>Reset Password</p>
+              </div>
+
+              <InputField label="Email Address" name="email" type="email" placeholder="e.g. staff@school.edu" icon={Mail} />
+
+              <motion.button
+                type="submit"
+                className="submit-btn"
+                disabled={loading || !formData.email}
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                style={{ background: currentRole.color }}
+              >
+                {loading ? <Loader2 className="spin" size={18} /> : <><Mail size={16} /> Send to Email Inbox</>}
+              </motion.button>
+            </motion.form>
           )}
 
           {loginStep === 'pin' && (
@@ -477,7 +554,7 @@ const Login = () => {
               initial={{ opacity: 0, x: 15 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -15 }}
-              onSubmit={handleForgotPin}
+              onSubmit={(e) => { e.preventDefault(); handleForgotPinSendToInbox(); }}
               className="auth-form"
             >
               <button type="button" className="back-btn" onClick={() => setLoginStep('pin')}>
@@ -489,57 +566,19 @@ const Login = () => {
                 <p>Reset your PIN</p>
               </div>
 
-              <InputField label={securityQuestion} name="securityAnswer" placeholder="Your answer" icon={HelpCircle} />
-              
-              <div className="input-wrapper">
-                <label className="input-label">
-                  <Lock size={14} />
-                  New 6-Digit PIN
-                </label>
-                <div className="pin-inputs">
-                  {[0, 1, 2, 3, 4, 5].map((i) => (
-                    <input
-                      key={i}
-                      type="password"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={1}
-                      className="pin-digit"
-                      value={formData.newPin[i] || ''}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/\D/g, '');
-                        if (val.length <= 1) {
-                          const newPinArr = formData.newPin.split('');
-                          newPinArr[i] = val;
-                          const joined = newPinArr.join('').slice(0, 6);
-                          setFormData({ ...formData, newPin: joined });
-                          setError('');
-                          if (val && i < 5) {
-                            const next = e.target.parentElement?.nextElementSibling?.querySelector('input');
-                            next?.focus();
-                          }
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Backspace' && !formData.newPin[i] && i > 0) {
-                          const prev = e.target.parentElement?.previousElementSibling?.querySelector('input');
-                          prev?.focus();
-                        }
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
+              <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '15px' }}>
+                We will generate a new PIN and send it to your registered inbox.
+              </p>
 
               <motion.button
                 type="submit"
                 className="submit-btn"
-                disabled={loading || formData.newPin.length !== 6}
+                disabled={loading}
                 whileHover={{ y: -1 }}
                 whileTap={{ scale: 0.98 }}
                 style={{ background: currentRole.color }}
               >
-                {loading ? <Loader2 className="spin" size={18} /> : <><CheckCircle size={16} /> Reset</>}
+                {loading ? <Loader2 className="spin" size={18} /> : <><Mail size={16} /> Send to Inbox</>}
               </motion.button>
             </motion.form>
           )}

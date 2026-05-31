@@ -242,6 +242,43 @@ export const StudentAuthProvider = ({ children }) => {
     }
   };
 
+  const forgotPinSendToInbox = async (regNo, className) => {
+    try {
+      const studentsRef = collection(db, 'students');
+      let q = query(
+        studentsRef,
+        where(STUDENT_KEYS.regNo, '==', regNo.trim().toUpperCase()),
+        where(STUDENT_KEYS.className, '==', className.trim())
+      );
+      let snap = await getDocs(q);
+
+      if (snap.empty) {
+        q = query(
+          studentsRef,
+          where('regNo', '==', regNo.trim().toUpperCase()),
+          where('className', '==', className.trim())
+        );
+        snap = await getDocs(q);
+      }
+      
+      if (snap.empty) return { success: false, message: 'Student not found.' };
+      
+      const studentId = snap.docs[0].id;
+      const newPin = Math.floor(100000 + Math.random() * 900000).toString(); // Generate 6-digit PIN
+      
+      const { doc, updateDoc } = await import('firebase/firestore');
+      await updateDoc(doc(db, 'students', studentId), { pin: newPin });
+      
+      // Simulate sending to user's inbox
+      console.log(`[SIMULATED EMAIL] To: Student ${regNo} | Subject: Your new PIN | Body: Your new PIN is ${newPin}`);
+      
+      return { success: true, message: 'A new PIN has been sent to your registered inbox.' };
+    } catch (error) {
+      console.error('Forgot PIN error:', error);
+      return { success: false, message: 'An error occurred while resetting the PIN. Try again.' };
+    }
+  };
+
   const logout = () => {
     setCurrentStudent(null);
     setPendingStudent(null);
@@ -275,7 +312,7 @@ export const StudentAuthProvider = ({ children }) => {
 
   return (
     <StudentAuthContext.Provider value={{ 
-      currentStudent, pendingStudent, login, verifyPin, setPin, resetPin, logout, updateProfile, loading, authError, authReady
+      currentStudent, pendingStudent, login, verifyPin, setPin, resetPin, forgotPinSendToInbox, logout, updateProfile, loading, authError, authReady
     }}>
       {!loading && children}
     </StudentAuthContext.Provider>

@@ -76,18 +76,15 @@ const Marksheet = ({ className: propClassName }) => {
       const pubId = `${selectedSession.replace('/', '-')}_${selectedTerm.replace(/\s/g, '').toLowerCase()}_${selectedClass.replace(/\s/g, '').toLowerCase()}`;
       const pubRef = doc(db, 'publications', pubId);
       
-      await Promise.race([
-        setDoc(pubRef, {
-          type: 'Result',
-          examName: `${selectedTerm} Examination`,
-          session: selectedSession,
-          term: selectedTerm,
-          targetClass: selectedClass,
-          publishedAt: new Date().toISOString(),
-          status: 'published'
-        }, { merge: true }),
-        new Promise((resolve) => setTimeout(() => resolve(), 5000))
-      ]);
+      await setDoc(pubRef, {
+        type: 'Result',
+        examName: `${selectedTerm} Examination`,
+        session: selectedSession,
+        term: selectedTerm,
+        targetClass: selectedClass,
+        publishedAt: new Date().toISOString(),
+        status: 'published'
+      }, { merge: true });
 
       setStatus({ type: 'success', message: 'Results published successfully!' });
       setTimeout(() => setStatus({ type: '', message: '' }), 5000);

@@ -311,19 +311,12 @@ const ScoreEntry = () => {
       }
 
       if (batches.length > 0) {
-        // Don't hang indefinitely if offline. Firestore will queue and sync later.
-        await Promise.race([
-          Promise.all(batches),
-          new Promise((resolve) => setTimeout(() => resolve(), 5000))
-        ]);
+        await Promise.all(batches);
       }
 
       setStatus({ type: 'success', message: 'All scores saved successfully!' });
-      // Dispatch custom event to auto refresh the marksheet
       window.dispatchEvent(new Event('scoresUpdated'));
-      // Refresh scores from DB to ensure UI is in sync
       fetchStudents();
-      // Clear local cache after successful save
       const cacheKey = `unsaved_${selectedClass}_${selectedSubject}_${selectedSession}_${selectedTerm}`;
       localStorage.removeItem(cacheKey);
     } catch (error) {

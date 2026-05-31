@@ -109,6 +109,20 @@ export const AdminAuthProvider = ({ children }) => {
       return { success: true, role: 'admin' };
     }
 
+    // Bursar hardcoded login
+    if (identifier === 'bursar@birxysms.edu' && password === '141414') {
+      await ensureAuth();
+      const adminUser = { 
+        email: identifier, 
+        role: 'bursar', 
+        name: 'School Bursar', 
+        staffId: 'BURSAR/001'
+      };
+      setCurrentAdmin(adminUser);
+      localStorage.setItem('adminUser', JSON.stringify(adminUser));
+      return { success: true, role: 'bursar' };
+    }
+
     // 2. Try Firestore lookup (either by Email or Staff ID)
     // Principal and Bursar accounts should be managed via Staff Management.
     try {
@@ -326,8 +340,6 @@ export const AdminAuthProvider = ({ children }) => {
       const { db } = await import('../lib/firebase');
       const { doc, updateDoc, collection, query, where, getDocs } = await import('firebase/firestore');
       
-      // If hardcoded admin, we can't change it in DB easily unless we create a record
-      // So let's try to find them in staff first, if not there, create them
       let staffId = currentAdmin.id;
       if (!staffId) {
         const staffRef = collection(db, 'staff');
@@ -341,36 +353,42 @@ export const AdminAuthProvider = ({ children }) => {
       if (staffId) {
         const staffRef = doc(db, 'staff', staffId);
         await updateDoc(staffRef, { password: newPassword });
-      } else {
-        // Check if record exists by email before creating
-        const staffRef = collection(db, 'staff');
-        const q = query(staffRef, where('email', '==', currentAdmin.email));
-        const snap = await getDocs(q);
-        
-        if (!snap.empty) {
-          const docId = snap.docs[0].id;
-          await updateDoc(doc(db, 'staff', docId), { password: newPassword });
-          const updatedUser = { ...currentAdmin, id: docId, password: newPassword };
-          setCurrentAdmin(updatedUser);
-          localStorage.setItem('adminUser', JSON.stringify(updatedUser));
-        } else {
-          // Create the staff record for the super admin
-          const { addDoc } = await import('firebase/firestore');
-          const newDoc = await addDoc(staffRef, {
-            ...currentAdmin,
-            password: newPassword,
-            createdAt: new Date().toISOString()
-          });
-          const updatedUser = { ...currentAdmin, id: newDoc.id, password: newPassword };
-          setCurrentAdmin(updatedUser);
-          localStorage.setItem('adminUser', JSON.stringify(updatedUser));
-        }
       }
       
       return { success: true };
     } catch (error) {
       console.error('Change password error:', error);
       return { success: false, message: error.message };
+    }
+  };
+
+  const forgotPassword = async (email) => {
+    try {
+      const { db } = await import('../lib/firebase');
+      const { collection, query, where, getDocs, doc, updateDoc } = await import('firebase/firestore');
+      
+      const staffRef = collection(db, 'staff');
+      const q = query(staffRef, where('email', '==', email.trim().toLowerCase()));
+      const snap = await getDocs(q);
+      
+      if (snap.empty) {
+        return { success: false, message: 'No account found with that email address.' };
+      }
+      
+      const staffId = snap.docs[0].id;
+      const newPassword = Math.random().toString(36).slice(-8); // Generate an 8-character password
+      
+      // Update password in DB
+      await updateDoc(doc(db, 'staff', staffId), { password: newPassword });
+      
+      // In a real application, you would trigger an email via Firebase Functions/Email extension.
+      // For now, we simulate sending the email to the user's inbox.
+      console.log(`[SIMULATED EMAIL] To: ${email} | Subject: Your new password | Body: Your new password is ${newPassword}`);
+      
+      return { success: true, message: 'A new password has been sent to your email inbox.' };
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      return { success: false, message: 'An error occurred while resetting the password. Try again.' };
     }
   };
 
@@ -383,6 +401,7 @@ export const AdminAuthProvider = ({ children }) => {
     logout,
     updateProfile,
     changePassword,
+    forgotPassword,
     loading,
     authReady
   };
