@@ -76,15 +76,18 @@ const Marksheet = ({ className: propClassName }) => {
       const pubId = `${selectedSession.replace('/', '-')}_${selectedTerm.replace(/\s/g, '').toLowerCase()}_${selectedClass.replace(/\s/g, '').toLowerCase()}`;
       const pubRef = doc(db, 'publications', pubId);
       
-      await setDoc(pubRef, {
-        type: 'Result',
-        examName: `${selectedTerm} Examination`,
-        session: selectedSession,
-        term: selectedTerm,
-        targetClass: selectedClass,
-        publishedAt: new Date().toISOString(),
-        status: 'published'
-      }, { merge: true });
+      await Promise.race([
+        setDoc(pubRef, {
+          type: 'Result',
+          examName: `${selectedTerm} Examination`,
+          session: selectedSession,
+          term: selectedTerm,
+          targetClass: selectedClass,
+          publishedAt: new Date().toISOString(),
+          status: 'published'
+        }, { merge: true }),
+        new Promise((resolve) => setTimeout(() => resolve(), 5000))
+      ]);
 
       setStatus({ type: 'success', message: 'Results published successfully!' });
       setTimeout(() => setStatus({ type: '', message: '' }), 5000);
@@ -238,6 +241,15 @@ const Marksheet = ({ className: propClassName }) => {
             where('term', '==', selectedTerm)
           );
           marksSnapshot = await getDocs(marksQuery);
+          if (marksSnapshot.empty) {
+            marksQuery = query(
+              collection(db, 'marks'),
+              where('session', '==', selectedSession),
+              where('className', '==', selectedClass),
+              where('term', '==', selectedTerm)
+            );
+            marksSnapshot = await getDocs(marksQuery);
+          }
         }
         const marksData = marksSnapshot.docs.map(doc => expandMarks(doc.data()));
         

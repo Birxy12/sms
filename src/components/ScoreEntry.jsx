@@ -16,14 +16,7 @@ const ScoreEntry = () => {
   const [selectedTerm, setSelectedTerm] = useState(() => localStorage.getItem('scoreEntry_term') || 'Second Term');
   const [selectedFile, setSelectedFile] = useState(null);
   const [students, setStudents] = useState([]);
-  const [scores, setScores] = useState(() => {
-    try {
-      const saved = localStorage.getItem('scoreEntry_scores');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
+  const [scores, setScores] = useState({});
   const [currentDbMarks, setCurrentDbMarks] = useState({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -35,7 +28,6 @@ const ScoreEntry = () => {
   useEffect(() => { localStorage.setItem('scoreEntry_subject', selectedSubject); }, [selectedSubject]);
   useEffect(() => { localStorage.setItem('scoreEntry_session', selectedSession); }, [selectedSession]);
   useEffect(() => { localStorage.setItem('scoreEntry_term', selectedTerm); }, [selectedTerm]);
-  useEffect(() => { localStorage.setItem('scoreEntry_scores', JSON.stringify(scores)); }, [scores]);
 
   const classes = CLASS_LIST;
   const sessions = ['2024/2025', '2025/2026', '2026/2027'];
@@ -143,12 +135,26 @@ const ScoreEntry = () => {
         const subjectMarks = mKey ? data.marks[mKey] : null;
         if (subjectMarks) {
           newScores[data.regNo] = {
-            cat1: subjectMarks.cat1 || '0',
-            cat2: subjectMarks.cat2 || '0',
-            exam: subjectMarks.exam || '0'
+            cat1: subjectMarks.cat1 !== undefined ? String(subjectMarks.cat1) : '0',
+            cat2: subjectMarks.cat2 !== undefined ? String(subjectMarks.cat2) : '0',
+            exam: subjectMarks.exam !== undefined ? String(subjectMarks.exam) : '0'
           };
         }
       });
+      
+      // Merge with localized draft cache if it exists
+      const cacheKey = `unsaved_${selectedClass}_${selectedSubject}_${selectedSession}_${selectedTerm}`;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          const parsedCached = JSON.parse(cached);
+          if (parsedCached && typeof parsedCached === 'object') {
+            Object.assign(newScores, parsedCached);
+          }
+        } catch (e) {
+          console.error("Error parsing cached scores:", e);
+        }
+      }
       
       setScores(newScores);
       setCurrentDbMarks(newDbMarks);
@@ -176,13 +182,18 @@ const ScoreEntry = () => {
   };
 
   const handleScoreChange = (regNo, field, value) => {
-    setScores(prev => ({
-      ...prev,
-      [regNo]: {
-        ...prev[regNo],
-        [field]: value
-      }
-    }));
+    setScores(prev => {
+      const updated = {
+        ...prev,
+        [regNo]: {
+          ...prev[regNo],
+          [field]: value
+        }
+      };
+      const cacheKey = `unsaved_${selectedClass}_${selectedSubject}_${selectedSession}_${selectedTerm}`;
+      localStorage.setItem(cacheKey, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const handleSave = async () => {
@@ -195,7 +206,9 @@ const ScoreEntry = () => {
       const safeSession = selectedSession.replace('/', '-');
       const safeTerm = selectedTerm.replace(/\s/g, '').toLowerCase();
       
-      const batch = writeBatch(db);
+      const batches = [];
+      let currentBatch = writeBatch(db);
+      let opCount = 0;
 
       for (const student of students) {
         const studentScores = scores[student.regNo] || {};
@@ -280,14 +293,29 @@ const ScoreEntry = () => {
           marks: updatedMarksObj
         });
 
-        batch.set(markRef, firestoreRecord, { merge: true });
+        currentBatch.set(markRef, firestoreRecord, { merge: true });
+        opCount++;
+        
+        if (opCount === 450) {
+          batches.push(currentBatch.commit());
+          currentBatch = writeBatch(db);
+          opCount = 0;
+        }
         
         // Optimistically update local state cache to avoid double sets or outdated meta
         currentDbMarks[student.regNo] = updatedMarksObj;
       }
 
-      if (students.length > 0) {
-        await batch.commit();
+      if (opCount > 0) {
+        batches.push(currentBatch.commit());
+      }
+
+      if (batches.length > 0) {
+        // Don't hang indefinitely if offline. Firestore will queue and sync later.
+        await Promise.race([
+          Promise.all(batches),
+          new Promise((resolve) => setTimeout(() => resolve(), 5000))
+        ]);
       }
 
       setStatus({ type: 'success', message: 'All scores saved successfully!' });
@@ -296,7 +324,8 @@ const ScoreEntry = () => {
       // Refresh scores from DB to ensure UI is in sync
       fetchStudents();
       // Clear local cache after successful save
-      localStorage.removeItem('scoreEntry_scores');
+      const cacheKey = `unsaved_${selectedClass}_${selectedSubject}_${selectedSession}_${selectedTerm}`;
+      localStorage.removeItem(cacheKey);
     } catch (error) {
       console.error('Save error:', error);
       setStatus({ type: 'error', message: 'Error saving scores: ' + error.message });
@@ -389,6 +418,8 @@ const ScoreEntry = () => {
         });
 
         setScores(newScores);
+        const cacheKey = `unsaved_${selectedClass}_${selectedSubject}_${selectedSession}_${selectedTerm}`;
+        localStorage.setItem(cacheKey, JSON.stringify(newScores));
         setSelectedFile(null); // Clear file after successful process
         setStatus({ 
           type: unmatched.length === 0 ? 'success' : 'info', 
@@ -407,7 +438,8 @@ const ScoreEntry = () => {
   const handleClearScores = () => {
     if (window.confirm("Are you sure you want to clear all unsaved scores for the current view?")) {
       setScores({});
-      localStorage.removeItem('scoreEntry_scores');
+      const cacheKey = `unsaved_${selectedClass}_${selectedSubject}_${selectedSession}_${selectedTerm}`;
+      localStorage.removeItem(cacheKey);
     }
   };
 
@@ -559,17 +591,17 @@ const ScoreEntry = () => {
                               type="number"
                               max="20"
                               placeholder="0"
-                              value={studentScores.cat1 || ''}
+                              value={studentScores.cat1 ?? ''}
                               className="w-20 mx-auto block px-2 py-1 text-center rounded border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
                               onChange={(e) => handleScoreChange(student.regNo, 'cat1', e.target.value)}
                             />
                           </td>
                           <td className="px-4 py-3">
                             <input
-                              type="number"
+                               type="number"
                               max="20"
                               placeholder="0"
-                              value={studentScores.cat2 || ''}
+                              value={studentScores.cat2 ?? ''}
                               className="w-20 mx-auto block px-2 py-1 text-center rounded border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
                               onChange={(e) => handleScoreChange(student.regNo, 'cat2', e.target.value)}
                             />
@@ -579,7 +611,7 @@ const ScoreEntry = () => {
                               type="number"
                               max="60"
                               placeholder="0"
-                              value={studentScores.exam || ''}
+                              value={studentScores.exam ?? ''}
                               className="w-20 mx-auto block px-2 py-1 text-center rounded border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
                               onChange={(e) => handleScoreChange(student.regNo, 'exam', e.target.value)}
                             />
@@ -608,10 +640,10 @@ const ScoreEntry = () => {
                 </div>
               </div>
             ) : (
-              <div className="py-12 text-center text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-                <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                <p className="text-lg">No students found for {selectedClass}.</p>
-                <p className="text-sm">Please register students first or check the spelling.</p>
+              <div className="py-12 text-center text-slate-600 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                <AlertCircle className="w-12 h-12 text-slate-500 mx-auto mb-4" />
+                <p className="text-lg font-bold">No students found for {selectedClass}.</p>
+                <p className="text-sm font-semibold">Please register students first or check the spelling.</p>
               </div>
             )}
           </div>

@@ -113,34 +113,39 @@ const LeaderboardPage = () => {
           let totalScore = parseFloat(meta.overallTotal || 0);
           let averageScore = parseFloat(meta.average || 0);
 
-          if (totalScore === 0) {
+          if (totalScore === 0 || !meta.average || parseFloat(meta.average) === 0) {
             // Fallback: manually calculate total score if _meta is missing or zero
-            Object.keys(marksData).forEach(key => {
-              if (key !== '_meta' && marksData[key]) {
-                totalScore += parseFloat(marksData[key].total || marksData[key].to || 0);
-              }
-            });
+            if (totalScore === 0) {
+              Object.keys(marksData).forEach(key => {
+                if (key !== '_meta' && marksData[key]) {
+                  totalScore += parseFloat(marksData[key].total || marksData[key].to || 0);
+                }
+              });
+            }
             
             // Correct divisor based on class policy
             let divisor = 15;
             const cls = (className || '').toUpperCase();
-            if (cls.includes('JSS') || cls.includes('SS1')) {
+            if (cls.includes('JSS') || cls.includes('SS1') || cls.includes('SS 1')) {
               divisor = 16;
-            } else if ((cls.includes('SS2') || cls.includes('SS3')) && (cls.includes('ART') || cls.includes('SCIENCE'))) {
+            } else if ((cls.includes('SS2') || cls.includes('SS3') || cls.includes('SS 2') || cls.includes('SS 3')) && 
+                       (cls.includes('ART') || cls.includes('SCIENCE'))) {
               divisor = 9;
             }
             averageScore = parseFloat((totalScore / divisor).toFixed(1));
           }
 
-          if (!classRankings[className]) {
-            classRankings[className] = [];
-          }
+          if (totalScore > 0) {
+            if (!classRankings[className]) {
+              classRankings[className] = [];
+            }
 
-          classRankings[className].push({
-            regNo,
-            totalScore,
-            average: averageScore.toFixed(1)
-          });
+            classRankings[className].push({
+              regNo,
+              totalScore,
+              average: averageScore.toFixed(1)
+            });
+          }
         });
 
         // 2. Sort each class and take top 2

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
-import { BookOpen, Users, Award, Shield, ArrowRight, LogIn, Trophy, GraduationCap } from 'lucide-react';
+import { BookOpen, Users, Award, Shield, ArrowRight, LogIn, Trophy, GraduationCap, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
@@ -110,7 +110,7 @@ const AboutPage = () => {
                 <span className="text-gradient">The Future</span>
               </h1>
 
-              <p className="text-xl text-slate-500 leading-relaxed mb-12 max-w-xl font-medium">
+              <p className="text-xl text-slate-600 leading-relaxed mb-12 max-w-xl font-semibold">
                 For over two decades, {schoolName} has been the cornerstone of elite education, 
                 cultivating innovators and leaders who redefine the global landscape.
               </p>
@@ -142,9 +142,9 @@ const AboutPage = () => {
                     <div className="flex-1">
                       <div className="flex items-baseline gap-3 mb-2">
                         <span className="text-4xl font-black text-slate-900 tracking-tighter">{stat.value}</span>
-                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{stat.label}</span>
+                        <span className="text-xs font-black text-slate-500 uppercase tracking-widest">{stat.label}</span>
                       </div>
-                      <p className="text-sm font-bold text-slate-500 leading-relaxed uppercase tracking-tight opacity-70">{stat.desc}</p>
+                      <p className="text-sm font-bold text-slate-600 leading-relaxed uppercase tracking-tight">{stat.desc}</p>
                     </div>
                   </div>
                 </motion.div>
@@ -218,12 +218,12 @@ const AboutPage = () => {
                   <span className="text-gradient">Absolute Excellence</span>
                 </h2>
                 <div className="relative mb-10">
-                  <p className="text-xl font-bold text-slate-600 leading-relaxed italic">
+                  <p className="text-xl font-bold text-slate-700 leading-relaxed italic">
                     "{principal?.message || "Our mission transcends traditional teaching. We engineer environments where intellectual curiosity meets unwavering discipline, fostering a global elite prepared for the challenges of tomorrow."}"
                   </p>
                 </div>
                 <div className="flex items-center gap-6 pt-8 border-t border-slate-50">
-                   <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center font-black text-slate-400 text-2xl">
+                   <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center font-black text-slate-600 text-2xl">
                     {(principal?.name || "P")[0]}
                    </div>
                    <div>
@@ -246,7 +246,7 @@ const AboutPage = () => {
               Elite Governance
             </div>
             <h2 className="text-4xl lg:text-5xl font-black text-slate-900 uppercase tracking-tighter mb-6">Executive Management</h2>
-            <p className="text-slate-400 font-bold text-sm tracking-widest uppercase max-w-2xl mx-auto">
+            <p className="text-slate-600 font-bold text-sm tracking-widest uppercase max-w-2xl mx-auto">
               Strategic leaders dedicated to maintaining world-class academic standards.
             </p>
           </div>
@@ -286,7 +286,7 @@ const AboutPage = () => {
                   </div>
                   <div>
                     <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Strategic Heritage</h2>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Documenting two decades of evolution</p>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Documenting two decades of evolution</p>
                   </div>
                 </div>
                 <div className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-p:text-slate-600 prose-p:font-medium prose-p:leading-loose prose-strong:text-indigo-600" dangerouslySetInnerHTML={{ __html: content }} />

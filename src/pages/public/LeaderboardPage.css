@@ -363,6 +363,16 @@
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
 }
 
+.lb-rank-1 .lb-avatar-fallback {
+  background-color: #fef3c7;
+  color: #451a03;
+}
+
+.lb-rank-2 .lb-avatar-fallback {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
 .lb-rank-1 .lb-avatar-img,
 .lb-rank-1 .lb-avatar-fallback {
   border: 3px solid #451a03;

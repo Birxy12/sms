@@ -276,19 +276,21 @@ if (!selectedPub) return;
           const dbKey = Object.keys(rawMarks).find(
             k => k.toUpperCase() === subjectName.toUpperCase()
           ) || subjectName;
-          const sm = rawMarks[dbKey] || {};
-          const cat1 = parseFloat(sm.cat1 || sm.ca1 || 0);
-          const cat2 = parseFloat(sm.cat2 || sm.ca2 || 0);
-          const exam = parseFloat(sm.exam || 0);
-          const total = parseFloat(sm.total || (cat1 + cat2 + exam));
+          const isOffered = rawMarks[dbKey] !== undefined;
 
-          if (total > 0) {
+          const sm = rawMarks[dbKey] || {};
+          const cat1 = parseFloat(sm.cat1 ?? sm.ca1 ?? 0);
+          const cat2 = parseFloat(sm.cat2 ?? sm.ca2 ?? 0);
+          const exam = parseFloat(sm.exam ?? 0);
+          const total = parseFloat(sm.total ?? (cat1 + cat2 + exam));
+
+          if (isOffered) {
             totalScore += total;
             subjectCount++;
           }
 
           let grade = sm.grade;
-          if (!grade && total > 0) {
+          if (!grade && isOffered) {
             if (total >= 75) grade = 'A';
             else if (total >= 70) grade = 'B1';
             else if (total >= 65) grade = 'B2';
@@ -306,12 +308,13 @@ if (!selectedPub) return;
             cat2,
             exam,
             total,
-            grade: grade || (total > 0 ? 'F9' : '-')
+            grade: grade || (isOffered ? 'F9' : '-'),
+            isOffered
           };
         });
 
-        // Only show subjects that have been offered (total > 0)
-        const displaySubjects = processedMarks.filter(s => s.total > 0);
+        // Only show subjects that have been offered
+        const displaySubjects = processedMarks.filter(s => s.isOffered);
 
         // Calculate average based on strict school policy: 
         // JSS1-3 (16), SS1 (16), SS2/3 Art/Science (9)
@@ -712,11 +715,11 @@ return (
 if (publishedTerms.length === 0) {
 return (
 <div className="card-white no-print" style={{ padding: '60px 40px', textAlign: 'center' }}>
-<div className="w-16 h-16 mx-auto mb-4 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center">
+<div className="w-16 h-16 mx-auto mb-4 bg-slate-100 text-slate-500 rounded-full flex items-center justify-center">
 <AlertCircle size={32} />
 </div>
 <h3 className="text-xl font-bold text-slate-800 mb-2">No Results Found</h3>
-<p className="text-slate-500">Academic results for this session have not been published by the management.</p>
+<p className="text-slate-600">Academic results for this session have not been published by the management.</p>
 </div>
 );
 }
@@ -726,7 +729,7 @@ return (
 <div className="card-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
 <div>
 <h3 className="text-lg font-bold text-slate-800 m-0">Term Reports</h3>
-<p className="text-xs text-slate-400 font-medium">Select a published session to view your report card.</p>
+<p className="text-xs text-slate-500 font-medium">Select a published session to view your report card.</p>
 </div>
 <select
 value={selectedTermId}
@@ -752,19 +755,19 @@ className="w-full sm:w-auto px-4 py-3 rounded-xl border-2 border-slate-100 outli
 <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center bg-slate-50/50 gap-4">
 <div className="text-center md:text-left">
 <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">Performance Summary</h3>
-<p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{selectedPub?.examName}</p>
+<p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{selectedPub?.examName}</p>
 </div>
 <div className="flex gap-4">
 <div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm text-center">
-<p className="text-[10px] font-black text-slate-400 uppercase">Grand Total</p>
+<p className="text-[10px] font-black text-slate-500 uppercase">Grand Total</p>
 <p className="text-lg font-black text-indigo-600">{studentMarks.overallTotal}</p>
 </div>
 <div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm text-center">
-<p className="text-[10px] font-black text-slate-400 uppercase">Average</p>
+<p className="text-[10px] font-black text-slate-500 uppercase">Average</p>
 <p className="text-lg font-black text-emerald-600">{studentMarks.average}%</p>
 </div>
 <div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm text-center">
-<p className="text-[10px] font-black text-slate-400 uppercase">Position</p>
+<p className="text-[10px] font-black text-slate-500 uppercase">Position</p>
 <p className="text-lg font-black text-amber-600">{classStats.position}</p>
 </div>
 </div>
@@ -863,7 +866,7 @@ className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bla
 </div>
 )}
 </div>
-<p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{currentStudent?.name}</p>
+<p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{currentStudent?.name}</p>
 </div>
 <div className="flex gap-3">
 <button
