@@ -809,3 +809,264 @@ h1, h2, h3, h4, h5, h6 {
   display: none;
 }
 
+/* =========================================
+   SCORE ENTRY — RESPONSIVE
+   ========================================= */
+
+/* Desktop table input */
+.score-input {
+  width: 72px;
+  display: block;
+  margin: 0 auto;
+  padding: 6px 8px;
+  text-align: center;
+  border-radius: 6px;
+  border: 1.5px solid #e2e8f0;
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.score-input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+/* Desktop: show table, hide cards */
+.score-table-wrap { display: block; overflow-x: auto; }
+.score-cards-mobile { display: none; }
+
+/* Mobile: hide table, show cards */
+@media (max-width: 680px) {
+  .score-table-wrap { display: none !important; }
+  .score-cards-mobile { display: flex; flex-direction: column; gap: 10px; }
+
+  .score-card-mobile {
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px 14px 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+
+  .score-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .score-card-num {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    background: #f1f5f9;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: #475569;
+  }
+
+  .score-card-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.2;
+    margin: 0;
+    flex: 1;
+  }
+
+  .score-card-regno {
+    font-size: 11px;
+    color: #64748b;
+    font-family: monospace;
+    margin: 2px 0 0;
+  }
+
+  .score-card-total {
+    font-size: 20px;
+    font-weight: 900;
+    min-width: 40px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .score-card-total.pass { color: #059669; }
+  .score-card-total.fail { color: #e11d48; }
+
+  .score-card-inputs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .score-card-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .score-card-field label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+  }
+  .score-card-field label span {
+    color: #94a3b8;
+    font-weight: 500;
+  }
+
+  .score-card-field input {
+    width: 100% !important;
+    padding: 10px 6px !important;
+    text-align: center !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+    border: 1.5px solid #e2e8f0 !important;
+    background: #f8fafc !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  .score-card-field input:focus {
+    border-color: #4f46e5 !important;
+    background: #fff !important;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1) !important;
+  }
+
+  /* Save button full width on mobile */
+  .save-scores-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Score entry header stacks better on mobile */
+  .bg-white.p-6.rounded-xl {
+    padding: 14px !important;
+  }
+}
+
+/* =========================================
+   GENERAL MOBILE LAYOUT FIXES
+   ========================================= */
+
+@media (max-width: 768px) {
+  /* Reduce padding on page content */
+  .page-content {
+    padding: 1rem !important;
+  }
+
+  /* Sidebar overlay fix */
+  .sidebar {
+    position: fixed !important;
+    left: -280px;
+    z-index: 200;
+    height: 100vh;
+    top: 0;
+    overflow-y: auto;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .sidebar.open {
+    left: 0 !important;
+    transform: none !important;
+  }
+
+  /* Dark overlay behind open sidebar */
+  .sidebar.open::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    left: 280px;
+    background: rgba(0,0,0,0.4);
+    z-index: -1;
+  }
+
+  /* Modern tabs — horizontally scrollable on mobile */
+  .modern-tabs-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap !important;
+    border-radius: 12px;
+  }
+  .modern-tabs-container::-webkit-scrollbar { display: none; }
+
+  .modern-tab-item {
+    padding: 8px 14px !important;
+    font-size: 12px !important;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Dashboard grid — single column on mobile */
+  .stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Stat cards slightly more compact */
+  .stat-card {
+    padding: 14px !important;
+  }
+  .stat-icon {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  .stat-info h3 {
+    font-size: 18px !important;
+  }
+
+  /* Card white less padding */
+  .card-white {
+    padding: 16px !important;
+  }
+
+  /* Table fallback — allow horizontal scroll if table is shown on some pages */
+  .overflow-x-auto {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Dashboard title wraps cleanly */
+  .dashboard-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  /* Grid cols 4 → 2 on mobile */
+  .grid.grid-cols-1.md\\:grid-cols-4 {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Flex wrap for header action buttons */
+  .flex.flex-wrap.gap-2 {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Score Entry section header */
+  .flex.flex-col.md\\:flex-row.md\\:items-center.justify-between {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .page-content {
+    padding: 0.75rem !important;
+  }
+  .grid.grid-cols-1.md\\:grid-cols-4 {
+    grid-template-columns: 1fr !important;
+  }
+}

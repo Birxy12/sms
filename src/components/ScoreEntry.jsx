@@ -556,79 +556,142 @@ const ScoreEntry = () => {
                 <p>Loading students...</p>
               </div>
             ) : students.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-y border-slate-200">
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Reg No.</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Student Name</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">CAT 1 (20)</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">CAT 2 (20)</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Exam (60)</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Total (100)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {students.map((student) => {
-                      const studentScores = scores[student.regNo] || {};
-                      const total = (parseFloat(studentScores.cat1 || 0)) + 
-                                   (parseFloat(studentScores.cat2 || 0)) + 
-                                   (parseFloat(studentScores.exam || 0));
+              <div>
+                {/* ── Desktop Table ── */}
+                <div className="score-table-wrap">
+                  <table className="w-full border-collapse score-table">
+                    <thead>
+                      <tr className="bg-slate-50 border-y border-slate-200">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Reg No.</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Student Name</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">CAT 1 (20)</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">CAT 2 (20)</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Exam (60)</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Total (100)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {students.map((student) => {
+                        const studentScores = scores[student.regNo] || {};
+                        const total = (parseFloat(studentScores.cat1 || 0)) + 
+                                     (parseFloat(studentScores.cat2 || 0)) + 
+                                     (parseFloat(studentScores.exam || 0));
 
-                      return (
-                        <tr key={student.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                          <td className="px-4 py-3 text-sm text-slate-600 font-mono">{student.regNo}</td>
-                          <td className="px-4 py-3 text-sm font-medium text-slate-800">{student.name}</td>
-                          <td className="px-4 py-3">
+                        return (
+                          <tr key={student.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td className="px-4 py-3 text-sm text-slate-600 font-mono">{student.regNo}</td>
+                            <td className="px-4 py-3 text-sm font-medium text-slate-800">{student.name}</td>
+                            <td className="px-4 py-3">
+                              <input
+                                type="number"
+                                max="20"
+                                min="0"
+                                placeholder="0"
+                                value={studentScores.cat1 ?? ''}
+                                className="score-input"
+                                onChange={(e) => handleScoreChange(student.regNo, 'cat1', e.target.value)}
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <input
+                                type="number"
+                                max="20"
+                                min="0"
+                                placeholder="0"
+                                value={studentScores.cat2 ?? ''}
+                                className="score-input"
+                                onChange={(e) => handleScoreChange(student.regNo, 'cat2', e.target.value)}
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <input
+                                type="number"
+                                max="60"
+                                min="0"
+                                placeholder="0"
+                                value={studentScores.exam ?? ''}
+                                className="score-input"
+                                onChange={(e) => handleScoreChange(student.regNo, 'exam', e.target.value)}
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`font-bold ${total < 40 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                {total}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ── Mobile Cards ── */}
+                <div className="score-cards-mobile">
+                  {students.map((student, idx) => {
+                    const studentScores = scores[student.regNo] || {};
+                    const total = (parseFloat(studentScores.cat1 || 0)) + 
+                                 (parseFloat(studentScores.cat2 || 0)) + 
+                                 (parseFloat(studentScores.exam || 0));
+                    return (
+                      <div key={student.id} className="score-card-mobile">
+                        <div className="score-card-header">
+                          <span className="score-card-num">{idx + 1}</span>
+                          <div>
+                            <p className="score-card-name">{student.name}</p>
+                            <p className="score-card-regno">{student.regNo}</p>
+                          </div>
+                          <span className={`score-card-total ${total < 40 ? 'fail' : 'pass'}`}>{total}</span>
+                        </div>
+                        <div className="score-card-inputs">
+                          <div className="score-card-field">
+                            <label>CAT 1 <span>/20</span></label>
                             <input
                               type="number"
                               max="20"
+                              min="0"
                               placeholder="0"
                               value={studentScores.cat1 ?? ''}
-                              className="w-20 mx-auto block px-2 py-1 text-center rounded border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
                               onChange={(e) => handleScoreChange(student.regNo, 'cat1', e.target.value)}
                             />
-                          </td>
-                          <td className="px-4 py-3">
+                          </div>
+                          <div className="score-card-field">
+                            <label>CAT 2 <span>/20</span></label>
                             <input
-                               type="number"
+                              type="number"
                               max="20"
+                              min="0"
                               placeholder="0"
                               value={studentScores.cat2 ?? ''}
-                              className="w-20 mx-auto block px-2 py-1 text-center rounded border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
                               onChange={(e) => handleScoreChange(student.regNo, 'cat2', e.target.value)}
                             />
-                          </td>
-                          <td className="px-4 py-3">
+                          </div>
+                          <div className="score-card-field">
+                            <label>Exam <span>/60</span></label>
                             <input
                               type="number"
                               max="60"
+                              min="0"
                               placeholder="0"
                               value={studentScores.exam ?? ''}
-                              className="w-20 mx-auto block px-2 py-1 text-center rounded border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
                               onChange={(e) => handleScoreChange(student.regNo, 'exam', e.target.value)}
                             />
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`font-bold ${total < 40 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                              {total}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
 
                 <div className="mt-8 flex justify-end">
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-2 bg-slate-900 text-white px-8 py-3 rounded-xl font-semibold hover:bg-black transition-all disabled:opacity-50"
+                    className="flex items-center gap-2 bg-slate-900 text-white px-8 py-3 rounded-xl font-semibold hover:bg-black transition-all disabled:opacity-50 save-scores-btn"
                     style={{ backgroundColor: '#000000', color: '#ffffff' }}
                   >
                     {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                    Save
+                    Save Scores
                   </button>
                 </div>
               </div>

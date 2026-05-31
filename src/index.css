@@ -119,12 +119,22 @@ a {
   .sidebar {
     position: fixed;
     left: -280px;
+    top: 0;
+    height: 100vh;
+    z-index: 200;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .sidebar.open {
     left: 0;
   }
   .page-content {
-    padding: 1.5rem;
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-content {
+    padding: 0.75rem;
   }
 }
 
