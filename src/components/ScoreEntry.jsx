@@ -205,6 +205,7 @@ const ScoreEntry = () => {
     try {
       const safeSession = selectedSession.replace('/', '-');
       const safeTerm = selectedTerm.replace(/\s/g, '').toLowerCase();
+      const safeClass = selectedClass.replace(/\s/g, '_').toLowerCase();
       
       const batches = [];
       let currentBatch = writeBatch(db);
@@ -212,15 +213,18 @@ const ScoreEntry = () => {
 
       for (const student of students) {
         const studentScores = scores[student.regNo] || {};
-        if (Object.keys(studentScores).length === 0) continue;
+        // Skip only if truly nothing was entered (all three fields absent)
+        const hasAnyScore = studentScores.cat1 !== undefined || studentScores.cat2 !== undefined || studentScores.exam !== undefined;
+        if (!hasAnyScore) continue;
 
         const cat1 = parseFloat(studentScores.cat1 || 0);
         const cat2 = parseFloat(studentScores.cat2 || 0);
         const exam = parseFloat(studentScores.exam || 0);
         const total = cat1 + cat2 + exam;
 
+        // Include className in doc ID to prevent cross-class collision (e.g. JSS1 vs JSS2 same regNo)
         const sanitizedRegNo = student.regNo.replace(/\//g, '-');
-        const id = `${sanitizedRegNo}_${safeSession}_${safeTerm}`;
+        const id = `${sanitizedRegNo}_${safeClass}_${safeSession}_${safeTerm}`;
         const markRef = doc(collection(db, 'marks'), id);
         
         let grade = 'F9';
