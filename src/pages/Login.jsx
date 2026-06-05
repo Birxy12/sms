@@ -415,7 +415,7 @@ const Login = () => {
                     <InputField label="Phone" name="phone" type="tel" placeholder="e.g. 08012345678" icon={Phone} />
                   )}
 
-                  <InputField label="Password" name="password" type="password" placeholder="Enter your password" icon={Lock} />
+                  <InputField label="Password" name="password" type="password" placeholder="••••••••" icon={Lock} />
 
                   <div className="form-options">
                     <label className="remember-me">
