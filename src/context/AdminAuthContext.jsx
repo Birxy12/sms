@@ -83,20 +83,17 @@ export const AdminAuthProvider = ({ children }) => {
       }
     };
 
+    let userToVerify = null;
+
     // 1. Check hardcoded Admin credentials (fallback to prevent lockout)
     if (identifier === 'admin@birxysms.edu' && password === '@@@@@&&&&&') {
       await ensureAuth();
-      const adminUser = { email: identifier, role: 'admin', name: 'System Administrator', staffId: 'ADMIN/001' };
-      setCurrentAdmin(adminUser);
-      localStorage.setItem('adminUser', JSON.stringify(adminUser));
-      return { success: true, role: 'admin' };
+      userToVerify = { email: identifier, role: 'admin', name: 'System Administrator', staffId: 'ADMIN/001' };
     }
-
     // New Super Admin requested by user
-    if (identifier === 'globixtechinc@gmail.com' && password === 'J123456@@') {
+    else if (identifier === 'globixtechinc@gmail.com' && password === 'J123456@@') {
       await ensureAuth();
-
-      const adminUser = { 
+      userToVerify = { 
         email: identifier, 
         role: 'admin', 
         name: 'Globix Admin', 
@@ -104,73 +101,179 @@ export const AdminAuthProvider = ({ children }) => {
         firstLogin: true,
         isSuperAdmin: true
       };
-      setCurrentAdmin(adminUser);
-      localStorage.setItem('adminUser', JSON.stringify(adminUser));
-      return { success: true, role: 'admin' };
     }
-
     // Bursar hardcoded login
-    if (identifier === 'bursar@birxysms.edu' && password === '141414') {
+    else if (identifier === 'bursar@birxysms.edu' && password === '141414') {
       await ensureAuth();
-      const adminUser = { 
+      userToVerify = { 
         email: identifier, 
         role: 'bursar', 
         name: 'School Bursar', 
         staffId: 'BURSAR/001'
       };
-      setCurrentAdmin(adminUser);
-      localStorage.setItem('adminUser', JSON.stringify(adminUser));
-      return { success: true, role: 'bursar' };
+    } else {
+      // 2. Try Firestore lookup (either by Email or Staff ID)
+      try {
+        const { db, auth } = await import('../lib/firebase');
+        const { signInAnonymously } = await import('firebase/auth');
+        await signInAnonymously(auth);
+
+        const { collection, query, where, getDocs } = await import('firebase/firestore');
+        
+        const staffRef = collection(db, 'staff');
+        let q;
+        const normalizedIdentifier = identifier.trim();
+        
+        if (normalizedIdentifier.includes('@')) {
+          q = query(staffRef, where('email', '==', normalizedIdentifier.toLowerCase()));
+        } else {
+          // Try uppercase first (standard)
+          q = query(staffRef, where('staffId', '==', normalizedIdentifier.toUpperCase()));
+        }
+        
+        let querySnapshot = await getDocs(q);
+        
+        // If uppercase search failed and it's not an email, try lowercase/raw search
+        if (querySnapshot.empty && !normalizedIdentifier.includes('@')) {
+          const qRaw = query(staffRef, where('staffId', '==', normalizedIdentifier.toLowerCase()));
+          querySnapshot = await getDocs(qRaw);
+          
+          if (querySnapshot.empty) {
+             const qLiteral = query(staffRef, where('staffId', '==', normalizedIdentifier));
+             querySnapshot = await getDocs(qLiteral);
+          }
+        }
+        
+        if (!querySnapshot.empty) {
+          const staffData = querySnapshot.docs[0].data();
+          // Check password matching exactly what's set in the DB
+          if (staffData.password === password) {
+            userToVerify = { ...staffData, id: querySnapshot.docs[0].id };
+          }
+        }
+      } catch (error) {
+        console.error('Staff login error:', error);
+      }
     }
 
-    // 2. Try Firestore lookup (either by Email or Staff ID)
-    // Principal and Bursar accounts should be managed via Staff Management.
-    try {
-      const { db, auth } = await import('../lib/firebase');
-      const { signInAnonymously } = await import('firebase/auth');
-      await signInAnonymously(auth);
-
-      const { collection, query, where, getDocs } = await import('firebase/firestore');
-      
-      const staffRef = collection(db, 'staff');
-      let q;
-      const normalizedIdentifier = identifier.trim();
-      
-      if (normalizedIdentifier.includes('@')) {
-        q = query(staffRef, where('email', '==', normalizedIdentifier.toLowerCase()));
-      } else {
-        // Try uppercase first (standard)
-        q = query(staffRef, where('staffId', '==', normalizedIdentifier.toUpperCase()));
+    if (userToVerify) {
+      if (!userToVerify.emailVerified && userToVerify.email !== 'admin@birxysms.edu' && userToVerify.email !== 'bursar@birxysms.edu' && userToVerify.email !== 'globixtechinc@gmail.com') {
+        return { success: true, requireEmailVerification: true, user: userToVerify };
       }
-      
-      let querySnapshot = await getDocs(q);
-      
-      // If uppercase search failed and it's not an email, try lowercase/raw search
-      if (querySnapshot.empty && !normalizedIdentifier.includes('@')) {
-        const qRaw = query(staffRef, where('staffId', '==', normalizedIdentifier.toLowerCase()));
-        querySnapshot = await getDocs(qRaw);
-        
-        if (querySnapshot.empty) {
-           const qLiteral = query(staffRef, where('staffId', '==', normalizedIdentifier));
-           querySnapshot = await getDocs(qLiteral);
-        }
+      if (!userToVerify.pin) {
+        return { success: true, requirePinSetup: true, user: userToVerify };
       }
-      
-      if (!querySnapshot.empty) {
-        const staffData = querySnapshot.docs[0].data();
-        // Check password matching exactly what's set in the DB
-        if (staffData.password === password) {
-          const user = { ...staffData, id: querySnapshot.docs[0].id };
-          setCurrentAdmin(user);
-          localStorage.setItem('adminUser', JSON.stringify(user));
-          return { success: true, role: user.role };
-        }
-      }
-    } catch (error) {
-      console.error('Staff login error:', error);
+      return { success: true, requirePin: true, user: userToVerify };
     }
 
     return { success: false, message: 'Invalid credentials. Please verify your password.' };
+  };
+
+  const completeLogin = (user) => {
+    setCurrentAdmin(user);
+    localStorage.setItem('adminUser', JSON.stringify(user));
+  };
+
+  const setupPin = async (user, pin) => {
+    try {
+      if (user.id) {
+        const { db } = await import('../lib/firebase');
+        const { doc, updateDoc } = await import('firebase/firestore');
+        await updateDoc(doc(db, 'staff', user.id), { pin });
+      }
+      const updatedUser = { ...user, pin };
+      completeLogin(updatedUser);
+      return { success: true };
+    } catch (error) {
+      console.error(error);
+      return { success: false, message: 'Failed to set PIN.' };
+    }
+  };
+
+  const verifyPin = async (user, pin) => {
+    if (user.pin === pin) {
+      completeLogin(user);
+      return { success: true };
+    }
+    return { success: false, message: 'Incorrect PIN.' };
+  };
+
+  const sendVerificationEmail = async (email) => {
+    console.log(`[SIMULATED EMAIL] To: ${email} | Subject: Verify your email | Body: Your verification code is 123456`);
+    return { success: true, message: 'Verification code sent to email.' };
+  };
+
+  const verifyEmail = async (user, code) => {
+    if (code === '123456') { // Mock verification code
+      try {
+        if (user.id) {
+          const { db } = await import('../lib/firebase');
+          const { doc, updateDoc } = await import('firebase/firestore');
+          await updateDoc(doc(db, 'staff', user.id), { emailVerified: true });
+        }
+        const updatedUser = { ...user, emailVerified: true };
+        if (!updatedUser.pin) {
+          return { success: true, requirePinSetup: true, user: updatedUser };
+        }
+        return { success: true, requirePin: true, user: updatedUser };
+      } catch (err) {
+        return { success: false, message: 'Error verifying email.' };
+      }
+    }
+    return { success: false, message: 'Invalid verification code.' };
+  };
+
+  const registerPasskey = async (user) => {
+    try {
+      if (!window.PublicKeyCredential) return { success: false, message: 'WebAuthn not supported' };
+      const challenge = new Uint8Array(32);
+      crypto.getRandomValues(challenge);
+      const publicKey = {
+        challenge,
+        rp: { name: "Bright Day School" },
+        user: { id: Uint8Array.from(user.email, c => c.charCodeAt(0)), name: user.email, displayName: user.name },
+        pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: "platform" },
+        timeout: 60000,
+        attestation: "none"
+      };
+      const credential = await navigator.credentials.create({ publicKey });
+      if (credential) {
+        if (user.id) {
+          const { db } = await import('../lib/firebase');
+          const { doc, updateDoc } = await import('firebase/firestore');
+          await updateDoc(doc(db, 'staff', user.id), { passkeyId: credential.id });
+        }
+        return { success: true };
+      }
+    } catch (error) {
+      console.error(error);
+      return { success: false, message: 'Passkey registration failed' };
+    }
+  };
+
+  const loginWithPasskey = async () => {
+    try {
+      if (!window.PublicKeyCredential) return { success: false, message: 'WebAuthn not supported' };
+      const challenge = new Uint8Array(32);
+      crypto.getRandomValues(challenge);
+      const credential = await navigator.credentials.get({ publicKey: { challenge, timeout: 60000 } });
+      if (credential) {
+        const { db } = await import('../lib/firebase');
+        const { collection, query, where, getDocs } = await import('firebase/firestore');
+        const snap = await getDocs(query(collection(db, 'staff'), where('passkeyId', '==', credential.id)));
+        if (!snap.empty) {
+          const staffData = { ...snap.docs[0].data(), id: snap.docs[0].id };
+          completeLogin(staffData);
+          return { success: true, role: staffData.role };
+        }
+        return { success: false, message: 'Passkey not recognized.' };
+      }
+    } catch (error) {
+      console.error(error);
+      return { success: false, message: 'Passkey login failed' };
+    }
+    return { success: false, message: 'Login cancelled' };
   };
 
   const logout = () => {
@@ -395,6 +498,13 @@ export const AdminAuthProvider = ({ children }) => {
   const value = {
     currentAdmin,
     login,
+    completeLogin,
+    setupPin,
+    verifyPin,
+    sendVerificationEmail,
+    verifyEmail,
+    registerPasskey,
+    loginWithPasskey,
     loginWithGoogle,
     loginWithPhone,
     registerStaff,

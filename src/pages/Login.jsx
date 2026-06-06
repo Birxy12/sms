@@ -9,7 +9,7 @@ import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { 
   GraduationCap, ShieldCheck, ArrowRight, ChevronLeft, Loader2,
   AlertCircle, HelpCircle, Phone, Lock, Mail, User, 
-  School, CheckCircle, Crown, Wallet, Eye, EyeOff, ChevronDown
+  School, CheckCircle, Crown, Wallet, Eye, EyeOff, ChevronDown, Fingerprint
 } from 'lucide-react';
 import './Auth.css';
 import bdsLogo from '../assets/bdslogo.jpg';
@@ -35,6 +35,63 @@ const DEFAULT_CLASS_OPTIONS = [
   'JSS 1', 'JSS 2', 'JSS 3', 'SSS 1', 'SSS 2', 'SSS 3'
 ];
 
+const InputField = ({ label, name, type = 'text', placeholder, icon: Icon, required = true, maxLength, pattern, inputMode, value, onChange, showPassword, onTogglePassword }) => (
+  <div className="input-wrapper">
+    <label className="input-label">
+      <Icon size={14} />
+      {label}
+    </label>
+    <div className="input-container">
+      <input
+        type={type === 'password' && showPassword ? 'text' : type}
+        name={name}
+        value={value || ''}
+        onChange={onChange}
+        placeholder={placeholder}
+        required={required}
+        maxLength={maxLength}
+        pattern={pattern}
+        inputMode={inputMode}
+        autoFocus={name === 'regNo' || name === 'email'}
+        className="modern-input"
+      />
+      {type === 'password' && (
+        <button
+          type="button"
+          className="password-toggle"
+          onClick={onTogglePassword}
+        >
+          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+        </button>
+      )}
+    </div>
+  </div>
+);
+
+const SelectField = ({ label, name, options, icon: Icon, required = true, value, onChange }) => (
+  <div className="input-wrapper">
+    <label className="input-label">
+      <Icon size={14} />
+      {label}
+    </label>
+    <div className="input-container select-container">
+      <select
+        name={name}
+        value={value || ''}
+        onChange={onChange}
+        required={required}
+        className="modern-input select-input"
+      >
+        <option value="" disabled>Select your class</option>
+        {options.map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+      <ChevronDown size={16} className="select-chevron" />
+    </div>
+  </div>
+);
+
 const Login = () => {
   const [selectedRole, setSelectedRole] = useState('student');
   const [loginStep, setLoginStep] = useState('credentials');
@@ -43,12 +100,13 @@ const Login = () => {
   const [classOptions, setClassOptions] = useState(DEFAULT_CLASS_OPTIONS);
   const [formData, setFormData] = useState({ 
     regNo: '', className: '', email: '', password: '', phone: '',
-    pin: '', securityAnswer: '', newPin: '' 
+    pin: '', securityAnswer: '', newPin: '', verificationCode: ''
   });
   const [securityQuestion, setSecurityQuestion] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [pendingUser, setPendingUser] = useState(null);
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -62,7 +120,6 @@ const Login = () => {
         }
       } catch (err) {
         console.error("Error fetching classes:", err);
-        // Fallback to default options already in state
       }
     };
     fetchClasses();
@@ -117,7 +174,20 @@ const Login = () => {
           result = await adminAuth.loginWithPhone(formData.phone, formData.password, selectedRole);
         }
         if (result.success) {
-          navigateByRole(selectedRole);
+          if (result.requireEmailVerification) {
+            setPendingUser(result.user);
+            await adminAuth.sendVerificationEmail(result.user.email);
+            setLoginStep('verify_email');
+          } else if (result.requirePinSetup) {
+            setPendingUser(result.user);
+            setLoginStep('setup_staff_pin');
+          } else if (result.requirePin) {
+            setPendingUser(result.user);
+            setLoginStep('verify_staff_pin');
+          } else {
+            adminAuth.completeLogin(result.user);
+            navigateByRole(selectedRole);
+          }
         } else {
           setError(result.message || 'Login failed');
         }
@@ -125,6 +195,23 @@ const Login = () => {
     } catch (err) {
       setError('An error occurred. Please try again.');
       console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasskeyLogin = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await adminAuth.loginWithPasskey();
+      if (result.success) {
+        navigateByRole(result.role || selectedRole);
+      } else {
+        setError(result.message || 'Passkey login failed');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -150,6 +237,104 @@ const Login = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleStaffPinSetup = async (e) => {
+    e.preventDefault();
+    if (formData.pin.length !== 6) {
+      setError('PIN must be exactly 6 digits');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const result = await adminAuth.setupPin(pendingUser, formData.pin);
+      if (result.success) {
+        // Option to setup Passkey
+        if (window.PublicKeyCredential) {
+          setLoginStep('setup_passkey');
+        } else {
+          navigateByRole(selectedRole);
+        }
+      } else {
+        setError(result.message || 'Failed to setup PIN');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStaffPinVerify = async (e) => {
+    e.preventDefault();
+    if (formData.pin.length !== 6) {
+      setError('PIN must be exactly 6 digits');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const result = await adminAuth.verifyPin(pendingUser, formData.pin);
+      if (result.success) {
+        navigateByRole(selectedRole);
+      } else {
+        setError(result.message || 'Invalid PIN');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailVerification = async (e) => {
+    e.preventDefault();
+    if (!formData.verificationCode) {
+      setError('Please enter the verification code');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const result = await adminAuth.verifyEmail(pendingUser, formData.verificationCode);
+      if (result.success) {
+        if (result.requirePinSetup) {
+          setPendingUser(result.user);
+          setLoginStep('setup_staff_pin');
+        } else if (result.requirePin) {
+          setPendingUser(result.user);
+          setLoginStep('verify_staff_pin');
+        } else {
+          adminAuth.completeLogin(result.user);
+          navigateByRole(selectedRole);
+        }
+      } else {
+        setError(result.message || 'Invalid verification code');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSetupPasskey = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      await adminAuth.registerPasskey(pendingUser);
+      navigateByRole(selectedRole);
+    } catch (err) {
+      console.error(err);
+      navigateByRole(selectedRole);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const skipPasskeySetup = () => {
+    navigateByRole(selectedRole);
   };
 
   const handleForgotPin = async (e) => {
@@ -236,61 +421,58 @@ const Login = () => {
     }
   };
 
-  const InputField = ({ label, name, type = 'text', placeholder, icon: Icon, required = true, maxLength, pattern, inputMode }) => (
-    <div className="input-wrapper">
-      <label className="input-label">
-        <Icon size={14} />
-        {label}
-      </label>
-      <div className="input-container">
-        <input
-          type={type === 'password' && showPassword ? 'text' : type}
-          name={name}
-          value={formData[name]}
-          onChange={handleInputChange}
-          placeholder={placeholder}
-          required={required}
-          maxLength={maxLength}
-          pattern={pattern}
-          inputMode={inputMode}
-          autoFocus={name === 'regNo' || name === 'email'}
-          className="modern-input"
-        />
-        {type === 'password' && (
-          <button
-            type="button"
-            className="password-toggle"
-            onClick={() => setShowPassword(!showPassword)}
-          >
-            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-
-  const SelectField = ({ label, name, options, icon: Icon, required = true }) => (
-    <div className="input-wrapper">
-      <label className="input-label">
-        <Icon size={14} />
-        {label}
-      </label>
-      <div className="input-container select-container">
-        <select
-          name={name}
-          value={formData[name]}
-          onChange={handleInputChange}
-          required={required}
-          className="modern-input select-input"
-        >
-          <option value="" disabled>Select your class</option>
-          {options.map((opt) => (
-            <option key={opt} value={opt}>{opt}</option>
+  const PinInputGroup = ({ onSubmit, disabled, buttonText }) => (
+    <form onSubmit={onSubmit} className="auth-form">
+      <div className="input-wrapper">
+        <label className="input-label">
+          <Lock size={14} />
+          Enter 6-Digit PIN
+        </label>
+        <div className="pin-inputs">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <input
+              key={i}
+              id={`pin-${i}`}
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={1}
+              className="pin-digit"
+              value={formData.pin[i] || ''}
+              autoFocus={i === 0}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '');
+                if (val.length <= 1) {
+                  const newPin = formData.pin.split('');
+                  newPin[i] = val;
+                  const joined = newPin.join('').slice(0, 6);
+                  setFormData({ ...formData, pin: joined });
+                  setError('');
+                  if (val && i < 5) {
+                    document.getElementById(`pin-${i + 1}`)?.focus();
+                  }
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Backspace' && !formData.pin[i] && i > 0) {
+                  document.getElementById(`pin-${i - 1}`)?.focus();
+                }
+              }}
+            />
           ))}
-        </select>
-        <ChevronDown size={16} className="select-chevron" />
+        </div>
       </div>
-    </div>
+      <motion.button
+        type="submit"
+        className="submit-btn"
+        disabled={disabled}
+        whileHover={{ y: -1 }}
+        whileTap={{ scale: 0.98 }}
+        style={{ background: currentRole.color }}
+      >
+        {loading ? <Loader2 className="spin" size={18} /> : <><CheckCircle size={16} /> {buttonText}</>}
+      </motion.button>
+    </form>
   );
 
   return (
@@ -366,12 +548,16 @@ const Login = () => {
                     name="regNo"
                     placeholder="e.g. BDS/2024/001"
                     icon={User}
+                    value={formData.regNo}
+                    onChange={handleInputChange}
                   />
                   <SelectField
                     label="Class"
                     name="className"
                     options={classOptions}
                     icon={School}
+                    value={formData.className}
+                    onChange={handleInputChange}
                   />
                   
                   <motion.button
@@ -410,12 +596,12 @@ const Login = () => {
                   </div>
 
                   {staffMode === 'email' ? (
-                    <InputField label="Email" name="email" type="email" placeholder="e.g. staff@school.edu" icon={Mail} />
+                    <InputField label="Email" name="email" type="email" placeholder="e.g. staff@school.edu" icon={Mail} value={formData.email} onChange={handleInputChange} />
                   ) : (
-                    <InputField label="Phone" name="phone" type="tel" placeholder="e.g. 08012345678" icon={Phone} />
+                    <InputField label="Phone" name="phone" type="tel" placeholder="e.g. 08012345678" icon={Phone} value={formData.phone} onChange={handleInputChange} />
                   )}
 
-                  <InputField label="Password" name="password" type="password" placeholder="••••••••" icon={Lock} />
+                  <InputField label="Password" name="password" type="password" placeholder="••••••••" icon={Lock} value={formData.password} onChange={handleInputChange} showPassword={showPassword} onTogglePassword={() => setShowPassword(!showPassword)} />
 
                   <div className="form-options">
                     <label className="remember-me">
@@ -434,6 +620,18 @@ const Login = () => {
                     style={{ background: currentRole.color }}
                   >
                     {loading ? <Loader2 className="spin" size={18} /> : <>Sign In <ArrowRight size={16} /></>}
+                  </motion.button>
+
+                  <div className="divider"><span>or</span></div>
+                  <motion.button
+                    type="button"
+                    className="google-btn"
+                    onClick={handlePasskeyLogin}
+                    disabled={loading}
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {loading ? <Loader2 className="spin" size={16} /> : <><Fingerprint size={16} /> Sign in with Passkey</>}
                   </motion.button>
                 </form>
               )}
@@ -458,7 +656,7 @@ const Login = () => {
                 <p>Reset Password</p>
               </div>
 
-              <InputField label="Email Address" name="email" type="email" placeholder="e.g. staff@school.edu" icon={Mail} />
+              <InputField label="Email Address" name="email" type="email" placeholder="e.g. staff@school.edu" icon={Mail} value={formData.email} onChange={handleInputChange} />
 
               <motion.button
                 type="submit"
@@ -474,77 +672,97 @@ const Login = () => {
           )}
 
           {loginStep === 'pin' && (
-            <motion.form
-              key="pin"
-              initial={{ opacity: 0, x: 15 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -15 }}
-              onSubmit={handlePinSubmit}
-              className="auth-form"
-            >
+            <motion.div key="pin" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -15 }}>
               <button type="button" className="back-btn" onClick={() => setLoginStep('credentials')}>
                 <ChevronLeft size={14} /> Back
               </button>
-
               <div className="security-banner">
                 <HelpCircle size={16} />
                 <p>{securityQuestion}</p>
               </div>
+              <PinInputGroup onSubmit={handlePinSubmit} disabled={loading || formData.pin.length !== 6} buttonText="Verify" />
+              <button type="button" className="text-link" onClick={() => setLoginStep('forgot_pin')}>
+                Forgot PIN?
+              </button>
+            </motion.div>
+          )}
 
-              <div className="input-wrapper">
-                <label className="input-label">
-                  <Lock size={14} />
-                  Enter 6-Digit PIN
-                </label>
-                <div className="pin-inputs">
-                  {[0, 1, 2, 3, 4, 5].map((i) => (
-                    <input
-                      key={i}
-                      id={`pin-${i}`}
-                      type="password"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={1}
-                      className="pin-digit"
-                      value={formData.pin[i] || ''}
-                      autoFocus={i === 0}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/\D/g, '');
-                        if (val.length <= 1) {
-                          const newPin = formData.pin.split('');
-                          newPin[i] = val;
-                          const joined = newPin.join('').slice(0, 6);
-                          setFormData({ ...formData, pin: joined });
-                          setError('');
-                          if (val && i < 5) {
-                            document.getElementById(`pin-${i + 1}`)?.focus();
-                          }
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Backspace' && !formData.pin[i] && i > 0) {
-                          document.getElementById(`pin-${i - 1}`)?.focus();
-                        }
-                      }}
-                    />
-                  ))}
-                </div>
+          {loginStep === 'setup_staff_pin' && (
+            <motion.div key="setup_staff_pin" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -15 }}>
+              <div className="security-banner alert">
+                <AlertCircle size={16} />
+                <p>Secure Your Account</p>
               </div>
+              <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '15px' }}>
+                Please set up a 6-digit PIN for faster and more secure future logins.
+              </p>
+              <PinInputGroup onSubmit={handleStaffPinSetup} disabled={loading || formData.pin.length !== 6} buttonText="Set PIN" />
+            </motion.div>
+          )}
 
+          {loginStep === 'verify_staff_pin' && (
+            <motion.div key="verify_staff_pin" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -15 }}>
+              <button type="button" className="back-btn" onClick={() => setLoginStep('credentials')}>
+                <ChevronLeft size={14} /> Back
+              </button>
+              <div className="security-banner">
+                <Lock size={16} />
+                <p>Enter your PIN to continue</p>
+              </div>
+              <PinInputGroup onSubmit={handleStaffPinVerify} disabled={loading || formData.pin.length !== 6} buttonText="Verify PIN" />
+            </motion.div>
+          )}
+
+          {loginStep === 'setup_passkey' && (
+            <motion.div key="setup_passkey" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -15 }} className="auth-form">
+              <div className="security-banner" style={{background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0'}}>
+                <CheckCircle size={16} />
+                <p>PIN set successfully!</p>
+              </div>
+              <div style={{textAlign: 'center', margin: '20px 0'}}>
+                <Fingerprint size={48} color={currentRole.color} style={{marginBottom: '10px'}} />
+                <h3 style={{fontSize: '18px', color: '#1e293b'}}>Enable Passkey</h3>
+                <p style={{ fontSize: '14px', color: '#64748b', marginTop: '10px' }}>
+                  Use your device's biometric authentication (fingerprint, face recognition) or screen lock to sign in faster next time.
+                </p>
+              </div>
+              <motion.button
+                type="button"
+                className="submit-btn"
+                onClick={handleSetupPasskey}
+                disabled={loading}
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                style={{ background: currentRole.color, marginBottom: '10px' }}
+              >
+                {loading ? <Loader2 className="spin" size={18} /> : <><Fingerprint size={16} /> Create Passkey</>}
+              </motion.button>
+              <button type="button" className="google-btn" onClick={skipPasskeySetup}>
+                Skip for now
+              </button>
+            </motion.div>
+          )}
+
+          {loginStep === 'verify_email' && (
+            <motion.form key="verify_email" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -15 }} onSubmit={handleEmailVerification} className="auth-form">
+              <div className="security-banner alert">
+                <Mail size={16} />
+                <p>Verify Your Email</p>
+              </div>
+              <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '15px' }}>
+                We've sent a verification code to {pendingUser?.email}. Please enter it below.
+              </p>
+              <InputField label="Verification Code" name="verificationCode" type="text" placeholder="123456" icon={CheckCircle} value={formData.verificationCode} onChange={handleInputChange} />
               <motion.button
                 type="submit"
                 className="submit-btn"
-                disabled={loading || formData.pin.length !== 6}
+                disabled={loading || !formData.verificationCode}
                 whileHover={{ y: -1 }}
                 whileTap={{ scale: 0.98 }}
                 style={{ background: currentRole.color }}
               >
-                {loading ? <Loader2 className="spin" size={18} /> : <><CheckCircle size={16} /> Verify</>}
+                {loading ? <Loader2 className="spin" size={18} /> : <>Verify</>}
               </motion.button>
-
-              <button type="button" className="text-link" onClick={() => setLoginStep('forgot_pin')}>
-                Forgot PIN?
-              </button>
             </motion.form>
           )}
 
