@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, LogIn, LogOut, X, Home, Award, BookOpen, Phone, Newspaper, BarChart3, User, Sun, Moon } from 'lucide-react';
+import { Menu, LogIn, LogOut, X, Home, Award, BookOpen, Phone, Newspaper, BarChart3, User, Sun, Moon, ClipboardSignature } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useStudentAuth } from '../context/StudentAuthContext';
@@ -57,6 +57,7 @@ const Navbar = () => {
     { name: 'Home', path: '/', icon: Home },
     { name: 'Check Result', path: '/check-result', icon: BarChart3 },
     { name: 'About', path: '/about', icon: BookOpen },
+    { name: 'Admission', path: '/admission', icon: ClipboardSignature },
     { name: 'Blog', path: '/blog', icon: Newspaper },
     { name: 'Leaderboard', path: '/leaderboard', icon: Award },
     { name: 'Contact us', path: '/contact', icon: Phone },

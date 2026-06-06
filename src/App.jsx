@@ -33,6 +33,7 @@ import PrincipalDashboard from './pages/dashboard/PrincipalDashboard';
 import BursarDashboard from './pages/dashboard/BursarDashboard';
 import StaffRegister from './pages/StaffRegister';
 import CheckResult from './pages/public/CheckResult';
+import AdmissionPortal from './pages/public/AdmissionPortal';
 import { useStudentAuth } from './context/StudentAuthContext';
 import { useAdminAuth } from './context/AdminAuthContext';
 import BonusAI from './components/BonusAI';
@@ -84,6 +85,7 @@ function App() {
       <Route path="/blog" element={<BlogPage />} />
       <Route path="/leaderboard" element={<LeaderboardPage />} />
       <Route path="/check-result" element={<CheckResult />} />
+      <Route path="/admission" element={<AdmissionPortal />} />
       
       {/* Student Dashboard – individual section routes (Protected) */}
       <Route path="/students" element={

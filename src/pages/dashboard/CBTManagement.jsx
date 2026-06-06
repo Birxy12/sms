@@ -42,6 +42,7 @@ const initialExam = {
   subject: 'ENGLISH LANGUAGE',
   targetClass: 'JSS1',
   durationMinutes: 45,
+  scheduledTime: '',
   status: 'draft',
   instructions: '',
   questions: [blankQuestion()],
@@ -53,6 +54,7 @@ const normalizeExam = (exam) => ({
   subject: exam.subject.trim().toUpperCase(),
   targetClass: exam.targetClass.trim().toUpperCase(),
   durationMinutes: Number(exam.durationMinutes) || 45,
+  scheduledTime: exam.scheduledTime || '',
   questions: exam.questions
     .map((question) => ({
       prompt: question.prompt.trim(),
@@ -198,6 +200,7 @@ const CBTManagement = () => {
       subject: exam.subject || 'ENGLISH LANGUAGE',
       targetClass: exam.targetClass || 'JSS1',
       durationMinutes: exam.durationMinutes || 45,
+      scheduledTime: exam.scheduledTime || '',
       status: exam.status || 'draft',
       instructions: exam.instructions || '',
       questions: exam.questions?.length ? exam.questions : [blankQuestion()],
@@ -336,6 +339,10 @@ const CBTManagement = () => {
             <label>
               Duration
               <input type="number" min="5" max="240" value={form.durationMinutes} onChange={(event) => setForm({ ...form, durationMinutes: event.target.value })} />
+            </label>
+            <label>
+              Scheduled Time
+              <input type="datetime-local" value={form.scheduledTime || ''} onChange={(event) => setForm({ ...form, scheduledTime: event.target.value })} />
             </label>
             <label>
               Status

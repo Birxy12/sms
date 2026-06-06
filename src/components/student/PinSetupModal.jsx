@@ -71,15 +71,38 @@ const PinSetupModal = () => {
           <div className="space-y-5">
             <div className="space-y-1">
               <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Set Access PIN</label>
-              <input 
-                type="password" 
-                maxLength={6}
-                value={pin}
-                onChange={(e) => setLocalPin(e.target.value.replace(/\D/g, ''))}
-                placeholder="••••••"
-                required
-                className="w-full py-2 border-b-2 border-slate-200 focus:border-indigo-600 bg-transparent outline-none font-black text-2xl tracking-[0.6em] transition-all placeholder:text-slate-200"
-              />
+              <div className="flex gap-2">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <input
+                    key={i}
+                    id={`setup-pin-${i}`}
+                    type="password"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={1}
+                    value={pin[i] || ''}
+                    required
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      if (val.length <= 1) {
+                        const newPin = pin.split('');
+                        newPin[i] = val;
+                        const joined = newPin.join('').slice(0, 6);
+                        setLocalPin(joined);
+                        if (val && i < 5) {
+                          document.getElementById(`setup-pin-${i + 1}`)?.focus();
+                        }
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Backspace' && !pin[i] && i > 0) {
+                        document.getElementById(`setup-pin-${i - 1}`)?.focus();
+                      }
+                    }}
+                    className="w-10 text-center py-2 border-b-2 border-slate-200 focus:border-indigo-600 bg-transparent outline-none font-black text-2xl transition-all"
+                  />
+                ))}
+              </div>
             </div>
 
             <div className="space-y-1">

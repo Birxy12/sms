@@ -248,6 +248,7 @@ const StudentCBT = () => {
       <div className="cbt-exam-grid">
         {exams.map((exam) => {
           const submission = submissionByExam[exam.id];
+          const isScheduledFuture = exam.scheduledTime && new Date(exam.scheduledTime) > new Date();
           return (
             <article className="cbt-exam-card" key={exam.id}>
               <div className="cbt-exam-main">
@@ -265,6 +266,10 @@ const StudentCBT = () => {
               <div className="cbt-card-actions">
                 {submission ? (
                   <strong className="cbt-score">{submission.correct}/{submission.totalQuestions}</strong>
+                ) : isScheduledFuture ? (
+                  <button type="button" disabled style={{ opacity: 0.7, cursor: 'not-allowed', background: '#e2e8f0', color: '#64748b', fontSize: '11px' }}>
+                    Opens {new Date(exam.scheduledTime).toLocaleString()}
+                  </button>
                 ) : (
                   <button type="button" onClick={() => startExam(exam)}>
                     Start <ChevronRight size={17} />

@@ -108,7 +108,7 @@ const StudentDashboard = () => {
   const mainStats = [
     { label: 'GPA Average', value: `${avgScore}%`, icon: Zap, color: '#6366f1', trend: '+2.4%' },
     { label: 'Exams Taken', value: resultsCount, icon: Trophy, color: '#10b981', trend: 'Completed' },
-    { label: 'Pending Fees', value: '₦60k', icon: Wallet, color: '#f59e0b', trend: 'Due Soon' },
+    { label: 'Pending Fees', value: '₦0', icon: Wallet, color: '#f59e0b', trend: 'Awaiting Payment' },
     { label: 'Attendance', value: '94%', icon: Calendar, color: '#ec4899', trend: 'Excellent' },
   ];
 
@@ -334,8 +334,8 @@ const StudentDashboard = () => {
                       </div>
                       <h3 className="text-2xl font-black text-slate-800 mb-2">School Fees Balance</h3>
                       <p className="text-slate-400 font-bold mb-8">Summary of your current financial standing.</p>
-                      <div className="text-4xl font-black text-slate-900 mb-2">₦60,000.00</div>
-                      <div className="text-xs font-black text-rose-500 uppercase">Outstanding Balance</div>
+                      <div className="text-4xl font-black text-slate-900 mb-2">₦0.00</div>
+                      <div className="text-xs font-black text-emerald-500 uppercase">Awaiting Payment</div>
                     </div>
                     <button onClick={() => navigate('/students/fees')} className="mt-10 py-5 bg-slate-900 text-white rounded-3xl font-black text-sm shadow-xl">
                       Make Payment Now
