@@ -126,6 +126,18 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
+    // ========== ADMISSIONS ==========
+    match /admissions/{id} {
+      allow read: if isAuthenticated();
+      allow create: if true;
+      allow update, delete: if isSuperAdmin();
+    }
+
+    match /admissionLetterTemplates/{id} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
     // ========== FALLBACK ==========
     match /{document=**} {
       allow read, write: if false;

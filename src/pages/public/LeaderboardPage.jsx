@@ -8,6 +8,15 @@ import Footer from '../../components/MainFooter';
 import { expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../../utils/firestoreSchema';
 import './LeaderboardPage.css';
 
+// Ordered class list for sorting
+const CLASS_ORDER = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 SCIENCE', 'SS2 ART', 'SS3 SCIENCE', 'SS3 ART'];
+
+const normalizeClassName = (name = '') => {
+  const n = name.toUpperCase().trim();
+  // Normalize separators e.g. "SS2-SCIENCE" => "SS2 SCIENCE"
+  return n.replace(/[-_]/g, ' ');
+};
+
 const LeaderboardPage = () => {
   const { schoolName, primaryColor } = useTheme();
   const [loading, setLoading] = useState(true);
@@ -104,7 +113,8 @@ const LeaderboardPage = () => {
           const data = expandMarks(docSnap.data());
           if (!data) return;
           
-          const className = data.className;
+          const rawClassName = data.className;
+          const className = normalizeClassName(rawClassName);
           const regNo = data.regNo;
           const marksData = data.marks || {};
           
@@ -114,7 +124,6 @@ const LeaderboardPage = () => {
           let averageScore = parseFloat(meta.average || 0);
 
           if (totalScore === 0 || !meta.average || parseFloat(meta.average) === 0) {
-            // Fallback: manually calculate total score if _meta is missing or zero
             if (totalScore === 0) {
               Object.keys(marksData).forEach(key => {
                 if (key !== '_meta' && marksData[key]) {
@@ -122,13 +131,11 @@ const LeaderboardPage = () => {
                 }
               });
             }
-            
-            // Correct divisor based on class policy
             let divisor = 15;
-            const cls = (className || '').toUpperCase();
-            if (cls.includes('JSS') || cls.includes('SS1') || cls.includes('SS 1')) {
+            const cls = className;
+            if (cls.includes('JSS') || cls === 'SS1') {
               divisor = 16;
-            } else if ((cls.includes('SS2') || cls.includes('SS3') || cls.includes('SS 2') || cls.includes('SS 3')) && 
+            } else if ((cls.includes('SS2') || cls.includes('SS3')) && 
                        (cls.includes('ART') || cls.includes('SCIENCE'))) {
               divisor = 9;
             }
@@ -139,7 +146,6 @@ const LeaderboardPage = () => {
             if (!classRankings[className]) {
               classRankings[className] = [];
             }
-
             classRankings[className].push({
               regNo,
               totalScore,
@@ -150,7 +156,15 @@ const LeaderboardPage = () => {
 
         // 2. Sort each class and take top 2
         const topStudents = [];
-        const classes = Object.keys(classRankings).sort();
+        // Sort classes by predefined order, fall back to alphabetical for unknowns
+        const classes = Object.keys(classRankings).sort((a, b) => {
+          const ai = CLASS_ORDER.indexOf(a);
+          const bi = CLASS_ORDER.indexOf(b);
+          if (ai === -1 && bi === -1) return a.localeCompare(b);
+          if (ai === -1) return 1;
+          if (bi === -1) return -1;
+          return ai - bi;
+        });
 
         // Fetch all students to map names/photos
         const studentsSnap = await getDocs(collection(db, 'students'));
@@ -165,7 +179,6 @@ const LeaderboardPage = () => {
         classes.forEach(className => {
           const sorted = classRankings[className].sort((a, b) => b.totalScore - a.totalScore);
 
-          // Assign tie-aware ranks (Standard Competition / Skip Ranking)
           let rank = 1;
           sorted.forEach((s, idx) => {
             if (idx > 0 && s.totalScore < sorted[idx - 1].totalScore) {

@@ -98,43 +98,41 @@ const Navbar = () => {
         <div className="nav-container">
           <div className="nav-inner">
             
-            {/* Left: Logo + Links (same row) */}
-            <div className="nav-left">
-              <Link to="/" className="brand">
-                <div className="brand-logo">
-                  <img src={schoolLogo || brandlogo} alt="Logo" />
-                </div>
-                <div className="brand-text">
-                  <span className="brand-name" style={{ color: textColor }}>
-                    {schoolName || 'Birxy SMS'}
-                  </span>
-                </div>
-              </Link>
-
-              {/* Desktop Links - inline with brand */}
-              <div className="desktop-links">
-                {navLinks.map((link) => {
-                  const active = isActive(link.path);
-                  const Icon = link.icon;
-                  return (
-                    <Link
-                      key={link.name}
-                      to={link.path}
-                      className={`nav-item ${active ? 'nav-item--active' : ''}`}
-                      style={{ color: active ? accentColor : textColor }}
-                    >
-                      <Icon size={15} strokeWidth={2.5} className="desktop-icon-hide" />
-                      <span>{link.name}</span>
-                      {active && <span className="nav-dot" />}
-                    </Link>
-                  );
-                })}
-                {dashboardPath && (
-                  <Link to={dashboardPath} className="nav-dashboard">
-                    Dashboard
-                  </Link>
-                )}
+            {/* Far Left: Brand only */}
+            <Link to="/" className="brand">
+              <div className="brand-logo">
+                <img src={schoolLogo || brandlogo} alt="Logo" />
               </div>
+              <div className="brand-text">
+                <span className="brand-name" style={{ color: textColor }}>
+                  {schoolName || 'Birxy SMS'}
+                </span>
+              </div>
+            </Link>
+
+            {/* Center: Desktop Links */}
+            <div className="desktop-links">
+              {navLinks.map((link) => {
+                const active = isActive(link.path);
+                const Icon = link.icon;
+                return (
+                  <Link
+                    key={link.name}
+                    to={link.path}
+                    className={`nav-item ${active ? 'nav-item--active' : ''}`}
+                    style={{ color: active ? accentColor : textColor }}
+                  >
+                    <Icon size={15} strokeWidth={2.5} className="desktop-icon-hide" />
+                    <span>{link.name}</span>
+                    {active && <span className="nav-dot" />}
+                  </Link>
+                );
+              })}
+              {dashboardPath && (
+                <Link to={dashboardPath} className="nav-dashboard">
+                  Dashboard
+                </Link>
+              )}
             </div>
 
             {/* Right: User or Login */}
