@@ -40,6 +40,8 @@ const Sidebar = ({ sidebarOpen, onClose }) => {
     { name: 'Principal Panel',    path: '/principal',      icon: LayoutDashboard, roles: ['principal', 'admin'] },
     { name: 'Teacher Dashboard',  path: '/teachers',       icon: LayoutDashboard, roles: ['teacher', 'principal', 'admin'] },
     { name: 'Finance Control',    path: '/finance',        icon: DollarSign,      roles: ['bursar', 'admin'] },
+    { name: 'Register Student',   path: '/finance?tab=register', icon: UserPlus,  roles: ['bursar', 'admin'] },
+    { name: 'Manual Payment',     path: '/finance?tab=cashpay',  icon: CreditCard,roles: ['bursar', 'admin'] },
     { name: 'Manage Students',    path: '/admin/students', icon: GraduationCap,   roles: ['admin', 'principal'] },
     { name: 'Manage Classes',     path: '/admin/classes',  icon: Layers,          roles: ['admin', 'principal'] },
     { name: 'Manage Staff',       path: '/staff',          icon: Users,           roles: ['admin'] },

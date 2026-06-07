@@ -162,17 +162,34 @@ const CheckResult = () => {
                     </AnimatePresence>
                   </div>
                 </div>
-                <div className="relative group">
-                  <Key size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
-                  <input 
-                    type="password"
-                    maxLength={6}
-                    value={pin}
-                    onChange={(e) => setPin(e.target.value)}
-                    placeholder="••••••"
-                    className="input-premium pl-12 font-black tracking-[1em] text-slate-800 placeholder:text-slate-200 placeholder:tracking-normal placeholder:font-medium"
-                    required
-                  />
+                <div className="flex justify-between gap-2">
+                  {[0, 1, 2, 3, 4, 5].map((index) => (
+                    <input
+                      key={index}
+                      id={`pin-${index}`}
+                      type="password"
+                      maxLength={1}
+                      value={pin[index] || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const newPin = (pin || '').split('');
+                        newPin[index] = val.slice(-1);
+                        setPin(newPin.join(''));
+                        if (val && index < 5) {
+                          const next = document.getElementById(`pin-${index + 1}`);
+                          if (next) next.focus();
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Backspace' && !(pin || '')[index] && index > 0) {
+                          const prev = document.getElementById(`pin-${index - 1}`);
+                          if (prev) prev.focus();
+                        }
+                      }}
+                      className="w-12 h-14 text-center font-black text-2xl text-slate-800 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:bg-white outline-none transition-all"
+                      required
+                    />
+                  ))}
                 </div>
               </div>
 

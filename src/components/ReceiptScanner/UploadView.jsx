@@ -15,7 +15,7 @@ const UploadView = ({ onUpload, onSwitchToCamera }) => {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'image/*': [] },
+    accept: { 'image/*': [], 'application/pdf': ['.pdf'] },
     multiple: false,
   });
 
@@ -38,7 +38,7 @@ const UploadView = ({ onUpload, onSwitchToCamera }) => {
             <span className="dropzone-sub">or click to browse files</span>
           </>
         )}
-        <div className="supported-formats">JPG · PNG · WEBP · HEIC</div>
+        <div className="supported-formats">JPG · PNG · WEBP · HEIC · PDF</div>
       </div>
 
       <div className="upload-divider">

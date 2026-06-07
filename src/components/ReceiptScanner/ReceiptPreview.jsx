@@ -18,6 +18,13 @@ const ReceiptPreview = ({ imageSrc, source, onRetake, onComplete, messageHubConf
   useEffect(() => {
     if (!imageSrc) return;
     let cancelled = false;
+    
+    const isPdf = imageSrc.startsWith('data:application/pdf');
+    if (isPdf) {
+      setStage('idle');
+      setExtractedData({ merchant: 'PDF Document', date: new Date().toLocaleDateString(), total: 'N/A', items: [] });
+      return;
+    }
 
     const run = async () => {
       setStage('ocr');
@@ -51,10 +58,14 @@ const ReceiptPreview = ({ imageSrc, source, onRetake, onComplete, messageHubConf
     setStage('sending');
     
     try {
-      // 1. Convert base64 to File for Supabase
+      const isPdf = imageSrc.startsWith('data:application/pdf');
+      const ext = isPdf ? 'pdf' : 'jpg';
+      const mime = isPdf ? 'application/pdf' : 'image/jpeg';
+
+      // 1. Convert base64 to File for Storage
       const res = await fetch(imageSrc);
       const blob = await res.blob();
-      const file = new File([blob], 'receipt.jpg', { type: 'image/jpeg' });
+      const file = new File([blob], `receipt.${ext}`, { type: mime });
 
       // 2. Upload to Supabase
       const publicUrl = await uploadReceipt(file, userId || 'anonymous');
@@ -98,7 +109,11 @@ const ReceiptPreview = ({ imageSrc, source, onRetake, onComplete, messageHubConf
 
       {/* ── Image ── */}
       <div className="image-container">
-        <img src={imageSrc} alt="Receipt preview" />
+        {imageSrc?.startsWith('data:application/pdf') ? (
+          <embed src={imageSrc} type="application/pdf" width="100%" height="300px" className="rounded-xl" />
+        ) : (
+          <img src={imageSrc} alt="Receipt preview" />
+        )}
       </div>
 
       {/* ── OCR Progress ── */}
@@ -181,7 +196,7 @@ const ReceiptPreview = ({ imageSrc, source, onRetake, onComplete, messageHubConf
           <button
             onClick={handleSend}
             className="process-btn"
-            disabled={isOCRing || isSendingStage || !extractedData}
+            disabled={isOCRing || isSendingStage}
           >
             {isSendingStage
               ? <><Loader2 size={18} className="animate-spin" /> Sending…</>

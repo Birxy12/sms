@@ -32,7 +32,7 @@ const ROLES = [
 ];
 
 const DEFAULT_CLASS_OPTIONS = [
-  'JSS 1', 'JSS 2', 'JSS 3', 'SSS 1', 'SSS 2', 'SSS 3'
+  'JSS 1', 'JSS 2', 'JSS 3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'
 ];
 
 const InputField = ({ label, name, type = 'text', placeholder, icon: Icon, required = true, maxLength, pattern, inputMode, value, onChange, showPassword, onTogglePassword }) => (

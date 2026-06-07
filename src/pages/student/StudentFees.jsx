@@ -17,15 +17,17 @@ const StudentFees = () => {
     const fetchFeeInfo = async () => {
       try {
         // 1. Get Global Fee Settings
-        const feeSnap = await getDoc(doc(db, 'settings', 'fees'));
         const fees = feeSnap.exists() ? feeSnap.data() : {};
         
         const studentClass = currentStudent?.className || currentStudent?.classId || '';
-        const expected = fees[studentClass] || fees['default'] || 45000;
+        let expected = currentStudent?.expectedFee;
+        if (expected === undefined || expected === null) {
+          expected = 0; // Forced to 0 per user request
+        }
 
         setFeeData({
           expected: expected,
-          paid: currentStudent?.paidFee || 0,
+          paid: currentStudent?.paidFee || currentStudent?.paidAmount || 0,
           lastDate: currentStudent?.lastPaymentDate || 'N/A'
         });
       } catch (error) {
@@ -59,7 +61,7 @@ const StudentFees = () => {
         </div>
         <button 
           onClick={() => window.print()}
-          className="flex items-center gap-2 bg-white border-2 border-slate-200 px-5 py-2.5 rounded-2xl font-black text-slate-700 hover:bg-slate-50 transition-all active:scale-95 no-print"
+          className="flex items-center gap-2 bg-white dark:bg-slate-800 dark:text-white border-2 border-slate-200 dark:border-slate-700 px-5 py-2.5 rounded-2xl font-black text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95 no-print"
         >
           <Printer size={18} /> Print Statement
         </button>
@@ -81,17 +83,17 @@ const StudentFees = () => {
            <p className="text-xs font-bold opacity-80">{isCleared ? 'Status: Fully Cleared' : 'Status: Payment Pending'}</p>
         </div>
 
-        <div className="lg:col-span-1 bg-white p-8 rounded-3xl shadow-sm border border-slate-200 flex flex-col justify-center">
+        <div className="lg:col-span-1 bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-center">
            <div className="flex justify-between items-end mb-4">
               <div>
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Payment Progress</p>
-                <h3 className="text-2xl font-black text-slate-800">{percentPaid}%</h3>
+                <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Payment Progress</p>
+                <h3 className="text-2xl font-black text-slate-800 dark:text-white">{percentPaid}%</h3>
               </div>
-              <span className={`text-[10px] font-black px-3 py-1 rounded-full ${isCleared ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+              <span className={`text-[10px] font-black px-3 py-1 rounded-full ${isCleared ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'}`}>
                 {percentPaid === 100 ? 'COMPLETED' : 'IN PROGRESS'}
               </span>
            </div>
-           <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+           <div className="h-3 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
               <div 
                 className={`h-full transition-all duration-1000 ${isCleared ? 'bg-emerald-500' : 'bg-indigo-500'}`} 
                 style={{ width: `${percentPaid}%` }} 
@@ -102,33 +104,33 @@ const StudentFees = () => {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         {/* Recent Transactions */}
-        <div className="card-white overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex items-center gap-3">
-             <Clock size={20} className="text-indigo-600" />
-             <h3 className="font-black text-slate-800 uppercase tracking-tight">Payment History</h3>
+        <div className="card-white dark:bg-slate-800 dark:border-slate-700 overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
+          <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex items-center gap-3">
+             <Clock size={20} className="text-indigo-600 dark:text-indigo-400" />
+             <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-tight">Payment History</h3>
           </div>
-          <div className="p-0">
+          <div className="p-0 overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              <thead className="bg-slate-50 dark:bg-slate-900/50 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                 <tr>
                   <th className="px-6 py-4">Description</th>
                   <th className="px-6 py-4">Date</th>
                   <th className="px-6 py-4 text-right">Amount</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 {feeData.paid > 0 ? (
                   <tr>
                     <td className="px-6 py-5">
-                      <p className="text-sm font-black text-slate-800">Bank Deposit / Transfer</p>
-                      <p className="text-[11px] text-slate-500">Recorded via Bursar Office</p>
+                      <p className="text-sm font-black text-slate-800 dark:text-slate-200">Bank Deposit / Transfer</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Recorded via Bursar Office</p>
                     </td>
-                    <td className="px-6 py-5 text-sm font-bold text-slate-500">{feeData.lastDate}</td>
-                    <td className="px-6 py-5 text-right font-black text-emerald-600">₦{feeData.paid.toLocaleString()}</td>
+                    <td className="px-6 py-5 text-sm font-bold text-slate-500 dark:text-slate-400">{feeData.lastDate}</td>
+                    <td className="px-6 py-5 text-right font-black text-emerald-600 dark:text-emerald-400">₦{feeData.paid.toLocaleString()}</td>
                   </tr>
                 ) : (
                   <tr>
-                    <td colSpan="3" className="px-6 py-12 text-center text-slate-400 font-bold italic">
+                    <td colSpan="3" className="px-6 py-12 text-center text-slate-400 dark:text-slate-500 font-bold italic">
                       No payment records found for this student.
                     </td>
                   </tr>
@@ -140,33 +142,33 @@ const StudentFees = () => {
 
         {/* Payment Instructions */}
         <div className="space-y-6">
-          <div className="card-white p-8 border-t-4 border-t-indigo-500">
-            <h4 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+          <div className="card-white dark:bg-slate-800 dark:border-slate-700 rounded-3xl border border-slate-200 shadow-sm p-8 border-t-4 border-t-indigo-500">
+            <h4 className="text-lg font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
               <AlertTriangle size={20} className="text-amber-500" />
               Payment Instructions
             </h4>
-            <p className="text-sm text-slate-600 leading-relaxed mb-6">
-              To settle your outstanding balance, please proceed with a bank transfer to the school's official account listed below. Ensure you include your <strong>Registration Number</strong> in the transaction description.
+            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
+              To settle your outstanding balance, please proceed with a bank transfer to the school's official account listed below. Ensure you include your <strong className="dark:text-white">Registration Number</strong> in the transaction description.
             </p>
             
-            <div className="bg-slate-50 rounded-2xl p-6 space-y-4">
+            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-6 space-y-4">
               <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500 font-bold">Bank Name</span>
-                <span className="text-slate-900 font-black uppercase">First Bank of Nigeria</span>
+                <span className="text-slate-500 dark:text-slate-400 font-bold">Bank Name</span>
+                <span className="text-slate-900 dark:text-white font-black uppercase">First Bank of Nigeria</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500 font-bold">Account Name</span>
-                <span className="text-slate-900 font-black uppercase">Bonus Dominus School</span>
+                <span className="text-slate-500 dark:text-slate-400 font-bold">Account Name</span>
+                <span className="text-slate-900 dark:text-white font-black uppercase">Bonus Dominus School</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500 font-bold">Account Number</span>
-                <span className="text-slate-900 font-black font-mono text-lg">2022829027</span>
+                <span className="text-slate-500 dark:text-slate-400 font-bold">Account Number</span>
+                <span className="text-slate-900 dark:text-white font-black font-mono text-lg">2022829027</span>
               </div>
             </div>
 
             <button 
               onClick={() => setShowScanner(true)}
-              className="mt-6 w-full flex items-center gap-3 bg-slate-50 hover:bg-slate-100 p-4 rounded-2xl border-2 border-dashed border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider transition-all group"
+              className="mt-6 w-full flex items-center gap-3 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-700 p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-600 text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider transition-all group"
             >
               <CheckCircle size={14} className="text-emerald-500" />
               Scan & Upload Receipt

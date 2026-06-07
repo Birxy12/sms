@@ -32,6 +32,8 @@ const StudentCBT = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
+  const [subjectFilter, setSubjectFilter] = useState('');
+  const [retakingExamId, setRetakingExamId] = useState(null);
 
   const studentClass = currentStudent?.className || currentStudent?.classId || '';
   const studentName = currentStudent?.name || currentStudent?.['STUDENT NAME'] || 'Student';
@@ -95,7 +97,14 @@ const StudentCBT = () => {
     setStartedAt(new Date());
     setSecondsLeft((exam.durationMinutes || 45) * 60);
     setStatus({ type: '', message: '' });
+    setRetakingExamId(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleRetake = (exam) => {
+    if (!window.confirm('Are you sure you want to retake this exam? Your previous score will be replaced.')) return;
+    setRetakingExamId(exam.id);
+    startExam(exam);
   };
 
   const formatTime = (totalSeconds) => {
@@ -238,6 +247,33 @@ const StudentCBT = () => {
         </div>
       </div>
 
+      {/* Subject Filter */}
+      {exams.length > 0 && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <select
+            value={subjectFilter}
+            onChange={(e) => setSubjectFilter(e.target.value)}
+            style={{
+              padding: '10px 16px',
+              borderRadius: '12px',
+              border: '2px solid #e2e8f0',
+              fontWeight: 700,
+              fontSize: '13px',
+              background: '#f8fafc',
+              color: '#1e293b',
+              outline: 'none',
+              cursor: 'pointer',
+              minWidth: '200px'
+            }}
+          >
+            <option value="">All Subjects</option>
+            {[...new Set(exams.map(e => e.subject).filter(Boolean))].map(sub => (
+              <option key={sub} value={sub}>{sub}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {status.message && (
         <div className={`cbt-alert ${status.type}`}>
           {status.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
@@ -246,7 +282,9 @@ const StudentCBT = () => {
       )}
 
       <div className="cbt-exam-grid">
-        {exams.map((exam) => {
+        {exams
+          .filter(exam => !subjectFilter || exam.subject === subjectFilter)
+          .map((exam) => {
           const submission = submissionByExam[exam.id];
           const isScheduledFuture = exam.scheduledTime && new Date(exam.scheduledTime) > new Date();
           return (
@@ -265,7 +303,16 @@ const StudentCBT = () => {
               </div>
               <div className="cbt-card-actions">
                 {submission ? (
-                  <strong className="cbt-score">{submission.correct}/{submission.totalQuestions}</strong>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                    <strong className="cbt-score">{submission.correct}/{submission.totalQuestions}</strong>
+                    <button
+                      type="button"
+                      onClick={() => handleRetake(exam)}
+                      style={{ fontSize: '11px', padding: '5px 12px', background: '#f1f5f9', color: '#475569', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 700 }}
+                    >
+                      🔄 Retake
+                    </button>
+                  </div>
                 ) : isScheduledFuture ? (
                   <button type="button" disabled style={{ opacity: 0.7, cursor: 'not-allowed', background: '#e2e8f0', color: '#64748b', fontSize: '11px' }}>
                     Opens {new Date(exam.scheduledTime).toLocaleString()}
@@ -279,8 +326,8 @@ const StudentCBT = () => {
             </article>
           );
         })}
-        {exams.length === 0 && (
-          <div className="cbt-empty">No published CBT exams are available for your class yet.</div>
+        {exams.filter(e => !subjectFilter || e.subject === subjectFilter).length === 0 && (
+          <div className="cbt-empty">No CBT exams found{subjectFilter ? ` for ${subjectFilter}` : ' for your class'} yet.</div>
         )}
       </div>
     </div>

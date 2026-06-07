@@ -4,13 +4,18 @@ import { collection, query, getDocs, orderBy, where, doc, updateDoc, writeBatch 
 import { 
   Wallet, DollarSign, TrendingUp, TrendingDown, Users, 
   Search, Download, Plus, ArrowUpRight, 
-  CheckCircle, AlertCircle, Loader2, Briefcase, Settings, Printer, MessageSquare, AlertTriangle, FileText
+  CheckCircle, AlertCircle, Loader2, Briefcase, Settings, Printer, MessageSquare, AlertTriangle, FileText, UserPlus, Banknote
 } from 'lucide-react';
+import { addDoc, serverTimestamp } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
 
 const BursarDashboard = () => {
   const { primaryColor, schoolName } = useTheme();
-  const [activeView, setActiveView] = useState('overview');
+  const location = window.location;
+  const [activeView, setActiveView] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('tab') || 'overview';
+  });
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState({ type: '', message: '' });
   
@@ -68,6 +73,13 @@ const BursarDashboard = () => {
     fetchFinancialData();
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab')) {
+      setActiveView(params.get('tab'));
+    }
+  }, [window.location.search]);
+
   const handleResetFees = async () => {
     if (!window.confirm("CRITICAL WARNING: This will set ALL students' paid and expected fees to 0 Naira. Proceed?")) return;
     
@@ -112,7 +124,9 @@ const BursarDashboard = () => {
   const sidebarTabs = [
     { id: 'overview', label: 'Overview', icon: TrendingUp, color: 'indigo' },
     { id: 'feesetting', label: 'Fee Setting', icon: Settings, color: 'blue' },
+    { id: 'cashpay', label: 'Cash Payment', icon: Banknote, color: 'green' },
     { id: 'receipts', label: 'Print Receipt', icon: Printer, color: 'emerald' },
+    { id: 'register', label: 'Register Student', icon: UserPlus, color: 'violet' },
     { id: 'messages', label: 'Message Hub', icon: MessageSquare, color: 'purple' },
     { id: 'debtors', label: 'Debtors', icon: AlertTriangle, color: 'rose' },
   ];
@@ -213,7 +227,7 @@ const BursarDashboard = () => {
     });
 
     const handlePrint = (student) => {
-      const pFee = parseFloat(student.paidFee) || 0;
+      const pFee = parseFloat(student.paidFee) || parseFloat(student.paidAmount) || 0;
       const eFee = parseFloat(student.expectedFee) || 0;
       const bal = eFee - pFee;
 
@@ -365,11 +379,11 @@ const BursarDashboard = () => {
   const DebtorsView = () => {
     const debtors = allStudents.filter(s => {
       const eFee = parseFloat(s.expectedFee) || 0;
-      const pFee = parseFloat(s.paidFee) || 0;
+      const pFee = parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0;
       return eFee > 0 && pFee < eFee;
     }).sort((a, b) => {
-      const balA = (parseFloat(a.expectedFee) || 0) - (parseFloat(a.paidFee) || 0);
-      const balB = (parseFloat(b.expectedFee) || 0) - (parseFloat(b.paidFee) || 0);
+      const balA = (parseFloat(a.expectedFee) || 0) - (parseFloat(a.paidFee) || parseFloat(a.paidAmount) || 0);
+      const balB = (parseFloat(b.expectedFee) || 0) - (parseFloat(b.paidFee) || parseFloat(b.paidAmount) || 0);
       return balB - balA; // highest debt first
     });
 
@@ -395,7 +409,7 @@ const BursarDashboard = () => {
             </thead>
             <tbody className="divide-y divide-rose-50">
               {debtors.map(s => {
-                const bal = (parseFloat(s.expectedFee) || 0) - (parseFloat(s.paidFee) || 0);
+                const bal = (parseFloat(s.expectedFee) || 0) - (parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0);
                 return (
                   <tr key={s.id} className="hover:bg-rose-50/50">
                     <td className="px-6 py-4">
@@ -445,6 +459,214 @@ const BursarDashboard = () => {
              </div>
            )}
          </div>
+      </div>
+    );
+  };
+
+  const CashPaymentView = () => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [cashAmount, setCashAmount] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [receipt, setReceipt] = useState(null);
+
+    const filtered = allStudents.filter(s => {
+      const name = (s.name || s['STUDENT NAME'] || '').toLowerCase();
+      const reg = (s.regNo || s.REGNO || '').toLowerCase();
+      return (name.includes(searchTerm.toLowerCase()) || reg.includes(searchTerm.toLowerCase())) && searchTerm.length > 0;
+    }).slice(0, 15);
+
+    const handlePay = async () => {
+      if (!selectedStudent || !cashAmount) return;
+      const amount = parseFloat(cashAmount);
+      if (isNaN(amount) || amount <= 0) { alert('Enter a valid amount.'); return; }
+      setSaving(true);
+      try {
+        const oldPaid = parseFloat(selectedStudent.paidFee) || parseFloat(selectedStudent.paidAmount) || 0;
+        const newPaid = oldPaid + amount;
+        const ref = doc(db, 'students', selectedStudent.id);
+        await updateDoc(ref, { paidFee: newPaid, paidAmount: newPaid, lastPaymentDate: new Date().toLocaleDateString('en-NG') });
+        await addDoc(collection(db, 'payment_messages'), {
+          studentName: selectedStudent.name || selectedStudent['STUDENT NAME'],
+          className: selectedStudent.className || selectedStudent.class_name || selectedStudent.CLASS,
+          regNo: selectedStudent.regNo || selectedStudent.REGNO,
+          amount, method: 'Cash',
+          message: `Cash payment of \u20a6${amount.toLocaleString()} received.`,
+          createdAt: serverTimestamp(),
+        });
+        setReceipt({ student: selectedStudent, amount, newPaid, date: new Date().toLocaleDateString('en-NG') });
+        fetchFinancialData();
+        setCashAmount(''); setSelectedStudent(null); setSearchTerm('');
+      } catch (e) { console.error(e); alert('Payment failed.'); }
+      finally { setSaving(false); }
+    };
+
+    const printReceipt = () => {
+      const s = receipt.student;
+      const w = window.open('', '_blank');
+      w.document.write(`<!DOCTYPE html><html><head><title>Receipt</title><style>
+        body{font-family:Arial,sans-serif;padding:40px;color:#1e293b;max-width:600px;margin:0 auto}
+        .hd{text-align:center;border-bottom:2px dashed #cbd5e1;padding-bottom:20px;margin-bottom:24px}
+        .school{font-size:22px;font-weight:900;text-transform:uppercase}
+        .sub{font-size:12px;letter-spacing:2px;color:#64748b;text-transform:uppercase;margin-top:4px}
+        .row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:15px}
+        .lbl{color:#64748b;font-weight:700}.val{font-weight:900;color:#0f172a}
+        .total{background:#f8fafc;border-radius:12px;padding:18px;margin-top:20px;display:flex;justify-content:space-between;font-size:20px;font-weight:900}
+        .sig{border-top:1px solid #cbd5e1;width:180px;padding-top:8px;text-align:center;font-weight:700;margin-top:50px;float:right;font-size:13px}
+      </style></head><body>
+        <div class="hd"><div class="school">${schoolName||'School Name'}</div><div class="sub">Official Cash Payment Receipt</div></div>
+        <div class="row"><span class="lbl">Date:</span><span class="val">${receipt.date}</span></div>
+        <div class="row"><span class="lbl">Student:</span><span class="val">${s.name||s['STUDENT NAME']}</span></div>
+        <div class="row"><span class="lbl">Reg No:</span><span class="val">${s.regNo||s.REGNO||'N/A'}</span></div>
+        <div class="row"><span class="lbl">Class:</span><span class="val">${s.className||s.CLASS||'N/A'}</span></div>
+        <div class="row"><span class="lbl">Method:</span><span class="val">CASH</span></div>
+        <div class="total"><span>Amount Paid:</span><span style="color:#10b981">\u20a6${receipt.amount.toLocaleString()}</span></div>
+        <div class="row" style="margin-top:12px"><span class="lbl">Total Paid to Date:</span><span class="val">\u20a6${receipt.newPaid.toLocaleString()}</span></div>
+        <div class="sig">Bursar's Signature</div>
+        <div style="clear:both;margin-top:40px;text-align:center;font-size:11px;color:#94a3b8">Computer-generated receipt \u2014 ${schoolName||'School Name'} Bursary</div>
+        <script>window.print();</script></body></html>`);
+      w.document.close();
+    };
+
+    return (
+      <div className="card-white p-8 mt-8 border border-slate-200 rounded-3xl shadow-sm max-w-2xl mx-auto">
+        <div className="flex items-center gap-4 mb-8 border-b border-slate-100 pb-6">
+          <div className="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center"><Banknote size={24} /></div>
+          <div><h3 className="text-xl font-black text-slate-900">Cash Payment Entry</h3><p className="text-sm text-slate-500">Record cash received and print a receipt.</p></div>
+        </div>
+        {receipt ? (
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto"><CheckCircle size={32} /></div>
+            <h4 className="text-xl font-black text-slate-900">Payment Recorded!</h4>
+            <p className="text-slate-500">\u20a6{receipt.amount.toLocaleString()} saved for {receipt.student.name||receipt.student['STUDENT NAME']}.</p>
+            <div className="flex gap-3 justify-center mt-6">
+              <button onClick={printReceipt} className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-indigo-600 transition-all"><Printer size={16}/> Print Receipt</button>
+              <button onClick={() => setReceipt(null)} className="px-6 py-3 border-2 border-slate-200 rounded-xl font-bold text-sm text-slate-600 hover:border-indigo-400 transition-all">New Payment</button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Search Student</label>
+              <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Name or Reg No..."
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold text-slate-800 transition-all" />
+              {filtered.length > 0 && (
+                <div className="mt-1 border border-slate-200 rounded-xl overflow-hidden shadow-lg bg-white max-h-48 overflow-y-auto relative z-10">
+                  {filtered.map(s => (
+                    <button key={s.id} type="button" onClick={() => { setSelectedStudent(s); setSearchTerm(''); }}
+                      className="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors border-b border-slate-100 last:border-0">
+                      <p className="font-bold text-slate-800 text-sm">{s.name||s['STUDENT NAME']}</p>
+                      <p className="text-xs text-slate-400">{s.regNo||s.REGNO} \u2022 {s.className||s.CLASS}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {selectedStudent && (
+              <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 flex items-center justify-between">
+                <div>
+                  <p className="font-black text-indigo-900">{selectedStudent.name||selectedStudent['STUDENT NAME']}</p>
+                  <p className="text-xs text-indigo-500 font-bold">{selectedStudent.regNo||selectedStudent.REGNO} \u2022 {selectedStudent.className||selectedStudent.CLASS}</p>
+                  <p className="text-xs text-indigo-400 mt-1">Balance: ₦{Math.max(0,(parseFloat(selectedStudent.expectedFee)||0)-(parseFloat(selectedStudent.paidFee)||parseFloat(selectedStudent.paidAmount)||0)).toLocaleString()}</p>
+                </div>
+                <button onClick={() => setSelectedStudent(null)} className="text-slate-400 hover:text-rose-500 text-xl font-bold">\u2715</button>
+              </div>
+            )}
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Cash Amount (\u20a6)</label>
+              <input type="number" value={cashAmount} onChange={e => setCashAmount(e.target.value)} placeholder="Enter amount received"
+                className="w-full px-4 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-black text-2xl text-slate-900 transition-all" />
+            </div>
+            <button disabled={!selectedStudent||!cashAmount||saving} onClick={handlePay}
+              className="w-full bg-green-600 text-white font-black py-4 rounded-xl hover:bg-green-700 transition-all shadow-lg disabled:opacity-40 flex items-center justify-center gap-2">
+              {saving ? <Loader2 size={20} className="animate-spin"/> : <Banknote size={20}/>} Record Cash Payment
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const RegisterStudentView = () => {
+    const [form, setForm] = useState({ name: '', regNo: '', className: '', gender: '', phone: '', guardianName: '' });
+    const [saving, setSaving] = useState(false);
+    const [done, setDone] = useState(null);
+
+    const generateRegNo = () => {
+      const year = new Date().getFullYear();
+      const rand = Math.floor(Math.random() * 9000 + 1000);
+      return `BDS/${year}/${rand}`;
+    };
+
+    const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+
+    const handleRegister = async e => {
+      e.preventDefault();
+      setSaving(true);
+      try {
+        const regNo = form.regNo || generateRegNo();
+        await addDoc(collection(db, 'students'), {
+          name: form.name, regNo, className: form.className,
+          gender: form.gender, guardianPhone: form.phone, guardianName: form.guardianName,
+          paidFee: 0, expectedFee: 0, createdAt: serverTimestamp(), createdBy: 'bursar',
+        });
+        await fetchFinancialData();
+        setDone(regNo);
+        setForm({ name: '', regNo: '', className: '', gender: '', phone: '', guardianName: '' });
+      } catch (e) { console.error(e); alert('Registration failed.'); }
+      finally { setSaving(false); }
+    };
+
+    return (
+      <div className="card-white p-8 mt-8 border border-slate-200 rounded-3xl shadow-sm max-w-2xl mx-auto">
+        <div className="flex items-center gap-4 mb-8 border-b border-slate-100 pb-6">
+          <div className="w-12 h-12 bg-violet-50 text-violet-600 rounded-xl flex items-center justify-center"><UserPlus size={24}/></div>
+          <div><h3 className="text-xl font-black text-slate-900">Register New Student</h3><p className="text-sm text-slate-500">Add a student manually to the database.</p></div>
+        </div>
+        {done && (
+          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3">
+            <CheckCircle size={20} className="text-emerald-600"/>
+            <p className="font-black text-emerald-800 text-sm">Registered! Reg No: <span className="font-mono">{done}</span></p>
+            <button onClick={() => setDone(null)} className="ml-auto text-emerald-600 font-bold text-xs underline">Register Another</button>
+          </div>
+        )}
+        <form onSubmit={handleRegister} className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {[
+              { label: 'Full Name', name: 'name', placeholder: 'e.g. John Doe', required: true },
+              { label: 'Reg Number (auto if blank)', name: 'regNo', placeholder: 'BDS/2025/001' },
+              { label: "Guardian's Name", name: 'guardianName', placeholder: "Mrs. Doe" },
+              { label: "Guardian's Phone", name: 'phone', placeholder: '08012345678' },
+            ].map(f => (
+              <div key={f.name}>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">{f.label}</label>
+                <input type="text" name={f.name} value={form[f.name]} onChange={handleChange} placeholder={f.placeholder} required={!!f.required}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-violet-500 outline-none font-bold text-slate-800 transition-all"/>
+              </div>
+            ))}
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Class</label>
+              <select name="className" value={form.className} onChange={handleChange} required
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-violet-500 outline-none font-bold text-slate-800 transition-all cursor-pointer">
+                <option value="">Select Class</option>
+                {classes.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Gender</label>
+              <select name="gender" value={form.gender} onChange={handleChange}
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-violet-500 outline-none font-bold text-slate-800 transition-all cursor-pointer">
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" disabled={saving}
+            className="w-full bg-violet-600 text-white font-black py-4 rounded-xl hover:bg-violet-700 transition-all shadow-lg disabled:opacity-50 flex items-center justify-center gap-2">
+            {saving ? <Loader2 size={20} className="animate-spin"/> : <UserPlus size={20}/>} Register Student
+          </button>
+        </form>
       </div>
     );
   };
@@ -549,12 +771,29 @@ const BursarDashboard = () => {
                 <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500 rounded-full blur-[80px] opacity-20"></div>
               </div>
             </div>
+
+          {activeView === 'overview' && (
+            <div className="mt-12 bg-rose-50 border border-rose-200 rounded-3xl p-8 flex flex-col items-center text-center max-w-xl mx-auto shadow-sm">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-rose-500 mb-4 shadow-sm">
+                <AlertTriangle size={32} />
+              </div>
+              <h4 className="text-xl font-black text-rose-900 mb-2">Emergency Fee Reset</h4>
+              <p className="text-sm text-rose-700 mb-6">This action will instantly wipe all expected and paid fee records for EVERY student in the database, setting them to ₦0. This cannot be undone.</p>
+              <button 
+                onClick={handleResetFees}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-black px-8 py-3 rounded-xl transition-all shadow-lg hover:shadow-xl active:scale-95"
+              >
+                Reset ALL Fees to ₦0
+              </button>
+            </div>
           )}
 
           {activeView === 'feesetting' && <FeeSettingView />}
           {activeView === 'receipts' && <PrintReceiptView />}
           {activeView === 'debtors' && <DebtorsView />}
           {activeView === 'messages' && <MessageHubView />}
+          {activeView === 'cashpay' && <CashPaymentView />}
+          {activeView === 'register' && <RegisterStudentView />}
 
         </div>
       )}
