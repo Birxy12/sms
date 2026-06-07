@@ -771,6 +771,7 @@ const BursarDashboard = () => {
                 <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500 rounded-full blur-[80px] opacity-20"></div>
               </div>
             </div>
+          )}
 
           {activeView === 'overview' && (
             <div className="mt-12 bg-rose-50 border border-rose-200 rounded-3xl p-8 flex flex-col items-center text-center max-w-xl mx-auto shadow-sm">
