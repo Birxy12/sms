@@ -32,7 +32,7 @@ const ROLES = [
 ];
 
 const DEFAULT_CLASS_OPTIONS = [
-  'JSS 1', 'JSS 2', 'JSS 3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'
+  'JSS 1', 'JSS 2', 'JSS 3', 'JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'
 ];
 
 const InputField = ({ label, name, type = 'text', placeholder, icon: Icon, required = true, maxLength, pattern, inputMode, value, onChange, showPassword, onTogglePassword }) => (
@@ -113,10 +113,10 @@ const Login = () => {
       try {
         const classesSnap = await getDocs(collection(db, 'classes'));
         if (!classesSnap.empty) {
-          const fetchedClasses = classesSnap.docs
-            .map(doc => doc.id)
+          const fetchedClasses = classesSnap.docs.map(doc => doc.id);
+          const combined = Array.from(new Set([...DEFAULT_CLASS_OPTIONS, ...fetchedClasses]))
             .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-          setClassOptions(fetchedClasses);
+          setClassOptions(combined);
         }
       } catch (err) {
         console.error("Error fetching classes:", err);

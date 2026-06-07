@@ -18,6 +18,7 @@ const BursarDashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState({ type: '', message: '' });
+  const [preSelectedStudent, setPreSelectedStudent] = useState(null);
   
   // Data state
   const [allStudents, setAllStudents] = useState([]);
@@ -357,12 +358,23 @@ const BursarDashboard = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => handlePrint(s)}
-                      className="px-4 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg text-xs font-black uppercase tracking-wider transition-colors"
-                    >
-                      Print
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={() => {
+                          setPreSelectedStudent(s);
+                          setActiveView('cashpay');
+                        }}
+                        className="px-4 py-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg text-xs font-black uppercase tracking-wider transition-colors"
+                      >
+                        Pay
+                      </button>
+                      <button 
+                        onClick={() => handlePrint(s)}
+                        className="px-4 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg text-xs font-black uppercase tracking-wider transition-colors"
+                      >
+                        Print
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -405,6 +417,7 @@ const BursarDashboard = () => {
                 <th className="px-6 py-4 text-[10px] font-black text-rose-400 uppercase tracking-widest">Student</th>
                 <th className="px-6 py-4 text-[10px] font-black text-rose-400 uppercase tracking-widest">Class</th>
                 <th className="px-6 py-4 text-[10px] font-black text-rose-400 uppercase tracking-widest text-right">Outstanding Balance</th>
+                <th className="px-6 py-4 text-[10px] font-black text-rose-400 uppercase tracking-widest text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-rose-50">
@@ -419,6 +432,17 @@ const BursarDashboard = () => {
                     <td className="px-6 py-4 text-sm font-bold text-slate-600">{s.className || s.class_name || s.CLASS}</td>
                     <td className="px-6 py-4 text-right">
                       <span className="text-sm font-black text-rose-600">₦{bal.toLocaleString()}</span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button 
+                        onClick={() => {
+                          setPreSelectedStudent(s);
+                          setActiveView('cashpay');
+                        }}
+                        className="px-4 py-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg text-xs font-black uppercase tracking-wider transition-colors"
+                      >
+                        Pay
+                      </button>
                     </td>
                   </tr>
                 );
@@ -465,10 +489,16 @@ const BursarDashboard = () => {
 
   const CashPaymentView = () => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [selectedStudent, setSelectedStudent] = useState(preSelectedStudent);
     const [cashAmount, setCashAmount] = useState('');
     const [saving, setSaving] = useState(false);
     const [receipt, setReceipt] = useState(null);
+
+    useEffect(() => {
+      if (preSelectedStudent) {
+        setSelectedStudent(preSelectedStudent);
+      }
+    }, [preSelectedStudent]);
 
     const filtered = allStudents.filter(s => {
       const name = (s.name || s['STUDENT NAME'] || '').toLowerCase();
@@ -497,6 +527,7 @@ const BursarDashboard = () => {
         setReceipt({ student: selectedStudent, amount, newPaid, date: new Date().toLocaleDateString('en-NG') });
         fetchFinancialData();
         setCashAmount(''); setSelectedStudent(null); setSearchTerm('');
+        setPreSelectedStudent(null);
       } catch (e) { console.error(e); alert('Payment failed.'); }
       finally { setSaving(false); }
     };
@@ -541,7 +572,7 @@ const BursarDashboard = () => {
             <p className="text-slate-500">\u20a6{receipt.amount.toLocaleString()} saved for {receipt.student.name||receipt.student['STUDENT NAME']}.</p>
             <div className="flex gap-3 justify-center mt-6">
               <button onClick={printReceipt} className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-indigo-600 transition-all"><Printer size={16}/> Print Receipt</button>
-              <button onClick={() => setReceipt(null)} className="px-6 py-3 border-2 border-slate-200 rounded-xl font-bold text-sm text-slate-600 hover:border-indigo-400 transition-all">New Payment</button>
+              <button onClick={() => { setReceipt(null); setPreSelectedStudent(null); }} className="px-6 py-3 border-2 border-slate-200 rounded-xl font-bold text-sm text-slate-600 hover:border-indigo-400 transition-all">New Payment</button>
             </div>
           </div>
         ) : (
@@ -553,7 +584,7 @@ const BursarDashboard = () => {
               {filtered.length > 0 && (
                 <div className="mt-1 border border-slate-200 rounded-xl overflow-hidden shadow-lg bg-white max-h-48 overflow-y-auto relative z-10">
                   {filtered.map(s => (
-                    <button key={s.id} type="button" onClick={() => { setSelectedStudent(s); setSearchTerm(''); }}
+                    <button key={s.id} type="button" onClick={() => { setSelectedStudent(s); setPreSelectedStudent(s); setSearchTerm(''); }}
                       className="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors border-b border-slate-100 last:border-0">
                       <p className="font-bold text-slate-800 text-sm">{s.name||s['STUDENT NAME']}</p>
                       <p className="text-xs text-slate-400">{s.regNo||s.REGNO} \u2022 {s.className||s.CLASS}</p>
@@ -569,7 +600,7 @@ const BursarDashboard = () => {
                   <p className="text-xs text-indigo-500 font-bold">{selectedStudent.regNo||selectedStudent.REGNO} \u2022 {selectedStudent.className||selectedStudent.CLASS}</p>
                   <p className="text-xs text-indigo-400 mt-1">Balance: ₦{Math.max(0,(parseFloat(selectedStudent.expectedFee)||0)-(parseFloat(selectedStudent.paidFee)||parseFloat(selectedStudent.paidAmount)||0)).toLocaleString()}</p>
                 </div>
-                <button onClick={() => setSelectedStudent(null)} className="text-slate-400 hover:text-rose-500 text-xl font-bold">\u2715</button>
+                <button onClick={() => { setSelectedStudent(null); setPreSelectedStudent(null); }} className="text-slate-400 hover:text-rose-500 text-xl font-bold">\u2715</button>
               </div>
             )}
             <div>
