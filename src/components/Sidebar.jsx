@@ -6,7 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { 
   LayoutDashboard, Users, BookOpen, GraduationCap, Settings, LogOut,
   DollarSign, Calendar, Layers, FileText, Mail, UserCircle, Award,
-  Inbox as InboxIcon, CreditCard, Home, X, MonitorCheck
+  Inbox as InboxIcon, CreditCard, Home, X, MonitorCheck, UserPlus
 } from 'lucide-react';
 
 const Sidebar = ({ sidebarOpen, onClose }) => {
