@@ -99,7 +99,7 @@ const CheckResult = () => {
           />
         )}
 
-        <div className="w-full max-w-md mx-auto relative z-10">
+        <div className="w-full max-w-md mx-auto relative z-10 flex flex-col items-center justify-center">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -116,7 +116,7 @@ const CheckResult = () => {
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
-            className={`bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 p-10 md:p-12 relative ${darkMode ? 'shadow-2xl shadow-slate-950/80' : 'shadow-2xl shadow-slate-200/60'}`}
+            className={`bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 p-10 md:p-12 relative w-full ${darkMode ? 'shadow-2xl shadow-slate-950/80' : 'shadow-2xl shadow-slate-200/60'}`}
           >
             <form onSubmit={handleCheck} className="space-y-8">
               {/* Registration Number Field */}

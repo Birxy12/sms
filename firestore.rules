@@ -107,7 +107,7 @@ service cloud.firestore {
 
     match /settings/{id} {
       allow read: if true;
-      allow write: if isSuperAdmin();
+      allow write: if isAuthenticated();
     }
 
     // ========== ACADEMIC ==========
@@ -124,6 +124,13 @@ service cloud.firestore {
     match /notifications/{id} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
+    }
+
+    // ========== PAYMENTS ==========
+    match /payment_messages/{id} {
+      allow read: if isAuthenticated();
+      allow create: if true; // students submit receipts without staff login
+      allow update, delete: if isAuthenticated();
     }
 
     // ========== ADMISSIONS ==========

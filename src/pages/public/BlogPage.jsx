@@ -73,13 +73,18 @@ const BlogPage = () => {
                 className="bg-white rounded-[3rem] shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden group hover:shadow-2xl transition-all duration-500 flex flex-col"
               >
                 <div className="h-64 overflow-hidden relative">
-                  {post.imageUrl ? (
-                     <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
-                  ) : (
-                    <div className="w-full h-full bg-slate-50 flex items-center justify-center">
-                      <FileText size={48} className="text-slate-200" />
-                    </div>
-                  )}
+                  {post.imageUrl && /\.(jpg|jpeg|png|gif|webp|svg|avif)(\?.*)?$/i.test(post.imageUrl) ? (
+                     <img
+                       src={post.imageUrl}
+                       alt={post.title}
+                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
+                       onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'flex'); }}
+                     />
+                  ) : null}
+                  <div className="w-full h-full bg-gradient-to-br from-indigo-50 to-slate-100 flex items-center justify-center"
+                    style={{ display: post.imageUrl && /\.(jpg|jpeg|png|gif|webp|svg|avif)(\?.*)?$/i.test(post.imageUrl) ? 'none' : 'flex' }}>
+                    <FileText size={48} className="text-indigo-200" />
+                  </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent"></div>
                   {post.category && (
                     <span className="absolute top-6 left-6 bg-white text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-xl shadow-lg">

@@ -25,7 +25,9 @@ const ContentCMS = () => {
    const [aboutHtml, setAboutHtml] = useState('');
    const [managementTeam, setManagementTeam] = useState([]);
    const [principalData, setPrincipalData] = useState({
-     name: '', image: '', message: ''
+     name: 'MRS. ETUZU ANITA',
+     image: '/principal.png',
+     message: 'Our mission transcends traditional teaching. We engineer environments where intellectual curiosity meets unwavering discipline, fostering a global elite prepared for the challenges of tomorrow.'
    });
 
   // Contact State

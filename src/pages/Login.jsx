@@ -100,7 +100,8 @@ const Login = () => {
   const [classOptions, setClassOptions] = useState(DEFAULT_CLASS_OPTIONS);
   const [formData, setFormData] = useState({ 
     regNo: '', className: '', email: '', password: '', phone: '',
-    pin: '', securityAnswer: '', newPin: '', verificationCode: ''
+    pin: '', securityAnswer: '', newPin: '', verificationCode: '',
+    newPassword: '', confirmPassword: ''
   });
   const [securityQuestion, setSecurityQuestion] = useState('');
   const [error, setError] = useState('');
@@ -174,7 +175,10 @@ const Login = () => {
           result = await adminAuth.loginWithPhone(formData.phone, formData.password, selectedRole);
         }
         if (result.success) {
-          if (result.requireEmailVerification) {
+          if (result.requirePasswordChange) {
+            setPendingUser(result.user);
+            setLoginStep('change_password');
+          } else if (result.requireEmailVerification) {
             setPendingUser(result.user);
             await adminAuth.sendVerificationEmail(result.user.email);
             setLoginStep('verify_email');
@@ -209,6 +213,41 @@ const Login = () => {
         navigateByRole(result.role || selectedRole);
       } else {
         setError(result.message || 'Passkey login failed');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFirstLoginPasswordChange = async (e) => {
+    e.preventDefault();
+    const newPass = formData.newPassword;
+    const confirmPass = formData.confirmPassword;
+    if (!newPass || newPass.length < 8) {
+      setError('New password must be at least 8 characters.');
+      return;
+    }
+    if (newPass !== confirmPass) {
+      setError('Passwords do not match.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const result = await adminAuth.changePassword(newPass, pendingUser);
+      if (result.success) {
+        const updatedUser = { ...pendingUser, password: newPass, firstLogin: false, id: result.id || pendingUser.id };
+        setPendingUser(updatedUser);
+        // Now proceed to PIN setup
+        if (!updatedUser.pin) {
+          setLoginStep('setup_staff_pin');
+        } else {
+          setLoginStep('verify_staff_pin');
+        }
+      } else {
+        setError(result.message || 'Failed to change password.');
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
@@ -697,6 +736,18 @@ const Login = () => {
                 Please set up a 6-digit PIN for faster and more secure future logins.
               </p>
               <PinInputGroup onSubmit={handleStaffPinSetup} disabled={loading || formData.pin.length !== 6} buttonText="Set PIN" />
+            </motion.div>
+          )}
+
+          {loginStep === 'change_password' && (
+            <motion.div key="change_password" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -15 }}>
+              <button type="button" className="back-btn" onClick={() => setLoginStep('credentials')}><ChevronLeft size={14} /> Back</button>
+              <h2>Set New Password</h2>
+              <InputField label="New Password" name="newPassword" type="password" placeholder="Enter new password" icon={Lock} value={formData.newPassword} onChange={handleInputChange} />
+              <InputField label="Confirm Password" name="confirmPassword" type="password" placeholder="Confirm new password" icon={Lock} value={formData.confirmPassword} onChange={handleInputChange} />
+              <motion.button type="button" className="submit-btn" disabled={loading || !formData.newPassword || formData.newPassword !== formData.confirmPassword} whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} style={{ background: currentRole.color }} onClick={handleFirstLoginPasswordChange}>
+                {loading ? <Loader2 className="spin" size={18} /> : <>Update Password <ArrowRight size={16} /></>}
+              </motion.button>
             </motion.div>
           )}
 

@@ -169,17 +169,9 @@ const AboutPage = () => {
           >
             <div className="about-principal-grid">
               <div className="about-principal-image">
-                {principal?.image ? (
-                  <img src={principal.image} alt={principal.name} />
-                ) : (
-                  <div className="about-principal-image-placeholder">
-                    <div className="about-principal-avatar">
-                      <User size={48} />
-                    </div>
-                  </div>
-                )}
+                <img src={principal?.image || '/principal.png'} alt={principal?.name || 'MRS. ETUZU ANITA'} className="w-full h-full object-cover" />
                 <div className="about-principal-image-overlay">
-                  <p className="name">{principal?.name || 'Dr. James Wilson'}</p>
+                  <p className="name">{principal?.name || 'MRS. ETUZU ANITA'}</p>
                   <p className="role">Principal &amp; Chief Administrator</p>
                 </div>
               </div>
@@ -201,7 +193,7 @@ const AboutPage = () => {
                     <Star size={20} />
                   </div>
                   <div>
-                    <p className="about-principal-footer-title">{principal?.name || 'Dr. James Wilson'}</p>
+                    <p className="about-principal-footer-title">{principal?.name || 'MRS. ETUZU ANITA'}</p>
                     <p className="about-principal-footer-desc">Principal &amp; Chief Administrator</p>
                   </div>
                 </div>

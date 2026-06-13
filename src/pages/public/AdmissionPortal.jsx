@@ -310,7 +310,7 @@ const AdmissionPortal = () => {
                     <p style={{ color: '#fff', fontWeight: 900, fontSize: 11, letterSpacing: '4px', margin: 0, fontFamily: 'Arial' }}>
                       {result.status === 'granted' ? 'OFFER OF ADMISSION' : 'PROVISIONAL ADMISSION'}
                     </p>
-                    <p style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 700, fontSize: 11, margin: 0, fontFamily: 'Arial', fontFamily: 'monospace' }}>
+                    <p style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 700, fontSize: 11, margin: 0, fontFamily: 'monospace' }}>
                       {result.applicant.appNo}
                     </p>
                   </div>

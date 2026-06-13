@@ -102,16 +102,39 @@ export const AdminAuthProvider = ({ children }) => {
         isSuperAdmin: true
       };
     }
-    // Bursar hardcoded login
-    else if (identifier === 'bursar@birxysms.edu' && password === '141414') {
+    // Principal hardcoded login
+    else if (identifier === 'principal@birxysms.edu' && password === '@@@@@@@@') {
       await ensureAuth();
-      userToVerify = { 
-        email: identifier, 
-        role: 'bursar', 
-        name: 'School Bursar', 
-        staffId: 'BURSAR/001'
-      };
-    } else {
+      // Check Firestore for existing record (so PIN/password changes persist)
+      try {
+        const { db } = await import('../lib/firebase');
+        const { collection, query, where, getDocs } = await import('firebase/firestore');
+        const snap = await getDocs(query(collection(db, 'staff'), where('email', '==', 'principal@birxysms.edu')));
+        if (!snap.empty) {
+          const data = snap.docs[0].data();
+          userToVerify = { ...data, id: snap.docs[0].id };
+        } else {
+          userToVerify = { email: identifier, role: 'principal', name: 'School Principal', staffId: 'PRINCIPAL/001', firstLogin: true };
+        }
+      } catch { userToVerify = { email: identifier, role: 'principal', name: 'School Principal', staffId: 'PRINCIPAL/001', firstLogin: true }; }
+    }
+    // Bursar hardcoded login
+    else if (identifier === 'bursar@birxysms.edu' && password === '@@@@@@@@') {
+      await ensureAuth();
+      // Check Firestore for existing record (so PIN/password changes persist)
+      try {
+        const { db } = await import('../lib/firebase');
+        const { collection, query, where, getDocs } = await import('firebase/firestore');
+        const snap = await getDocs(query(collection(db, 'staff'), where('email', '==', 'bursar@birxysms.edu')));
+        if (!snap.empty) {
+          const data = snap.docs[0].data();
+          userToVerify = { ...data, id: snap.docs[0].id };
+        } else {
+          userToVerify = { email: identifier, role: 'bursar', name: 'School Bursar', staffId: 'BURSAR/001', firstLogin: true };
+        }
+      } catch { userToVerify = { email: identifier, role: 'bursar', name: 'School Bursar', staffId: 'BURSAR/001', firstLogin: true }; }
+    }
+    else {
       // 2. Try Firestore lookup (either by Email or Staff ID)
       try {
         const { db, auth } = await import('../lib/firebase');
@@ -157,7 +180,11 @@ export const AdminAuthProvider = ({ children }) => {
     }
 
     if (userToVerify) {
-      if (!userToVerify.emailVerified && userToVerify.email !== 'admin@birxysms.edu' && userToVerify.email !== 'bursar@birxysms.edu' && userToVerify.email !== 'globixtechinc@gmail.com') {
+      // First-login: force password change before anything else
+      if (userToVerify.firstLogin) {
+        return { success: true, requirePasswordChange: true, user: userToVerify };
+      }
+      if (!userToVerify.emailVerified && userToVerify.email !== 'admin@birxysms.edu' && userToVerify.email !== 'bursar@birxysms.edu' && userToVerify.email !== 'principal@birxysms.edu' && userToVerify.email !== 'globixtechinc@gmail.com') {
         return { success: true, requireEmailVerification: true, user: userToVerify };
       }
       if (!userToVerify.pin) {
@@ -437,16 +464,17 @@ export const AdminAuthProvider = ({ children }) => {
     }
   };
 
-  const changePassword = async (newPassword) => {
-    if (!currentAdmin) return { success: false, message: 'Not logged in' };
+  const changePassword = async (newPassword, targetUser = null) => {
+    const user = targetUser || currentAdmin;
+    if (!user) return { success: false, message: 'Not logged in' };
     try {
       const { db } = await import('../lib/firebase');
-      const { doc, updateDoc, collection, query, where, getDocs } = await import('firebase/firestore');
+      const { doc, updateDoc, collection, query, where, getDocs, addDoc, setDoc } = await import('firebase/firestore');
       
-      let staffId = currentAdmin.id;
+      let staffId = user.id;
       if (!staffId) {
         const staffRef = collection(db, 'staff');
-        const q = query(staffRef, where('email', '==', currentAdmin.email));
+        const q = query(staffRef, where('email', '==', user.email));
         const snap = await getDocs(q);
         if (!snap.empty) {
           staffId = snap.docs[0].id;
@@ -454,13 +482,47 @@ export const AdminAuthProvider = ({ children }) => {
       }
 
       if (staffId) {
-        const staffRef = doc(db, 'staff', staffId);
-        await updateDoc(staffRef, { password: newPassword });
+        await updateDoc(doc(db, 'staff', staffId), { password: newPassword, firstLogin: false });
+      } else {
+        // Create the record for principal/bursar on first password change
+        const newRef = await addDoc(collection(db, 'staff'), {
+          ...user,
+          password: newPassword,
+          firstLogin: false,
+          createdAt: new Date().toISOString()
+        });
+        staffId = newRef.id;
+      }
+      
+      // If changing own password, update local state
+      if (!targetUser && currentAdmin) {
+        const updatedUser = { ...currentAdmin, id: staffId, password: newPassword, firstLogin: false };
+        setCurrentAdmin(updatedUser);
+        localStorage.setItem('adminUser', JSON.stringify(updatedUser));
       }
       
       return { success: true };
     } catch (error) {
       console.error('Change password error:', error);
+      return { success: false, message: error.message };
+    }
+  };
+
+  // Admin-only: reset another staff member's password and/or PIN
+  const adminResetCredentials = async (staffId, { newPassword, clearPin } = {}) => {
+    if (!currentAdmin || (currentAdmin.role !== 'admin' && !currentAdmin.isSuperAdmin)) {
+      return { success: false, message: 'Only admins can reset credentials.' };
+    }
+    try {
+      const { db } = await import('../lib/firebase');
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const updates = {};
+      if (newPassword) { updates.password = newPassword; updates.firstLogin = true; }
+      if (clearPin) { updates.pin = null; }
+      await updateDoc(doc(db, 'staff', staffId), updates);
+      return { success: true };
+    } catch (error) {
+      console.error('Admin reset error:', error);
       return { success: false, message: error.message };
     }
   };
@@ -512,6 +574,7 @@ export const AdminAuthProvider = ({ children }) => {
     updateProfile,
     changePassword,
     forgotPassword,
+    adminResetCredentials,
     loading,
     authReady
   };

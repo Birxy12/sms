@@ -674,3 +674,54 @@ body.dark-mode [style*="background-color: rgb(255, 255, 255)"] svg {
   color: #0f172a !important;
   stroke: #0f172a !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL SCHOOL LOGO LOADERS (TRANSPARENT BACKGROUND)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Override standard spinner/loader icons (like Loader2, custom spinner divs, etc.) */
+svg.animate-spin,
+svg.spin,
+svg.lucide-loader2,
+.about-loading-spinner,
+.spinner,
+.capture-spinner,
+.lb-spin {
+  background-image: url('/bdslogo.jpg') !important;
+  background-size: contain !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 50% !important;
+  outline: none !important;
+}
+
+/* Hide original vector paths and outlines inside the SVG loaders so only the background logo is visible */
+svg.animate-spin path,
+svg.spin path,
+svg.lucide-loader2 path,
+svg.lucide-loader2 circle,
+.about-loading-spinner {
+  stroke: transparent !important;
+  fill: transparent !important;
+}
+
+/* Size and spin animations for specific page-level load screens */
+.about-loading-spinner {
+  width: 4rem !important;
+  height: 4rem !important;
+  animation: spin 1.5s linear infinite !important;
+}
+
+.spinner {
+  width: 3rem !important;
+  height: 3rem !important;
+  animation: spin 1.5s linear infinite !important;
+}
+
+/* Ensure background of the loader wrappers are completely transparent */
+.about-loading,
+.lb-loading {
+  background-color: transparent !important;
+}
