@@ -103,23 +103,23 @@ export const AdminAuthProvider = ({ children }) => {
       };
     }
     // Principal hardcoded login
-    else if (identifier === 'principal@birxysms.edu' && password === '@@@@@@@@') {
+    else if ((identifier === 'principal@birxysms.edu' || identifier === 'pricipal@birxysms.edu') && password === '@@@@@@') {
       await ensureAuth();
       // Check Firestore for existing record (so PIN/password changes persist)
       try {
         const { db } = await import('../lib/firebase');
         const { collection, query, where, getDocs } = await import('firebase/firestore');
-        const snap = await getDocs(query(collection(db, 'staff'), where('email', '==', 'principal@birxysms.edu')));
+        const snap = await getDocs(query(collection(db, 'staff'), where('email', 'in', ['principal@birxysms.edu', 'pricipal@birxysms.edu'])));
         if (!snap.empty) {
           const data = snap.docs[0].data();
           userToVerify = { ...data, id: snap.docs[0].id };
         } else {
-          userToVerify = { email: identifier, role: 'principal', name: 'School Principal', staffId: 'PRINCIPAL/001', firstLogin: true };
+          userToVerify = { email: 'principal@birxysms.edu', role: 'principal', name: 'School Principal', staffId: 'PRINCIPAL/001', firstLogin: true };
         }
-      } catch { userToVerify = { email: identifier, role: 'principal', name: 'School Principal', staffId: 'PRINCIPAL/001', firstLogin: true }; }
+      } catch { userToVerify = { email: 'principal@birxysms.edu', role: 'principal', name: 'School Principal', staffId: 'PRINCIPAL/001', firstLogin: true }; }
     }
     // Bursar hardcoded login
-    else if (identifier === 'bursar@birxysms.edu' && password === '@@@@@@@@') {
+    else if (identifier === 'bursar@birxysms.edu' && password === '@@@@@@') {
       await ensureAuth();
       // Check Firestore for existing record (so PIN/password changes persist)
       try {
