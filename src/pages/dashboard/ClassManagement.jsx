@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, query, getDocs, where, doc, setDoc, getDoc } from 'firebase/firestore';
-import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info, UserCheck, X, Calendar, CheckSquare, Square } from 'lucide-react';
+import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info, UserCheck, X, Calendar, CheckSquare, Square, ChevronDown, Save } from 'lucide-react';
 
 const ClassManagement = () => {
   const [classStats, setClassStats] = useState([]);
@@ -11,6 +11,7 @@ const ClassManagement = () => {
 
   // Modal State
   const [selectedClass, setSelectedClass] = useState(null);
+  const [openDropdownId, setOpenDropdownId] = useState(null);
   const [classStudents, setClassStudents] = useState([]);
   const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [presentStudents, setPresentStudents] = useState([]);
@@ -96,10 +97,11 @@ const ClassManagement = () => {
     fetchClassStats();
   }, []);
 
-  const openManageDetails = async (className) => {
+  const openManageDetails = async (className, tab = 'attendance') => {
     setSelectedClass(className);
+    setOpenDropdownId(null);
     setAttendanceLoading(true);
-    setActiveTab('attendance');
+    setActiveTab(tab);
     try {
       const q = query(collection(db, 'students'), where('className', '==', className));
       const snap = await getDocs(q);
@@ -292,11 +294,27 @@ const ClassManagement = () => {
               {savingTeacher === cls.id && <p className="text-xs text-indigo-500 mt-1 font-bold animate-pulse">Saving...</p>}
             </div>
 
-            <button 
-              onClick={() => openManageDetails(cls.id)}
-              className="mt-6 w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
-              Manage Details <ArrowUpRight size={16} />
-            </button>
+            <div className="relative mt-6">
+              <button 
+                onClick={() => setOpenDropdownId(openDropdownId === cls.id ? null : cls.id)}
+                className="w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-50 hover:text-indigo-600 transition-all">
+                Manage Details <ChevronDown size={16} className={`transition-transform ${openDropdownId === cls.id ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {openDropdownId === cls.id && (
+                <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-20 animate-in fade-in slide-in-from-top-2">
+                  <button onClick={() => openManageDetails(cls.id, 'attendance')} className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors border-b border-slate-50">
+                    <Calendar size={16} /> Take Daily Attendance
+                  </button>
+                  <button onClick={() => openManageDetails(cls.id, 'demographics')} className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors border-b border-slate-50">
+                    <Users size={16} /> Demographics Analysis
+                  </button>
+                  <button onClick={() => openManageDetails(cls.id, 'performance')} className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors">
+                    <TrendingUp size={16} /> Performance Analysis
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
