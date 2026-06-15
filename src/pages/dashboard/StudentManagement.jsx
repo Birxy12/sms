@@ -3,7 +3,7 @@ import { db, storage } from '../../lib/firebase';
 import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, where, setDoc } from 'firebase/firestore';
 import { uploadAvatar } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award } from 'lucide-react';
+import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History } from 'lucide-react';
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
@@ -21,6 +21,10 @@ const StudentManagement = () => {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [allowProfileEdit, setAllowProfileEdit] = useState(true);
+  // Promote/Demote state
+  const [promoteModal, setPromoteModal] = useState(null); // { student }
+  const [newClass, setNewClass] = useState('');
+  const [promoting, setPromoting] = useState(false);
 
   const classes = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'];
 
@@ -143,6 +147,38 @@ const StudentManagement = () => {
     }
   };
 
+  const handlePromote = async () => {
+    if (!newClass || newClass === promoteModal.student.className) {
+      setStatus({ type: 'error', message: 'Please select a different class.' });
+      return;
+    }
+    setPromoting(true);
+    const student = promoteModal.student;
+    const oldClass = student.className;
+    const historyEntry = {
+      from: oldClass,
+      to: newClass,
+      date: new Date().toISOString(),
+      changedBy: 'Admin'
+    };
+    const updatedHistory = [...(student.classHistory || []), historyEntry];
+    try {
+      await updateDoc(doc(db, 'students', student.id), {
+        className: newClass,
+        classHistory: updatedHistory,
+        updatedAt: new Date().toISOString()
+      });
+      setStatus({ type: 'success', message: `${student.name} moved from ${oldClass} to ${newClass}. Reg No preserved.` });
+      setPromoteModal(null);
+      fetchStudents();
+    } catch (error) {
+      console.error('Promote error:', error);
+      setStatus({ type: 'error', message: 'Failed to update student class.' });
+    } finally {
+      setPromoting(false);
+    }
+  };
+
   const filteredStudents = students.filter(s => 
     (s.name?.toLowerCase().includes(searchTerm.toLowerCase()) || s.regNo?.toLowerCase().includes(searchTerm.toLowerCase())) &&
     (selectedClass === 'All' || s.className === selectedClass)
@@ -252,6 +288,7 @@ const StudentManagement = () => {
                   <td className="px-8 py-5 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
                       <button onClick={() => navigate(`/admin/student-results?regNo=${encodeURIComponent(student.regNo)}&className=${encodeURIComponent(student.className)}&name=${encodeURIComponent(student.name)}`)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg" title="View Results"><Award size={16} /></button>
+                      <button onClick={() => { setPromoteModal({ student }); setNewClass(student.className); }} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-white rounded-lg" title="Promote / Demote"><ArrowUpDown size={16} /></button>
                       <button onClick={() => { setIsEditing(true); setCurrentStudent(student); setShowModal(true); }} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg" title="Edit Student"><Edit2 size={16} /></button>
                       <button onClick={() => handleDelete(student.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg" title="Delete Student"><Trash2 size={16} /></button>
                     </div>
@@ -264,6 +301,75 @@ const StudentManagement = () => {
           </table>
         </div>
       </div>
+
+      {/* Promote / Demote Modal */}
+      {promoteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-emerald-600 to-teal-700 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-black">Promote / Demote Student</h3>
+                <p className="text-emerald-100 text-xs mt-1">Registration number will be preserved</p>
+              </div>
+              <button onClick={() => setPromoteModal(null)} className="hover:opacity-50 transition-opacity"><X size={24} /></button>
+            </div>
+            <div className="p-8 space-y-6">
+              {/* Student Info */}
+              <div className="flex items-center gap-4 bg-slate-50 rounded-2xl p-4">
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-lg overflow-hidden">
+                  {promoteModal.student.photo ? <img src={promoteModal.student.photo} alt="" className="w-full h-full object-cover" /> : promoteModal.student.name[0]}
+                </div>
+                <div className="text-left">
+                  <p className="font-black text-slate-900">{promoteModal.student.name}</p>
+                  <p className="text-xs font-mono text-slate-500">{promoteModal.student.regNo}</p>
+                </div>
+              </div>
+
+              {/* Class change */}
+              <div className="grid grid-cols-2 gap-4 items-center">
+                <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-center">
+                  <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">Current Class</p>
+                  <p className="text-lg font-black text-rose-700">{promoteModal.student.className}</p>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-center">
+                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">New Class</p>
+                  <select
+                    value={newClass}
+                    onChange={(e) => setNewClass(e.target.value)}
+                    className="w-full text-center font-black text-emerald-700 bg-transparent outline-none text-sm border-b-2 border-emerald-300 focus:border-emerald-600 transition-colors"
+                  >
+                    {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* History */}
+              {promoteModal.student.classHistory?.length > 0 && (
+                <div className="text-left">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1"><History size={12} /> Transfer History</p>
+                  <div className="space-y-1 max-h-28 overflow-y-auto">
+                    {[...promoteModal.student.classHistory].reverse().map((h, i) => (
+                      <div key={i} className="flex items-center justify-between text-xs px-3 py-1.5 bg-slate-50 rounded-lg">
+                        <span className="font-bold text-slate-600">{h.from} → {h.to}</span>
+                        <span className="text-slate-400">{new Date(h.date).toLocaleDateString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={handlePromote}
+                disabled={promoting || newClass === promoteModal.student.className}
+                className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 transition-all active:scale-95 disabled:opacity-50"
+              >
+                {promoting ? <Loader2 size={18} className="animate-spin" /> : <ArrowUpDown size={18} />}
+                {promoting ? 'Moving Student...' : 'Confirm Transfer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
