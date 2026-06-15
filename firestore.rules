@@ -34,8 +34,8 @@ service cloud.firestore {
     // ========== STAFF ==========
     match /staff/{id} {
       allow read: if isAuthenticated();
-      allow create: if isSuperAdmin();
-      allow update: if isSuperAdmin();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
       allow delete: if isSuperAdmin();
     }
 
