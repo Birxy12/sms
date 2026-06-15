@@ -1,13 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
-import { collection, query, getDocs, where, doc, setDoc } from 'firebase/firestore';
-import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info, UserCheck } from 'lucide-react';
+import { collection, query, getDocs, where, doc, setDoc, getDoc } from 'firebase/firestore';
+import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info, UserCheck, X, Calendar, CheckSquare, Square } from 'lucide-react';
 
 const ClassManagement = () => {
   const [classStats, setClassStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [staff, setStaff] = useState([]);
   const [savingTeacher, setSavingTeacher] = useState('');
+
+  // Modal State
+  const [selectedClass, setSelectedClass] = useState(null);
+  const [classStudents, setClassStudents] = useState([]);
+  const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [presentStudents, setPresentStudents] = useState([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [attendanceSaving, setAttendanceSaving] = useState(false);
 
   const classes = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'];
 
@@ -75,6 +83,84 @@ const ClassManagement = () => {
     fetchClassStats();
   }, []);
 
+  const openManageDetails = async (className) => {
+    setSelectedClass(className);
+    setAttendanceLoading(true);
+    try {
+      const q = query(collection(db, 'students'), where('className', '==', className));
+      const snap = await getDocs(q);
+      const studentsList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setClassStudents(studentsList);
+      
+      await fetchAttendance(className, attendanceDate);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
+  const fetchAttendance = async (className, date) => {
+    setAttendanceLoading(true);
+    try {
+      const docRef = doc(db, 'attendance', `${className}_${date}`);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        setPresentStudents(snap.data().presentStudents || []);
+      } else {
+        setPresentStudents([]);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
+  const handleDateChange = (e) => {
+    const newDate = e.target.value;
+    setAttendanceDate(newDate);
+    if (selectedClass) {
+      fetchAttendance(selectedClass, newDate);
+    }
+  };
+
+  const toggleAttendance = (studentId) => {
+    setPresentStudents(prev => 
+      prev.includes(studentId) 
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const toggleAllAttendance = () => {
+    if (presentStudents.length === classStudents.length) {
+      setPresentStudents([]);
+    } else {
+      setPresentStudents(classStudents.map(s => s.id));
+    }
+  };
+
+  const saveAttendance = async () => {
+    if (!selectedClass) return;
+    setAttendanceSaving(true);
+    try {
+      const docRef = doc(db, 'attendance', `${selectedClass}_${attendanceDate}`);
+      await setDoc(docRef, {
+        className: selectedClass,
+        date: attendanceDate,
+        presentStudents,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      alert('Attendance saved successfully!');
+    } catch (error) {
+      console.error(error);
+      alert('Failed to save attendance.');
+    } finally {
+      setAttendanceSaving(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -134,7 +220,9 @@ const ClassManagement = () => {
               {savingTeacher === cls.id && <p className="text-xs text-indigo-500 mt-1 font-bold animate-pulse">Saving...</p>}
             </div>
 
-            <button className="mt-6 w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
+            <button 
+              onClick={() => openManageDetails(cls.id)}
+              className="mt-6 w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
               Manage Details <ArrowUpRight size={16} />
             </button>
           </div>
@@ -161,6 +249,128 @@ const ClassManagement = () => {
           <p className="text-sm text-indigo-700">Class names are standardized across the portal. Any changes to these names will require an administrator to update the global registry in the database settings.</p>
         </div>
       </div>
+
+      {/* Manage Details Modal */}
+      {selectedClass && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-100 bg-indigo-900 text-white flex justify-between items-center shrink-0">
+              <div className="text-left">
+                <h3 className="text-2xl font-black m-0">{selectedClass} Management</h3>
+                <p className="text-indigo-200 text-sm mt-1">Class Analysis & Attendance</p>
+              </div>
+              <button onClick={() => setSelectedClass(null)} className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-rose-500 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-50 text-left">
+              {attendanceLoading && classStudents.length === 0 ? (
+                 <div className="flex justify-center p-10"><div className="animate-spin h-8 w-8 border-4 border-indigo-600 border-t-transparent rounded-full"></div></div>
+              ) : (
+                <div className="space-y-8">
+                  {/* Class Analysis */}
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Demographics</h4>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-8">
+                      <div className="flex-1 bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center justify-between">
+                        <span className="font-bold text-blue-700">Male Students</span>
+                        <span className="text-2xl font-black text-blue-800">{classStudents.filter(s => s.gender === 'Male').length}</span>
+                      </div>
+                      <div className="flex-1 bg-pink-50 p-4 rounded-xl border border-pink-100 flex items-center justify-between">
+                        <span className="font-bold text-pink-700">Female Students</span>
+                        <span className="text-2xl font-black text-pink-800">{classStudents.filter(s => s.gender === 'Female').length}</span>
+                      </div>
+                      <div className="flex-1 bg-slate-100 p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+                        <span className="font-bold text-slate-700">Total</span>
+                        <span className="text-2xl font-black text-slate-800">{classStudents.length}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Attendance Tracker */}
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6 gap-4">
+                      <div>
+                        <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-2">Daily Attendance</h4>
+                        <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-lg">
+                          <Calendar size={16} className="text-slate-500" />
+                          <input 
+                            type="date" 
+                            value={attendanceDate}
+                            onChange={handleDateChange}
+                            className="bg-transparent border-none outline-none text-sm font-bold text-slate-700"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <button 
+                          onClick={toggleAllAttendance}
+                          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-colors"
+                        >
+                          Toggle All
+                        </button>
+                        <button 
+                          onClick={saveAttendance}
+                          disabled={attendanceSaving}
+                          className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+                        >
+                          {attendanceSaving ? 'Saving...' : 'Save Attendance'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {attendanceLoading ? (
+                      <div className="flex justify-center p-6"><div className="animate-spin h-6 w-6 border-4 border-indigo-600 border-t-transparent rounded-full"></div></div>
+                    ) : (
+                      <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                        <table className="w-full text-left">
+                          <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            <tr>
+                              <th className="px-6 py-4">Reg Number</th>
+                              <th className="px-6 py-4">Student Name</th>
+                              <th className="px-6 py-4">Gender</th>
+                              <th className="px-6 py-4 text-right">Present</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {classStudents.map(student => {
+                              const isPresent = presentStudents.includes(student.id);
+                              return (
+                                <tr key={student.id} className={`hover:bg-slate-50 transition-colors ${isPresent ? 'bg-emerald-50/30' : ''}`}>
+                                  <td className="px-6 py-4 text-xs font-bold text-slate-500">{student.regNo}</td>
+                                  <td className="px-6 py-4 text-sm font-black text-slate-800">{student.name}</td>
+                                  <td className="px-6 py-4 text-xs font-bold text-slate-500">{student.gender}</td>
+                                  <td className="px-6 py-4 text-right">
+                                    <button 
+                                      onClick={() => toggleAttendance(student.id)}
+                                      className={`w-8 h-8 rounded-lg flex items-center justify-center ml-auto transition-colors ${isPresent ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                                    >
+                                      {isPresent ? <CheckSquare size={18} /> : <Square size={18} />}
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                            {classStudents.length === 0 && (
+                              <tr>
+                                <td colSpan="4" className="px-6 py-8 text-center text-slate-400 font-bold text-sm">
+                                  No students enrolled in this class yet.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -145,6 +145,12 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    // ========== ATTENDANCE ==========
+    match /attendance/{id} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
     // ========== FALLBACK ==========
     match /{document=**} {
       allow read, write: if false;
