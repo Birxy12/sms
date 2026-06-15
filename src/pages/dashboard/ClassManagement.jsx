@@ -16,6 +16,9 @@ const ClassManagement = () => {
   const [presentStudents, setPresentStudents] = useState([]);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [attendanceSaving, setAttendanceSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('attendance');
+  const [performanceData, setPerformanceData] = useState({ maleAvg: 0, femaleAvg: 0, overallAvg: 0 });
+  const [performanceLoading, setPerformanceLoading] = useState(false);
 
   const classes = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'];
 
@@ -86,6 +89,7 @@ const ClassManagement = () => {
   const openManageDetails = async (className) => {
     setSelectedClass(className);
     setAttendanceLoading(true);
+    setActiveTab('attendance');
     try {
       const q = query(collection(db, 'students'), where('className', '==', className));
       const snap = await getDocs(q);
@@ -93,10 +97,54 @@ const ClassManagement = () => {
       setClassStudents(studentsList);
       
       await fetchAttendance(className, attendanceDate);
+      await fetchPerformance(className, studentsList);
     } catch (error) {
       console.error(error);
     } finally {
       setAttendanceLoading(false);
+    }
+  };
+
+  const fetchPerformance = async (className, studentsList) => {
+    setPerformanceLoading(true);
+    try {
+      const q = query(collection(db, 'marks'), where('c', '==', className));
+      const snap = await getDocs(q);
+      
+      let maleTotal = 0, maleCount = 0;
+      let femaleTotal = 0, femaleCount = 0;
+
+      const genderMap = {};
+      studentsList.forEach(s => {
+        if (s.regNo) genderMap[s.regNo] = s.gender;
+      });
+
+      snap.docs.forEach(doc => {
+        const data = doc.data();
+        const regNo = data.r || data.regNo;
+        const gender = genderMap[regNo];
+        const avg = data.m?._meta?.avg || data.marks?._meta?.average || 0;
+        
+        if (avg > 0) {
+          if (gender === 'Male') {
+            maleTotal += Number(avg);
+            maleCount++;
+          } else if (gender === 'Female') {
+            femaleTotal += Number(avg);
+            femaleCount++;
+          }
+        }
+      });
+
+      setPerformanceData({
+        maleAvg: maleCount > 0 ? (maleTotal / maleCount).toFixed(1) : 0,
+        femaleAvg: femaleCount > 0 ? (femaleTotal / femaleCount).toFixed(1) : 0,
+        overallAvg: (maleCount + femaleCount) > 0 ? ((maleTotal + femaleTotal) / (maleCount + femaleCount)).toFixed(1) : 0
+      });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setPerformanceLoading(false);
     }
   };
 
@@ -264,33 +312,78 @@ const ClassManagement = () => {
                 <X size={20} />
               </button>
             </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-slate-200 bg-white px-6 shrink-0">
+              {['attendance', 'demographics', 'performance'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-6 py-4 text-sm font-bold uppercase tracking-widest transition-colors ${
+                    activeTab === tab 
+                      ? 'border-b-2 border-indigo-600 text-indigo-600' 
+                      : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
             
             <div className="p-6 overflow-y-auto flex-1 bg-slate-50 text-left">
               {attendanceLoading && classStudents.length === 0 ? (
                  <div className="flex justify-center p-10"><div className="animate-spin h-8 w-8 border-4 border-indigo-600 border-t-transparent rounded-full"></div></div>
               ) : (
                 <div className="space-y-8">
-                  {/* Class Analysis */}
-                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                    <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Demographics</h4>
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-8">
-                      <div className="flex-1 bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center justify-between">
-                        <span className="font-bold text-blue-700">Male Students</span>
-                        <span className="text-2xl font-black text-blue-800">{classStudents.filter(s => s.gender === 'Male').length}</span>
-                      </div>
-                      <div className="flex-1 bg-pink-50 p-4 rounded-xl border border-pink-100 flex items-center justify-between">
-                        <span className="font-bold text-pink-700">Female Students</span>
-                        <span className="text-2xl font-black text-pink-800">{classStudents.filter(s => s.gender === 'Female').length}</span>
-                      </div>
-                      <div className="flex-1 bg-slate-100 p-4 rounded-xl border border-slate-200 flex items-center justify-between">
-                        <span className="font-bold text-slate-700">Total</span>
-                        <span className="text-2xl font-black text-slate-800">{classStudents.length}</span>
+                  {/* Demographics Tab */}
+                  {activeTab === 'demographics' && (
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Demographics Breakdown</h4>
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-8">
+                        <div className="flex-1 bg-blue-50 p-6 rounded-xl border border-blue-100 flex flex-col items-center justify-center gap-2">
+                          <span className="font-bold text-blue-700 uppercase tracking-widest text-xs">Male Students</span>
+                          <span className="text-5xl font-black text-blue-800">{classStudents.filter(s => s.gender === 'Male').length}</span>
+                        </div>
+                        <div className="flex-1 bg-pink-50 p-6 rounded-xl border border-pink-100 flex flex-col items-center justify-center gap-2">
+                          <span className="font-bold text-pink-700 uppercase tracking-widest text-xs">Female Students</span>
+                          <span className="text-5xl font-black text-pink-800">{classStudents.filter(s => s.gender === 'Female').length}</span>
+                        </div>
+                        <div className="flex-1 bg-slate-100 p-6 rounded-xl border border-slate-200 flex flex-col items-center justify-center gap-2">
+                          <span className="font-bold text-slate-700 uppercase tracking-widest text-xs">Total</span>
+                          <span className="text-5xl font-black text-slate-800">{classStudents.length}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Attendance Tracker */}
-                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                  {/* Performance Tab */}
+                  {activeTab === 'performance' && (
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Performance by Gender</h4>
+                      {performanceLoading ? (
+                        <div className="flex justify-center p-6"><div className="animate-spin h-6 w-6 border-4 border-indigo-600 border-t-transparent rounded-full"></div></div>
+                      ) : (
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-8">
+                          <div className="flex-1 bg-emerald-50 p-6 rounded-xl border border-emerald-100 flex flex-col items-center justify-center gap-2">
+                            <span className="font-bold text-emerald-700 uppercase tracking-widest text-xs">Class Average</span>
+                            <span className="text-5xl font-black text-emerald-800">{performanceData.overallAvg}%</span>
+                          </div>
+                          <div className="flex-1 bg-blue-50 p-6 rounded-xl border border-blue-100 flex flex-col items-center justify-center gap-2">
+                            <span className="font-bold text-blue-700 uppercase tracking-widest text-xs">Male Average</span>
+                            <span className="text-5xl font-black text-blue-800">{performanceData.maleAvg}%</span>
+                          </div>
+                          <div className="flex-1 bg-pink-50 p-6 rounded-xl border border-pink-100 flex flex-col items-center justify-center gap-2">
+                            <span className="font-bold text-pink-700 uppercase tracking-widest text-xs">Female Average</span>
+                            <span className="text-5xl font-black text-pink-800">{performanceData.femaleAvg}%</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Attendance Tracker Tab */}
+                  {activeTab === 'attendance' && (
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6 gap-4">
                       <div>
                         <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-2">Daily Attendance</h4>
@@ -364,7 +457,8 @@ const ClassManagement = () => {
                         </table>
                       </div>
                     )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
