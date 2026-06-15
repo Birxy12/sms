@@ -88,11 +88,31 @@
   max-width: 1280px;
   margin: 0 auto;
   padding: 8rem 1.5rem 5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.about-hero-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  width: 100%;
+}
+
+.about-hero-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .about-hero-badge {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   background: rgba(255, 255, 255, 0.08);
@@ -125,13 +145,14 @@
   font-size: 1.125rem;
   color: #94a3b8;
   line-height: 1.75;
-  max-width: 32rem;
-  margin-bottom: 2.5rem;
+  max-width: 48rem;
+  margin: 0 auto 2.5rem auto;
 }
 
 .about-hero-actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 1rem;
 }
 
@@ -180,8 +201,11 @@
 
 /* Hero Stats Cards */
 .about-hero-stats {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 1rem;
+  margin-top: 4rem;
 }
 
 .about-stat-card {
