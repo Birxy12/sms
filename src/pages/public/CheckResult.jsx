@@ -121,8 +121,8 @@ const CheckResult = () => {
             <form onSubmit={handleCheck} className="space-y-8">
               {/* Registration Number Field */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Registration ID</label>
+                <div className="flex items-center justify-center gap-2">
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Registration ID</label>
                   <div className="relative group">
                     <HelpCircle size={14} className="text-slate-300 cursor-help" onMouseEnter={() => setHoveredField('reg')} onMouseLeave={() => setHoveredField(null)} />
                     <AnimatePresence>
@@ -134,14 +134,13 @@ const CheckResult = () => {
                     </AnimatePresence>
                   </div>
                 </div>
-                <div className="relative group">
-                  <GraduationCap size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+                <div className="relative group flex justify-center">
                   <input 
                     type="text"
                     value={regNo}
                     onChange={(e) => setRegNo(e.target.value)}
                     placeholder="BDS/2024/001"
-                    className="input-premium pl-12 font-black text-slate-800 placeholder:text-slate-200 placeholder:font-medium"
+                    className="input-premium text-center font-black text-slate-800 placeholder:text-slate-200 placeholder:font-medium w-full"
                     required
                   />
                 </div>
@@ -149,8 +148,8 @@ const CheckResult = () => {
 
               {/* Access PIN Field */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Secure Access PIN</label>
+                <div className="flex items-center justify-center gap-2">
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Secure Access PIN</label>
                   <div className="relative group">
                     <HelpCircle size={14} className="text-slate-300 cursor-help" onMouseEnter={() => setHoveredField('pin')} onMouseLeave={() => setHoveredField(null)} />
                     <AnimatePresence>
@@ -162,7 +161,7 @@ const CheckResult = () => {
                     </AnimatePresence>
                   </div>
                 </div>
-                <div className="flex justify-between gap-2">
+                <div className="flex justify-center gap-3">
                   {[0, 1, 2, 3, 4, 5].map((index) => (
                     <input
                       key={index}
