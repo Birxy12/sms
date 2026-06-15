@@ -95,11 +95,10 @@ const SelectField = ({ label, name, options, icon: Icon, required = true, value,
 const Login = () => {
   const [selectedRole, setSelectedRole] = useState('student');
   const [loginStep, setLoginStep] = useState('credentials');
-  const [staffMode, setStaffMode] = useState('email');
   const [showPassword, setShowPassword] = useState(false);
   const [classOptions, setClassOptions] = useState(DEFAULT_CLASS_OPTIONS);
   const [formData, setFormData] = useState({ 
-    regNo: '', className: '', email: '', password: '', phone: '',
+    regNo: '', className: '', identifier: '', password: '',
     pin: '', securityAnswer: '', newPin: '', verificationCode: '',
     newPassword: '', confirmPassword: ''
   });
@@ -168,12 +167,7 @@ const Login = () => {
           setError(result.message || 'Login failed');
         }
       } else {
-        let result;
-        if (staffMode === 'email') {
-          result = await adminAuth.login(formData.email, formData.password, selectedRole);
-        } else {
-          result = await adminAuth.loginWithPhone(formData.phone, formData.password, selectedRole);
-        }
+        const result = await adminAuth.login(formData.identifier, formData.password, selectedRole);
         if (result.success) {
           if (result.requirePasswordChange) {
             setPendingUser(result.user);
@@ -625,20 +619,15 @@ const Login = () => {
                 </form>
               ) : (
                 <form onSubmit={handleLogin} className="auth-form">
-                  <div className="staff-mode-toggle">
-                    <button type="button" className={staffMode === 'email' ? 'active' : ''} onClick={() => setStaffMode('email')}>
-                      <Mail size={13} /> Email
-                    </button>
-                    <button type="button" className={staffMode === 'phone' ? 'active' : ''} onClick={() => setStaffMode('phone')}>
-                      <Phone size={13} /> Phone
-                    </button>
-                  </div>
-
-                  {staffMode === 'email' ? (
-                    <InputField label="Email" name="email" type="email" placeholder="e.g. staff@school.edu" icon={Mail} value={formData.email} onChange={handleInputChange} />
-                  ) : (
-                    <InputField label="Phone" name="phone" type="tel" placeholder="e.g. 08012345678" icon={Phone} value={formData.phone} onChange={handleInputChange} />
-                  )}
+                  <InputField 
+                    label="Email, Phone, or Staff ID" 
+                    name="identifier" 
+                    type="text" 
+                    placeholder="e.g. staff@school.edu or 080... or BDS/STAFF/001" 
+                    icon={User} 
+                    value={formData.identifier} 
+                    onChange={handleInputChange} 
+                  />
 
                   <InputField label="Password" name="password" type="password" placeholder="••••••••" icon={Lock} value={formData.password} onChange={handleInputChange} showPassword={showPassword} onTogglePassword={() => setShowPassword(!showPassword)} />
 

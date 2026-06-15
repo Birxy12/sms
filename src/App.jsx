@@ -31,7 +31,6 @@ import LeaderboardPage from './pages/public/LeaderboardPage';
 import MessageHub from './pages/dashboard/MessageHub';
 import PrincipalDashboard from './pages/dashboard/PrincipalDashboard';
 import BursarDashboard from './pages/dashboard/BursarDashboard';
-import StaffRegister from './pages/StaffRegister';
 import CheckResult from './pages/public/CheckResult';
 import AdmissionPortal from './pages/public/AdmissionPortal';
 import { useStudentAuth } from './context/StudentAuthContext';
@@ -79,7 +78,6 @@ function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/staff-register" element={<StaffRegister />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/blog" element={<BlogPage />} />

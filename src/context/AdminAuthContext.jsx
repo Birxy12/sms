@@ -146,24 +146,26 @@ export const AdminAuthProvider = ({ children }) => {
         const staffRef = collection(db, 'staff');
         let q;
         const normalizedIdentifier = identifier.trim();
+        let querySnapshot = null;
         
         if (normalizedIdentifier.includes('@')) {
-          q = query(staffRef, where('email', '==', normalizedIdentifier.toLowerCase()));
+          querySnapshot = await getDocs(query(staffRef, where('email', '==', normalizedIdentifier.toLowerCase())));
         } else {
-          // Try uppercase first (standard)
-          q = query(staffRef, where('staffId', '==', normalizedIdentifier.toUpperCase()));
-        }
-        
-        let querySnapshot = await getDocs(q);
-        
-        // If uppercase search failed and it's not an email, try lowercase/raw search
-        if (querySnapshot.empty && !normalizedIdentifier.includes('@')) {
-          const qRaw = query(staffRef, where('staffId', '==', normalizedIdentifier.toLowerCase()));
-          querySnapshot = await getDocs(qRaw);
+          // Check if it looks like a phone number
+          if (/^[\d\+\-\s]+$/.test(normalizedIdentifier)) {
+            const phoneNormalized = normalizedIdentifier.replace(/\s+/g, '');
+            querySnapshot = await getDocs(query(staffRef, where('phone', '==', phoneNormalized)));
+          }
           
-          if (querySnapshot.empty) {
-             const qLiteral = query(staffRef, where('staffId', '==', normalizedIdentifier));
-             querySnapshot = await getDocs(qLiteral);
+          // If not found or not a phone, check staffId variations
+          if (!querySnapshot || querySnapshot.empty) {
+            querySnapshot = await getDocs(query(staffRef, where('staffId', '==', normalizedIdentifier.toUpperCase())));
+            if (querySnapshot.empty) {
+              querySnapshot = await getDocs(query(staffRef, where('staffId', '==', normalizedIdentifier.toLowerCase())));
+              if (querySnapshot.empty) {
+                 querySnapshot = await getDocs(query(staffRef, where('staffId', '==', normalizedIdentifier)));
+              }
+            }
           }
         }
         

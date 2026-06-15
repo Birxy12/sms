@@ -169,7 +169,7 @@ const AboutPage = () => {
           >
             <div className="about-principal-grid">
               <div className="about-principal-image">
-                <img src={principal?.image || '/principal.png'} alt={principal?.name || 'MRS. ETUZU ANITA'} className="w-full h-full object-cover" />
+                <img src={principal?.image || '/principal.jpg'} alt={principal?.name || 'MRS. ETUZU ANITA'} className="w-full h-full object-cover" />
                 <div className="about-principal-image-overlay">
                   <p className="name">{principal?.name || 'MRS. ETUZU ANITA'}</p>
                   <p className="role">Principal &amp; Chief Administrator</p>

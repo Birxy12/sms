@@ -128,7 +128,7 @@ service cloud.firestore {
 
     // ========== PAYMENTS ==========
     match /payment_messages/{id} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow create: if true; // students submit receipts without staff login
       allow update, delete: if isAuthenticated();
     }

@@ -308,14 +308,15 @@ const StudentManagement = () => {
                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Reg Number</label>
                     <input 
                       type="text" required 
+                      readOnly={isEditing}
                       value={currentStudent.regNo}
-                      onChange={(e) => setCurrentStudent({...currentStudent, regNo: e.target.value.toUpperCase()})}
+                      onChange={(e) => !isEditing && setCurrentStudent({...currentStudent, regNo: e.target.value.toUpperCase()})}
                       placeholder="e.g. BDS/25/001"
-                      className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                      className={`w-full px-5 py-3.5 rounded-2xl border-2 border-transparent outline-none transition-all font-bold ${isEditing ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-slate-50 focus:border-indigo-600 focus:bg-white'}`}
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Assigned Class</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">{isEditing ? 'Change Class (Promote/Demote)' : 'Assigned Class'}</label>
                     <select 
                       value={currentStudent.className}
                       onChange={(e) => setCurrentStudent({...currentStudent, className: e.target.value})}
