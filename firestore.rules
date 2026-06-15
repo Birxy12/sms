@@ -13,10 +13,10 @@ service cloud.firestore {
     }
 
     function isSuperAdmin() {
-      // The app uses custom role management on top of Firebase Anonymous Auth.
-      // Since token.email is not available for anonymous users, we rely on the
-      // frontend UI to enforce role-based access for these operations.
-      return isAuthenticated();
+      return hasEmail() && (
+        request.auth.token.email == 'globixtechinc@gmail.com' ||
+        request.auth.token.email == 'admin@birxysms.edu'
+      );
     }
 
     function isOwner(userId) {
@@ -107,7 +107,7 @@ service cloud.firestore {
 
     match /settings/{id} {
       allow read: if true;
-      allow write: if isAuthenticated();
+      allow write: if isSuperAdmin();
     }
 
     // ========== ACADEMIC ==========
@@ -126,13 +126,6 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
-    // ========== PAYMENTS ==========
-    match /payment_messages/{id} {
-      allow read: if true;
-      allow create: if true; // students submit receipts without staff login
-      allow update, delete: if isAuthenticated();
-    }
-
     // ========== ADMISSIONS ==========
     match /admissions/{id} {
       allow read: if isAuthenticated();
@@ -143,6 +136,13 @@ service cloud.firestore {
     match /admissionLetterTemplates/{id} {
       allow read: if true;
       allow write: if isSuperAdmin();
+    }
+
+    // ========== PAYMENTS ==========
+    match /payment_messages/{id} {
+      allow read: if isAuthenticated();
+      allow create: if true; // students submit receipts without staff login
+      allow update, delete: if isAuthenticated();
     }
 
     // ========== ATTENDANCE ==========
