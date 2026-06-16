@@ -186,9 +186,6 @@ export const AdminAuthProvider = ({ children }) => {
       if (userToVerify.firstLogin) {
         return { success: true, requirePasswordChange: true, user: userToVerify };
       }
-      if (!userToVerify.emailVerified && userToVerify.email !== 'admin@birxysms.edu' && userToVerify.email !== 'bursar@birxysms.edu' && userToVerify.email !== 'principal@birxysms.edu' && userToVerify.email !== 'globixtechinc@gmail.com') {
-        return { success: true, requireEmailVerification: true, user: userToVerify };
-      }
       if (!userToVerify.pin) {
         return { success: true, requirePinSetup: true, user: userToVerify };
       }
@@ -225,31 +222,6 @@ export const AdminAuthProvider = ({ children }) => {
       return { success: true };
     }
     return { success: false, message: 'Incorrect PIN.' };
-  };
-
-  const sendVerificationEmail = async (email) => {
-    console.log(`[SIMULATED EMAIL] To: ${email} | Subject: Verify your email | Body: Your verification code is 123456`);
-    return { success: true, message: 'Verification code sent to email.' };
-  };
-
-  const verifyEmail = async (user, code) => {
-    if (code === '123456') { // Mock verification code
-      try {
-        if (user.id) {
-          const { db } = await import('../lib/firebase');
-          const { doc, updateDoc } = await import('firebase/firestore');
-          await updateDoc(doc(db, 'staff', user.id), { emailVerified: true });
-        }
-        const updatedUser = { ...user, emailVerified: true };
-        if (!updatedUser.pin) {
-          return { success: true, requirePinSetup: true, user: updatedUser };
-        }
-        return { success: true, requirePin: true, user: updatedUser };
-      } catch (err) {
-        return { success: false, message: 'Error verifying email.' };
-      }
-    }
-    return { success: false, message: 'Invalid verification code.' };
   };
 
   const registerPasskey = async (user) => {
@@ -565,8 +537,6 @@ export const AdminAuthProvider = ({ children }) => {
     completeLogin,
     setupPin,
     verifyPin,
-    sendVerificationEmail,
-    verifyEmail,
     registerPasskey,
     loginWithPasskey,
     loginWithGoogle,
