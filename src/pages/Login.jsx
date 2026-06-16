@@ -5,7 +5,7 @@ import { useStudentAuth } from '../context/StudentAuthContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { db } from '../lib/firebase';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { 
   GraduationCap, ShieldCheck, ArrowRight, ChevronLeft, Loader2,
   AlertCircle, HelpCircle, Phone, Lock, Mail, User, 
@@ -32,7 +32,7 @@ const ROLES = [
 ];
 
 const DEFAULT_CLASS_OPTIONS = [
-  'JSS 1', 'JSS 2', 'JSS 3', 'JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'
+   'JSS 3', 'JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'
 ];
 
 const InputField = ({ label, name, type = 'text', placeholder, icon: Icon, required = true, maxLength, pattern, inputMode, value, onChange, showPassword, onTogglePassword }) => (
@@ -99,8 +99,7 @@ const Login = () => {
   const [classOptions, setClassOptions] = useState(DEFAULT_CLASS_OPTIONS);
   const [formData, setFormData] = useState({ 
     regNo: '', className: '', identifier: '', password: '',
-    pin: '', securityAnswer: '', newPin: '', verificationCode: '',
-    newPassword: '', confirmPassword: ''
+    pin: '', securityAnswer: '', newPin: '', newPassword: '', confirmPassword: ''
   });
   const [securityQuestion, setSecurityQuestion] = useState('');
   const [error, setError] = useState('');
@@ -172,10 +171,6 @@ const Login = () => {
           if (result.requirePasswordChange) {
             setPendingUser(result.user);
             setLoginStep('change_password');
-          } else if (result.requireEmailVerification) {
-            setPendingUser(result.user);
-            await adminAuth.sendVerificationEmail(result.user.email);
-            setLoginStep('verify_email');
           } else if (result.requirePinSetup) {
             setPendingUser(result.user);
             setLoginStep('setup_staff_pin');
@@ -234,7 +229,6 @@ const Login = () => {
       if (result.success) {
         const updatedUser = { ...pendingUser, password: newPass, firstLogin: false, id: result.id || pendingUser.id };
         setPendingUser(updatedUser);
-        // Now proceed to PIN setup
         if (!updatedUser.pin) {
           setLoginStep('setup_staff_pin');
         } else {
@@ -283,7 +277,6 @@ const Login = () => {
     try {
       const result = await adminAuth.setupPin(pendingUser, formData.pin);
       if (result.success) {
-        // Option to setup Passkey
         if (window.PublicKeyCredential) {
           setLoginStep('setup_passkey');
         } else {
@@ -313,37 +306,6 @@ const Login = () => {
         navigateByRole(selectedRole);
       } else {
         setError(result.message || 'Invalid PIN');
-      }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEmailVerification = async (e) => {
-    e.preventDefault();
-    if (!formData.verificationCode) {
-      setError('Please enter the verification code');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
-      const result = await adminAuth.verifyEmail(pendingUser, formData.verificationCode);
-      if (result.success) {
-        if (result.requirePinSetup) {
-          setPendingUser(result.user);
-          setLoginStep('setup_staff_pin');
-        } else if (result.requirePin) {
-          setPendingUser(result.user);
-          setLoginStep('verify_staff_pin');
-        } else {
-          adminAuth.completeLogin(result.user);
-          navigateByRole(selectedRole);
-        }
-      } else {
-        setError(result.message || 'Invalid verification code');
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
@@ -426,7 +388,7 @@ const Login = () => {
       const result = await adminAuth.forgotPassword(formData.email);
       if (result.success) {
         setLoginStep('credentials');
-        setError(result.message); // Success message
+        setError(result.message);
       } else {
         setError(result.message || 'Failed to reset password');
       }
@@ -781,29 +743,6 @@ const Login = () => {
                 Skip for now
               </button>
             </motion.div>
-          )}
-
-          {loginStep === 'verify_email' && (
-            <motion.form key="verify_email" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -15 }} onSubmit={handleEmailVerification} className="auth-form">
-              <div className="security-banner alert">
-                <Mail size={16} />
-                <p>Verify Your Email</p>
-              </div>
-              <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '15px' }}>
-                We've sent a verification code to {pendingUser?.email}. Please enter it below.
-              </p>
-              <InputField label="Verification Code" name="verificationCode" type="text" placeholder="123456" icon={CheckCircle} value={formData.verificationCode} onChange={handleInputChange} />
-              <motion.button
-                type="submit"
-                className="submit-btn"
-                disabled={loading || !formData.verificationCode}
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.98 }}
-                style={{ background: currentRole.color }}
-              >
-                {loading ? <Loader2 className="spin" size={18} /> : <>Verify</>}
-              </motion.button>
-            </motion.form>
           )}
 
           {loginStep === 'forgot_pin' && (
