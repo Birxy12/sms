@@ -444,13 +444,25 @@ const Login = () => {
                   setFormData({ ...formData, pin: joined });
                   setError('');
                   if (val && i < 5) {
-                    document.getElementById(`pin-${i + 1}`)?.focus();
+                    setTimeout(() => {
+                      const next = document.getElementById(`pin-${i + 1}`);
+                      if (next) {
+                        next.focus();
+                        next.select();
+                      }
+                    }, 10);
                   }
                 }
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Backspace' && !formData.pin[i] && i > 0) {
-                  document.getElementById(`pin-${i - 1}`)?.focus();
+                  setTimeout(() => {
+                    const prev = document.getElementById(`pin-${i - 1}`);
+                    if (prev) {
+                      prev.focus();
+                      prev.select();
+                    }
+                  }, 10);
                 }
               }}
             />

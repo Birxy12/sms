@@ -175,14 +175,24 @@ const CheckResult = () => {
                         newPin[index] = val.slice(-1);
                         setPin(newPin.join(''));
                         if (val && index < 5) {
-                          const next = document.getElementById(`pin-${index + 1}`);
-                          if (next) next.focus();
+                          setTimeout(() => {
+                            const next = document.getElementById(`pin-${index + 1}`);
+                            if (next) {
+                              next.focus();
+                              next.select();
+                            }
+                          }, 10);
                         }
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Backspace' && !(pin || '')[index] && index > 0) {
-                          const prev = document.getElementById(`pin-${index - 1}`);
-                          if (prev) prev.focus();
+                          setTimeout(() => {
+                            const prev = document.getElementById(`pin-${index - 1}`);
+                            if (prev) {
+                              prev.focus();
+                              prev.select();
+                            }
+                          }, 10);
                         }
                       }}
                       className="w-12 h-14 text-center font-black text-2xl text-slate-800 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:bg-white outline-none transition-all"

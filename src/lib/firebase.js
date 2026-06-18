@@ -20,21 +20,9 @@ const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 
 // Initialize Firestore with settings to mitigate common errors and support multi-tab persistence
 // Initialize Firestore with settings to support multi-tab persistence
-let db;
-try {
-  db = initializeFirestore(app, {
+const db = initializeFirestore(app, {
     localCache: memoryLocalCache(),
-    experimentalForceLongPolling: true,
-    useFetchStreams: false,
   });
-} catch (e) {
-  if (e.code === 'failed-precondition') {
-    console.warn("Firestore persistence already enabled in another tab.");
-  } else {
-    console.error("Firestore persistence failed:", e);
-  }
-  db = getFirestore(app);
-}
 const auth = getAuth(app);
 const storage = getStorage(app);
 

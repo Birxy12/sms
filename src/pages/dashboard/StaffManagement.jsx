@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, limit } from 'firebase/firestore';
-import { Users, UserPlus, Mail, Phone, Briefcase, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Search, ShieldCheck, Wallet } from 'lucide-react';
+import { Users, UserPlus, Mail, Phone, Briefcase, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Search, ShieldCheck, Wallet, MoreVertical, Key, Lock } from 'lucide-react';
+import { useAdminAuth } from '../../context/AdminAuthContext';
 
 const StaffManagement = () => {
+  const { currentAdmin, adminResetCredentials } = useAdminAuth();
+  const isAdmin = currentAdmin?.role === 'admin' || currentAdmin?.isSuperAdmin;
+
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,6 +16,11 @@ const StaffManagement = () => {
   const [currentStaff, setCurrentStaff] = useState({ name: '', email: '', phone: '', department: 'Science', role: 'teacher' });
   const [status, setStatus] = useState({ type: '', message: '' });
   const [saving, setSaving] = useState(false);
+
+  // Advanced admin actions state
+  const [activeDropdownId, setActiveDropdownId] = useState(null);
+  const [resetPasswordStaff, setResetPasswordStaff] = useState(null);
+  const [newPasswordVal, setNewPasswordVal] = useState('');
 
   // Fetch staff list
   const fetchStaffData = async () => {
@@ -94,6 +103,50 @@ const StaffManagement = () => {
     }
   };
 
+  const handleResetPin = async (person) => {
+    if (!window.confirm(`Are you sure you want to reset the login PIN for ${person.name}? They will be required to set a new PIN on next login.`)) return;
+    try {
+      setSaving(true);
+      const res = await adminResetCredentials(person.id, { clearPin: true });
+      if (res.success) {
+        setStatus({ type: 'success', message: `PIN for ${person.name} has been cleared and reset successfully!` });
+      } else {
+        setStatus({ type: 'error', message: res.message || 'Failed to reset PIN.' });
+      }
+    } catch (err) {
+      console.error(err);
+      setStatus({ type: 'error', message: 'Error resetting PIN.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openResetPasswordModal = (person) => {
+    setResetPasswordStaff(person);
+    const tempPass = Math.random().toString(36).slice(-8).toUpperCase();
+    setNewPasswordVal(tempPass);
+  };
+
+  const handleConfirmResetPassword = async (e) => {
+    e.preventDefault();
+    if (!newPasswordVal.trim()) return;
+    setSaving(true);
+    try {
+      const res = await adminResetCredentials(resetPasswordStaff.id, { newPassword: newPasswordVal });
+      if (res.success) {
+        setStatus({ type: 'success', message: `Password for ${resetPasswordStaff.name} reset successfully to "${newPasswordVal}"` });
+        setResetPasswordStaff(null);
+      } else {
+        setStatus({ type: 'error', message: res.message || 'Failed to reset password.' });
+      }
+    } catch (err) {
+      console.error(err);
+      setStatus({ type: 'error', message: 'Error resetting password.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const filteredStaff = staff.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     s.staffId.toLowerCase().includes(searchTerm.toLowerCase())
@@ -106,13 +159,15 @@ const StaffManagement = () => {
           <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Staff Management</h2>
           <p className="text-slate-500">Add, edit and manage teacher records and assignments.</p>
         </div>
-        <button 
-          onClick={() => { setIsEditing(false); setCurrentStaff({ name: '', email: '', phone: '', department: 'Science', role: 'teacher' }); setShowModal(true); }}
-          className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
-        >
-          <UserPlus size={20} />
-          Add New Staff
-        </button>
+        {isAdmin && (
+          <button 
+            onClick={() => { setIsEditing(false); setCurrentStaff({ name: '', email: '', phone: '', department: 'Science', role: 'teacher' }); setShowModal(true); }}
+            className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
+          >
+            <UserPlus size={20} />
+            Add New Staff
+          </button>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -159,7 +214,7 @@ const StaffManagement = () => {
                 <th className="px-6 py-5">Staff ID</th>
                 <th className="px-6 py-5">Department</th>
                 <th className="px-6 py-5">Role</th>
-                <th className="px-8 py-5 text-right">Actions</th>
+                {isAdmin && <th className="px-8 py-5 text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -199,22 +254,58 @@ const StaffManagement = () => {
                       {person.role}
                     </span>
                   </td>
-                  <td className="px-8 py-5 text-right">
-                    <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {isAdmin && (
+                    <td className="px-8 py-5 text-right relative">
                       <button 
-                        onClick={() => { setIsEditing(true); setCurrentStaff(person); setShowModal(true); }}
+                        onClick={() => setActiveDropdownId(activeDropdownId === person.id ? null : person.id)}
                         className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                       >
-                        <Edit2 size={18} />
+                        <MoreVertical size={18} />
                       </button>
-                      <button 
-                        onClick={() => handleDelete(person.id)}
-                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
+                      {activeDropdownId === person.id && (
+                        <div className="absolute right-8 top-12 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-30 animate-in fade-in slide-in-from-top-2 text-left">
+                          <button 
+                            onClick={() => { 
+                              setIsEditing(true); 
+                              setCurrentStaff(person); 
+                              setShowModal(true); 
+                              setActiveDropdownId(null); 
+                            }}
+                            className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors border-b border-slate-50"
+                          >
+                            <Edit2 size={16} /> Edit Profile
+                          </button>
+                          <button 
+                            onClick={() => { 
+                              openResetPasswordModal(person); 
+                              setActiveDropdownId(null); 
+                            }}
+                            className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors border-b border-slate-50"
+                          >
+                            <Lock size={16} /> Reset Password
+                          </button>
+                          <button 
+                            onClick={() => { 
+                              handleResetPin(person); 
+                              setActiveDropdownId(null); 
+                            }}
+                            className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors border-b border-slate-50"
+                          >
+                            <Key size={16} /> Reset PIN
+                          </button>
+                          <button 
+                            onClick={() => { 
+                              handleDelete(person.id); 
+                              setActiveDropdownId(null); 
+                            }}
+                            className="w-full px-4 py-3 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors"
+                          >
+                            <Trash2 size={16} /> Delete Staff
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  )}
                 </tr>
               )) : (
                 <tr>
@@ -337,6 +428,78 @@ const StaffManagement = () => {
                   className="flex-1 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-50"
                 >
                   {saving ? <Loader2 className="animate-spin w-5 h-5 mx-auto" /> : isEditing ? 'Update Record' : 'Create Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {resetPasswordStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-8 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="text-2xl font-bold text-slate-900">Reset Staff Password</h3>
+              <button onClick={() => setResetPasswordStaff(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={24} /></button>
+            </div>
+            
+            <form onSubmit={handleConfirmResetPassword} className="p-8 space-y-6 text-left">
+              <div>
+                <p className="text-sm font-medium text-slate-600 mb-4">
+                  You are resetting the password for <strong className="text-slate-900">{resetPasswordStaff.name}</strong>. The staff member will be required to change this password on their next login.
+                </p>
+                
+                <label className="block text-sm font-bold text-slate-700 mb-2">Temporary Password</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    required 
+                    value={newPasswordVal}
+                    onChange={(e) => setNewPasswordVal(e.target.value)}
+                    placeholder="Enter new password"
+                    className="flex-1 px-5 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none transition-all placeholder:text-slate-300 font-mono font-bold"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const tempPass = Math.random().toString(36).slice(-8).toUpperCase();
+                      setNewPasswordVal(tempPass);
+                    }}
+                    className="px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition-all"
+                  >
+                    Regen
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(newPasswordVal);
+                    alert('Password copied to clipboard!');
+                  }}
+                  className="w-full py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold text-sm transition-all"
+                >
+                  Copy Password
+                </button>
+              </div>
+
+              <div className="flex items-center gap-4 pt-4 border-t border-slate-100">
+                <button 
+                  type="button"
+                  onClick={() => setResetPasswordStaff(null)}
+                  className="flex-1 bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold hover:bg-slate-200 transition-all active:scale-95"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={saving}
+                  className="flex-1 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="animate-spin w-5 h-5 mx-auto" /> : 'Confirm Reset'}
                 </button>
               </div>
             </form>

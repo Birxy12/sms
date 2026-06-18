@@ -493,19 +493,6 @@ const ClassManagement = () => {
                           </table>
                         </div>
                         
-                        {/* Enterprise Submit Button Footer */}
-                        {classStudents.length > 0 && (
-                          <div className="mt-6 flex justify-end pt-4 border-t border-slate-100">
-                            <button 
-                              onClick={saveAttendance}
-                              disabled={attendanceSaving}
-                              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-indigo-800 hover:from-indigo-700 hover:to-indigo-900 text-white rounded-xl font-black shadow-lg hover:shadow-indigo-500/25 transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95"
-                            >
-                              <Save size={18} />
-                              {attendanceSaving ? 'Saving Records...' : 'Submit Attendance'}
-                            </button>
-                          </div>
-                        )}
                       </div>
                     )}
                     </div>
@@ -513,6 +500,20 @@ const ClassManagement = () => {
                 </div>
               )}
             </div>
+
+            {/* Modal Footer */}
+            {selectedClass && activeTab === 'attendance' && classStudents.length > 0 && !attendanceLoading && (
+              <div className="p-6 border-t border-slate-200 bg-white flex justify-end shrink-0">
+                <button 
+                  onClick={saveAttendance}
+                  disabled={attendanceSaving}
+                  className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-indigo-800 hover:from-indigo-700 hover:to-indigo-900 text-white rounded-xl font-black shadow-lg hover:shadow-indigo-500/25 transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95"
+                >
+                  <Save size={18} />
+                  {attendanceSaving ? 'Saving Records...' : 'Submit Attendance'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

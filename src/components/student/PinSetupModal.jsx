@@ -90,13 +90,25 @@ const PinSetupModal = () => {
                         const joined = newPin.join('').slice(0, 6);
                         setLocalPin(joined);
                         if (val && i < 5) {
-                          document.getElementById(`setup-pin-${i + 1}`)?.focus();
+                          setTimeout(() => {
+                            const next = document.getElementById(`setup-pin-${i + 1}`);
+                            if (next) {
+                              next.focus();
+                              next.select();
+                            }
+                          }, 10);
                         }
                       }
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Backspace' && !pin[i] && i > 0) {
-                        document.getElementById(`setup-pin-${i - 1}`)?.focus();
+                        setTimeout(() => {
+                          const prev = document.getElementById(`setup-pin-${i - 1}`);
+                          if (prev) {
+                            prev.focus();
+                            prev.select();
+                          }
+                        }, 10);
                       }
                     }}
                     className="w-10 text-center py-2 border-b-2 border-slate-200 focus:border-indigo-600 bg-transparent outline-none font-black text-2xl transition-all"

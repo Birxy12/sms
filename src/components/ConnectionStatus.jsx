@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../lib/firebase';
-import { onSnapshot, doc } from 'firebase/firestore';
 import { Wifi, WifiOff, RefreshCw } from 'lucide-react';
 
 const ConnectionStatus = () => {

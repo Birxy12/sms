@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
-import { collection, query, getDocs, orderBy, limit, onSnapshot, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, limit, doc, getDoc, setDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import StatCard from '../../components/StatCard';
 import ResultPublisher from '../../components/ResultPublisher';
