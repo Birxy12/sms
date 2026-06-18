@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { ensureFirebaseAuth } from '../lib/ensureAuth';
 
 import { STUDENT_KEYS, expandStudent } from '../utils/firestoreSchema';
 
@@ -188,6 +189,7 @@ export const StudentAuthProvider = ({ children }) => {
   const setPin = async (pin, question, answer) => {
     if (!currentStudent) return { success: false, message: 'Not logged in' };
     try {
+      await ensureFirebaseAuth();
       const { doc, updateDoc } = await import('firebase/firestore');
       const studentRef = doc(db, 'students', currentStudent.id);
       const updates = { pin, securityQuestion: question, securityAnswer: answer.toLowerCase().trim() };
@@ -234,6 +236,7 @@ export const StudentAuthProvider = ({ children }) => {
       }
 
       const { doc, updateDoc } = await import('firebase/firestore');
+      await ensureFirebaseAuth();
       await updateDoc(doc(db, 'students', studentId), { pin: newPin });
       
       return { success: true };
@@ -267,6 +270,7 @@ export const StudentAuthProvider = ({ children }) => {
       const newPin = Math.floor(100000 + Math.random() * 900000).toString(); // Generate 6-digit PIN
       
       const { doc, updateDoc } = await import('firebase/firestore');
+      await ensureFirebaseAuth();
       await updateDoc(doc(db, 'students', studentId), { pin: newPin });
       
       // Simulate sending to user's inbox
@@ -290,6 +294,7 @@ export const StudentAuthProvider = ({ children }) => {
     if (!currentStudent) return { success: false, message: 'Not logged in' };
     
     try {
+      await ensureFirebaseAuth();
       const { doc, updateDoc } = await import('firebase/firestore');
       
       // Update local state

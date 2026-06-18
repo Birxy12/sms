@@ -275,6 +275,7 @@ const StudentDashboard = () => {
                     { label: 'CBT Portal', icon: MonitorCheck, color: '#f59e0b', path: '/students/cbt', desc: 'Computer based tests' },
                     { label: 'Study Notes', icon: BookOpen, color: '#6366f1', path: '/students/notes', desc: 'Course materials' },
                     { label: 'Assignments', icon: Library, color: '#8b5cf6', path: '/students/assignments', desc: 'Pending homework' },
+                    ...(className.startsWith('SS2') || className.startsWith('SS3') ? [{ label: 'Subject Registration', icon: BookOpen, color: '#ec4899', path: '/students/registration', desc: 'Register 9 subjects' }] : [])
                   ].map((module, idx) => (
                     <button 
                       key={idx}

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { db, storage } from '../../lib/firebase';
+import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, where, setDoc } from 'firebase/firestore';
 import { uploadAvatar } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History } from 'lucide-react';
+import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList } from 'lucide-react';
+import { getSubjectsForClass } from '../../utils/subjectConfig';
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
@@ -25,6 +27,45 @@ const StudentManagement = () => {
   const [promoteModal, setPromoteModal] = useState(null); // { student }
   const [newClass, setNewClass] = useState('');
   const [promoting, setPromoting] = useState(false);
+
+  // Admin Subject Registration state
+  const [subjectRegModal, setSubjectRegModal] = useState(null); // { student }
+  const [adminSelectedSubjects, setAdminSelectedSubjects] = useState([]);
+  const [savingSubjects, setSavingSubjects] = useState(false);
+
+  const openSubjectRegModal = (student) => {
+    setSubjectRegModal({ student });
+    const available = getSubjectsForClass(student.className);
+    setAdminSelectedSubjects(student.registeredSubjects || []);
+  };
+
+  const toggleAdminSubject = (subject) => {
+    setAdminSelectedSubjects(prev =>
+      prev.includes(subject)
+        ? prev.filter(s => s !== subject)
+        : prev.length >= 9
+          ? prev // max 9
+          : [...prev, subject]
+    );
+  };
+
+  const saveAdminSubjects = async () => {
+    if (adminSelectedSubjects.length !== 9) return;
+    setSavingSubjects(true);
+    try {
+      await updateDoc(doc(db, 'students', subjectRegModal.student.id), {
+        registeredSubjects: adminSelectedSubjects,
+        updatedAt: new Date().toISOString()
+      });
+      setStatus({ type: 'success', message: `Subjects saved for ${subjectRegModal.student.name}.` });
+      setSubjectRegModal(null);
+      fetchStudents();
+    } catch (err) {
+      setStatus({ type: 'error', message: 'Failed to save subjects.' });
+    } finally {
+      setSavingSubjects(false);
+    }
+  };
 
   const classes = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'];
 
@@ -58,6 +99,7 @@ const StudentManagement = () => {
     const newValue = !allowProfileEdit;
     setAllowProfileEdit(newValue);
     try {
+      await ensureFirebaseAuth(); // Guarantee auth before Firestore write
       await setDoc(doc(db, 'settings', 'student_permissions'), {
         allowProfileEdit: newValue,
         updatedAt: new Date().toISOString()
@@ -289,6 +331,9 @@ const StudentManagement = () => {
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
                       <button onClick={() => navigate(`/admin/student-results?regNo=${encodeURIComponent(student.regNo)}&className=${encodeURIComponent(student.className)}&name=${encodeURIComponent(student.name)}`)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg" title="View Results"><Award size={16} /></button>
                       <button onClick={() => { setPromoteModal({ student }); setNewClass(student.className); }} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-white rounded-lg" title="Promote / Demote"><ArrowUpDown size={16} /></button>
+                      {(student.className?.startsWith('SS2') || student.className?.startsWith('SS3')) && (
+                        <button onClick={() => openSubjectRegModal(student)} className="p-2 text-slate-400 hover:text-pink-600 hover:bg-white rounded-lg" title="Subject Registration"><ClipboardList size={16} /></button>
+                      )}
                       <button onClick={() => { setIsEditing(true); setCurrentStudent(student); setShowModal(true); }} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg" title="Edit Student"><Edit2 size={16} /></button>
                       <button onClick={() => handleDelete(student.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg" title="Delete Student"><Trash2 size={16} /></button>
                     </div>
@@ -371,6 +416,83 @@ const StudentManagement = () => {
         </div>
       )}
 
+      {/* Admin Subject Registration Modal */}
+      {subjectRegModal && (() => {
+        const availableSubjects = getSubjectsForClass(subjectRegModal.student.className);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+              {/* Header */}
+              <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-pink-600 to-rose-700 text-white flex justify-between items-center flex-shrink-0">
+                <div>
+                  <h3 className="text-xl font-black">Subject Registration</h3>
+                  <p className="text-pink-100 text-xs mt-1">{subjectRegModal.student.name} — {subjectRegModal.student.className}</p>
+                </div>
+                <button onClick={() => setSubjectRegModal(null)} className="hover:opacity-50 transition-opacity"><X size={24} /></button>
+              </div>
+
+              {/* Subjects Grid */}
+              <div className="p-6 overflow-y-auto flex-1">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm font-bold text-slate-600">Select exactly 9 subjects</p>
+                  <span className={`text-sm font-black px-3 py-1 rounded-full ${
+                    adminSelectedSubjects.length === 9 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                  }`}>{adminSelectedSubjects.length} / 9</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {availableSubjects.map((subject, idx) => {
+                    const isSelected = adminSelectedSubjects.includes(subject);
+                    const isDisabled = !isSelected && adminSelectedSubjects.length >= 9;
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => !isDisabled && toggleAdminSubject(subject)}
+                        className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                          isSelected
+                            ? 'border-pink-500 bg-pink-50'
+                            : isDisabled
+                              ? 'border-slate-100 bg-slate-50 opacity-40 cursor-not-allowed'
+                              : 'border-slate-200 hover:border-pink-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded flex-shrink-0 flex items-center justify-center transition-colors ${
+                          isSelected ? 'bg-pink-600 text-white' : 'bg-slate-200'
+                        }`}>
+                          {isSelected && <CheckCircle size={12} />}
+                        </div>
+                        <span className={`text-xs font-bold leading-tight ${
+                          isSelected ? 'text-pink-900' : 'text-slate-700'
+                        }`}>{subject}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between flex-shrink-0">
+                <p className="text-xs text-slate-400 font-medium">
+                  {subjectRegModal.student.registeredSubjects?.length > 0
+                    ? `Previously: ${subjectRegModal.student.registeredSubjects.length} subjects registered`
+                    : 'No subjects registered yet'}
+                </p>
+                <div className="flex gap-3">
+                  <button onClick={() => setSubjectRegModal(null)} className="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-black hover:bg-slate-200 transition-all">Cancel</button>
+                  <button
+                    onClick={saveAdminSubjects}
+                    disabled={savingSubjects || adminSelectedSubjects.length !== 9}
+                    className="px-6 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-black flex items-center gap-2 transition-all disabled:opacity-50 shadow-lg shadow-pink-100 active:scale-95"
+                  >
+                    {savingSubjects ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                    {savingSubjects ? 'Saving...' : 'Save Registration'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
@@ -379,7 +501,7 @@ const StudentManagement = () => {
               <button onClick={() => setShowModal(false)} className="hover:opacity-50 transition-opacity"><X size={24} /></button>
             </div>
             
-            <form onSubmit={handleSave} className="p-8 space-y-6 text-left">
+            <form onSubmit={handleSave} className="p-8 space-y-6 text-left max-h-[70vh] overflow-y-auto">
               <div className="flex justify-center mb-6">
                 <div className="relative group">
                   <div className="w-24 h-24 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden group-hover:border-indigo-400 transition-all">

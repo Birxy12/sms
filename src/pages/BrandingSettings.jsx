@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { Save, RefreshCcw, Palette, School } from 'lucide-react';
+import { Save, RefreshCcw, Palette, School, BookOpen, CheckCircle, Loader2 } from 'lucide-react';
+import { db } from '../lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const BrandingSettings = () => {
   const { 
@@ -32,6 +34,11 @@ const BrandingSettings = () => {
   const [bSig, setBSig] = useState(bursarSignature);
   const [bStamp, setBStamp] = useState(bursarStamp);
 
+  // Academic Configuration State
+  const [subjectRegistrationEnabled, setSubjectRegistrationEnabled] = useState(false);
+  const [configLoading, setConfigLoading] = useState(true);
+  const [statusMsg, setStatusMsg] = useState({ type: '', message: '' });
+
   // Sync with context once loaded
   React.useEffect(() => {
     setName(schoolName);
@@ -47,6 +54,40 @@ const BrandingSettings = () => {
     setBSig(bursarSignature);
     setBStamp(bursarStamp);
   }, [schoolName, primaryColor, secondaryColor, schoolLogo, navbarBg, footerBg, navbarTextColor, footerTextColor, principalSignature, principalStamp, bursarSignature, bursarStamp]);
+
+  // Fetch Academic Config
+  React.useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'academic_permissions'));
+        if (snap.exists()) {
+          setSubjectRegistrationEnabled(snap.data().subjectRegistrationEnabled ?? false);
+        }
+      } catch (err) {
+        console.error('Error fetching academic config:', err);
+      } finally {
+        setConfigLoading(false);
+      }
+    };
+    fetchConfig();
+  }, []);
+
+  const toggleSubjectRegistration = async () => {
+    const newValue = !subjectRegistrationEnabled;
+    setSubjectRegistrationEnabled(newValue);
+    try {
+      await setDoc(doc(db, 'settings', 'academic_permissions'), {
+        subjectRegistrationEnabled: newValue,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      setStatusMsg({ type: 'success', message: `Subject Registration ${newValue ? 'Opened' : 'Closed'}.` });
+      setTimeout(() => setStatusMsg({ type: '', message: '' }), 3000);
+    } catch (err) {
+      console.error('Error toggling subject registration:', err);
+      setSubjectRegistrationEnabled(!newValue);
+      setStatusMsg({ type: 'error', message: 'Failed to update setting.' });
+    }
+  };
 
   const handleImageUpload = (e, setter) => {
     const file = e.target.files[0];
@@ -196,6 +237,39 @@ const BrandingSettings = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Academic Configuration Card */}
+        <div className="card-white branding-card">
+          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <BookOpen color="var(--primary)" />
+            <h3>Academic Configuration</h3>
+          </div>
+          
+          <div className="input-group">
+            <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#1e293b', display: 'block', marginBottom: '4px' }}>Subject Registration Portal</label>
+                <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>Allow SS2 and SS3 students to register their 9 subjects.</p>
+              </div>
+              
+              {configLoading ? (
+                <Loader2 size={24} className="animate-spin text-slate-400" />
+              ) : (
+                <button 
+                  onClick={toggleSubjectRegistration}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all focus:outline-none ${subjectRegistrationEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                >
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${subjectRegistrationEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              )}
+            </div>
+            {statusMsg.message && (
+              <p style={{ marginTop: '12px', fontSize: '12px', fontWeight: 'bold', color: statusMsg.type === 'success' ? '#10b981' : '#f43f5e', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <CheckCircle size={14} /> {statusMsg.message}
+              </p>
+            )}
           </div>
         </div>
 

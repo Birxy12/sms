@@ -4,7 +4,8 @@ import Marksheet from '../../components/Marksheet';
 import ScoreEntry from '../../components/ScoreEntry';
 import AssignmentManager from '../../components/AssignmentManager';
 import NoteManager from '../../components/NoteManager';
-import { Book, CheckCircle, Clock, Edit3, List, Calendar as CalendarIcon, FileText, ClipboardList } from 'lucide-react';
+import TeacherAttendance from '../../components/TeacherAttendance';
+import { Book, CheckCircle, Clock, Edit3, List, Calendar as CalendarIcon, FileText, ClipboardList, Users } from 'lucide-react';
 
 const StaffDashboard = () => {
   const [activeTab, setActiveTab] = useState('entry'); // schedule, marksheet, entry, assignments, materials
@@ -21,6 +22,7 @@ const StaffDashboard = () => {
     { id: 'materials', label: 'Materials', icon: FileText },
     { id: 'schedule', label: 'Schedule', icon: CalendarIcon },
     { id: 'marksheet', label: 'Marksheet', icon: List },
+    { id: 'attendance', label: 'Attendance', icon: Users },
   ];
 
   return (
@@ -107,9 +109,15 @@ const StaffDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'materials' && (
+        { activeTab === 'materials' && (
           <div>
             <NoteManager />
+          </div>
+        )}
+
+        { activeTab === 'attendance' && (
+          <div>
+            <TeacherAttendance />
           </div>
         )}
       </div>

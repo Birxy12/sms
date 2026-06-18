@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
+import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import { collection, query, getDocs, orderBy, limit, doc, getDoc, setDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import StatCard from '../../components/StatCard';
@@ -47,6 +48,7 @@ const AdminDashboard = () => {
     setSystemControls(updated);
     setControlsSaving(true);
     try {
+      await ensureFirebaseAuth(); // Guarantee auth before any Firestore write
       await setDoc(doc(db, 'settings', 'student_permissions'), updated, { merge: true });
       setControlsStatus('Saved!');
       setTimeout(() => setControlsStatus(''), 2500);

@@ -105,7 +105,7 @@ service cloud.firestore {
 
     match /settings/{id} {
       allow read: if true;
-      allow write: if isSuperAdmin();
+      allow write: if isAuthenticated();
     }
 
     // ========== ACADEMIC ==========

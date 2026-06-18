@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { ensureFirebaseAuth } from '../lib/ensureAuth';
 
 
 const AdminAuthContext = createContext();
@@ -205,6 +206,7 @@ export const AdminAuthProvider = ({ children }) => {
       if (user.id) {
         const { db } = await import('../lib/firebase');
         const { doc, updateDoc } = await import('firebase/firestore');
+        await ensureFirebaseAuth();
         await updateDoc(doc(db, 'staff', user.id), { pin });
       }
       const updatedUser = { ...user, pin };
@@ -393,6 +395,7 @@ export const AdminAuthProvider = ({ children }) => {
     try {
       const { db } = await import('../lib/firebase');
       const { doc, updateDoc, collection, query, where, getDocs, setDoc } = await import('firebase/firestore');
+      await ensureFirebaseAuth();
       
       // Update local state
       const updatedUser = { ...currentAdmin, ...newData };
@@ -444,6 +447,7 @@ export const AdminAuthProvider = ({ children }) => {
     try {
       const { db } = await import('../lib/firebase');
       const { doc, updateDoc, collection, query, where, getDocs, addDoc, setDoc } = await import('firebase/firestore');
+      await ensureFirebaseAuth();
       
       let staffId = user.id;
       if (!staffId) {
@@ -490,6 +494,7 @@ export const AdminAuthProvider = ({ children }) => {
     try {
       const { db } = await import('../lib/firebase');
       const { doc, updateDoc } = await import('firebase/firestore');
+      await ensureFirebaseAuth();
       const updates = {};
       if (newPassword) { updates.password = newPassword; updates.firstLogin = true; }
       if (clearPin) { updates.pin = null; }

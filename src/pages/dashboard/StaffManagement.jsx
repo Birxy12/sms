@@ -341,7 +341,7 @@ const StaffManagement = () => {
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={24} /></button>
             </div>
             
-            <form onSubmit={handleSave} className="p-8 space-y-6 text-left">
+            <form onSubmit={handleSave} className="p-8 space-y-6 text-left max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-6">
                 <div className="col-span-2">
                   <label className="block text-sm font-bold text-slate-700 mb-2">Full Name</label>

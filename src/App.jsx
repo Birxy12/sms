@@ -15,6 +15,7 @@ import StudentFees from './pages/student/StudentFees';
 import StudentProfile from './pages/student/StudentProfile';
 import StudentIDCard from './pages/student/StudentIDCard';
 import StudentCBT from './pages/student/StudentCBT';
+import StudentSubjectRegistration from './pages/student/StudentSubjectRegistration';
 
 import StaffManagement from './pages/dashboard/StaffManagement';
 import CourseManagement from './pages/dashboard/CourseManagement';
@@ -130,6 +131,11 @@ function App() {
       <Route path="/students/cbt" element={
         <ProtectedStudentRoute>
           <Layout><StudentCBT /></Layout>
+        </ProtectedStudentRoute>
+      } />
+      <Route path="/students/registration" element={
+        <ProtectedStudentRoute>
+          <Layout><StudentSubjectRegistration /></Layout>
         </ProtectedStudentRoute>
       } />
 
