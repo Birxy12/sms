@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import Layout from './components/Layout';
 import LandingPage from './pages/home';
 import Login from './pages/Login';
@@ -73,6 +74,7 @@ const ProtectedAdminRoute = ({ children, requiredRole }) => {
 function App() {
   return (
     <>
+      <Analytics />
       <Routes>
       {/* Public Landing Page */}
       <Route path="/" element={<LandingPage />} />
