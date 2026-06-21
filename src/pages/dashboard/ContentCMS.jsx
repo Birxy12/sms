@@ -57,6 +57,7 @@ const ContentCMS = () => {
   
   // School Dates State
   const [schoolDates, setSchoolDates] = useState({
+    termStarts: '',
     termEnds: '',
     nextTermBegins: '',
     resumptionDate: ''
@@ -590,7 +591,7 @@ const ContentCMS = () => {
                   <button onClick={() => setIsComposing(false)} className="text-slate-400 hover:text-slate-800 font-bold px-4 py-2 bg-slate-100 rounded-lg">Cancel</button>
                 </div>
                 
-                <form onSubmit={publishPost} className="space-y-6">
+                <form onSubmit={publishPost} className="space-y-6 max-h-[70vh] overflow-y-auto">
                   <div>
                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Post Title</label>
                     <input type="text" required value={newPost.title} onChange={e => setNewPost({...newPost, title: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold text-lg" placeholder="Enter an engaging title..." />
