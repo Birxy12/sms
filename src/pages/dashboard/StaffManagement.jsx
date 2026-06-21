@@ -444,7 +444,7 @@ const StaffManagement = () => {
               <button onClick={() => setResetPasswordStaff(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={24} /></button>
             </div>
             
-            <form onSubmit={handleConfirmResetPassword} className="p-8 space-y-6 text-left">
+            <form onSubmit={handleConfirmResetPassword} className="p-8 space-y-6 text-left max-h-[70vh] overflow-y-auto">
               <div>
                 <p className="text-sm font-medium text-slate-600 mb-4">
                   You are resetting the password for <strong className="text-slate-900">{resetPasswordStaff.name}</strong>. The staff member will be required to change this password on their next login.
