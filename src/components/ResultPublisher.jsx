@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { doc, setDoc, serverTimestamp, collection, getDocs, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { FileUp, CheckCircle, AlertCircle, Save, Trash2, Calendar, Users, Loader2 } from 'lucide-react';
-import { CLASS_LIST } from '../utils/subjectConfig';
+import { promoteStudents } from '../utils/promotion';
 
 const ResultPublisher = () => {
   const [examName, setExamName] = useState('');

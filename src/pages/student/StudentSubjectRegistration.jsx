@@ -17,6 +17,10 @@ const StudentSubjectRegistration = () => {
   const [selectedSubjects, setSelectedSubjects] = useState([]);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState({ type: '', text: '' });
+  // Stream selection for generic SS2/SS3 classes
+  const [selectedStream, setSelectedStream] = useState('');
+  // Pagination state for subjects list
+  const [currentPage, setCurrentPage] = useState(0);
 
   useEffect(() => {
     // Check if the portal is enabled globally
@@ -46,15 +50,32 @@ const StudentSubjectRegistration = () => {
       return;
     }
 
-    // Load available subjects based on class stream (ART vs SCIENCE)
-    const subjects = getSubjectsForClass(currentStudent.className);
+    // Determine subject list based on class and optional stream selection
+    let subjects = [];
+    const genericSS = /^(SS2|SS3)$/.test(currentStudent.className);
+    if (genericSS && selectedStream) {
+      // Combine class name with chosen stream (e.g., 'SS2 ART')
+      subjects = getSubjectsForClass(`${currentStudent.className} ${selectedStream}`);
+    } else {
+      subjects = getSubjectsForClass(currentStudent.className);
+    }
     setAvailableSubjects(subjects);
 
     // Load existing selected subjects
     if (currentStudent.registeredSubjects && Array.isArray(currentStudent.registeredSubjects)) {
       setSelectedSubjects(currentStudent.registeredSubjects);
     }
-  }, [currentStudent, navigate]);
+    // If the student is in generic SS2/SS3 and already has a className with stream, preset it
+    if (/^(SS2|SS3) (ART|SCIENCE)$/.test(currentStudent.className)) {
+      const parts = currentStudent.className.split(' ');
+      setSelectedStream(parts[1]);
+    }
+  }, [currentStudent, navigate, selectedStream]);
+
+  useEffect(() => {
+    // Reset pagination to first page whenever available subjects change (e.g., stream selection)
+    setCurrentPage(0);
+  }, [availableSubjects]);
 
   const toggleSubject = (subject) => {
     if (selectedSubjects.includes(subject)) {
@@ -69,6 +90,26 @@ const StudentSubjectRegistration = () => {
     }
   };
 
+  const renderStreamSelector = () => {
+    if (!/^(SS2|SS3)$/.test(currentStudent?.className)) return null;
+    return (
+      <div className="mb-6 p-6 bg-indigo-50 rounded-3xl border border-indigo-100">
+        <label className="block text-sm font-bold text-indigo-900 mb-2">Select Stream</label>
+        <div className="flex gap-4">
+          {['ART', 'SCIENCE'].map((stream) => (
+            <button
+              key={stream}
+              onClick={() => setSelectedStream(stream)}
+              className={`px-6 py-2 rounded-xl font-bold transition-all ${selectedStream === stream ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-indigo-600 border border-indigo-200'}`}
+            >
+              {stream}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const handleSave = async () => {
     if (selectedSubjects.length !== 9) {
       setSaveMessage({ type: 'error', text: `Please select exactly 9 subjects. You currently selected ${selectedSubjects.length}.` });
@@ -76,7 +117,11 @@ const StudentSubjectRegistration = () => {
     }
 
     setSaving(true);
-    const result = await updateProfile({ registeredSubjects: selectedSubjects });
+    let updateData = { registeredSubjects: selectedSubjects };
+      if (/^(SS2|SS3)$/.test(currentStudent.className) && selectedStream) {
+        updateData.className = `${currentStudent.className} ${selectedStream}`;
+      }
+      const result = await updateProfile(updateData);
     setSaving(false);
     
     if (result.success) {
@@ -139,36 +184,63 @@ const StudentSubjectRegistration = () => {
             </div>
 
             <div className="p-6 md:p-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {availableSubjects.map((subject, idx) => {
-                  const isSelected = selectedSubjects.includes(subject);
-                  // Determine if we should disable it (if not selected and we already have 9)
-                  const isDisabled = !isSelected && selectedSubjects.length >= 9;
-                  
-                  return (
-                    <div 
-                      key={idx}
-                      onClick={() => !isDisabled && toggleSubject(subject)}
-                      className={`
-                        relative flex items-center gap-4 p-4 rounded-2xl border-2 transition-all cursor-pointer
-                        ${isSelected 
-                          ? 'border-indigo-600 bg-indigo-50/50 shadow-md shadow-indigo-100/50' 
-                          : isDisabled 
-                            ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
-                            : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-slate-50'
-                        }
-                      `}
-                    >
-                      <div className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-transparent'}`}>
-                        <CheckSquare size={14} className={isSelected ? 'opacity-100' : 'opacity-0'} />
-                      </div>
-                      <span className={`font-bold text-sm ${isSelected ? 'text-indigo-900' : 'text-slate-700'}`}>
-                        {subject}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+            {/* Pagination state */}
+            {(() => {
+              const subjectsPerPage = 10;
+              const startIdx = currentPage * subjectsPerPage;
+              const endIdx = startIdx + subjectsPerPage;
+              const displayedSubjects = availableSubjects.slice(startIdx, endIdx);
+              return (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {displayedSubjects.map((subject, idx) => {
+                      const isSelected = selectedSubjects.includes(subject);
+                      const isDisabled = !isSelected && selectedSubjects.length >= 9;
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => !isDisabled && toggleSubject(subject)}
+                          className={`
+                            relative flex items-center gap-4 p-4 rounded-2xl border-2 transition-all cursor-pointer
+                            ${isSelected 
+                              ? 'border-indigo-600 bg-indigo-50/50 shadow-md shadow-indigo-100/50' 
+                              : isDisabled 
+                                ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
+                                : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-slate-50'
+                            }
+                          `}
+                        >
+                          <div className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-transparent'}`}
+                          >
+                            {isSelected && <CheckSquare size={16} />}
+                          </div>
+                          <span className="text-sm font-medium text-slate-800">{subject}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Pagination controls */}
+                  <div className="flex justify-center mt-4 space-x-2">
+                    {currentPage > 0 && (
+                      <button
+                        onClick={() => setCurrentPage(prev => prev - 1)}
+                        className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200"
+                      >
+                        Previous
+                      </button>
+                    )}
+                    {endIdx < availableSubjects.length && (
+                      <button
+                        onClick={() => setCurrentPage(prev => prev + 1)}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                      >
+                        Next
+                      </button>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
             </div>
 
             <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/30 flex flex-col items-end gap-4">
