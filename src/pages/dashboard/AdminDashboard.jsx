@@ -487,7 +487,7 @@ const AdminDashboard = () => {
                   key: 'allowProfileEdit',
                   label: 'Allow Student Profile Editing',
                   description: 'When ON, students can edit their name, phone number, date of birth, email and profile photo from their profile page.',
-                  color: 'indigo',
+                  color: 'purple',
                 },
               ].map(control => (
                 <div key={control.key} className="flex items-start justify-between py-6 gap-6">

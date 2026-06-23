@@ -278,7 +278,7 @@ const BrandingSettings = () => {
               ) : (
                 <button 
                   onClick={toggleSubjectRegistration}
-                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all focus:outline-none ${subjectRegistrationEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all focus:outline-none ${subjectRegistrationEnabled ? 'bg-purple-600' : 'bg-slate-300'}`}
                 >
                   <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${subjectRegistrationEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
@@ -299,7 +299,7 @@ const BrandingSettings = () => {
               ) : (
                 <button 
                   onClick={toggleAdmission}
-                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all focus:outline-none ${admissionEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all focus:outline-none ${admissionEnabled ? 'bg-purple-600' : 'bg-slate-300'}`}
                 >
                   <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${admissionEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
