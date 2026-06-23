@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, query, getDocs, where, doc, setDoc, getDoc } from 'firebase/firestore';
-import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info, UserCheck, X, Calendar, CheckSquare, Square, ChevronDown, Save } from 'lucide-react';
+import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info, UserCheck, X, Calendar, CheckSquare, Square, ChevronDown, Save, Check } from 'lucide-react';
 
 const ClassManagement = () => {
   const [classStats, setClassStats] = useState([]);
@@ -425,76 +425,85 @@ const ClassManagement = () => {
 
                   {/* Attendance Tracker Tab */}
                   {activeTab === 'attendance' && (
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6 gap-4">
-                      <div>
-                        <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-2">Daily Attendance</h4>
-                        <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-lg">
-                          <Calendar size={16} className="text-slate-500" />
-                          <input 
-                            type="date" 
-                            value={attendanceDate}
-                            onChange={handleDateChange}
-                            className="bg-transparent border-none outline-none text-sm font-bold text-slate-700"
-                          />
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      {/* Banner */}
+                      <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 rounded-3xl p-8 text-white mb-6 shadow-xl shadow-indigo-200 flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div>
+                          <div className="flex items-center gap-2 mb-3 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full w-fit">
+                            <Calendar size={14} className="text-indigo-100" />
+                            <span className="text-xs font-black tracking-widest text-indigo-50 uppercase">Attendance Register</span>
+                          </div>
+                          <h3 className="text-3xl font-black mb-2">Mark Attendance</h3>
+                          <p className="text-indigo-100 font-medium max-w-md">Record daily presence for {selectedClass} students. Select the date and toggle attendance below.</p>
+                        </div>
+                        <div className="flex flex-col gap-3 min-w-[200px]">
+                          <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20">
+                            <label className="text-xs font-black text-indigo-200 uppercase tracking-widest mb-2 block">Date</label>
+                            <input 
+                              type="date" 
+                              value={attendanceDate}
+                              onChange={handleDateChange}
+                              className="w-full bg-transparent border-none outline-none text-lg font-black text-white [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert"
+                            />
+                          </div>
                         </div>
                       </div>
-                      <div className="flex gap-3">
-                        <button 
-                          onClick={toggleAllAttendance}
-                          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-colors"
-                        >
-                          Toggle All
-                        </button>
-                      </div>
-                    </div>
 
-                    {attendanceLoading ? (
-                      <div className="flex justify-center p-6"><div className="animate-spin h-6 w-6 border-4 border-indigo-600 border-t-transparent rounded-full"></div></div>
-                    ) : (
-                      <div className="flex flex-col">
-                        <div className="overflow-x-auto overflow-y-auto max-h-[50vh] border border-slate-200 rounded-xl shadow-inner scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-50 relative">
-                          <table className="w-full text-left min-w-[600px] border-collapse">
-                            <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0 z-10 shadow-sm backdrop-blur-sm bg-slate-50/90">
-                              <tr>
-                                <th className="px-6 py-4 border-b border-slate-200">Reg Number</th>
-                                <th className="px-6 py-4 border-b border-slate-200">Student Name</th>
-                                <th className="px-6 py-4 border-b border-slate-200">Gender</th>
-                                <th className="px-6 py-4 border-b border-slate-200 text-right">Present</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                              {classStudents.map(student => {
-                                const isPresent = presentStudents.includes(student.id);
-                                return (
-                                  <tr key={student.id} className={`hover:bg-slate-50 transition-colors ${isPresent ? 'bg-emerald-50/30' : ''}`}>
-                                    <td className="px-6 py-4 text-xs font-bold text-slate-500 whitespace-nowrap">{student.regNo}</td>
-                                    <td className="px-6 py-4 text-sm font-black text-slate-800 whitespace-nowrap">{student.name}</td>
-                                    <td className="px-6 py-4 text-xs font-bold text-slate-500 whitespace-nowrap">{student.gender}</td>
-                                    <td className="px-6 py-4 text-right">
-                                      <button 
-                                        onClick={() => toggleAttendance(student.id)}
-                                        className={`w-8 h-8 rounded-lg flex items-center justify-center ml-auto transition-colors ${isPresent ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 shadow-sm border border-slate-200'}`}
-                                      >
-                                        {isPresent ? <CheckSquare size={18} /> : <Square size={18} />}
-                                      </button>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                              {classStudents.length === 0 && (
-                                <tr>
-                                  <td colSpan="4" className="px-6 py-8 text-center text-slate-400 font-bold text-sm">
-                                    No students enrolled in this class yet.
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
+                      {/* Controls */}
+                      <div className="bg-white rounded-2xl p-4 mb-6 shadow-sm border border-slate-200 flex flex-wrap gap-4 items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <button 
+                            onClick={toggleAllAttendance}
+                            className="px-6 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-black text-sm transition-colors flex items-center gap-2"
+                          >
+                            <CheckSquare size={16} /> Toggle All Present/Absent
+                          </button>
                         </div>
-                        
+                        <div className="text-sm font-bold text-slate-500">
+                          <span className="text-indigo-600 font-black">{presentStudents.length}</span> / {classStudents.length} Present
+                        </div>
                       </div>
-                    )}
+
+                      {/* Grid */}
+                      {attendanceLoading ? (
+                        <div className="flex justify-center p-12"><div className="animate-spin h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full"></div></div>
+                      ) : classStudents.length === 0 ? (
+                        <div className="text-center p-12 bg-white rounded-3xl border border-slate-200">
+                          <p className="text-slate-400 font-bold">No students enrolled in this class yet.</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[55vh] overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-slate-300">
+                          {classStudents.map(student => {
+                            const isPresent = presentStudents.includes(student.id);
+                            return (
+                              <div 
+                                key={student.id} 
+                                onClick={() => toggleAttendance(student.id)}
+                                className={`cursor-pointer rounded-2xl p-4 border-2 transition-all duration-200 flex items-center gap-4 ${
+                                  isPresent 
+                                    ? 'bg-emerald-50 border-emerald-500 shadow-sm shadow-emerald-100' 
+                                    : 'bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50'
+                                }`}
+                              >
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg overflow-hidden flex-shrink-0 transition-colors ${
+                                  isPresent ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-100 text-slate-500'
+                                }`}>
+                                  {student.photo ? <img src={student.photo} alt={student.name} className="w-full h-full object-cover" /> : student.name[0]}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h5 className={`font-black truncate transition-colors ${isPresent ? 'text-emerald-900' : 'text-slate-800'}`}>{student.name}</h5>
+                                  <p className={`text-xs font-bold truncate transition-colors ${isPresent ? 'text-emerald-600/80' : 'text-slate-400'}`}>{student.regNo} • {student.gender}</p>
+                                </div>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+                                  isPresent ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'
+                                }`}>
+                                  {isPresent ? <Check size={16} strokeWidth={3} /> : <div className="w-2.5 h-2.5 rounded-full bg-slate-300" />}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

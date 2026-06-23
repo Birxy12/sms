@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, limit } from 'firebase/firestore';
-import { Users, UserPlus, Mail, Phone, Briefcase, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Search, ShieldCheck, Wallet, MoreVertical, Key, Lock } from 'lucide-react';
+import { Users, UserPlus, Mail, Phone, Briefcase, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Search, ShieldCheck, Wallet, MoreVertical, Key, Lock, Camera, Upload } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { uploadAvatar } from '../../lib/supabase';
+import ImageCropperModal from '../../components/ImageCropperModal';
 
 const StaffManagement = () => {
   const { currentAdmin, adminResetCredentials } = useAdminAuth();
@@ -13,7 +15,7 @@ const StaffManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentStaff, setCurrentStaff] = useState({ name: '', email: '', phone: '', department: 'Science', role: 'teacher' });
+  const [currentStaff, setCurrentStaff] = useState({ name: '', email: '', phone: '', department: 'Science', role: 'teacher', photo: '' });
   const [status, setStatus] = useState({ type: '', message: '' });
   const [saving, setSaving] = useState(false);
 
@@ -21,6 +23,9 @@ const StaffManagement = () => {
   const [activeDropdownId, setActiveDropdownId] = useState(null);
   const [resetPasswordStaff, setResetPasswordStaff] = useState(null);
   const [newPasswordVal, setNewPasswordVal] = useState('');
+
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState(null);
 
   // Fetch staff list
   const fetchStaffData = async () => {
@@ -147,6 +152,40 @@ const StaffManagement = () => {
     }
   };
 
+  const handlePhotoSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      setStatus({ type: 'error', message: 'Image size must be less than 2MB' });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => setCropImageSrc(reader.result);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleCropComplete = async (croppedBlob) => {
+    setCropImageSrc(null);
+    if (!croppedBlob) return;
+
+    setUploadingPhoto(true);
+    try {
+      const file = new File([croppedBlob], `avatar_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      const staffIdForUpload = currentStaff.staffId || 'new-staff';
+      const url = await uploadAvatar(file, staffIdForUpload);
+      setCurrentStaff(prev => ({ ...prev, photo: url }));
+      setStatus({ type: 'success', message: 'Profile picture uploaded successfully!' });
+    } catch (error) {
+      console.error("Upload error:", error);
+      setStatus({ type: 'error', message: 'Upload failed.' });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const filteredStaff = staff.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     s.staffId.toLowerCase().includes(searchTerm.toLowerCase())
@@ -161,7 +200,7 @@ const StaffManagement = () => {
         </div>
         {isAdmin && (
           <button 
-            onClick={() => { setIsEditing(false); setCurrentStaff({ name: '', email: '', phone: '', department: 'Science', role: 'teacher' }); setShowModal(true); }}
+            onClick={() => { setIsEditing(false); setCurrentStaff({ name: '', email: '', phone: '', department: 'Science', role: 'teacher', photo: '' }); setShowModal(true); }}
             className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
           >
             <UserPlus size={20} />
@@ -229,8 +268,12 @@ const StaffManagement = () => {
                 <tr key={person.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600">
-                        {person.name[0]}
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 overflow-hidden border border-slate-200">
+                        {person.photo ? (
+                          <img src={person.photo} alt={person.name} className="w-full h-full object-cover" />
+                        ) : (
+                          person.name[0]
+                        )}
                       </div>
                       <div>
                         <p className="text-sm font-bold text-slate-900">{person.name}</p>
@@ -335,13 +378,31 @@ const StaffManagement = () => {
       {/* Modal Backdrop */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-8 border-b border-slate-100 flex justify-between items-center">
+          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="p-8 border-b border-slate-100 flex justify-between items-center shrink-0">
               <h3 className="text-2xl font-bold text-slate-900">{isEditing ? 'Edit Staff Profile' : 'Add New Staff Member'}</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={24} /></button>
             </div>
             
-            <form onSubmit={handleSave} className="p-8 space-y-6 text-left max-h-[70vh] overflow-y-auto">
+            <form onSubmit={handleSave} className="p-8 space-y-6 text-left overflow-y-auto flex-1 custom-scrollbar">
+              <div className="flex justify-center mb-6">
+                <div className="relative group">
+                  <div className="w-24 h-24 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden group-hover:border-indigo-400 transition-all">
+                    {uploadingPhoto ? (
+                      <Loader2 className="animate-spin text-indigo-600" />
+                    ) : currentStaff.photo ? (
+                      <img src={currentStaff.photo} alt="Passport" className="w-full h-full object-cover" />
+                    ) : (
+                      <Camera className="text-slate-400" size={32} />
+                    )}
+                  </div>
+                  <label className="absolute -bottom-2 -right-2 bg-indigo-600 text-white p-2 rounded-xl cursor-pointer shadow-lg hover:bg-indigo-700 transition-all">
+                    <Upload size={16} />
+                    <input type="file" accept="image/*" onChange={handlePhotoSelect} className="hidden" />
+                  </label>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-6">
                 <div className="col-span-2">
                   <label className="block text-sm font-bold text-slate-700 mb-2">Full Name</label>
@@ -438,13 +499,13 @@ const StaffManagement = () => {
       {/* Reset Password Modal */}
       {resetPasswordStaff && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-8 border-b border-slate-100 flex justify-between items-center">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="p-8 border-b border-slate-100 flex justify-between items-center shrink-0">
               <h3 className="text-2xl font-bold text-slate-900">Reset Staff Password</h3>
               <button onClick={() => setResetPasswordStaff(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={24} /></button>
             </div>
             
-            <form onSubmit={handleConfirmResetPassword} className="p-8 space-y-6 text-left max-h-[70vh] overflow-y-auto">
+            <form onSubmit={handleConfirmResetPassword} className="p-8 space-y-6 text-left overflow-y-auto flex-1 custom-scrollbar">
               <div>
                 <p className="text-sm font-medium text-slate-600 mb-4">
                   You are resetting the password for <strong className="text-slate-900">{resetPasswordStaff.name}</strong>. The staff member will be required to change this password on their next login.
@@ -505,6 +566,15 @@ const StaffManagement = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {cropImageSrc && (
+        <ImageCropperModal
+          imageSrc={cropImageSrc}
+          onCropComplete={handleCropComplete}
+          onClose={() => setCropImageSrc(null)}
+          aspect={1}
+        />
       )}
     </div>
   );

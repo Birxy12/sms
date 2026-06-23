@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { uploadAvatar } from '../../lib/supabase';
+import ImageCropperModal from '../../components/ImageCropperModal';
 
 const ProfileSettings = () => {
   const { currentAdmin, updateProfile: updateAdminProfile } = useAdminAuth();
@@ -31,6 +32,7 @@ const ProfileSettings = () => {
   // Photo State
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoURL, setPhotoURL] = useState(user?.photo || user?.photoURL || '');
+  const [cropImageSrc, setCropImageSrc] = useState(null);
 
   // Detect if staff is using default password (134)
   const isUsingDefaultPassword = isStaff && !user.password;
@@ -80,7 +82,7 @@ const ProfileSettings = () => {
     setChangingPassword(false);
   };
 
-  const handlePhotoUpload = async (e) => {
+  const handlePhotoSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -89,8 +91,19 @@ const ProfileSettings = () => {
       return;
     }
 
+    const reader = new FileReader();
+    reader.onload = () => setCropImageSrc(reader.result);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleCropComplete = async (croppedBlob) => {
+    setCropImageSrc(null);
+    if (!croppedBlob) return;
+
     setUploadingPhoto(true);
     try {
+      const file = new File([croppedBlob], `avatar_${Date.now()}.jpg`, { type: 'image/jpeg' });
       const url = await uploadAvatar(file, isStudent ? currentStudent.id : currentAdmin.id);
       
       const updateFn = isStudent ? updateStudentProfile : updateAdminProfile;
@@ -164,7 +177,7 @@ const ProfileSettings = () => {
                   {uploadingPhoto ? 'Uploading…' : 'Change Photo'}
                 </span>
               </label>
-              <input type="file" ref={fileInputRef} onChange={handlePhotoUpload} className="hidden" accept="image/*" />
+              <input type="file" ref={fileInputRef} onChange={handlePhotoSelect} className="hidden" accept="image/*" />
             </div>
 
             {/* Avatar circle overlapping banner */}
@@ -325,6 +338,15 @@ const ProfileSettings = () => {
           )}
         </div>
       </div>
+
+      {cropImageSrc && (
+        <ImageCropperModal
+          imageSrc={cropImageSrc}
+          onCropComplete={handleCropComplete}
+          onClose={() => setCropImageSrc(null)}
+          aspect={1}
+        />
+      )}
     </div>
   );
 };

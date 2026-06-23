@@ -6,6 +6,7 @@ import { uploadAvatar } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList } from 'lucide-react';
 import { getSubjectsForClass } from '../../utils/subjectConfig';
+import ImageCropperModal from '../../components/ImageCropperModal';
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
@@ -22,6 +23,7 @@ const StudentManagement = () => {
   const [status, setStatus] = useState({ type: '', message: '' });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState(null);
   const [allowProfileEdit, setAllowProfileEdit] = useState(true);
   // Promote/Demote state
   const [promoteModal, setPromoteModal] = useState(null); // { student }
@@ -131,7 +133,7 @@ const StudentManagement = () => {
     }
   }, [currentStudent.className, showModal, isEditing, students]);
 
-  const handleFileUpload = async (e) => {
+  const handlePhotoSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     
@@ -140,8 +142,19 @@ const StudentManagement = () => {
       return;
     }
 
+    const reader = new FileReader();
+    reader.onload = () => setCropImageSrc(reader.result);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleCropComplete = async (croppedBlob) => {
+    setCropImageSrc(null);
+    if (!croppedBlob) return;
+
     setUploading(true);
     try {
+      const file = new File([croppedBlob], `avatar_${Date.now()}.jpg`, { type: 'image/jpeg' });
       const url = await uploadAvatar(file, currentStudent.regNo || 'new-student');
       setCurrentStudent(prev => ({ ...prev, photo: url }));
       setStatus({ type: 'success', message: 'Passport uploaded to Supabase successfully!' });
@@ -496,13 +509,13 @@ const StudentManagement = () => {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-8 border-b border-slate-100 bg-indigo-600 text-white flex justify-between items-center">
+          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="p-8 border-b border-slate-100 bg-indigo-600 text-white flex justify-between items-center shrink-0">
               <h3 className="text-2xl font-black">{isEditing ? 'Edit Student' : 'Student Enrollment'}</h3>
               <button onClick={() => setShowModal(false)} className="hover:opacity-50 transition-opacity"><X size={24} /></button>
             </div>
             
-            <form onSubmit={handleSave} className="p-8 space-y-6 text-left max-h-[70vh] overflow-y-auto">
+            <form onSubmit={handleSave} className="p-8 space-y-6 text-left overflow-y-auto flex-1 custom-scrollbar">
               <div className="flex justify-center mb-6">
                 <div className="relative group">
                   <div className="w-24 h-24 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden group-hover:border-indigo-400 transition-all">
@@ -516,7 +529,7 @@ const StudentManagement = () => {
                   </div>
                   <label className="absolute -bottom-2 -right-2 bg-indigo-600 text-white p-2 rounded-xl cursor-pointer shadow-lg hover:bg-indigo-700 transition-all">
                     <Upload size={16} />
-                    <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+                    <input type="file" accept="image/*" onChange={handlePhotoSelect} className="hidden" />
                   </label>
                 </div>
               </div>
@@ -593,7 +606,9 @@ const StudentManagement = () => {
                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Date of Birth</label>
                     <input 
                       type="date" 
-                      value={currentStudent.dob || ''}
+                      value={currentStudent.dob && currentStudent.dob.includes('/') 
+                        ? currentStudent.dob.split('/').reverse().join('-') 
+                        : (currentStudent.dob || '')}
                       onChange={(e) => setCurrentStudent({...currentStudent, dob: e.target.value})}
                       className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
                     />
@@ -629,6 +644,15 @@ const StudentManagement = () => {
           <CheckCircle size={20} />
           <span className="font-bold tracking-tight">{status.message}</span>
         </div>
+      )}
+
+      {cropImageSrc && (
+        <ImageCropperModal
+          imageSrc={cropImageSrc}
+          onCropComplete={handleCropComplete}
+          onClose={() => setCropImageSrc(null)}
+          aspect={1}
+        />
       )}
     </div>
   );

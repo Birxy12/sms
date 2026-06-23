@@ -6,6 +6,7 @@ import {
   Plus, Search, Edit, Trash2, Camera, Loader2, X, Upload,
   GraduationCap, Calendar, Heart, MapPin, Mail, Sparkles
 } from 'lucide-react';
+import ImageCropperModal from '../../components/ImageCropperModal';
 
 const EMPTY_FORM = {
   name: '',
@@ -30,6 +31,7 @@ const FameManagement = () => {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [status, setStatus] = useState({ type: '', message: '' });
+  const [cropImageSrc, setCropImageSrc] = useState(null);
 
   useEffect(() => { fetchStudents(); }, []);
 
@@ -64,12 +66,29 @@ const FameManagement = () => {
     setShowModal(true);
   };
 
-  const handleFileUpload = async (e) => {
+  const handlePhotoSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      showStatus('error', 'Image size must be less than 2MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => setCropImageSrc(reader.result);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleCropComplete = async (croppedBlob) => {
+    setCropImageSrc(null);
+    if (!croppedBlob) return;
+
     setUploading(true);
     showStatus('info', 'Uploading portrait to Supabase Storage…');
     try {
+      const file = new File([croppedBlob], `fame_avatar_${Date.now()}.jpg`, { type: 'image/jpeg' });
       const url = await uploadFileToSupabase(file, 'fame', 'portraits/');
       setFormData(prev => ({ ...prev, photo: url }));
       showStatus('success', 'Portrait uploaded successfully!');
@@ -346,7 +365,7 @@ const FameManagement = () => {
                 }}>
                   <Upload size={14} />
                   {formData.photo ? 'Change Portrait' : 'Upload Portrait'}
-                  <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} disabled={uploading} />
+                  <input type="file" accept="image/*" onChange={handlePhotoSelect} style={{ display: 'none' }} disabled={uploading} />
                 </label>
                 <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>
                   Saved to Supabase Storage · Recommended: Square image &lt; 2MB
@@ -400,6 +419,15 @@ const FameManagement = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {cropImageSrc && (
+        <ImageCropperModal
+          imageSrc={cropImageSrc}
+          onCropComplete={handleCropComplete}
+          onClose={() => setCropImageSrc(null)}
+          aspect={1}
+        />
       )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
