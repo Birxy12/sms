@@ -482,7 +482,7 @@ const ClassManagement = () => {
                           <p className="text-slate-400 font-bold">No students enrolled in this class yet.</p>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[55vh] overflow-y-auto p-2 custom-scrollbar">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-2">
                           {classStudents.map(student => {
                             const isPresent = presentStudents.includes(student.id);
                             return (

@@ -45,11 +45,11 @@ const allNavItems = [
   { name: 'Manage Students',    path: '/admin/students', icon: GraduationCap,   roles: ['admin', 'principal'] },
   { name: 'Manage Classes',     path: '/admin/classes',  icon: Layers,          roles: ['admin', 'principal'] },
   { name: 'Manage Staff',       path: '/staff',          icon: Users,           roles: ['admin'] },
-  { name: 'Subject Registration', path: '/students/registration', icon: BookOpen, roles: ['admin'] },
+  { name: 'Subject Registration', path: '/courses', icon: BookOpen, roles: ['admin'] },
   { name: 'School Mailing',     path: '/messages',       icon: Mail,            roles: ['admin', 'teacher', 'principal', 'bursar'] },
     { name: 'Content Management', path: '/admin/posts',    icon: FileText,        roles: ['admin', 'principal'] },
     { name: 'Manage Fame',        path: '/admin/fame',     icon: Star,            roles: ['admin', 'principal'] },
-    { name: 'Manage Courses',     path: '/courses',        icon: BookOpen,        roles: ['admin', 'principal'] },
+
     { name: 'CBT Exams',          path: '/cbt',            icon: MonitorCheck,    roles: ['admin', 'principal', 'teacher'] },
     { name: 'School Branding',    path: '/settings',       icon: Settings,        roles: ['admin'] },
     { name: 'My Profile',         path: '/profile',        icon: UserCircle,      roles: ['admin', 'teacher', 'principal', 'bursar'] },
