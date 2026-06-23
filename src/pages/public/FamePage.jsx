@@ -206,7 +206,7 @@ const FamePage = () => {
                       <img
                         src={s.photo}
                         alt={s.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s' }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', transition: 'transform 0.4s' }}
                         onError={e => { e.target.style.display = 'none'; }}
                       />
                       {/* Class badge */}
@@ -274,7 +274,7 @@ const FamePage = () => {
               <img
                 src={selected.photo}
                 alt={selected.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
               />
               <div style={{
                 position: 'absolute', inset: 0,

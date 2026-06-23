@@ -16,9 +16,6 @@ const StudentFees = () => {
   useEffect(() => {
     const fetchFeeInfo = async () => {
       try {
-        // 1. Get Global Fee Settings
-        const fees = feeSnap.exists() ? feeSnap.data() : {};
-        
         const studentClass = currentStudent?.className || currentStudent?.classId || '';
         let expected = currentStudent?.expectedFee;
         if (expected === undefined || expected === null) {

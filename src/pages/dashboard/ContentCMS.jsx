@@ -216,8 +216,8 @@ const ContentCMS = () => {
       <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">{label}</label>
       <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border-2 border-slate-100 hover:border-indigo-200 transition-all">
         {currentUrl ? (
-          <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 bg-white shrink-0 shadow-sm">
-            <img src={currentUrl} alt="Preview" className="w-full h-full object-cover" />
+          <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 bg-white shrink-0 shadow-sm flex items-center justify-center">
+            <img src={currentUrl} alt="Preview" className="w-full h-full object-contain" />
           </div>
         ) : (
           <div className="w-16 h-16 rounded-xl bg-slate-200 flex items-center justify-center shrink-0">
@@ -233,7 +233,7 @@ const ContentCMS = () => {
               onChange={async (e) => {
                 const file = e.target.files[0];
                 if (file) {
-                  const url = await handleFileUpload(file, folder);
+                  const url = await handleFileUpload(file, 'images', `${folder}/`);
                   if (url) onUpload(url);
                 }
               }} 
