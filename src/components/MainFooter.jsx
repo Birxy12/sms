@@ -26,6 +26,7 @@ const MainFooter = () => {
     { to: '/about', label: 'About Us' },
     { to: '/blog', label: 'School Blog' },
     { to: '/leaderboard', label: 'Leaderboard' },
+    { to: '/fame', label: 'Wall of Fame' },
     { to: '/contact', label: 'Support Hub' },
     { to: '/privacy', label: 'Privacy Policy' },
     { to: '/terms', label: 'Terms of Service' },

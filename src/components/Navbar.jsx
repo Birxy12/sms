@@ -59,7 +59,15 @@ const Navbar = () => {
     { name: 'About', path: '/about', icon: BookOpen },
     { name: 'Admission', path: '/admission', icon: ClipboardSignature },
     { name: 'Blog', path: '/blog', icon: Newspaper },
-    { name: 'Leaderboard', path: '/leaderboard', icon: Award },
+    { 
+      name: 'Leaderboard', 
+      path: '/leaderboard', 
+      icon: Award,
+      dropdown: [
+        { name: 'Leaderboard', path: '/leaderboard' },
+        { name: 'Fame', path: '/fame' }
+      ]
+    },
     { name: 'Contact us', path: '/contact', icon: Phone },
   ];
 
@@ -115,6 +123,35 @@ const Navbar = () => {
               {navLinks.map((link) => {
                 const active = isActive(link.path);
                 const Icon = link.icon;
+                if (link.dropdown) {
+                  return (
+                    <div key={link.name} className="nav-dropdown-wrapper">
+                      <Link
+                        to={link.path}
+                        className={`nav-item ${active ? 'nav-item--active' : ''}`}
+                        style={{ color: active ? accentColor : textColor }}
+                      >
+                        <Icon size={15} strokeWidth={2.5} className="desktop-icon-hide" />
+                        <span>{link.name}</span>
+                        {active && <span className="nav-dot" />}
+                      </Link>
+                      <div className="nav-dropdown-menu">
+                        {link.dropdown.map((sub) => {
+                          const subActive = isActive(sub.path);
+                          return (
+                            <Link
+                              key={sub.name}
+                              to={sub.path}
+                              className={`nav-dropdown-item ${subActive ? 'nav-dropdown-item--active' : ''}`}
+                            >
+                              {sub.name}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                }
                 return (
                   <Link
                     key={link.name}
@@ -238,6 +275,34 @@ const Navbar = () => {
               {navLinks.map((link) => {
                 const active = isActive(link.path);
                 const Icon = link.icon;
+                if (link.dropdown) {
+                  return (
+                    <React.Fragment key={link.name}>
+                      <Link
+                        to={link.path}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={`mobile-link ${active ? 'mobile-link--active' : ''}`}
+                      >
+                        <Icon size={18} />
+                        {link.name}
+                      </Link>
+                      {link.dropdown.map((sub) => {
+                        const subActive = isActive(sub.path);
+                        return (
+                          <Link
+                            key={sub.name}
+                            to={sub.path}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className={`mobile-link mobile-sub-link ${subActive ? 'mobile-link--active' : ''}`}
+                            style={{ paddingLeft: '2.5rem', fontSize: '0.85rem', opacity: 0.9 }}
+                          >
+                            — {sub.name}
+                          </Link>
+                        );
+                      })}
+                    </React.Fragment>
+                  );
+                }
                 return (
                   <Link
                     key={link.name}

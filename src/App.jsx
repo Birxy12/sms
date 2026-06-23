@@ -29,6 +29,8 @@ import ContactPage from './pages/public/ContactPage';
 import BlogPage from './pages/public/BlogPage';
 import ContentCMS from './pages/dashboard/ContentCMS';
 import LeaderboardPage from './pages/public/LeaderboardPage';
+import FamePage from './pages/public/FamePage';
+import FameFormPage from './pages/public/FameFormPage';
 import MessageHub from './pages/dashboard/MessageHub';
 import PrincipalDashboard from './pages/dashboard/PrincipalDashboard';
 import BursarDashboard from './pages/dashboard/BursarDashboard';
@@ -83,6 +85,8 @@ function App() {
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/blog" element={<BlogPage />} />
       <Route path="/leaderboard" element={<LeaderboardPage />} />
+      <Route path="/fame" element={<FamePage />} />
+      <Route path="/famefrm" element={<FameFormPage />} />
       <Route path="/check-result" element={<CheckResult />} />
       <Route path="/admission" element={<AdmissionPortal />} />
       
