@@ -45,8 +45,9 @@ const ClassManagement = () => {
         let femaleCount = 0;
         studentsSnap.docs.forEach(doc => {
           const data = doc.data();
-          if (data.gender === 'Male' || data.GENDER === 'Male') maleCount++;
-          else if (data.gender === 'Female' || data.GENDER === 'Female') femaleCount++;
+          const g = (data.gender || data.GENDER || '').toLowerCase();
+          if (g === 'm' || g === 'male') maleCount++;
+          else if (g === 'f' || g === 'female' || g === 'girl') femaleCount++;
         });
 
         // Count subjects for this class

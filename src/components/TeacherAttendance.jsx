@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { Calendar, CheckSquare, Square, Loader2, Save, Users, AlertCircle } from 'lucide-react';
+import { Calendar, CheckSquare, Square, Loader2, Save, Users, AlertCircle, Check } from 'lucide-react';
 
 const TeacherAttendance = () => {
   const { currentAdmin } = useAdminAuth();
@@ -249,70 +249,42 @@ const TeacherAttendance = () => {
             No students found in {selectedClass}.
           </div>
         ) : (
-          <div className="overflow-x-auto max-h-[60vh] scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-50">
-            <table className="w-full text-left min-w-[600px] border-collapse">
-              <thead className="bg-white text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0 z-10 shadow-sm">
-                <tr>
-                  <th className="px-6 py-4 border-b border-slate-200 bg-white">Student Info</th>
-                  <th className="px-6 py-4 border-b border-slate-200 bg-white">Gender</th>
-                  <th className="px-6 py-4 border-b border-slate-200 bg-white">Status</th>
-                  <th className="px-6 py-4 border-b border-slate-200 bg-white text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {classStudents.map(student => {
-                  const isPresent = presentStudents.includes(student.id);
-                  return (
-                    <tr 
-                      key={student.id} 
-                      onClick={() => toggleAttendance(student.id)}
-                      className={`group cursor-pointer transition-colors ${isPresent ? 'bg-emerald-50/20 hover:bg-emerald-50/40' : 'hover:bg-slate-50'}`}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black overflow-hidden transition-colors ${isPresent ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                            {student.photo ? (
-                              <img src={student.photo} alt={student.name} className="w-full h-full object-cover" />
-                            ) : (
-                              student.name[0]
-                            )}
-                          </div>
-                          <div>
-                            <p className={`font-black text-sm transition-colors ${isPresent ? 'text-slate-900' : 'text-slate-700'}`}>{student.name}</p>
-                            <p className="text-xs font-mono font-bold text-slate-400">{student.regNo}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${student.gender === 'Male' ? 'text-blue-500' : 'text-pink-500'}`}>{student.gender}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {isPresent ? (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700">
-                            Present
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 group-hover:bg-slate-200 transition-colors">
-                            Absent
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button 
-                          className={`w-8 h-8 rounded-lg inline-flex items-center justify-center transition-all ${
-                            isPresent 
-                              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-200 scale-105' 
-                              : 'bg-white border-2 border-slate-200 text-transparent group-hover:border-indigo-400'
-                          }`}
-                        >
-                          <CheckSquare size={16} className={isPresent ? 'opacity-100' : 'opacity-0'} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="attendance-roster-scroll">
+            <div className="attendance-roster-grid">
+              {classStudents.map(student => {
+                const isPresent = presentStudents.includes(student.id);
+                return (
+                  <div 
+                    key={student.id} 
+                    onClick={() => toggleAttendance(student.id)}
+                    className={`cursor-pointer rounded-2xl p-4 border-2 transition-all duration-200 flex items-center gap-3 select-none ${
+                      isPresent 
+                        ? 'bg-emerald-50 border-emerald-400 shadow-sm shadow-emerald-100' 
+                        : 'bg-white border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/40'
+                    }`}
+                  >
+                    <div className={`w-11 h-11 rounded-full flex items-center justify-center font-black text-base overflow-hidden flex-shrink-0 transition-colors ${
+                      isPresent ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {student.photo ? (
+                        <img src={student.photo} alt={student.name} className="w-full h-full object-cover" />
+                      ) : (
+                        student.name?.[0]
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h5 className={`font-black text-sm truncate transition-colors ${isPresent ? 'text-emerald-900' : 'text-slate-800'}`}>{student.name}</h5>
+                      <p className={`text-xs font-bold truncate transition-colors ${isPresent ? 'text-emerald-600/80' : 'text-slate-400'}`}>{student.regNo} • {student.gender}</p>
+                    </div>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                      isPresent ? 'bg-emerald-500 text-white scale-110 shadow-md shadow-emerald-300' : 'bg-slate-100 text-slate-300'
+                    }`}>
+                      {isPresent ? <Check size={15} strokeWidth={3} /> : <div className="w-2.5 h-2.5 rounded-full bg-slate-300" />}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

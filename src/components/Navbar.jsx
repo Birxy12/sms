@@ -4,6 +4,8 @@ import { Menu, LogIn, LogOut, X, Home, Award, BookOpen, Phone, Newspaper, BarCha
 import { useTheme } from '../context/ThemeContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useStudentAuth } from '../context/StudentAuthContext';
+import { db } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import brandlogo from '../assets/bdslogo.jpg';
 import './navbar.css';
 
@@ -16,11 +18,26 @@ const Navbar = () => {
   const { currentStudent, logout: studentLogout } = useStudentAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [admissionEnabled, setAdmissionEnabled] = useState(true);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'academic_permissions'));
+        if (snap.exists()) {
+          setAdmissionEnabled(snap.data().admissionEnabled ?? true);
+        }
+      } catch (err) {
+        console.error('Error fetching academic config:', err);
+      }
+    };
+    fetchConfig();
   }, []);
 
   useEffect(() => {
@@ -57,7 +74,7 @@ const Navbar = () => {
     { name: 'Home', path: '/', icon: Home },
     { name: 'Check Result', path: '/check-result', icon: BarChart3 },
     { name: 'About', path: '/about', icon: BookOpen },
-    { name: 'Admission', path: '/admission', icon: ClipboardSignature },
+    ...(admissionEnabled ? [{ name: 'Admission', path: '/admission', icon: ClipboardSignature }] : []),
     { name: 'Blog', path: '/blog', icon: Newspaper },
     { 
       name: 'Leaderboard', 

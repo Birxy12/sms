@@ -199,12 +199,12 @@ const BlogPage = () => {
               )}
 
               {/* Modal Body — scrollable */}
-              <div className="p-8 overflow-y-auto flex-1">
+              <div className="p-8 overflow-y-auto flex-1 custom-scrollbar">
                 <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight leading-tight mb-6">
                   {selectedPost.title}
                 </h2>
                 <div
-                  className="prose prose-slate max-w-none text-slate-600 leading-relaxed text-base"
+                  className="blog-rich-content"
                   dangerouslySetInnerHTML={{
                     __html: selectedPost.content || '<p>No content available for this post.</p>'
                   }}

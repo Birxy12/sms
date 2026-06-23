@@ -36,6 +36,7 @@ const BrandingSettings = () => {
 
   // Academic Configuration State
   const [subjectRegistrationEnabled, setSubjectRegistrationEnabled] = useState(false);
+  const [admissionEnabled, setAdmissionEnabled] = useState(false);
   const [configLoading, setConfigLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState({ type: '', message: '' });
 
@@ -62,6 +63,7 @@ const BrandingSettings = () => {
         const snap = await getDoc(doc(db, 'settings', 'academic_permissions'));
         if (snap.exists()) {
           setSubjectRegistrationEnabled(snap.data().subjectRegistrationEnabled ?? false);
+          setAdmissionEnabled(snap.data().admissionEnabled ?? false);
         }
       } catch (err) {
         console.error('Error fetching academic config:', err);
@@ -85,6 +87,23 @@ const BrandingSettings = () => {
     } catch (err) {
       console.error('Error toggling subject registration:', err);
       setSubjectRegistrationEnabled(!newValue);
+      setStatusMsg({ type: 'error', message: 'Failed to update setting.' });
+    }
+  };
+
+  const toggleAdmission = async () => {
+    const newValue = !admissionEnabled;
+    setAdmissionEnabled(newValue);
+    try {
+      await setDoc(doc(db, 'settings', 'academic_permissions'), {
+        admissionEnabled: newValue,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      setStatusMsg({ type: 'success', message: `Admission Portal (Advance Pro) ${newValue ? 'Enabled' : 'Disabled'}.` });
+      setTimeout(() => setStatusMsg({ type: '', message: '' }), 3000);
+    } catch (err) {
+      console.error('Error toggling admission:', err);
+      setAdmissionEnabled(!newValue);
       setStatusMsg({ type: 'error', message: 'Failed to update setting.' });
     }
   };
@@ -262,6 +281,27 @@ const BrandingSettings = () => {
                   className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all focus:outline-none ${subjectRegistrationEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
                 >
                   <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${subjectRegistrationEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              )}
+            </div>
+
+            <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
+              <div>
+                <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  Admission Portal 
+                  <span style={{ fontSize: '10px', backgroundColor: '#8b5cf6', color: 'white', padding: '2px 8px', borderRadius: '12px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Advance Pro</span>
+                </label>
+                <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>Enable or disable the public Admission page.</p>
+              </div>
+              
+              {configLoading ? (
+                <Loader2 size={24} className="animate-spin text-slate-400" />
+              ) : (
+                <button 
+                  onClick={toggleAdmission}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all focus:outline-none ${admissionEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                >
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${admissionEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
               )}
             </div>
