@@ -138,7 +138,8 @@ const ContentCMS = () => {
     try {
       const docRef = doc(db, 'settings', 'public_content');
       if (type === 'about') {
-        await setDoc(docRef, { aboutHtml }, { merge: true });
+        // Save everything in the About tab: principal info + HTML content
+        await setDoc(docRef, { aboutHtml, principalData }, { merge: true });
       } else if (type === 'contact') {
         await setDoc(docRef, { contactDetails: contactData }, { merge: true });
        } else if (type === 'landing') {
@@ -451,8 +452,7 @@ const ContentCMS = () => {
                  <div key={idx} className="p-6 bg-slate-50 rounded-2xl border-2 border-slate-100 space-y-4 relative group">
                    <button 
                      onClick={() => {
-                       const newTeam = managementTeam.filter((_, i) => i !== idx);
-                       setManagementTeam(newTeam);
+                       setManagementTeam(prev => prev.filter((_, i) => i !== idx));
                      }}
                      className="absolute top-4 right-4 p-2 text-rose-500 hover:bg-rose-100 rounded-lg"
                    >
@@ -466,9 +466,8 @@ const ContentCMS = () => {
                          type="text" 
                          value={member.name} 
                          onChange={e => {
-                           const newTeam = [...managementTeam];
-                           newTeam[idx].name = e.target.value;
-                           setManagementTeam(newTeam);
+                           const val = e.target.value;
+                           setManagementTeam(prev => prev.map((m, i) => i === idx ? { ...m, name: val } : m));
                          }}
                          className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none font-bold"
                        />
@@ -479,9 +478,8 @@ const ContentCMS = () => {
                          type="text" 
                          value={member.role} 
                          onChange={e => {
-                           const newTeam = [...managementTeam];
-                           newTeam[idx].role = e.target.value;
-                           setManagementTeam(newTeam);
+                           const val = e.target.value;
+                           setManagementTeam(prev => prev.map((m, i) => i === idx ? { ...m, role: val } : m));
                          }}
                          className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none font-bold"
                        />
@@ -493,9 +491,8 @@ const ContentCMS = () => {
                        rows="2" 
                        value={member.bio} 
                        onChange={e => {
-                         const newTeam = [...managementTeam];
-                         newTeam[idx].bio = e.target.value;
-                         setManagementTeam(newTeam);
+                         const val = e.target.value;
+                         setManagementTeam(prev => prev.map((m, i) => i === idx ? { ...m, bio: val } : m));
                        }}
                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none font-medium"
                      />

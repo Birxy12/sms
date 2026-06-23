@@ -372,7 +372,7 @@ const ClassManagement = () => {
               ))}
             </div>
             
-            <div className="p-6 overflow-y-auto flex-1 bg-slate-50 text-left">
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-50 text-left custom-scrollbar">
               {attendanceLoading && classStudents.length === 0 ? (
                  <div className="flex justify-center p-10"><div className="animate-spin h-8 w-8 border-4 border-indigo-600 border-t-transparent rounded-full"></div></div>
               ) : (
@@ -451,12 +451,22 @@ const ClassManagement = () => {
 
                       {/* Controls */}
                       <div className="bg-white rounded-2xl p-4 mb-6 shadow-sm border border-slate-200 flex flex-wrap gap-4 items-center justify-between">
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                           <button 
                             onClick={toggleAllAttendance}
                             className="px-6 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-black text-sm transition-colors flex items-center gap-2"
                           >
                             <CheckSquare size={16} /> Toggle All Present/Absent
+                          </button>
+                          
+                          {/* Submit button at the top for quick access */}
+                          <button 
+                            onClick={saveAttendance}
+                            disabled={attendanceSaving}
+                            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm shadow-md hover:shadow-indigo-500/20 transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95"
+                          >
+                            <Save size={16} />
+                            {attendanceSaving ? 'Saving...' : 'Submit Attendance'}
                           </button>
                         </div>
                         <div className="text-sm font-bold text-slate-500">
@@ -472,7 +482,7 @@ const ClassManagement = () => {
                           <p className="text-slate-400 font-bold">No students enrolled in this class yet.</p>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[55vh] overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-slate-300">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[55vh] overflow-y-auto p-2 custom-scrollbar">
                           {classStudents.map(student => {
                             const isPresent = presentStudents.includes(student.id);
                             return (

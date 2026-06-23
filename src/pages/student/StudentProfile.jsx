@@ -9,6 +9,7 @@ import {
   Loader2, Phone, Briefcase, Award, Shield, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ImageCropperModal from '../../components/ImageCropperModal';
 
 const StudentProfile = () => {
   const { currentStudent, updateProfile } = useStudentAuth();
@@ -16,17 +17,32 @@ const StudentProfile = () => {
   
   // -- State Management --
   const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const canEdit = true; // Always allow student profile editing
+  const [status, setStatus] = useState({ type: '', message: '' });
+  
+  // -- Date Formatting --
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    if (dateString.includes('/')) {
+      const parts = dateString.split('/');
+      if (parts.length === 3) {
+        if (parts[0].length === 4) return dateString.replace(/\//g, '-');
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+    return dateString;
+  };
+
   const [formData, setFormData] = useState({
     name: currentStudent?.name || '',
     phone: currentStudent?.phone || '',
-    dob: currentStudent?.dob || '',
+    dob: formatDateForInput(currentStudent?.dob || ''),
     email: currentStudent?.email || '',
     gender: currentStudent?.gender || '',
     house: currentStudent?.house || ''
   });
-  const [saving, setSaving] = useState(false);
-  const canEdit = true; // Always allow student profile editing
-  const [status, setStatus] = useState({ type: '', message: '' });
+
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -37,6 +53,8 @@ const StudentProfile = () => {
     profileCompletion: 0,
     academicStatus: 'Active'
   });
+  const [showCropper, setShowCropper] = useState(false);
+  const [cropperFile, setCropperFile] = useState(null);
 
   const fileInputRef = useRef(null);
   const statusTimerRef = useRef(null);
@@ -44,7 +62,7 @@ const StudentProfile = () => {
   // -- Helpers --
   const hasChanges = formData.name !== (currentStudent?.name || '') ||
                      formData.phone !== (currentStudent?.phone || '') ||
-                     formData.dob !== (currentStudent?.dob || '') ||
+                     formData.dob !== formatDateForInput(currentStudent?.dob || '') ||
                      formData.email !== (currentStudent?.email || '') ||
                      formData.gender !== (currentStudent?.gender || '') ||
                      formData.house !== (currentStudent?.house || '') ||
@@ -77,7 +95,7 @@ const StudentProfile = () => {
       setFormData({
         name: currentStudent.name || '',
         phone: currentStudent.phone || '',
-        dob: currentStudent.dob || '',
+        dob: formatDateForInput(currentStudent.dob || ''),
         email: currentStudent.email || '',
         gender: currentStudent.gender || '',
         house: currentStudent.house || ''
@@ -98,20 +116,26 @@ const StudentProfile = () => {
     if (!isFormValid) return;
     
     setSaving(true);
-    let photoUrl = currentStudent?.photo;
+    let photoUrl = currentStudent?.photo || null;
 
     if (avatarFile) {
       setUploadingAvatar(true);
       try {
         const uploadResult = await uploadAvatar(avatarFile, currentStudent?.id);
         if (uploadResult) photoUrl = uploadResult;
-      } catch {
-        setStatus({ type: 'error', message: 'Photo upload failed.' });
+      } catch (error) {
+        setStatus({ type: 'error', message: 'Photo upload failed. Check Supabase Storage RLS policies.' });
+        setSaving(false);
+        setUploadingAvatar(false);
+        return; // Halt save if avatar fails to upload
       }
       setUploadingAvatar(false);
     }
 
-    const result = await updateProfile({ ...formData, photo: photoUrl });
+    const payload = { ...formData };
+    if (photoUrl) payload.photo = photoUrl;
+
+    const result = await updateProfile(payload);
     if (result.success) {
       setStatus({ type: 'success', message: 'Profile synchronized successfully' });
       setIsEditing(false);
@@ -128,7 +152,7 @@ const StudentProfile = () => {
     setFormData({
       name: currentStudent?.name || '',
       phone: currentStudent?.phone || '',
-      dob: currentStudent?.dob || '',
+      dob: formatDateForInput(currentStudent?.dob || ''),
       email: currentStudent?.email || '',
       gender: currentStudent?.gender || ''
     });
@@ -154,8 +178,20 @@ const StudentProfile = () => {
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) return setStatus({ type: 'error', message: 'Max 2MB allowed' });
+    if (file.size > 2 * 1024 * 1024) {
+      setStatus({ type: 'error', message: 'Max 2MB allowed' });
+      return;
+    }
     
+    setCropperFile(file);
+    setShowCropper(true);
+    // Reset input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCroppedImage = (file) => {
     setAvatarFile(file);
     const reader = new FileReader();
     reader.onloadend = () => setAvatarPreview(reader.result);
@@ -495,6 +531,18 @@ const StudentProfile = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Image Cropper */}
+      {showCropper && (
+        <ImageCropperModal
+          file={cropperFile}
+          onClose={() => {
+            setShowCropper(false);
+            setCropperFile(null);
+          }}
+          onComplete={handleCroppedImage}
+        />
+      )}
 
     </div>
   );
