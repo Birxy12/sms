@@ -449,90 +449,87 @@ const ClassManagement = () => {
                         </div>
                       </div>
 
-                      {/* Controls */}
-                      <div className="bg-white rounded-2xl p-4 mb-6 shadow-sm border border-slate-200 flex flex-wrap gap-4 items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <button 
-                            onClick={toggleAllAttendance}
-                            className="px-6 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-black text-sm transition-colors flex items-center gap-2"
-                          >
-                            <CheckSquare size={16} /> Toggle All Present/Absent
-                          </button>
-                          
-                          {/* Submit button at the top for quick access */}
-                          <button 
-                            onClick={saveAttendance}
-                            disabled={attendanceSaving}
-                            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm shadow-md hover:shadow-indigo-500/20 transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95"
-                          >
-                            <Save size={16} />
-                            {attendanceSaving ? 'Saving...' : 'Submit Attendance'}
-                          </button>
+                      {/* ── Roster Card: standalone card with both scrollbars ── */}
+                      <div className="bg-white rounded-3xl border border-slate-200 shadow-lg shadow-indigo-50/60 overflow-hidden">
+                        {/* Card Header / Controls (pinned, never scrolls) */}
+                        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/80 flex flex-wrap gap-3 items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              onClick={toggleAllAttendance}
+                              className="px-5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-black text-sm transition-colors flex items-center gap-2"
+                            >
+                              <CheckSquare size={15} /> Toggle All
+                            </button>
+                            <button 
+                              onClick={saveAttendance}
+                              disabled={attendanceSaving}
+                              className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl font-black text-sm shadow-md transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95"
+                            >
+                              <Save size={15} />
+                              {attendanceSaving ? 'Saving…' : 'Submit Attendance'}
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                            <span className="text-2xl font-black text-indigo-600 leading-none">{presentStudents.length}</span>
+                            <span className="text-slate-300 font-black leading-none">/</span>
+                            <span className="text-2xl font-black text-slate-600 leading-none">{classStudents.length}</span>
+                            <span className="text-xs font-bold text-slate-400 ml-1">Present</span>
+                          </div>
                         </div>
-                        <div className="text-sm font-bold text-slate-500">
-                          <span className="text-indigo-600 font-black">{presentStudents.length}</span> / {classStudents.length} Present
-                        </div>
-                      </div>
 
-                      {/* Grid */}
-                      {attendanceLoading ? (
-                        <div className="flex justify-center p-12"><div className="animate-spin h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full"></div></div>
-                      ) : classStudents.length === 0 ? (
-                        <div className="text-center p-12 bg-white rounded-3xl border border-slate-200">
-                          <p className="text-slate-400 font-bold">No students enrolled in this class yet.</p>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-2">
-                          {classStudents.map(student => {
-                            const isPresent = presentStudents.includes(student.id);
-                            return (
-                              <div 
-                                key={student.id} 
-                                onClick={() => toggleAttendance(student.id)}
-                                className={`cursor-pointer rounded-2xl p-4 border-2 transition-all duration-200 flex items-center gap-4 ${
-                                  isPresent 
-                                    ? 'bg-emerald-50 border-emerald-500 shadow-sm shadow-emerald-100' 
-                                    : 'bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50'
-                                }`}
-                              >
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg overflow-hidden flex-shrink-0 transition-colors ${
-                                  isPresent ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-100 text-slate-500'
-                                }`}>
-                                  {student.photo ? <img src={student.photo} alt={student.name} className="w-full h-full object-cover" /> : student.name[0]}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <h5 className={`font-black truncate transition-colors ${isPresent ? 'text-emerald-900' : 'text-slate-800'}`}>{student.name}</h5>
-                                  <p className={`text-xs font-bold truncate transition-colors ${isPresent ? 'text-emerald-600/80' : 'text-slate-400'}`}>{student.regNo} • {student.gender}</p>
-                                </div>
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
-                                  isPresent ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'
-                                }`}>
-                                  {isPresent ? <Check size={16} strokeWidth={3} /> : <div className="w-2.5 h-2.5 rounded-full bg-slate-300" />}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                        {/* Scrollable roster area — both axes */}
+                        {attendanceLoading ? (
+                          <div className="flex justify-center items-center p-12">
+                            <div className="animate-spin h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
+                          </div>
+                        ) : classStudents.length === 0 ? (
+                          <div className="text-center p-12">
+                            <p className="text-slate-400 font-bold">No students enrolled in this class yet.</p>
+                          </div>
+                        ) : (
+                          <div className="attendance-roster-scroll">
+                            <div className="attendance-roster-grid">
+                              {classStudents.map(student => {
+                                const isPresent = presentStudents.includes(student.id);
+                                return (
+                                  <div 
+                                    key={student.id} 
+                                    onClick={() => toggleAttendance(student.id)}
+                                    className={`cursor-pointer rounded-2xl p-4 border-2 transition-all duration-200 flex items-center gap-3 select-none ${
+                                      isPresent 
+                                        ? 'bg-emerald-50 border-emerald-400 shadow-sm shadow-emerald-100' 
+                                        : 'bg-white border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/40'
+                                    }`}
+                                  >
+                                    <div className={`w-11 h-11 rounded-full flex items-center justify-center font-black text-base overflow-hidden flex-shrink-0 transition-colors ${
+                                      isPresent ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-100 text-slate-500'
+                                    }`}>
+                                      {student.photo ? <img src={student.photo} alt={student.name} className="w-full h-full object-cover" /> : student.name?.[0]}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <h5 className={`font-black text-sm truncate transition-colors ${isPresent ? 'text-emerald-900' : 'text-slate-800'}`}>{student.name}</h5>
+                                      <p className={`text-xs font-bold truncate transition-colors ${isPresent ? 'text-emerald-600/80' : 'text-slate-400'}`}>{student.regNo} • {student.gender?.[0]}</p>
+                                    </div>
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                                      isPresent ? 'bg-emerald-500 text-white scale-110 shadow-md shadow-emerald-300' : 'bg-slate-100 text-slate-300'
+                                    }`}>
+                                      {isPresent ? <Check size={15} strokeWidth={3} /> : <div className="w-2.5 h-2.5 rounded-full bg-slate-300" />}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Modal Footer */}
-            {selectedClass && activeTab === 'attendance' && classStudents.length > 0 && !attendanceLoading && (
-              <div className="p-6 border-t border-slate-200 bg-white flex justify-end shrink-0">
-                <button 
-                  onClick={saveAttendance}
-                  disabled={attendanceSaving}
-                  className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-indigo-800 hover:from-indigo-700 hover:to-indigo-900 text-white rounded-xl font-black shadow-lg hover:shadow-indigo-500/25 transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95"
-                >
-                  <Save size={18} />
-                  {attendanceSaving ? 'Saving Records...' : 'Submit Attendance'}
-                </button>
-              </div>
-            )}
+
+
           </div>
         </div>
       )}

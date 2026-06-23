@@ -778,3 +778,52 @@ svg.lucide-loader2 circle,
 .lb-loading {
   background-color: transparent !important;
 }
+
+/* ─── Attendance Roster Card ──────────────────────────────────────────────── */
+
+/* Outer scroll viewport: fixed height with BOTH scrollbars */
+.attendance-roster-scroll {
+  overflow: auto;
+  max-height: 380px;
+  padding: 1rem;
+  /* Firefox thin dual-axis scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: #a5b4fc #f1f5f9;
+}
+
+/* Webkit: vertical scrollbar */
+.attendance-roster-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.attendance-roster-scroll::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 999px;
+}
+
+.attendance-roster-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+  border-radius: 999px;
+  border: 2px solid #f8fafc;
+  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.3);
+}
+
+.attendance-roster-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+}
+
+/* Corner square between H and V scrollbar */
+.attendance-roster-scroll::-webkit-scrollbar-corner {
+  background: #f8fafc;
+}
+
+/* Inner grid — 3-column fixed min-width forces horizontal scroll on narrow viewports */
+.attendance-roster-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(210px, 1fr));
+  gap: 12px;
+  min-width: 680px;
+}
+
