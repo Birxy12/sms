@@ -17,7 +17,7 @@ const StudentManagement = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentStudent, setCurrentStudent] = useState({ 
     name: '', regNo: '', className: 'JSS1', gender: 'Male', email: '', 
-    phone: '', dob: '', house: '' 
+    phone: '', dob: '', house: '', photo: ''
   });
   const [status, setStatus] = useState({ type: '', message: '' });
   const [saving, setSaving] = useState(false);
@@ -147,8 +147,9 @@ const StudentManagement = () => {
       setStatus({ type: 'success', message: 'Passport uploaded to Supabase successfully!' });
     } catch (error) {
       console.error("Upload error:", error);
-      setStatus({ type: 'error', message: 'Failed to upload passport.' });
+      setStatus({ type: 'error', message: 'Upload failed. Ensure the "avatars" bucket exists and is public in Supabase.' });
     } finally {
+      setStatus(prev => prev.type === 'error' ? prev : { type: 'success', message: 'Passport uploaded successfully!' });
       setUploading(false);
     }
   };
@@ -238,7 +239,7 @@ const StudentManagement = () => {
             <div className="flex flex-col">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1 group-hover:text-indigo-600">Portal Governance</span>
               <span className="text-sm font-bold text-slate-700">Self-Service Profile Edit</span>
-              <span className="text-[9px] font-medium text-slate-400 mt-1 italic italic">Restricted to identity & contact fields</span>
+              <span className="text-[9px] font-medium text-slate-400 mt-1 italic">Restricted to identity & contact fields</span>
             </div>
             <button 
               onClick={toggleProfileEdit}
@@ -252,7 +253,7 @@ const StudentManagement = () => {
               setIsEditing(false); 
               setCurrentStudent({ 
                 name: '', regNo: '', className: 'JSS1', gender: 'Male', email: '',
-                phone: '', dob: '', house: '' 
+                phone: '', dob: '', house: '', photo: ''
               }); 
               setShowModal(true); 
             }}

@@ -108,6 +108,12 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
+    // ========== WALL OF FAME ==========
+    match /fame_students/{id} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
     // ========== ACADEMIC ==========
     match /assignments/{id} {
       allow read: if isAuthenticated();

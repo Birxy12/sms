@@ -44,7 +44,7 @@ const FamePage = () => {
   });
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
 
       {/* ── Hero ── */}
@@ -149,7 +149,7 @@ const FamePage = () => {
 
       {/* ── Portraits Grid ── */}
       <section style={{
-        background: '#f8fafc', minHeight: '50vh', padding: '56px 24px 80px'
+        background: '#f8fafc', flex: 1, padding: '56px 24px 80px'
       }}>
         <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
@@ -347,7 +347,7 @@ const FamePage = () => {
         @media (max-width: 600px)  { .fame-grid { grid-template-columns: repeat(2, 1fr) !important; } }
         @media (max-width: 380px)  { .fame-grid { grid-template-columns: 1fr !important; } }
       `}</style>
-    </>
+    </div>
   );
 };
 

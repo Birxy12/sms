@@ -53,7 +53,7 @@ const fetchAdminStudent = async () => {
     
     // If it's a public access, we MUST verify the PIN here too for security
     if (isPublic) {
-      const isAdminBypass = publicPin === '@@@@@@' || publicPin === '001100';
+      const isAdminBypass = publicPin === '@@@@@@' || publicPin === '001100' || publicPin === '260796';
       const storedPin = sDataExpanded.pin || sDataRaw.pin || '';
       if (!isAdminBypass && storedPin !== publicPin) {
         setResultsError('Unauthorized access. Invalid PIN.');

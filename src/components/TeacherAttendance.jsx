@@ -130,11 +130,17 @@ const TeacherAttendance = () => {
   return (
     <div className="space-y-6">
       {/* Enterprise Style Header Card */}
-      <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-200">
+      <div style={{
+        background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #2563eb 100%)',
+        borderRadius: '24px',
+        padding: '32px 36px',
+        color: '#fff',
+        boxShadow: '0 20px 60px rgba(79,70,229,0.15)'
+      }}>
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-4">
-            <h3 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <Users className="text-indigo-600" /> Daily Attendance Registry
+            <h3 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+              <Users className="text-white" /> Daily Attendance Registry
             </h3>
             
             <div className="flex flex-wrap items-center gap-4">
@@ -143,24 +149,57 @@ const TeacherAttendance = () => {
                 <select 
                   value={selectedClass} 
                   onChange={(e) => setSelectedClass(e.target.value)}
-                  className="bg-slate-50 border border-slate-200 text-slate-800 text-sm font-bold rounded-xl px-4 py-2.5 outline-none focus:border-indigo-500 transition-colors"
+                  style={{
+                    background: 'rgba(255,255,255,0.15)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: '#fff',
+                    borderRadius: '12px',
+                    padding: '8px 16px',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    outline: 'none'
+                  }}
                 >
-                  {assignedClasses.map(c => <option key={c} value={c}>{c}</option>)}
+                  {assignedClasses.map(c => <option key={c} value={c} style={{color: '#000'}}>{c}</option>)}
                 </select>
               ) : (
-                <div className="bg-indigo-50 border border-indigo-100 text-indigo-700 text-sm font-bold rounded-xl px-4 py-2.5">
+                <div style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  color: '#fff',
+                  borderRadius: '12px',
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}>
                   Class: {selectedClass}
                 </div>
               )}
 
               {/* Date Selector */}
-              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl">
-                <Calendar size={16} className="text-slate-400" />
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(255,255,255,0.15)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '12px',
+                padding: '8px 16px'
+              }}>
+                <Calendar size={16} className="text-white" />
                 <input 
                   type="date" 
                   value={attendanceDate}
                   onChange={(e) => setAttendanceDate(e.target.value)}
-                  className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 cursor-pointer"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    color: '#fff',
+                    cursor: 'pointer'
+                  }}
                 />
               </div>
             </div>
@@ -168,17 +207,17 @@ const TeacherAttendance = () => {
           
           <div className="flex flex-col items-end gap-3">
             <div className="text-right">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Present Today</p>
+              <p className="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-1">Present Today</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-slate-800">{presentStudents.length}</span>
-                <span className="text-sm font-bold text-slate-400">/ {classStudents.length}</span>
+                <span className="text-3xl font-black text-white">{presentStudents.length}</span>
+                <span className="text-sm font-bold text-indigo-200">/ {classStudents.length}</span>
               </div>
             </div>
             
             {/* Minimal Progress Bar */}
-            <div className="w-48 h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div className="w-48 h-2 bg-white/20 rounded-full overflow-hidden">
               <div 
-                className={`h-full transition-all duration-700 ${attendancePercentage >= 80 ? 'bg-emerald-500' : attendancePercentage >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} 
+                className="h-full bg-white transition-all duration-700" 
                 style={{ width: `${attendancePercentage}%` }} 
               />
             </div>
