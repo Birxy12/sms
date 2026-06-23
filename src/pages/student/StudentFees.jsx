@@ -16,16 +16,28 @@ const StudentFees = () => {
   useEffect(() => {
     const fetchFeeInfo = async () => {
       try {
-        const studentClass = currentStudent?.className || currentStudent?.classId || '';
-        let expected = currentStudent?.expectedFee;
-        if (expected === undefined || expected === null) {
-          expected = 0; // Forced to 0 per user request
+        if (!currentStudent?.id) return;
+        
+        // Fetch fresh data from Firestore instead of relying on cached currentStudent
+        const studentRef = doc(db, 'students', currentStudent.id);
+        const studentSnap = await getDoc(studentRef);
+        
+        let expected = 0;
+        let paid = 0;
+        let lastDate = 'N/A';
+
+        if (studentSnap.exists()) {
+          const sData = studentSnap.data();
+          // Fallbacks for different field names used over time
+          expected = parseFloat(sData.expectedFee) || 0;
+          paid = parseFloat(sData.paidFee) || parseFloat(sData.paidAmount) || 0;
+          lastDate = sData.lastPaymentDate || 'N/A';
         }
 
         setFeeData({
-          expected: expected,
-          paid: currentStudent?.paidFee || currentStudent?.paidAmount || 0,
-          lastDate: currentStudent?.lastPaymentDate || 'N/A'
+          expected,
+          paid,
+          lastDate
         });
       } catch (error) {
         console.error('Error fetching fees:', error);

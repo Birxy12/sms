@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, query, getDocs, where, doc, setDoc, getDoc } from 'firebase/firestore';
-import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info, UserCheck, X, Calendar, CheckSquare, Square, ChevronDown, Save, Check } from 'lucide-react';
+import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info, UserCheck, X, Calendar, CheckSquare, Square, ChevronDown, Save, Check, Download } from 'lucide-react';
 
 const ClassManagement = () => {
   const [classStats, setClassStats] = useState([]);
@@ -319,18 +319,79 @@ const ClassManagement = () => {
         ))}
       </div>
 
-      <div className="bg-indigo-900 text-white p-8 rounded-[2rem] relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
-        <div className="relative z-10 text-left">
-          <h4 className="text-indigo-200 text-xs font-black uppercase tracking-widest mb-2">Capacity Insight</h4>
-          <h3 className="text-2xl font-bold mb-4">Class Balanced Distribution is at <span className="text-emerald-400">92%</span></h3>
-          <p className="text-indigo-300 max-w-md text-sm">Most classes are currently operating at optimal capacity. Consider adding more desks to SS2 Science upcoming term.</p>
-        </div>
-        <div className="relative z-10">
-          <button className="bg-white text-indigo-900 px-8 py-3 rounded-2xl font-black hover:bg-indigo-50 transition-all shadow-xl active:scale-95">Download Capacity Report</button>
-        </div>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/10 rounded-full -ml-16 -mb-16 blur-2xl"></div>
-      </div>
+      {/* ── Capacity Insight — fully dynamic ─────────────────────────────── */}
+      {(() => {
+        if (loading || classStats.length === 0) return null;
+
+        const totalStudents = classStats.reduce((s, c) => s + c.studentCount, 0);
+        const avgPerClass   = totalStudents / classStats.length;
+        // Balance: how evenly spread are students? 100% = perfectly even
+        const maxCount      = Math.max(...classStats.map(c => c.studentCount));
+        const balancePct    = maxCount > 0 ? Math.round((avgPerClass / maxCount) * 100) : 0;
+        const largestClass  = classStats.reduce((a, b) => b.studentCount > a.studentCount ? b : a, classStats[0]);
+        const smallestClass = classStats.reduce((a, b) => b.studentCount < a.studentCount ? b : a, classStats[0]);
+        const balanceColor  = balancePct >= 80 ? 'text-emerald-400' : balancePct >= 60 ? 'text-amber-400' : 'text-rose-400';
+        const statusMsg     = balancePct >= 80
+          ? 'Classes are well-balanced. Distribution is at optimal levels.'
+          : balancePct >= 60
+          ? `Moderate imbalance detected. ${largestClass.name} has the most students (${largestClass.studentCount}).`
+          : `Significant imbalance. Consider redistributing students from ${largestClass.name} (${largestClass.studentCount} students) to ${smallestClass.name} (${smallestClass.studentCount} students).`;
+
+        const downloadReport = () => {
+          const rows = [
+            ['Class', 'Total Students', 'Male', 'Female', 'Subjects', 'Form Teacher ID'],
+            ...classStats.map(c => [c.name, c.studentCount, c.maleCount, c.femaleCount, c.subjectCount, c.formTeacherId || 'Unassigned'])
+          ];
+          const csv  = rows.map(r => r.join(',')).join('\n');
+          const blob = new Blob([csv], { type: 'text/csv' });
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement('a');
+          a.href     = url;
+          a.download = `capacity-report-${new Date().toISOString().split('T')[0]}.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+
+        return (
+          <div className="bg-indigo-900 text-white p-8 rounded-[2rem] relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+            <div className="relative z-10 text-left flex-1">
+              <h4 className="text-indigo-200 text-xs font-black uppercase tracking-widest mb-2">Capacity Insight</h4>
+              <h3 className="text-2xl font-bold mb-3">
+                Class Balanced Distribution is at{' '}
+                <span className={`font-black ${balanceColor}`}>{balancePct}%</span>
+              </h3>
+              <p className="text-indigo-300 max-w-md text-sm leading-relaxed">{statusMsg}</p>
+              {/* Mini class breakdown pills */}
+              <div className="flex flex-wrap gap-2 mt-4">
+                {classStats.map(c => (
+                  <span
+                    key={c.id}
+                    className="text-[11px] font-black px-3 py-1 rounded-full bg-white/10 text-indigo-100 backdrop-blur-sm"
+                  >
+                    {c.name}: <span className="text-white">{c.studentCount}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="relative z-10 flex flex-col items-center gap-3">
+              {/* Big stat */}
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl px-8 py-4 text-center border border-white/20">
+                <p className="text-indigo-300 text-xs font-black uppercase tracking-widest mb-1">Total Students</p>
+                <p className="text-5xl font-black text-white">{totalStudents}</p>
+                <p className="text-indigo-300 text-xs mt-1">{classStats.length} classes</p>
+              </div>
+              <button
+                onClick={downloadReport}
+                className="w-full bg-white text-indigo-900 px-6 py-3 rounded-2xl font-black hover:bg-indigo-50 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2 text-sm"
+              >
+                <Download size={16} /> Download CSV Report
+              </button>
+            </div>
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/10 rounded-full -ml-16 -mb-16 blur-2xl"></div>
+          </div>
+        );
+      })()}
 
       <div className="card-white p-6 border-l-4 border-l-indigo-500 bg-indigo-50/30 flex items-start gap-4">
         <Info size={24} className="text-indigo-600 mt-1" />
@@ -384,11 +445,21 @@ const ClassManagement = () => {
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-8">
                         <div className="flex-1 bg-blue-50 p-6 rounded-xl border border-blue-100 flex flex-col items-center justify-center gap-2">
                           <span className="font-bold text-blue-700 uppercase tracking-widest text-xs">Male Students</span>
-                          <span className="text-5xl font-black text-blue-800">{classStudents.filter(s => s.gender === 'Male').length}</span>
+                          <span className="text-5xl font-black text-blue-800">
+                            {classStudents.filter(s => {
+                              const g = (s.gender || '').toLowerCase();
+                              return g === 'm' || g === 'male';
+                            }).length}
+                          </span>
                         </div>
                         <div className="flex-1 bg-pink-50 p-6 rounded-xl border border-pink-100 flex flex-col items-center justify-center gap-2">
                           <span className="font-bold text-pink-700 uppercase tracking-widest text-xs">Female Students</span>
-                          <span className="text-5xl font-black text-pink-800">{classStudents.filter(s => s.gender === 'Female').length}</span>
+                          <span className="text-5xl font-black text-pink-800">
+                            {classStudents.filter(s => {
+                              const g = (s.gender || '').toLowerCase();
+                              return g === 'f' || g === 'female' || g === 'girl';
+                            }).length}
+                          </span>
                         </div>
                         <div className="flex-1 bg-slate-100 p-6 rounded-xl border border-slate-200 flex flex-col items-center justify-center gap-2">
                           <span className="font-bold text-slate-700 uppercase tracking-widest text-xs">Total</span>
