@@ -30,12 +30,13 @@ import BlogPage from './pages/public/BlogPage';
 import ContentCMS from './pages/dashboard/ContentCMS';
 import LeaderboardPage from './pages/public/LeaderboardPage';
 import FamePage from './pages/public/FamePage';
-import FameFormPage from './pages/public/FameFormPage';
+
 import MessageHub from './pages/dashboard/MessageHub';
 import PrincipalDashboard from './pages/dashboard/PrincipalDashboard';
 import BursarDashboard from './pages/dashboard/BursarDashboard';
 import CheckResult from './pages/public/CheckResult';
 import AdmissionPortal from './pages/public/AdmissionPortal';
+import FameManagement from './pages/dashboard/FameManagement';
 import { useStudentAuth } from './context/StudentAuthContext';
 import { useAdminAuth } from './context/AdminAuthContext';
 import BonusAI from './components/BonusAI';
@@ -86,7 +87,7 @@ function App() {
       <Route path="/blog" element={<BlogPage />} />
       <Route path="/leaderboard" element={<LeaderboardPage />} />
       <Route path="/fame" element={<FamePage />} />
-      <Route path="/famefrm" element={<FameFormPage />} />
+
       <Route path="/check-result" element={<CheckResult />} />
       <Route path="/admission" element={<AdmissionPortal />} />
       
@@ -213,6 +214,11 @@ function App() {
       <Route path="/messages" element={
         <ProtectedAdminRoute requiredRole={['teacher', 'principal', 'bursar']}>
           <Layout><MessageHub /></Layout>
+        </ProtectedAdminRoute>
+      } />
+      <Route path="/admin/fame" element={
+        <ProtectedAdminRoute requiredRole={['admin', 'principal']}>
+          <Layout><FameManagement /></Layout>
         </ProtectedAdminRoute>
       } />
       <Route path="/admin/posts" element={

@@ -65,7 +65,7 @@ const Navbar = () => {
       icon: Award,
       dropdown: [
         { name: 'Leaderboard', path: '/leaderboard' },
-        { name: 'Fame', path: '/fame' }
+        { name: 'Wall of Fame', path: '/fame' }
       ]
     },
     { name: 'Contact us', path: '/contact', icon: Phone },
