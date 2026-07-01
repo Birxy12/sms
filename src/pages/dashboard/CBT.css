@@ -152,26 +152,38 @@
 }
 
 .cbt-exam-card {
-  background: white;
+  background: #0f172a;
   border-radius: var(--radius-xl);
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 1.5rem;
+  color: #ffffff;
   transition: all 0.3s ease;
 }
 
 .cbt-exam-card:hover {
   transform: translateY(-5px);
-  box-shadow: var(--shadow-xl);
-  border-color: var(--primary);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .cbt-exam-main h3 {
   font-size: 1.25rem;
   margin-top: 0.5rem;
+  color: #ffffff;
+}
+
+.cbt-exam-main p {
+  color: #94a3b8;
+}
+
+.cbt-exam-card .cbt-metrics span {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
 }
 
 .cbt-status-pill {
