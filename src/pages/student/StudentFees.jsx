@@ -9,7 +9,7 @@ import ReceiptScanner from '../../components/ReceiptScanner';
 const StudentFees = () => {
   const { currentStudent } = useStudentAuth();
   const { primaryColor, currentSession } = useTheme();
-  const [feeData, setFeeData] = useState({ expected: 0, paid: 0, lastDate: 'N/A' });
+  const [feeData, setFeeData] = useState({ expected: 0, paid: 0, lastDate: 'N/A', term: 'First Term', session: '', txnId: '', serialNo: '' });
   const [loading, setLoading] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
 
@@ -25,19 +25,30 @@ const StudentFees = () => {
         let expected = 0;
         let paid = 0;
         let lastDate = 'N/A';
+        let term = 'First Term';
+        let session = currentSession || '2025/2026';
+        let txnId = '';
+        let serialNo = '';
 
         if (studentSnap.exists()) {
           const sData = studentSnap.data();
-          // Fallbacks for different field names used over time
           expected = parseFloat(sData.expectedFee) || 0;
           paid = parseFloat(sData.paidFee) || parseFloat(sData.paidAmount) || 0;
           lastDate = sData.lastPaymentDate || 'N/A';
+          term = sData.lastPaymentTerm || 'First Term';
+          session = sData.lastPaymentSession || currentSession || '2025/2026';
+          txnId = sData.lastTransactionId || '';
+          serialNo = sData.lastSerialNo || '';
         }
 
         setFeeData({
           expected,
           paid,
-          lastDate
+          lastDate,
+          term,
+          session,
+          txnId,
+          serialNo
         });
       } catch (error) {
         console.error('Error fetching fees:', error);
@@ -52,6 +63,120 @@ const StudentFees = () => {
   const balance = feeData.expected - feeData.paid;
   const isCleared = balance <= 0;
   const percentPaid = Math.min(100, Math.round((feeData.paid / feeData.expected) * 100)) || 0;
+
+  const handlePrintReceipt = () => {
+    const pFee = feeData.paid;
+    const eFee = feeData.expected;
+    const bal = eFee - pFee;
+    const term = feeData.term || 'First Term';
+    const session = feeData.session || currentSession || '2025/2026';
+    const txnId = feeData.txnId || 'TXN-' + Math.floor(10000000 + Math.random() * 90000000);
+    const serialNo = feeData.serialNo || 'SN-' + Math.floor(100000 + Math.random() * 900000);
+    const qrData = `Receipt: ${currentStudent?.name || 'Student'} | ${term} ${session} | Reg: ${currentStudent?.regNo || 'N/A'} | Paid: ₦${pFee} | Txn: ${txnId}`;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Receipt - ${currentStudent?.name || 'Student'}</title>
+          <style>
+            body { font-family: 'Arial', sans-serif; padding: 40px; color: #1e293b; }
+            .receipt-box { border: 2px solid #e2e8f0; border-radius: 16px; padding: 40px; max-width: 600px; margin: 0 auto; }
+            .header { text-align: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 20px; margin-bottom: 30px; }
+            .school-name { font-size: 24px; font-weight: 900; margin-bottom: 5px; color: #0f172a; text-transform: uppercase; }
+            .title { font-size: 14px; font-weight: bold; letter-spacing: 2px; color: #64748b; text-transform: uppercase; }
+            .row { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 16px; }
+            .label { color: #64748b; font-weight: bold; }
+            .value { font-weight: 900; color: #0f172a; }
+            .total-box { margin-top: 30px; background: #f8fafc; padding: 20px; border-radius: 12px; }
+            .total-row { display: flex; justify-content: space-between; font-size: 20px; font-weight: 900; }
+            .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #94a3b8; }
+            .signature { margin-top: 45px; border-top: 1px solid #cbd5e1; width: 200px; padding-top: 10px; text-align: center; float: right; font-weight: bold; }
+            .qr-barcode-section { display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 25px; border-top: 2px dashed #e2e8f0; }
+            .barcode-visual { font-family: 'Courier New', monospace; font-size: 24px; letter-spacing: 1px; font-weight: bold; margin-bottom: 2px; }
+          </style>
+        </head>
+        <body>
+          <div class="receipt-box">
+            <div class="header">
+              <div class="school-name">Bonus Dominus School</div>
+              <div class="title">Official Payment Receipt</div>
+            </div>
+            <div class="row">
+              <span class="label">Date Printed:</span>
+              <span class="value">${new Date().toLocaleDateString()}</span>
+            </div>
+            <div class="row">
+              <span class="label">Session:</span>
+              <span class="value">${session}</span>
+            </div>
+            <div class="row">
+              <span class="label">Term:</span>
+              <span class="value">${term}</span>
+            </div>
+            <div class="row">
+              <span class="label">Serial No:</span>
+              <span class="value">${serialNo}</span>
+            </div>
+            <div class="row">
+              <span class="label">Transaction ID:</span>
+              <span class="value">${txnId}</span>
+            </div>
+            <div class="row">
+              <span class="label">Student Name:</span>
+              <span class="value">${currentStudent?.name || 'Student'}</span>
+            </div>
+            <div class="row">
+              <span class="label">Reg Number:</span>
+              <span class="value">${currentStudent?.regNo || 'N/A'}</span>
+            </div>
+            <div class="row">
+              <span class="label">Class:</span>
+              <span class="value">${currentStudent?.className || 'N/A'}</span>
+            </div>
+            
+            <div class="total-box">
+              <div class="row">
+                <span class="label">Expected Fee:</span>
+                <span class="value">₦${eFee.toLocaleString()}</span>
+              </div>
+              <div class="row">
+                <span class="label">Amount Paid:</span>
+                <span class="value" style="color: #10b981;">₦${pFee.toLocaleString()}</span>
+              </div>
+              <div class="total-row" style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed #cbd5e1;">
+                <span>Outstanding Balance:</span>
+                <span style="color: ${bal > 0 ? '#e11d48' : '#10b981'};">₦${Math.max(0, bal).toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div class="qr-barcode-section">
+              <div>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}" alt="QR Code" style="width: 80px; height: 80px;" />
+                <div style="font-size: 9px; color: #94a3b8; margin-top: 4px; text-align: center;">Scan to Verify</div>
+              </div>
+              <div style="text-align: right;">
+                <div class="barcode-visual">||| | |||| | || ||| ||</div>
+                <div style="font-size: 10px; color: #94a3b8; font-family: monospace;">SERIAL: ${serialNo}</div>
+              </div>
+            </div>
+
+            <div class="signature">
+              Bursar Signature
+            </div>
+            <div style="clear: both;"></div>
+
+            <div class="footer">
+              Thank you for your payment.<br/>
+              This is a computer generated receipt.
+            </div>
+          </div>
+          <script>window.print();</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   if (loading) {
     return (
@@ -125,6 +250,7 @@ const StudentFees = () => {
                   <th className="px-6 py-4">Description</th>
                   <th className="px-6 py-4">Date</th>
                   <th className="px-6 py-4 text-right">Amount</th>
+                  <th className="px-6 py-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -136,10 +262,18 @@ const StudentFees = () => {
                     </td>
                     <td className="px-6 py-5 text-sm font-bold text-slate-500 dark:text-slate-400">{feeData.lastDate}</td>
                     <td className="px-6 py-5 text-right font-black text-emerald-600 dark:text-emerald-400">₦{feeData.paid.toLocaleString()}</td>
+                    <td className="px-6 py-5 text-right">
+                      <button 
+                        onClick={handlePrintReceipt}
+                        className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all"
+                      >
+                        <Printer size={12} /> Receipt
+                      </button>
+                    </td>
                   </tr>
                 ) : (
                   <tr>
-                    <td colSpan="3" className="px-6 py-12 text-center text-slate-400 dark:text-slate-500 font-bold italic">
+                    <td colSpan="4" className="px-6 py-12 text-center text-slate-400 dark:text-slate-500 font-bold italic">
                       No payment records found for this student.
                     </td>
                   </tr>

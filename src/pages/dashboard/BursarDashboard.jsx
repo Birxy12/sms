@@ -9,6 +9,100 @@ import {
 import { addDoc, serverTimestamp } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
 
+const OldFeesAnalytics = ({ currentCollected, currentExpected }) => {
+  const [oldFees, setOldFees] = useState(() => {
+    const saved = localStorage.getItem('historical_fees');
+    return saved ? JSON.parse(saved) : [
+      { session: '2023/2024', expected: 12000000, collected: 11500000 },
+      { session: '2024/2025', expected: 15000000, collected: 14200000 }
+    ];
+  });
+  const [newSession, setNewSession] = useState('');
+  const [newExpected, setNewExpected] = useState('');
+  const [newCollected, setNewCollected] = useState('');
+
+  const handleAdd = (e) => {
+    e.preventDefault();
+    if (!newSession || !newExpected || !newCollected) return;
+    const updated = [
+      ...oldFees,
+      { session: newSession, expected: parseFloat(newExpected), collected: parseFloat(newCollected) }
+    ];
+    setOldFees(updated);
+    localStorage.setItem('historical_fees', JSON.stringify(updated));
+    setNewSession(''); setNewExpected(''); setNewCollected('');
+  };
+
+  const handleClear = () => {
+    setOldFees([]);
+    localStorage.removeItem('historical_fees');
+  };
+
+  const data = [
+    ...oldFees,
+    { session: 'Current', expected: currentExpected, collected: currentCollected }
+  ];
+
+  const maxVal = Math.max(...data.map(d => Math.max(d.expected, d.collected)), 1);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center border-b pb-3">
+        <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest">Historical Performance Chart</h4>
+        {oldFees.length > 0 && (
+          <button onClick={handleClear} className="text-xs text-rose-600 hover:text-rose-800 font-bold">Clear History</button>
+        )}
+      </div>
+      <div className="flex flex-col md:flex-row gap-8 items-end justify-between p-6 bg-slate-50 rounded-2xl overflow-x-auto">
+        {data.map((d, idx) => {
+          const expHeight = `${(d.expected / maxVal) * 100}%`;
+          const colHeight = `${(d.collected / maxVal) * 100}%`;
+          return (
+            <div key={idx} className="flex-1 flex flex-col items-center min-w-[100px] h-60 justify-end">
+              <div className="h-48 w-full flex items-end justify-center gap-2 relative">
+                {/* Expected Bar */}
+                <div style={{ height: expHeight }} className="w-8 bg-slate-300 rounded-t-lg group relative cursor-pointer hover:bg-slate-400 transition-colors">
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-900 text-white text-[10px] p-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20 shadow-md">
+                    Expected: ₦{d.expected.toLocaleString()}
+                  </div>
+                </div>
+                {/* Collected Bar */}
+                <div style={{ height: colHeight }} className="w-8 bg-emerald-500 rounded-t-lg group relative cursor-pointer hover:bg-emerald-600 transition-colors">
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-900 text-white text-[10px] p-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20 shadow-md">
+                    Collected: ₦{d.collected.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+              <span className="text-xs font-black text-slate-700 mt-3 block text-center">{d.session}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <form onSubmit={handleAdd} className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+        <div>
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Session</label>
+          <input type="text" value={newSession} onChange={e => setNewSession(e.target.value)} placeholder="e.g. 2023/2024" required
+            className="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 outline-none text-sm font-bold focus:border-slate-400" />
+        </div>
+        <div>
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Expected (₦)</label>
+          <input type="number" value={newExpected} onChange={e => setNewExpected(e.target.value)} placeholder="Expected" required
+            className="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 outline-none text-sm font-bold focus:border-slate-400" />
+        </div>
+        <div>
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Collected (₦)</label>
+          <input type="number" value={newCollected} onChange={e => setNewCollected(e.target.value)} placeholder="Collected" required
+            className="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 outline-none text-sm font-bold focus:border-slate-400" />
+        </div>
+        <button type="submit" className="w-full bg-slate-900 text-white font-bold py-3.5 rounded-xl text-sm transition-all hover:bg-slate-800">
+          Add Comparison
+        </button>
+      </form>
+    </div>
+  );
+};
+
 const BursarDashboard = () => {
   const { primaryColor, schoolName } = useTheme();
   const location = window.location;
@@ -219,6 +313,8 @@ const BursarDashboard = () => {
   const PrintReceiptView = () => {
     const [selectedClass, setSelectedClass] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [printSession, setPrintSession] = useState('2025/2026');
+    const [printTerm, setPrintTerm] = useState('First Term');
 
     const targetStudents = allStudents.filter(s => {
       const matchClass = selectedClass ? (s.className || s.class_name || s.CLASS) === selectedClass : true;
@@ -234,7 +330,9 @@ const BursarDashboard = () => {
       
       const txnId = student.lastTransactionId || "TXN-" + Math.floor(10000000 + Math.random() * 90000000);
       const serialNo = student.lastSerialNo || "SN-" + Math.floor(100000 + Math.random() * 900000);
-      const qrData = `Receipt: ${student.name || student['STUDENT NAME']} | Reg: ${student.regNo || 'N/A'} | Expected: ₦${eFee} | Paid: ₦${pFee} | Txn: ${txnId}`;
+      const term = printTerm;
+      const session = printSession;
+      const qrData = `Receipt: ${student.name || student['STUDENT NAME']} | ${term} ${session} | Reg: ${student.regNo || 'N/A'} | Paid: ₦${pFee} | Txn: ${txnId}`;
 
       const printWindow = window.open('', '_blank');
       printWindow.document.write(`
@@ -267,6 +365,14 @@ const BursarDashboard = () => {
               <div class="row">
                 <span class="label">Date Printed:</span>
                 <span class="value">${new Date().toLocaleDateString()}</span>
+              </div>
+              <div class="row">
+                <span class="label">Session:</span>
+                <span class="value">${session}</span>
+              </div>
+              <div class="row">
+                <span class="label">Term:</span>
+                <span class="value">${term}</span>
               </div>
               <div class="row">
                 <span class="label">Serial No:</span>
@@ -338,7 +444,15 @@ const BursarDashboard = () => {
           <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
             <Printer size={20} className="text-emerald-500" /> Receipt Generator
           </h3>
-          <div className="flex gap-2 w-full md:w-auto">
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
+            <select value={printSession} onChange={e => setPrintSession(e.target.value)}
+              className="px-4 py-2 rounded-xl bg-slate-50 border-none focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-sm">
+              {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select value={printTerm} onChange={e => setPrintTerm(e.target.value)}
+              className="px-4 py-2 rounded-xl bg-slate-50 border-none focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-sm">
+              {TERMS.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
             <select 
               value={selectedClass} 
               onChange={(e) => setSelectedClass(e.target.value)}
@@ -512,10 +626,15 @@ const BursarDashboard = () => {
     );
   };
 
+  const SESSIONS = ['2024/2025', '2025/2026', '2026/2027', '2027/2028'];
+  const TERMS = ['First Term', 'Second Term', 'Third Term'];
+
   const CashPaymentView = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedStudent, setSelectedStudent] = useState(preSelectedStudent);
     const [cashAmount, setCashAmount] = useState('');
+    const [paymentTerm, setPaymentTerm] = useState('First Term');
+    const [paymentSession, setPaymentSession] = useState('2025/2026');
     const [saving, setSaving] = useState(false);
     const [receipt, setReceipt] = useState(null);
 
@@ -539,17 +658,25 @@ const BursarDashboard = () => {
       try {
         const oldPaid = parseFloat(selectedStudent.paidFee) || parseFloat(selectedStudent.paidAmount) || 0;
         const newPaid = oldPaid + amount;
+        const txnId = 'TXN-' + Math.floor(10000000 + Math.random() * 90000000);
+        const serialNo = 'SN-' + Math.floor(100000 + Math.random() * 900000);
         const ref = doc(db, 'students', selectedStudent.id);
-        await updateDoc(ref, { paidFee: newPaid, paidAmount: newPaid, lastPaymentDate: new Date().toLocaleDateString('en-NG') });
+        await updateDoc(ref, {
+          paidFee: newPaid, paidAmount: newPaid,
+          lastPaymentDate: new Date().toLocaleDateString('en-NG'),
+          lastTransactionId: txnId, lastSerialNo: serialNo,
+          lastPaymentTerm: paymentTerm, lastPaymentSession: paymentSession,
+        });
         await addDoc(collection(db, 'payment_messages'), {
           studentName: selectedStudent.name || selectedStudent['STUDENT NAME'],
           className: selectedStudent.className || selectedStudent.class_name || selectedStudent.CLASS,
           regNo: selectedStudent.regNo || selectedStudent.REGNO,
-          amount, method: 'Cash',
-          message: `Cash payment of \u20a6${amount.toLocaleString()} received.`,
+          amount, method: 'Cash', term: paymentTerm, session: paymentSession,
+          transactionId: txnId, serialNo,
+          message: `Cash payment of \u20a6${amount.toLocaleString()} received for ${paymentTerm}, ${paymentSession}.`,
           createdAt: serverTimestamp(),
         });
-        setReceipt({ student: selectedStudent, amount, newPaid, date: new Date().toLocaleDateString('en-NG') });
+        setReceipt({ student: selectedStudent, amount, newPaid, date: new Date().toLocaleDateString('en-NG'), term: paymentTerm, session: paymentSession, txnId, serialNo });
         fetchFinancialData();
         setCashAmount(''); setSelectedStudent(null); setSearchTerm('');
         setPreSelectedStudent(null);
@@ -559,9 +686,11 @@ const BursarDashboard = () => {
 
     const printReceipt = () => {
       const s = receipt.student;
-      const txnId = s.lastTransactionId || "TXN-" + Math.floor(10000000 + Math.random() * 90000000);
-      const serialNo = s.lastSerialNo || "SN-" + Math.floor(100000 + Math.random() * 900000);
-      const qrData = `Receipt: ${s.name || s['STUDENT NAME']} | Amount: ₦${receipt.amount.toLocaleString()} | Txn: ${txnId}`;
+      const txnId = receipt.txnId || s.lastTransactionId || 'TXN-' + Math.floor(10000000 + Math.random() * 90000000);
+      const serialNo = receipt.serialNo || s.lastSerialNo || 'SN-' + Math.floor(100000 + Math.random() * 900000);
+      const term = receipt.term || s.lastPaymentTerm || 'N/A';
+      const session = receipt.session || s.lastPaymentSession || 'N/A';
+      const qrData = `Receipt: ${s.name || s['STUDENT NAME']} | ${term} ${session} | Amount: ₦${receipt.amount.toLocaleString()} | Txn: ${txnId}`;
 
       const w = window.open('', '_blank');
       w.document.write(`<!DOCTYPE html><html><head><title>Receipt</title><style>
@@ -578,6 +707,8 @@ const BursarDashboard = () => {
       </style></head><body>
         <div class="hd"><div class="school">${schoolName||'School Name'}</div><div class="sub">Official Cash Payment Receipt</div></div>
         <div class="row"><span class="lbl">Date:</span><span class="val">${receipt.date}</span></div>
+        <div class="row"><span class="lbl">Session:</span><span class="val">${session}</span></div>
+        <div class="row"><span class="lbl">Term:</span><span class="val">${term}</span></div>
         <div class="row"><span class="lbl">Serial No:</span><span class="val">${serialNo}</span></div>
         <div class="row"><span class="lbl">Transaction ID:</span><span class="val">${txnId}</span></div>
         <div class="row"><span class="lbl">Student:</span><span class="val">${s.name||s['STUDENT NAME']}</span></div>
@@ -648,6 +779,22 @@ const BursarDashboard = () => {
                 <button onClick={() => { setSelectedStudent(null); setPreSelectedStudent(null); }} className="text-slate-400 hover:text-rose-500 text-xl font-bold">\u2715</button>
               </div>
             )}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Session</label>
+                <select value={paymentSession} onChange={e => setPaymentSession(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold text-slate-900 transition-all">
+                  {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Term</label>
+                <select value={paymentTerm} onChange={e => setPaymentTerm(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold text-slate-900 transition-all">
+                  {TERMS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
             <div>
               <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Cash Amount (\u20a6)</label>
               <input type="number" value={cashAmount} onChange={e => setCashAmount(e.target.value)} placeholder="Enter amount received"
@@ -848,6 +995,66 @@ const BursarDashboard = () => {
               </div>
             </div>
           )}
+
+          {activeView === 'overview' && (() => {
+            const classBreakdown = classes.map(cls => {
+              const students = allStudents.filter(s => (s.className || s.class_name || s.CLASS) === cls);
+              const expected = students.reduce((sum, s) => sum + (parseFloat(s.expectedFee) || 0), 0);
+              const collected = students.reduce((sum, s) => sum + (parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0), 0);
+              return { cls, students: students.length, expected, collected };
+            }).filter(c => c.students > 0);
+            const collectedPct = stats.totalExpected > 0 ? Math.round((stats.totalCollected / stats.totalExpected) * 100) : 0;
+            const r = 60, cx = 75, cy = 75;
+            const angle = (collectedPct / 100) * 2 * Math.PI;
+            const x1 = cx + r * Math.sin(angle);
+            const y1 = cy - r * Math.cos(angle);
+            const largeArc = collectedPct > 50 ? 1 : 0;
+            return (
+              <div className="space-y-8 mt-6" key="analytics">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex flex-col items-center">
+                    <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Collection Ratio</h4>
+                    <svg width="150" height="150" viewBox="0 0 150 150">
+                      <circle cx={cx} cy={cy} r={r} fill="#f1f5f9" />
+                      {collectedPct > 0 && collectedPct < 100 && (
+                        <path d={`M ${cx} ${cy - r} A ${r} ${r} 0 ${largeArc} 1 ${x1} ${y1} L ${cx} ${cy} Z`} fill="#10b981" />
+                      )}
+                      {collectedPct >= 100 && <circle cx={cx} cy={cy} r={r} fill="#10b981" />}
+                      <circle cx={cx} cy={cy} r={40} fill="white" />
+                      <text x={cx} y={cy + 6} textAnchor="middle" fontSize="16" fontWeight="900" fill="#0f172a">{collectedPct}%</text>
+                    </svg>
+                    <div className="flex gap-4 mt-2 text-xs font-bold">
+                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"/> Collected</span>
+                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-slate-200 inline-block"/> Outstanding</span>
+                    </div>
+                    <div className="mt-3 text-center">
+                      <p className="text-xs text-slate-400">Collected: <span className="font-black text-emerald-600">₦{stats.totalCollected.toLocaleString()}</span></p>
+                      <p className="text-xs text-slate-400">Outstanding: <span className="font-black text-rose-500">₦{stats.totalOutstanding.toLocaleString()}</span></p>
+                    </div>
+                  </div>
+                  <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+                    <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4">Collection by Class</h4>
+                    <div className="space-y-3">
+                      {classBreakdown.map(c => (
+                        <div key={c.cls}>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-black text-slate-600">{c.cls}</span>
+                            <span className="text-xs font-bold text-slate-400">₦{c.collected.toLocaleString()} / ₦{c.expected.toLocaleString()}</span>
+                          </div>
+                          <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full"
+                              style={{ width: c.expected > 0 ? `${Math.min(100, Math.round((c.collected / c.expected) * 100))}%` : '0%' }} />
+                          </div>
+                        </div>
+                      ))}
+                      {classBreakdown.length === 0 && <p className="text-sm text-slate-400 text-center py-4">No fee data yet.</p>}
+                    </div>
+                  </div>
+                </div>
+                <OldFeesAnalytics currentCollected={stats.totalCollected} currentExpected={stats.totalExpected} />
+              </div>
+            );
+          })()}
 
           {activeView === 'overview' && (
             <div className="mt-12 bg-rose-50 border border-rose-200 rounded-3xl p-8 flex flex-col items-center text-center max-w-xl mx-auto shadow-sm">
