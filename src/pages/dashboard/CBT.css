@@ -31,13 +31,13 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: white;
+  background: #1e293b;
   padding: 0.625rem 1rem;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 0.8125rem;
   font-weight: 800;
-  color: var(--text-main);
+  color: #ffffff;
   box-shadow: var(--shadow-sm);
 }
 
@@ -64,12 +64,37 @@
 }
 
 .cbt-builder {
-  background: white;
+  background: #0f172a;
+  color: #ffffff;
   border-radius: var(--radius-2xl);
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 2.5rem;
-  box-shadow: var(--shadow-xl);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   margin-bottom: 3rem;
+}
+
+.cbt-builder h2 {
+  color: #ffffff;
+}
+
+.cbt-builder input,
+.cbt-builder select,
+.cbt-builder textarea {
+  background: #1e293b;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-lg);
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.cbt-builder input:focus,
+.cbt-builder select:focus,
+.cbt-builder textarea:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
 }
 
 .cbt-panel-title {
@@ -94,7 +119,7 @@
 .cbt-builder label {
   font-size: 0.75rem;
   font-weight: 800;
-  color: var(--text-muted);
+  color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   display: flex;
@@ -104,18 +129,19 @@
 
 .cbt-question-editor,
 .cbt-question-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-xl);
   padding: 2rem;
   margin-bottom: 1.5rem;
+  color: #ffffff;
   transition: all 0.2s ease;
 }
 
 .cbt-question-editor:focus-within {
-  border-color: var(--primary);
-  background: white;
-  box-shadow: var(--shadow-lg);
+  border-color: #6366f1;
+  background: #1e293b;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
 .cbt-question-top {
@@ -128,7 +154,7 @@
 .cbt-question-top strong {
   font-size: 1.125rem;
   font-weight: 900;
-  color: var(--primary);
+  color: #818cf8;
 }
 
 .cbt-options-grid {
@@ -139,10 +165,11 @@
 }
 
 .cbt-option-field {
-  background: white;
+  background: #0f172a;
   padding: 1rem;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
 .cbt-exam-grid {
@@ -243,8 +270,8 @@
 }
 
 .cbt-answer-options button {
-  background: white;
-  border: 2px solid var(--border-color);
+  background: #0f172a;
+  border: 2px solid rgba(255, 255, 255, 0.1);
   padding: 1.25rem;
   border-radius: var(--radius-xl);
   display: flex;
@@ -254,47 +281,50 @@
   transition: all 0.2s ease;
   text-align: left;
   font-weight: 700;
+  color: #ffffff;
 }
 
 .cbt-answer-options button:hover {
-  border-color: var(--primary);
-  background: var(--bg-secondary);
+  border-color: #6366f1;
+  background: #1e293b;
 }
 
 .cbt-answer-options button.selected {
-  border-color: var(--primary);
-  background: var(--primary-light);
-  color: var(--primary);
+  border-color: #6366f1;
+  background: #4f46e5;
+  color: #ffffff;
 }
 
 .cbt-answer-options button span {
   width: 40px;
   height: 40px;
-  background: var(--bg-tertiary);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 900;
+  color: #ffffff;
   flex-shrink: 0;
 }
 
 .cbt-answer-options button.selected span {
-  background: var(--primary);
-  color: white;
+  background: #ffffff;
+  color: #0f172a;
 }
 
 .cbt-submit-strip {
   position: sticky;
   bottom: 2rem;
-  background: white;
-  border: 1px solid var(--border-color);
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 1.25rem 2rem;
   border-radius: var(--radius-2xl);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+  color: #ffffff;
   z-index: 10;
 }
 
