@@ -308,7 +308,7 @@ const StudentCBT = () => {
                     <button
                       type="button"
                       onClick={() => handleRetake(exam)}
-                      style={{ fontSize: '11px', padding: '5px 12px', background: '#f1f5f9', color: '#475569', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 700 }}
+                      style={{ fontSize: '11px', padding: '5px 12px', background: '#1e3b8b', color: '#ffffff', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 700 }}
                     >
                       🔄 Retake
                     </button>
