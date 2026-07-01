@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../lib/firebase';
+import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import { collection, query, getDocs, orderBy, where, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { 
   Wallet, DollarSign, TrendingUp, TrendingDown, Users, 
@@ -131,6 +132,7 @@ const BursarDashboard = () => {
   const fetchFinancialData = async () => {
     setLoading(true);
     try {
+      await ensureFirebaseAuth();
       const snap = await getDocs(collection(db, 'students'));
       const students = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setAllStudents(students);
@@ -1188,6 +1190,7 @@ const BursarDashboard = () => {
     const fetchStaffData = async () => {
       setLoadingStaff(true);
       try {
+        await ensureFirebaseAuth();
         const snap = await getDocs(collection(db, 'staff'));
         setStaffList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
 
