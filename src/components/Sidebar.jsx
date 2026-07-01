@@ -6,7 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { 
   LayoutDashboard, Users, BookOpen, GraduationCap, Settings, LogOut,
   DollarSign, Calendar, Layers, FileText, Mail, UserCircle, Award,
-  Inbox as InboxIcon, CreditCard, Home, X, MonitorCheck, UserPlus, Star
+  Inbox as InboxIcon, CreditCard, Home, X, MonitorCheck, UserPlus, Star, Fingerprint
 } from 'lucide-react';
 
 const Sidebar = ({ sidebarOpen, onClose }) => {
@@ -50,7 +50,8 @@ const allNavItems = [
     { name: 'Content Management', path: '/admin/posts',    icon: FileText,        roles: ['admin', 'principal'] },
     { name: 'Manage Fame',        path: '/admin/fame',     icon: Star,            roles: ['admin', 'principal'] },
 
-    { name: 'CBT Exams',          path: '/cbt',            icon: MonitorCheck,    roles: ['admin', 'principal', 'teacher'] },
+  { name: 'CBT Exams',          path: '/cbt',            icon: MonitorCheck,    roles: ['admin', 'principal', 'teacher'] },
+  { name: 'Attendance',         path: '/attendance',     icon: Fingerprint,     roles: ['admin', 'principal', 'teacher', 'bursar'] },
     { name: 'School Branding',    path: '/settings',       icon: Settings,        roles: ['admin'] },
     { name: 'My Profile',         path: '/profile',        icon: UserCircle,      roles: ['admin', 'teacher', 'principal', 'bursar'] },
 

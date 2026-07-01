@@ -4,10 +4,12 @@ import { collection, query, getDocs, orderBy, where, doc, updateDoc, writeBatch 
 import { 
   Wallet, DollarSign, TrendingUp, TrendingDown, Users, 
   Search, Download, Plus, ArrowUpRight, 
-  CheckCircle, AlertCircle, Loader2, Briefcase, Settings, Printer, MessageSquare, AlertTriangle, FileText, UserPlus, Banknote
+  CheckCircle, AlertCircle, Loader2, Briefcase, Settings, Printer, MessageSquare, AlertTriangle, FileText, UserPlus, Banknote,
+  FileSpreadsheet
 } from 'lucide-react';
 import { addDoc, serverTimestamp } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
+import Papa from 'papaparse';
 
 const OldFeesAnalytics = ({ currentCollected, currentExpected }) => {
   const [oldFees, setOldFees] = useState(() => {
@@ -220,10 +222,13 @@ const BursarDashboard = () => {
     { id: 'overview', label: 'Overview', icon: TrendingUp, color: 'indigo' },
     { id: 'feesetting', label: 'Fee Setting', icon: Settings, color: 'blue' },
     { id: 'cashpay', label: 'Cash Payment', icon: Banknote, color: 'green' },
+    { id: 'bulkpay', label: 'Bulk Upload', icon: Download, color: 'blue' },
     { id: 'receipts', label: 'Print Receipt', icon: Printer, color: 'emerald' },
     { id: 'register', label: 'Register Student', icon: UserPlus, color: 'violet' },
     { id: 'messages', label: 'Message Hub', icon: MessageSquare, color: 'purple' },
     { id: 'debtors', label: 'Debtors', icon: AlertTriangle, color: 'rose' },
+    { id: 'analysis', label: 'Financial Analysis', icon: Briefcase, color: 'indigo' },
+    { id: 'staffpay', label: 'Staff Payment', icon: Users, color: 'violet' },
   ];
 
   // --- Sub-Components for Tabs ---
@@ -231,12 +236,14 @@ const BursarDashboard = () => {
   const FeeSettingView = () => {
     const [selectedClass, setSelectedClass] = useState('');
     const [feeAmount, setFeeAmount] = useState('');
+    const [feeSession, setFeeSession] = useState('2025/2026');
+    const [feeTerm, setFeeTerm] = useState('First Term');
     const [saving, setSaving] = useState(false);
 
     const handleSetFee = async (e) => {
       e.preventDefault();
       if (!selectedClass || !feeAmount) return;
-      if (!window.confirm(`Set fee of ₦${feeAmount} for ALL students in ${selectedClass}?`)) return;
+      if (!window.confirm(`Set fee of ₦${feeAmount} for ALL students in ${selectedClass} for ${feeTerm} (${feeSession})?`)) return;
 
       setSaving(true);
       try {
@@ -247,13 +254,17 @@ const BursarDashboard = () => {
 
         targetStudents.forEach(s => {
           const ref = doc(db, 'students', s.id);
-          batch.update(ref, { expectedFee: parseFloat(feeAmount) });
+          batch.update(ref, { 
+            expectedFee: parseFloat(feeAmount),
+            lastPaymentTerm: feeTerm,
+            lastPaymentSession: feeSession
+          });
         });
 
         if (targetStudents.length > 0) {
           await batch.commit();
           await fetchFinancialData();
-          setStatus({ type: 'success', message: `Updated fee for ${targetStudents.length} students in ${selectedClass}.` });
+          setStatus({ type: 'success', message: `Updated expected fee for ${targetStudents.length} students in ${selectedClass}.` });
         } else {
           setStatus({ type: 'error', message: `No students found in ${selectedClass}.` });
         }
@@ -279,28 +290,53 @@ const BursarDashboard = () => {
         </div>
 
         <form onSubmit={handleSetFee} className="space-y-6">
-          <div>
-            <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Select Class</label>
-            <select 
-              value={selectedClass} 
-              onChange={(e) => setSelectedClass(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold"
-              required
-            >
-              <option value="">Choose a class...</option>
-              {classes.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Select Class</label>
+              <select 
+                value={selectedClass} 
+                onChange={(e) => setSelectedClass(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold"
+                required
+              >
+                <option value="">Choose a class...</option>
+                {classes.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Expected Fee Amount (₦)</label>
+              <input 
+                type="number" 
+                value={feeAmount} 
+                onChange={(e) => setFeeAmount(e.target.value)}
+                placeholder="e.g. 45000"
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold"
+                required
+              />
+            </div>
           </div>
-          <div>
-            <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Expected Fee Amount (₦)</label>
-            <input 
-              type="number" 
-              value={feeAmount} 
-              onChange={(e) => setFeeAmount(e.target.value)}
-              placeholder="e.g. 45000"
-              className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold"
-              required
-            />
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Session / Year</label>
+              <select 
+                value={feeSession} 
+                onChange={(e) => setFeeSession(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold"
+              >
+                {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Term</label>
+              <select 
+                value={feeTerm} 
+                onChange={(e) => setFeeTerm(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold"
+              >
+                {TERMS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
           </div>
           <button type="submit" disabled={saving} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 transition flex justify-center items-center gap-2">
             {saving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />} Apply Fee to Class
@@ -894,6 +930,431 @@ const BursarDashboard = () => {
     );
   };
 
+  const BulkPayView = () => {
+    const [csvData, setCsvData] = useState([]);
+    const [uploading, setUploading] = useState(false);
+    const [previewRows, setPreviewRows] = useState([]);
+
+    const handleFileChange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          const rows = results.data.map(row => {
+            const regNo = (row['Reg No'] || row['regNo'] || '').trim();
+            const amount = parseFloat(row['Amount'] || row['amount'] || 0);
+            const term = (row['Term'] || row['term'] || 'First Term').trim();
+            const session = (row['Session'] || row['session'] || '2025/2026').trim();
+
+            const student = allStudents.find(s => 
+              (s.regNo || s.REGNO || '').trim().toLowerCase() === regNo.toLowerCase()
+            );
+
+            const oldPaid = student ? (parseFloat(student.paidFee) || parseFloat(student.paidAmount) || 0) : 0;
+            const expected = student ? (parseFloat(student.expectedFee) || 0) : 0;
+            const newPaid = oldPaid + amount;
+            const newBalance = Math.max(0, expected - newPaid);
+
+            return {
+              regNo,
+              amount,
+              term,
+              session,
+              studentName: student ? (student.name || student['STUDENT NAME']) : 'Student Not Found',
+              studentId: student ? student.id : null,
+              newPaid,
+              balance: newBalance,
+              isValid: !!student
+            };
+          });
+
+          setPreviewRows(rows);
+        }
+      });
+    };
+
+    const handleUploadPayments = async () => {
+      if (previewRows.length === 0) return;
+      const validRows = previewRows.filter(r => r.isValid && r.amount > 0);
+      if (validRows.length === 0) {
+        alert('No valid student payment rows found to process.');
+        return;
+      }
+
+      setUploading(true);
+      try {
+        const batch = writeBatch(db);
+        let count = 0;
+
+        for (const row of validRows) {
+          const studentRef = doc(db, 'students', row.studentId);
+          batch.update(studentRef, {
+            paidFee: row.newPaid,
+            paidAmount: row.newPaid,
+            lastPaymentDate: new Date().toLocaleDateString('en-NG'),
+            lastTransactionId: 'TXN-BULK-' + Math.floor(10000000 + Math.random() * 90000000),
+            lastSerialNo: 'SN-BULK-' + Math.floor(100000 + Math.random() * 900000),
+            lastPaymentTerm: row.term,
+            lastPaymentSession: row.session
+          });
+
+          const msgRef = doc(collection(db, 'payment_messages'));
+          batch.set(msgRef, {
+            studentName: row.studentName,
+            regNo: row.regNo,
+            amount: row.amount,
+            method: 'Bulk Upload',
+            term: row.term,
+            session: row.session,
+            message: `Bulk payment upload of ₦${row.amount.toLocaleString()} processed for ${row.term} (${row.session}).`,
+            createdAt: serverTimestamp()
+          });
+
+          count++;
+          if (count % 400 === 0) {
+            await batch.commit();
+          }
+        }
+
+        await batch.commit();
+        await fetchFinancialData();
+        setStatus({ type: 'success', message: `Processed bulk payments for ${validRows.length} students.` });
+        setPreviewRows([]);
+      } catch (err) {
+        console.error(err);
+        setStatus({ type: 'error', message: 'Failed to process bulk upload.' });
+      } finally {
+        setUploading(false);
+      }
+    };
+
+    return (
+      <div className="card-white p-8 mt-8 border border-slate-200 rounded-3xl shadow-sm max-w-4xl mx-auto">
+        <div className="flex items-center gap-4 mb-8 border-b border-slate-100 pb-6">
+          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+            <FileSpreadsheet size={24} />
+          </div>
+          <div>
+            <h3 className="text-xl font-black text-slate-900">Bulk Fee Payments Upload</h3>
+            <p className="text-sm text-slate-500">Upload a CSV containing Reg No, Amount, Term, and Session columns to apply payments in batch.</p>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="border-2 border-dashed border-slate-200 hover:border-indigo-500 rounded-2xl p-8 text-center transition-all bg-slate-50 cursor-pointer relative">
+            <input type="file" accept=".csv" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+            <FileSpreadsheet className="mx-auto text-slate-400 mb-4" size={48} />
+            <p className="font-bold text-slate-700">Click to upload or drag & drop CSV file</p>
+            <p className="text-xs text-slate-400 mt-1">Columns required: "Reg No", "Amount", "Term", "Session"</p>
+          </div>
+
+          {previewRows.length > 0 && (
+            <div className="space-y-4">
+              <h4 className="font-black text-slate-800 text-sm uppercase tracking-wider">Upload Preview ({previewRows.length} Rows)</h4>
+              <div className="overflow-x-auto max-h-96 border border-slate-100 rounded-2xl">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-slate-50 sticky top-0">
+                    <tr>
+                      <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase">Reg No</th>
+                      <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase">Student Name</th>
+                      <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase">Amount</th>
+                      <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase">Term</th>
+                      <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase">Session</th>
+                      <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase">New Balance</th>
+                      <th className="px-4 py-3 text-xs font-black text-slate-400 uppercase">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 text-sm">
+                    {previewRows.map((r, i) => (
+                      <tr key={i} className={r.isValid ? "hover:bg-slate-50" : "bg-rose-50/50"}>
+                        <td className="px-4 py-3 font-mono font-bold text-xs">{r.regNo}</td>
+                        <td className="px-4 py-3 font-bold text-slate-700">{r.studentName}</td>
+                        <td className="px-4 py-3 font-black text-emerald-600">₦{r.amount.toLocaleString()}</td>
+                        <td className="px-4 py-3 font-bold text-slate-500">{r.term}</td>
+                        <td className="px-4 py-3 font-bold text-slate-500">{r.session}</td>
+                        <td className="px-4 py-3 font-black text-slate-600">₦{r.balance.toLocaleString()}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${r.isValid ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                            {r.isValid ? 'Valid' : 'Not Found'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <button onClick={handleUploadPayments} disabled={uploading}
+                className="w-full bg-indigo-600 text-white font-black py-4 rounded-xl hover:bg-indigo-700 transition flex justify-center items-center gap-2">
+                {uploading ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+                Confirm and Process Payments
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const AnalysisView = () => {
+    const classBreakdown = classes.map(cls => {
+      const students = allStudents.filter(s => (s.className || s.class_name || s.CLASS) === cls);
+      const expected = students.reduce((sum, s) => sum + (parseFloat(s.expectedFee) || 0), 0);
+      const collected = students.reduce((sum, s) => sum + (parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0), 0);
+      return { cls, students: students.length, expected, collected, balance: Math.max(0, expected - collected) };
+    }).filter(c => c.students > 0);
+
+    const collectedPct = stats.totalExpected > 0 ? Math.round((stats.totalCollected / stats.totalExpected) * 100) : 0;
+    const r = 60, cx = 75, cy = 75;
+    const angle = (collectedPct / 100) * 2 * Math.PI;
+    const x1 = cx + r * Math.sin(angle);
+    const y1 = cy - r * Math.cos(angle);
+    const largeArc = collectedPct > 50 ? 1 : 0;
+
+    return (
+      <div className="space-y-8 mt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Pie Chart */}
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex flex-col items-center">
+            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Collection Ratio</h4>
+            <svg width="150" height="150" viewBox="0 0 150 150">
+              <circle cx={cx} cy={cy} r={r} fill="#f1f5f9" />
+              {collectedPct > 0 && collectedPct < 100 && (
+                <path d={`M ${cx} ${cy - r} A ${r} ${r} 0 ${largeArc} 1 ${x1} ${y1} L ${cx} ${cy} Z`} fill="#10b981" />
+              )}
+              {collectedPct >= 100 && <circle cx={cx} cy={cy} r={r} fill="#10b981" />}
+              <circle cx={cx} cy={cy} r={40} fill="white" />
+              <text x={cx} y={cy + 6} textAnchor="middle" fontSize="16" fontWeight="900" fill="#0f172a">{collectedPct}%</text>
+            </svg>
+            <div className="flex gap-4 mt-2 text-xs font-bold">
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"/> Collected</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-slate-200 inline-block"/> Outstanding</span>
+            </div>
+            <div className="mt-3 text-center text-sm font-bold text-slate-600">
+              <p>Total Revenue Expected: ₦{stats.totalExpected.toLocaleString()}</p>
+              <p>Total Revenue Collected: ₦{stats.totalCollected.toLocaleString()}</p>
+              <p>Outstanding Balance: ₦{stats.totalOutstanding.toLocaleString()}</p>
+            </div>
+          </div>
+
+          {/* Bar Chart by Class */}
+          <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4">Collection by Class</h4>
+            <div className="space-y-4">
+              {classBreakdown.map(c => (
+                <div key={c.cls}>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs font-black text-slate-600">{c.cls}</span>
+                    <span className="text-xs font-bold text-slate-400">₦{c.collected.toLocaleString()} / ₦{c.expected.toLocaleString()} ({c.expected > 0 ? Math.round((c.collected / c.expected) * 100) : 0}%)</span>
+                  </div>
+                  <div className="h-3.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full transition-all duration-700"
+                      style={{ width: c.expected > 0 ? `${Math.min(100, Math.round((c.collected / c.expected) * 100))}%` : '0%' }} />
+                  </div>
+                </div>
+              ))}
+              {classBreakdown.length === 0 && <p className="text-sm text-slate-400 text-center py-4">No fee data yet.</p>}
+            </div>
+          </div>
+        </div>
+
+        {/* Historical Entry Chart */}
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+          <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-1">Historical Fee Comparison</h4>
+          <p className="text-xs text-slate-400 mb-4">Enter and review previous sessions' totals to track growth trends.</p>
+          <OldFeesAnalytics currentCollected={stats.totalCollected} currentExpected={stats.totalExpected} />
+        </div>
+      </div>
+    );
+  };
+
+  const StaffPayView = () => {
+    const [staffList, setStaffList] = useState([]);
+    const [payments, setPayments] = useState([]);
+    const [selectedStaff, setSelectedStaff] = useState(null);
+    const [salaryAmount, setSalaryAmount] = useState('');
+    const [payMethod, setPayMethod] = useState('Transfer');
+    const [payMonth, setPayMonth] = useState('January');
+    const [payYear, setPayYear] = useState('2026');
+    const [saving, setSaving] = useState(false);
+    const [loadingStaff, setLoadingStaff] = useState(true);
+
+    const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const YEARS = ['2025', '2026', '2027', '2028'];
+
+    const fetchStaffData = async () => {
+      setLoadingStaff(true);
+      try {
+        const snap = await getDocs(collection(db, 'staff'));
+        setStaffList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+        const paySnap = await getDocs(collection(db, 'staff_payments'));
+        setPayments(paySnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingStaff(false);
+      }
+    };
+
+    useEffect(() => {
+      fetchStaffData();
+    }, []);
+
+    const handlePayStaff = async () => {
+      if (!selectedStaff || !salaryAmount) return;
+      const amt = parseFloat(salaryAmount);
+      if (isNaN(amt) || amt <= 0) { alert('Enter a valid salary amount.'); return; }
+
+      setSaving(true);
+      try {
+        const payload = {
+          staffId: selectedStaff.staffId || 'N/A',
+          name: selectedStaff.name,
+          role: selectedStaff.role || 'N/A',
+          amount: amt,
+          month: payMonth,
+          year: payYear,
+          method: payMethod,
+          date: new Date().toLocaleDateString('en-NG'),
+          createdAt: serverTimestamp()
+        };
+
+        await addDoc(collection(db, 'staff_payments'), payload);
+        alert(`Successfully recorded manual salary payment of ₦${amt.toLocaleString()} for ${selectedStaff.name}.`);
+        setSalaryAmount('');
+        setSelectedStaff(null);
+        fetchStaffData();
+      } catch (err) {
+        console.error(err);
+        alert('Failed to record staff payment.');
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    return (
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-8">
+        <div className="xl:col-span-2 bg-white p-6 border border-slate-200 rounded-3xl shadow-sm">
+          <h3 className="text-lg font-black text-slate-900 mb-6">Staff Payroll Directory</h3>
+          <div className="overflow-x-auto max-h-96">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-slate-50 sticky top-0 text-xs font-black uppercase text-slate-400">
+                <tr>
+                  <th className="px-4 py-3">Staff ID</th>
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Role</th>
+                  <th className="px-4 py-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm">
+                {staffList.map(s => (
+                  <tr key={s.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-mono font-bold text-xs">{s.staffId}</td>
+                    <td className="px-4 py-3 font-bold text-slate-700">{s.name}</td>
+                    <td className="px-4 py-3 font-bold text-slate-500">{s.role || 'N/A'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button onClick={() => setSelectedStaff(s)}
+                        className="px-4 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-xs font-black uppercase transition-colors">
+                        Pay Salary
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <h3 className="text-lg font-black text-slate-900 mt-10 mb-4 border-t pt-6">Salary Disbursement Log</h3>
+          <div className="overflow-x-auto max-h-60 border border-slate-100 rounded-2xl">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead className="bg-slate-50 text-xs font-black uppercase text-slate-400">
+                <tr>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Staff Name</th>
+                  <th className="px-4 py-3">Period</th>
+                  <th className="px-4 py-3">Method</th>
+                  <th className="px-4 py-3 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {payments.map(p => (
+                  <tr key={p.id}>
+                    <td className="px-4 py-3 font-bold text-slate-400">{p.date}</td>
+                    <td className="px-4 py-3 font-bold text-slate-700">{p.name}</td>
+                    <td className="px-4 py-3 font-bold text-slate-500">{p.month} {p.year}</td>
+                    <td className="px-4 py-3 font-bold text-slate-500">{p.method}</td>
+                    <td className="px-4 py-3 text-right font-black text-rose-600">₦{p.amount.toLocaleString()}</td>
+                  </tr>
+                ))}
+                {payments.length === 0 && (
+                  <tr><td colSpan="5" className="text-center py-6 text-slate-400 font-bold italic">No salary payments recorded yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 border border-slate-200 rounded-3xl shadow-sm h-fit">
+          <h3 className="text-lg font-black text-slate-900 mb-6">Manual Salary Entry</h3>
+          {selectedStaff ? (
+            <div className="space-y-6">
+              <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
+                <p className="font-black text-indigo-900">{selectedStaff.name}</p>
+                <p className="text-xs text-indigo-600 font-bold">Role: {selectedStaff.role || 'N/A'} • ID: {selectedStaff.staffId}</p>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Disbursement Period</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <select value={payMonth} onChange={e => setPayMonth(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 outline-none text-sm font-bold">
+                    {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <select value={payYear} onChange={e => setPayYear(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 outline-none text-sm font-bold">
+                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Payment Method</label>
+                <select value={payMethod} onChange={e => setPayMethod(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 outline-none text-sm font-bold">
+                  <option value="Transfer">Bank Transfer</option>
+                  <option value="Cash">Cash payment</option>
+                  <option value="Cheque">Cheque</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Salary Amount (₦)</label>
+                <input type="number" value={salaryAmount} onChange={e => setSalaryAmount(e.target.value)} placeholder="e.g. 150000"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-black text-lg text-slate-900" />
+              </div>
+
+              <div className="flex gap-2">
+                <button onClick={() => setSelectedStaff(null)} className="flex-1 py-3 border-2 border-slate-200 rounded-xl font-bold text-sm text-slate-500">Cancel</button>
+                <button onClick={handlePayStaff} disabled={saving}
+                  className="flex-1 bg-green-600 text-white font-black py-3 rounded-xl hover:bg-green-700 transition flex justify-center items-center gap-2">
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : 'Record Salary'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-slate-400 font-bold italic">
+              Select a staff member from the list to start salary entry.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto">
       {/* Header */}
@@ -1078,6 +1539,9 @@ const BursarDashboard = () => {
           {activeView === 'messages' && <MessageHubView />}
           {activeView === 'cashpay' && <CashPaymentView />}
           {activeView === 'register' && <RegisterStudentView />}
+          {activeView === 'bulkpay' && <BulkPayView />}
+          {activeView === 'analysis' && <AnalysisView />}
+          {activeView === 'staffpay' && <StaffPayView />}
 
         </div>
       )}

@@ -11,7 +11,7 @@ import ScoreEntry from '../../components/ScoreEntry';
 import StaffDashboard from './StaffDashboard';
 import StudentDashboard from './StudentDashboard';
 import { expandStudent } from '../../utils/firestoreSchema';
-import { Users, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download } from 'lucide-react';
+import { Users, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 const AdminDashboard = () => {
   const { currentAdmin, changePassword, authReady } = useAdminAuth();
@@ -66,8 +66,230 @@ const AdminDashboard = () => {
     { id: 'Academics', label: 'Academics', icon: BookOpen },
     { id: 'Finance', label: 'Finance', icon: DollarSign },
     { id: 'Management', label: 'Management', icon: Briefcase },
+    { id: 'Biometrics', label: 'Biometrics', icon: Fingerprint },
     ...(currentAdmin?.isSuperAdmin ? [{ id: 'Security', label: 'System Security', icon: Shield }] : []),
   ];
+
+  // ── Fingerprint Manager (inline) ──────────────────────────────────────
+  const FingerprintManager = () => {
+    const [fmStudents, setFmStudents] = React.useState([]);
+    const [fmLoading, setFmLoading] = React.useState(true);
+    const [fmSearch, setFmSearch] = React.useState('');
+    const [fmClass, setFmClass] = React.useState('All');
+    const [fmStatus, setFmStatus] = React.useState({ type: '', message: '', id: '' });
+    const [enrolling, setEnrolling] = React.useState('');
+
+    const webAuthnOk = typeof window !== 'undefined' &&
+      window.PublicKeyCredential !== undefined &&
+      typeof window.PublicKeyCredential === 'function';
+
+    const toBase64url = buf =>
+      btoa(String.fromCharCode(...new Uint8Array(buf)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+    React.useEffect(() => {
+      const fetchAll = async () => {
+        setFmLoading(true);
+        try {
+          const { getDocs, collection } = await import('firebase/firestore');
+          const { db: firestoreDb } = await import('../../lib/firebase');
+          const snap = await getDocs(collection(firestoreDb, 'students'));
+          setFmStudents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        } catch (e) { console.error(e); }
+        setFmLoading(false);
+      };
+      fetchAll();
+    }, []);
+
+    const handleEnroll = async (student) => {
+      if (!webAuthnOk) { setFmStatus({ type: 'error', message: 'WebAuthn not supported in this browser.', id: student.id }); return; }
+      setEnrolling(student.id);
+      setFmStatus({ type: 'info', message: 'Follow the browser prompt to enroll fingerprint…', id: student.id });
+      try {
+        const userId = new TextEncoder().encode(student.id.slice(0, 16).padEnd(16, '0'));
+        const cred = await navigator.credentials.create({
+          publicKey: {
+            challenge: crypto.getRandomValues(new Uint8Array(32)),
+            rp: { name: 'School Management System', id: window.location.hostname },
+            user: { id: userId, name: student.regNo || student.id, displayName: student.name || student.NAME || 'Student' },
+            pubKeyCredParams: [{ alg: -7, type: 'public-key' }, { alg: -257, type: 'public-key' }],
+            authenticatorSelection: { userVerification: 'required', authenticatorAttachment: 'platform' },
+            timeout: 60000,
+            attestation: 'none'
+          }
+        });
+        const credId = toBase64url(cred.rawId);
+        const { doc, updateDoc } = await import('firebase/firestore');
+        const { db: firestoreDb } = await import('../../lib/firebase');
+        await updateDoc(doc(firestoreDb, 'students', student.id), {
+          fingerprintCredentialId: credId,
+          fingerprintEnrolled: true,
+          fingerprintEnrolledAt: new Date().toISOString()
+        });
+        setFmStudents(prev => prev.map(s => s.id === student.id
+          ? { ...s, fingerprintCredentialId: credId, fingerprintEnrolled: true }
+          : s
+        ));
+        setFmStatus({ type: 'success', message: `Fingerprint enrolled for ${student.name}!`, id: student.id });
+      } catch (err) {
+        if (err.name === 'NotAllowedError') {
+          setFmStatus({ type: 'error', message: 'Enrollment cancelled or timed out.', id: student.id });
+        } else {
+          setFmStatus({ type: 'error', message: err.message, id: student.id });
+        }
+      } finally {
+        setEnrolling('');
+      }
+    };
+
+    const handleRevoke = async (student) => {
+      if (!window.confirm(`Revoke fingerprint for ${student.name}? They will need to re-enroll.`)) return;
+      try {
+        const { doc, updateDoc, deleteField } = await import('firebase/firestore');
+        const { db: firestoreDb } = await import('../../lib/firebase');
+        await updateDoc(doc(firestoreDb, 'students', student.id), {
+          fingerprintCredentialId: deleteField(),
+          fingerprintEnrolled: false
+        });
+        setFmStudents(prev => prev.map(s => s.id === student.id
+          ? { ...s, fingerprintCredentialId: null, fingerprintEnrolled: false }
+          : s
+        ));
+        setFmStatus({ type: 'success', message: `Fingerprint revoked for ${student.name}.`, id: student.id });
+      } catch (e) {
+        setFmStatus({ type: 'error', message: 'Failed to revoke fingerprint.', id: student.id });
+      }
+    };
+
+    const filtered = fmStudents.filter(s => {
+      const matchClass = fmClass === 'All' || (s.className || s.class_name || s.CLASS) === fmClass;
+      const q = fmSearch.toLowerCase();
+      const matchSearch = !q || (s.name || s.NAME || '').toLowerCase().includes(q) ||
+        (s.regNo || s.reg_no || '').toLowerCase().includes(q);
+      return matchClass && matchSearch;
+    });
+
+    const enrolledCount = fmStudents.filter(s => s.fingerprintCredentialId).length;
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-3xl p-8 text-white relative overflow-hidden shadow-2xl">
+          <div className="absolute -right-12 -top-12 w-48 h-48 bg-white/5 rounded-full" />
+          <div className="absolute right-24 bottom-8 w-24 h-24 bg-white/5 rounded-full" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center">
+                <Fingerprint size={28} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black tracking-tight">Fingerprint Manager</h2>
+                <p className="text-indigo-200 text-sm font-medium">Assign & manage student biometric credentials</p>
+              </div>
+            </div>
+            <div className="flex gap-6">
+              <div>
+                <p className="text-3xl font-black">{enrolledCount}</p>
+                <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest">Enrolled</p>
+              </div>
+              <div>
+                <p className="text-3xl font-black">{fmStudents.length - enrolledCount}</p>
+                <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest">Pending</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {!webAuthnOk && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+            <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-amber-700 text-sm font-medium">
+              <strong>WebAuthn not supported</strong> in this browser. Please use Chrome or Edge on Windows with Windows Hello, or Safari on Mac with Touch ID to enroll fingerprints.
+            </p>
+          </div>
+        )}
+
+        <div className="card-premium">
+          <div className="flex flex-wrap gap-3 mb-6">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={fmSearch}
+                onChange={e => setFmSearch(e.target.value)}
+                placeholder="Search by name or reg no…"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-sm font-bold focus:border-indigo-400"
+              />
+            </div>
+            <select
+              value={fmClass}
+              onChange={e => setFmClass(e.target.value)}
+              className="px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-sm font-bold focus:border-indigo-400"
+            >
+              {['All', ...classes].map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          {fmLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 size={28} className="animate-spin text-indigo-500" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className="text-center text-slate-400 py-8 font-medium">No students found.</p>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {filtered.map(student => {
+                const enrolled = !!student.fingerprintCredentialId;
+                const isEnrolling = enrolling === student.id;
+                const myStatus = fmStatus.id === student.id ? fmStatus : null;
+                return (
+                  <div key={student.id} className="flex items-center gap-4 py-4">
+                    <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-sm shrink-0 overflow-hidden">
+                      {student.photo
+                        ? <img src={student.photo} alt="" className="w-full h-full object-cover" />
+                        : (student.name || student.NAME || '?')[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-slate-800 text-sm truncate">{student.name || student.NAME}</p>
+                      <p className="text-xs text-slate-400 font-medium">{student.regNo || student.reg_no} · {student.className || student.class_name}</p>
+                      {myStatus && (
+                        <p className={`text-xs font-bold mt-1 ${myStatus.type === 'success' ? 'text-emerald-600' : myStatus.type === 'error' ? 'text-rose-600' : 'text-indigo-600'}`}>
+                          {myStatus.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${
+                        enrolled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {enrolled ? '🫆 Enrolled' : 'Not Enrolled'}
+                      </span>
+                      {!enrolled ? (
+                        <button
+                          onClick={() => handleEnroll(student)}
+                          disabled={isEnrolling || !webAuthnOk}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isEnrolling ? <Loader2 size={12} className="animate-spin" /> : <Fingerprint size={12} />}
+                          {isEnrolling ? 'Enrolling…' : 'Enroll'}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleRevoke(student)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all"
+                        >
+                          <XCircle size={12} /> Revoke
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
 
   const [realStats, setRealStats] = useState({
@@ -515,6 +737,13 @@ const AdminDashboard = () => {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Biometrics Tab */}
+      {activeTab === 'Biometrics' && (
+        <div className="animate-in fade-in">
+          <FingerprintManager />
         </div>
       )}
 

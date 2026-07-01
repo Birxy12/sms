@@ -37,6 +37,7 @@ import BursarDashboard from './pages/dashboard/BursarDashboard';
 import CheckResult from './pages/public/CheckResult';
 import AdmissionPortal from './pages/public/AdmissionPortal';
 import FameManagement from './pages/dashboard/FameManagement';
+import BiometricAttendance from './pages/dashboard/BiometricAttendance';
 import { useStudentAuth } from './context/StudentAuthContext';
 import { useAdminAuth } from './context/AdminAuthContext';
 import BonusAI from './components/BonusAI';
@@ -224,6 +225,12 @@ function App() {
       <Route path="/admin/posts" element={
         <ProtectedAdminRoute requiredRole={['principal', 'admin', 'teacher']}>
           <Layout><ContentCMS /></Layout>
+        </ProtectedAdminRoute>
+      } />
+
+      <Route path="/attendance" element={
+        <ProtectedAdminRoute requiredRole={['admin', 'principal', 'teacher', 'bursar']}>
+          <Layout><BiometricAttendance /></Layout>
         </ProtectedAdminRoute>
       } />
 
