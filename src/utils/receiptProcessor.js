@@ -28,15 +28,48 @@ function parseReceiptText(text) {
   }
 
   // --- Total: last occurrence of a currency-like amount ---
-  const amountRegex = /(?:total|amount|grand total|subtotal)?[\s:]*\$?(\d{1,6}[.,]\d{2})/i;
+  const amountRegex = /(?:total|amount|grand total|subtotal|paid)?[\s:]*(?:₦|NGN|N|\$|#|=N=)?\s*(\d{1,6}[.,]\d{2})/i;
   let total = null;
   for (let i = lines.length - 1; i >= 0; i--) {
     const m = lines[i].match(amountRegex);
     if (m) { total = m[1]; break; }
   }
 
+  // --- Amount Paid: look for amount paid or default to total ---
+  const paidRegex = /(?:amount\s*paid|paid\s*amount|paid|amt\s*paid|received|payment)[:\s]*(?:₦|NGN|N|\$|#|=N=)?\s*(\d{1,6}[.,]\d{2})/i;
+  let amountPaid = null;
+  for (const line of lines) {
+    const m = line.match(paidRegex);
+    if (m) { amountPaid = m[1]; break; }
+  }
+  if (!amountPaid) amountPaid = total || '0.00';
+
+  // --- Serial Number: look for serial number patterns ---
+  const serialRegex = /(?:serial\s*(?:no|num|number)?|s\/n|sl\s*no)[:\s]*([a-z0-9-]+)/i;
+  let serialNumber = null;
+  for (const line of lines) {
+    const m = line.match(serialRegex);
+    if (m) { serialNumber = m[1]; break; }
+  }
+  if (!serialNumber) {
+    // Generate a fallback serial number (e.g. SN-XXXXXX)
+    serialNumber = "SN-" + Math.floor(100000 + Math.random() * 900000);
+  }
+
+  // --- Transaction ID: look for transaction id patterns ---
+  const txnRegex = /(?:transaction\s*(?:id|no|num)?|txn\s*(?:id|no|num)?|txid|ref(?:erence)?|receipt\s*(?:no|num|number)?)[:\s]*([a-z0-9-]+)/i;
+  let transactionId = null;
+  for (const line of lines) {
+    const m = line.match(txnRegex);
+    if (m) { transactionId = m[1]; break; }
+  }
+  if (!transactionId) {
+    // Generate a fallback transaction ID (e.g. TXN-XXXXXXXX)
+    transactionId = "TXN-" + Math.floor(10000000 + Math.random() * 90000000);
+  }
+
   // --- Items: lines that look like "item name ... price" ---
-  const itemRegex = /^(.+?)\s+\$?(\d+[.,]\d{2})$/;
+  const itemRegex = /^(.+?)\s+(?:₦|NGN|N|\$|#|=N=)?\s*(\d+[.,]\d{2})$/i;
   const items = [];
   for (const line of lines) {
     const m = line.match(itemRegex);
@@ -49,6 +82,9 @@ function parseReceiptText(text) {
     merchant,
     date: date || new Date().toISOString().split('T')[0],
     total: total || '0.00',
+    amountPaid,
+    serialNumber,
+    transactionId,
     items,
   };
 }

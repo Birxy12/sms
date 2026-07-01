@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { db } from '../../lib/firebase';
-import { collection, query, getDocs, where, limit, orderBy } from 'firebase/firestore';
+import { collection, query, getDocs, where, limit, orderBy, doc, getDoc } from 'firebase/firestore';
 import { 
   LayoutDashboard, Award, CreditCard, Calendar, Bell, ChevronRight, 
   Inbox as InboxIcon, Trophy, Wallet, BookOpen, Library, MonitorCheck, 
@@ -29,6 +29,7 @@ const StudentDashboard = () => {
   const [loading, setLoading]           = useState(true);
   const [dashboardError, setDashboardError] = useState('');
   const [recentNotifications, setRecentNotifications] = useState([]);
+  const [feeData, setFeeData]           = useState({ expected: 0, paid: 0, balance: 0, lastDate: 'N/A' });
 
   useEffect(() => {
     if (!currentStudent || !regNum) {
@@ -92,6 +93,23 @@ const StudentDashboard = () => {
             if (count > 0) setAvgScore((total / count).toFixed(1));
           }
         }
+
+        // 3. Fetch Fees Info
+        let expected = 0;
+        let paid = 0;
+        let lastDate = 'N/A';
+        if (currentStudent?.id) {
+          const studentRef = doc(db, 'students', currentStudent.id);
+          const studentSnap = await getDoc(studentRef);
+          if (studentSnap.exists()) {
+            const sData = studentSnap.data();
+            expected = parseFloat(sData.expectedFee) || 0;
+            paid = parseFloat(sData.paidFee) || parseFloat(sData.paidAmount) || 0;
+            lastDate = sData.lastPaymentDate || 'N/A';
+          }
+        }
+        setFeeData({ expected, paid, balance: Math.max(0, expected - paid), lastDate });
+
       } catch (e) {
         console.error("Dashboard error:", e);
         if (e?.code === 'permission-denied') {
@@ -108,7 +126,7 @@ const StudentDashboard = () => {
   const mainStats = [
     { label: 'GPA Average', value: `${avgScore}%`, icon: Zap, color: '#6366f1', trend: '+2.4%' },
     { label: 'Exams Taken', value: resultsCount, icon: Trophy, color: '#10b981', trend: 'Completed' },
-    { label: 'Pending Fees', value: '₦0', icon: Wallet, color: '#f59e0b', trend: 'Awaiting Payment' },
+    { label: 'Pending Fees', value: `₦${feeData.balance.toLocaleString()}`, icon: Wallet, color: '#f59e0b', trend: feeData.balance <= 0 ? 'Cleared' : 'Awaiting Payment' },
     { label: 'Attendance', value: '94%', icon: Calendar, color: '#ec4899', trend: 'Excellent' },
   ];
 
@@ -335,8 +353,10 @@ const StudentDashboard = () => {
                       </div>
                       <h3 className="text-2xl font-black text-slate-800 mb-2">School Fees Balance</h3>
                       <p className="text-slate-400 font-bold mb-8">Summary of your current financial standing.</p>
-                      <div className="text-4xl font-black text-slate-900 mb-2">₦0.00</div>
-                      <div className="text-xs font-black text-emerald-500 uppercase">Awaiting Payment</div>
+                      <div className="text-4xl font-black text-slate-900 mb-2">₦{feeData.balance.toLocaleString()}</div>
+                      <div className={`text-xs font-black uppercase ${feeData.balance <= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        {feeData.balance <= 0 ? 'Fully Cleared' : 'Awaiting Payment'}
+                      </div>
                     </div>
                     <button onClick={() => navigate('/students/fees')} className="mt-10 py-5 bg-slate-900 text-white rounded-3xl font-black text-sm shadow-xl">
                       Make Payment Now

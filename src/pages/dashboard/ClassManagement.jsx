@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
-import { collection, query, getDocs, where, doc, setDoc, getDoc } from 'firebase/firestore';
-import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info, UserCheck, X, Calendar, CheckSquare, Square, ChevronDown, Save, Check, Download } from 'lucide-react';
+import { collection, query, getDocs, where, doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
+import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info, UserCheck, X, Calendar, CheckSquare, Square, ChevronDown, Save, Check, Download, Plus, Trash2 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
 const ClassManagement = () => {
@@ -10,6 +10,12 @@ const ClassManagement = () => {
   const [loading, setLoading] = useState(true);
   const [staff, setStaff] = useState([]);
   const [savingTeacher, setSavingTeacher] = useState('');
+
+  // Add Class modal state
+  const [showAddClass, setShowAddClass] = useState(false);
+  const [newClassName, setNewClassName] = useState('');
+  const [addingClass, setAddingClass] = useState(false);
+  const [deletingClass, setDeletingClass] = useState('');
 
   // Modal State
   const [selectedClass, setSelectedClass] = useState(null);
@@ -23,7 +29,8 @@ const ClassManagement = () => {
   const [performanceData, setPerformanceData] = useState({ maleAvg: 0, femaleAvg: 0, overallAvg: 0 });
   const [performanceLoading, setPerformanceLoading] = useState(false);
 
-  const classes = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'];
+  const DEFAULT_CLASSES = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'];
+  const [classes, setClasses] = useState(DEFAULT_CLASSES);
 
   const fetchClassStats = async () => {
     setLoading(true);
@@ -34,11 +41,20 @@ const ClassManagement = () => {
 
       const classesSnap = await getDocs(collection(db, 'classes'));
       const classesData = {};
+      // Collect any custom classes stored in Firestore
+      const customClassNames = [];
       classesSnap.docs.forEach(d => {
         classesData[d.id] = d.data();
+        if (!DEFAULT_CLASSES.includes(d.id) && !d.data().deleted) {
+          customClassNames.push(d.id);
+        }
       });
 
-      const stats = await Promise.all(classes.map(async (className) => {
+      // Merge defaults + custom, deduplicating
+      const allClasses = [...DEFAULT_CLASSES, ...customClassNames.filter(c => !DEFAULT_CLASSES.includes(c))];
+      setClasses(allClasses);
+
+      const stats = await Promise.all(allClasses.map(async (className) => {
         // Fetch students in this class
         const studentsQuery = query(collection(db, 'students'), where('className', '==', className));
         const studentsSnap = await getDocs(studentsQuery);
@@ -63,7 +79,8 @@ const ClassManagement = () => {
           femaleCount,
           subjectCount: subjectsSnap.size,
           formTeacherId: classesData[className]?.formTeacherId || '',
-          id: className
+          id: className,
+          isCustom: !DEFAULT_CLASSES.includes(className)
         };
       }));
       setClassStats(stats);
@@ -71,6 +88,47 @@ const ClassManagement = () => {
       console.error('Error fetching class stats:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddClass = async () => {
+    const name = newClassName.trim().toUpperCase();
+    if (!name) return;
+    if (classes.includes(name)) {
+      alert('A class with that name already exists.');
+      return;
+    }
+    setAddingClass(true);
+    try {
+      await setDoc(doc(db, 'classes', name), {
+        name,
+        isCustom: true,
+        createdAt: new Date().toISOString()
+      }, { merge: true });
+      setNewClassName('');
+      setShowAddClass(false);
+      fetchClassStats();
+    } catch (e) {
+      console.error(e);
+      alert('Failed to add class.');
+    } finally {
+      setAddingClass(false);
+    }
+  };
+
+  const handleDeleteClass = async (className) => {
+    if (!window.confirm(`Delete class "${className}"? This will not remove any students already assigned to it.`)) return;
+    setDeletingClass(className);
+    try {
+      // Soft-delete by marking deleted=true in Firestore
+      await setDoc(doc(db, 'classes', className), { deleted: true }, { merge: true });
+      setClasses(prev => prev.filter(c => c !== className));
+      setClassStats(prev => prev.filter(c => c.id !== className));
+    } catch (e) {
+      console.error(e);
+      alert('Failed to delete class.');
+    } finally {
+      setDeletingClass('');
     }
   };
 
@@ -231,11 +289,17 @@ const ClassManagement = () => {
           <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight text-left">Class Management</h2>
           <p className="text-slate-500 text-left">Overview of school structure, student distribution, and academic capacity.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <div className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 border border-emerald-100">
             <TrendingUp size={16} />
             Academic Session {currentSession}
           </div>
+          <button
+            onClick={() => setShowAddClass(true)}
+            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+          >
+            <Plus size={16} /> Add Class
+          </button>
         </div>
       </div>
 
@@ -318,9 +382,79 @@ const ClassManagement = () => {
                 </div>
               )}
             </div>
+
+            {/* Delete custom class */}
+            {cls.isCustom && (
+              <button
+                onClick={() => handleDeleteClass(cls.id)}
+                disabled={deletingClass === cls.id}
+                className="w-full mt-3 py-2 text-xs font-bold text-rose-500 hover:bg-rose-50 rounded-xl border border-rose-100 flex items-center justify-center gap-1.5 transition-all"
+              >
+                {deletingClass === cls.id ? 'Deleting…' : <><Trash2 size={12} /> Delete Class</>}
+              </button>
+            )}
           </div>
         ))}
+
+        {/* Add Class placeholder card */}
+        <button
+          onClick={() => setShowAddClass(true)}
+          className="group h-full min-h-[200px] bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center gap-3 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-center group-hover:bg-indigo-600 group-hover:border-indigo-600 transition-all">
+            <Plus size={22} className="text-slate-400 group-hover:text-white transition-colors" />
+          </div>
+          <span className="text-sm font-bold text-slate-400 group-hover:text-indigo-600 transition-colors">Add New Class</span>
+        </button>
       </div>
+
+      {/* ── Add Class Modal ─────────────────────────────── */}
+      {showAddClass && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: '24px', width: '100%', maxWidth: '440px', boxShadow: '0 25px 60px rgba(0,0,0,0.2)', padding: '32px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Layers size={18} color="#fff" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '900', color: '#1e293b' }}>Add New Class</h3>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Custom class will appear in all dropdowns</p>
+                </div>
+              </div>
+              <button onClick={() => { setShowAddClass(false); setNewClassName(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <label style={{ fontSize: '13px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '8px' }}>Class Name</label>
+            <input
+              type="text"
+              value={newClassName}
+              onChange={e => setNewClassName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAddClass()}
+              placeholder="e.g. JSS4, SS4 ART…"
+              autoFocus
+              style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '2px solid #e2e8f0', fontSize: '14px', fontWeight: '700', outline: 'none', marginBottom: '8px', boxSizing: 'border-box' }}
+            />
+            <p style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '24px' }}>Class name will be converted to uppercase automatically.</p>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button onClick={() => { setShowAddClass(false); setNewClassName(''); }} style={{ padding: '10px 20px', borderRadius: '10px', border: '2px solid #e2e8f0', background: '#fff', fontWeight: '700', cursor: 'pointer', color: '#475569', fontSize: '14px' }}>
+                Cancel
+              </button>
+              <button
+                onClick={handleAddClass}
+                disabled={addingClass || !newClassName.trim()}
+                style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', fontWeight: '800', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', opacity: addingClass || !newClassName.trim() ? 0.6 : 1 }}
+              >
+                <Plus size={16} />
+                {addingClass ? 'Adding…' : 'Add Class'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Capacity Insight — fully dynamic ─────────────────────────────── */}
       {(() => {

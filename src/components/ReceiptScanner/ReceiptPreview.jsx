@@ -142,8 +142,16 @@ const ReceiptPreview = ({ imageSrc, source, onRetake, onComplete, messageHubConf
               <span className="data-value">{extractedData.date}</span>
             </div>
             <div className="data-row">
-              <span className="data-label">Total</span>
-              <span className="data-value total">${extractedData.total}</span>
+              <span className="data-label">Amount Paid</span>
+              <span className="data-value total">₦{extractedData.amountPaid || extractedData.total}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-label">Serial No</span>
+              <span className="data-value font-mono text-xs">{extractedData.serialNumber || 'N/A'}</span>
+            </div>
+            <div className="data-row">
+              <span className="data-label">Transaction ID</span>
+              <span className="data-value font-mono text-xs">{extractedData.transactionId || 'N/A'}</span>
             </div>
           </div>
 
@@ -158,7 +166,7 @@ const ReceiptPreview = ({ imageSrc, source, onRetake, onComplete, messageHubConf
                   {extractedData.items.map((item, i) => (
                     <li key={i} className="item-row">
                       <span>{item.name}</span>
-                      <span>${item.price}</span>
+                      <span>₦{item.price}</span>
                     </li>
                   ))}
                 </ul>

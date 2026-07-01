@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../lib/firebase';
-import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, writeBatch } from 'firebase/firestore';
+import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, writeBatch, setDoc } from 'firebase/firestore';
 import { BookOpen, Plus, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Search, User, Database, Filter, UserPlus, Save } from 'lucide-react';
 import { CLASS_LIST, getSubjectsForClass } from '../../utils/subjectConfig';
 
@@ -65,6 +65,9 @@ const CourseManagement = () => {
       seenNames.add(upperName);
 
       const fs = fsMap[upperName];
+      // Skip subjects soft-deleted by admin
+      if (fs?.isDeleted) return;
+
       merged.push({
         name,
         class: activeTab,
@@ -73,11 +76,13 @@ const CourseManagement = () => {
         teacherName: fs?.teacherName || '',
         department: fs?.department || 'General',
         inFirestore: !!fs,
+        isConfigSubject: true,
       });
     });
 
     // Add any Firestore subjects not in the config (custom subjects admin added)
     fsForClass.forEach(fs => {
+      if (fs.isDeleted) return; // skip soft-deleted
       const upperName = fs.name.toUpperCase().trim();
       if (!seenNames.has(upperName)) {
         seenNames.add(upperName);
@@ -269,15 +274,38 @@ const CourseManagement = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!id) return;
-    if (!window.confirm('Remove this subject from the database?')) return;
+  const handleDelete = async (subject) => {
+    if (!window.confirm(`Remove "${subject.name}" from ${activeTab}?`)) return;
     try {
-      await deleteDoc(doc(db, 'subjects', id));
-      fetchData();
-      setStatus({ type: 'success', message: 'Subject removed.' });
+      if (subject.isCustom && subject.id) {
+        // Custom-only subject: hard delete from Firestore
+        await deleteDoc(doc(db, 'subjects', subject.id));
+        setFirestoreSubjects(prev => prev.filter(s => s.id !== subject.id));
+      } else {
+        // Config subject: soft-delete by writing isDeleted: true to Firestore
+        if (subject.id) {
+          // Already has a Firestore record — just update it
+          await updateDoc(doc(db, 'subjects', subject.id), { isDeleted: true });
+          setFirestoreSubjects(prev => prev.map(s => s.id === subject.id ? { ...s, isDeleted: true } : s));
+        } else {
+          // No Firestore record yet — create one with isDeleted: true
+          const ref = doc(collection(db, 'subjects'));
+          const newDoc = {
+            name: subject.name,
+            class: subject.class,
+            department: subject.department || 'General',
+            teacherId: '',
+            teacherName: '',
+            isDeleted: true,
+            createdAt: new Date().toISOString()
+          };
+          await setDoc(ref, newDoc);
+          setFirestoreSubjects(prev => [...prev, { id: ref.id, ...newDoc }]);
+        }
+      }
+      setStatus({ type: 'success', message: `"${subject.name}" removed from ${activeTab}.` });
     } catch (err) {
-      setStatus({ type: 'error', message: 'Delete failed.' });
+      setStatus({ type: 'error', message: 'Delete failed: ' + err.message });
     }
   };
 
@@ -449,23 +477,21 @@ const CourseManagement = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {sub.id && (
-                          <>
-                            <button
-                              onClick={() => { setIsEditing(true); setCurrentSubject(sub); setShowModal(true); }}
-                              className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all"
-                              title="Edit subject"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(sub.id)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                              title="Delete subject"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </>
+                          <button
+                            onClick={() => { setIsEditing(true); setCurrentSubject(sub); setShowModal(true); }}
+                            className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all"
+                            title="Edit subject"
+                          >
+                            <Edit2 size={14} />
+                          </button>
                         )}
+                        <button
+                          onClick={() => handleDelete(sub)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                          title={sub.isCustom ? 'Delete subject' : 'Remove subject from this class'}
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </td>
                   </tr>

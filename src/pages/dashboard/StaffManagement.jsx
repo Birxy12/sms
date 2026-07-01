@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
-import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, limit } from 'firebase/firestore';
+import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, limit, where, getDoc } from 'firebase/firestore';
 import { Users, UserPlus, Mail, Phone, Briefcase, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Search, ShieldCheck, Wallet, MoreVertical, Key, Lock, Camera, Upload } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { uploadAvatar } from '../../lib/supabase';
@@ -50,15 +50,33 @@ const StaffManagement = () => {
     fetchStaffData();
   }, []);
 
-  // Auto-generate Staff ID (BDS/STAFF/001 ...)
+  // Auto-generate Staff ID — finds true numeric max across ALL records to avoid duplicates
   const generateStaffId = async () => {
-    const q = query(collection(db, 'staff'), orderBy('staffId', 'desc'), limit(1));
-    const querySnapshot = await getDocs(q);
-    if (querySnapshot.empty) return 'BDS/STAFF/001';
-    
-    const lastId = querySnapshot.docs[0].data().staffId;
-    const num = parseInt(lastId.split('/').pop());
-    return `BDS/STAFF/${String(num + 1).padStart(3, '0')}`;
+    // Fetch every staff document so we can find the real numeric maximum
+    const allSnap = await getDocs(collection(db, 'staff'));
+    let maxNum = 0;
+    allSnap.docs.forEach(d => {
+      const sid = d.data().staffId || '';
+      // Expected format: BDS/STAFF/001  —  grab everything after the last '/'
+      const parts = sid.split('/');
+      const num = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(num) && num > maxNum) maxNum = num;
+    });
+
+    // Increment and verify the candidate is not already taken (anti-race guard)
+    let candidate;
+    let attempts = 0;
+    do {
+      maxNum += 1;
+      attempts += 1;
+      candidate = `BDS/STAFF/${String(maxNum).padStart(3, '0')}`;
+      // Check if this ID is already in use
+      const colRef = collection(db, 'staff');
+      const check = await getDocs(query(colRef, where('staffId', '==', candidate)));
+      if (check.empty) break; // ID is free
+    } while (attempts < 20); // safety cap
+
+    return candidate;
   };
 
   const handleSave = async (e) => {

@@ -231,6 +231,10 @@ const BursarDashboard = () => {
       const pFee = parseFloat(student.paidFee) || parseFloat(student.paidAmount) || 0;
       const eFee = parseFloat(student.expectedFee) || 0;
       const bal = eFee - pFee;
+      
+      const txnId = student.lastTransactionId || "TXN-" + Math.floor(10000000 + Math.random() * 90000000);
+      const serialNo = student.lastSerialNo || "SN-" + Math.floor(100000 + Math.random() * 900000);
+      const qrData = `Receipt: ${student.name || student['STUDENT NAME']} | Reg: ${student.regNo || 'N/A'} | Expected: ₦${eFee} | Paid: ₦${pFee} | Txn: ${txnId}`;
 
       const printWindow = window.open('', '_blank');
       printWindow.document.write(`
@@ -249,7 +253,9 @@ const BursarDashboard = () => {
               .total-box { margin-top: 30px; background: #f8fafc; padding: 20px; border-radius: 12px; }
               .total-row { display: flex; justify-content: space-between; font-size: 20px; font-weight: 900; }
               .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #94a3b8; }
-              .signature { margin-top: 50px; border-top: 1px solid #cbd5e1; width: 200px; padding-top: 10px; text-align: center; float: right; font-weight: bold;}
+              .signature { margin-top: 45px; border-top: 1px solid #cbd5e1; width: 200px; padding-top: 10px; text-align: center; float: right; font-weight: bold; }
+              .qr-barcode-section { display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 25px; border-top: 2px dashed #e2e8f0; }
+              .barcode-visual { font-family: 'Courier New', monospace; font-size: 24px; letter-spacing: 1px; font-weight: bold; margin-bottom: 2px; }
             </style>
           </head>
           <body>
@@ -261,6 +267,14 @@ const BursarDashboard = () => {
               <div class="row">
                 <span class="label">Date Printed:</span>
                 <span class="value">${new Date().toLocaleDateString()}</span>
+              </div>
+              <div class="row">
+                <span class="label">Serial No:</span>
+                <span class="value">${serialNo}</span>
+              </div>
+              <div class="row">
+                <span class="label">Transaction ID:</span>
+                <span class="value">${txnId}</span>
               </div>
               <div class="row">
                 <span class="label">Student Name:</span>
@@ -287,6 +301,17 @@ const BursarDashboard = () => {
                 <div class="total-row" style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed #cbd5e1;">
                   <span>Outstanding Balance:</span>
                   <span style="color: ${bal > 0 ? '#e11d48' : '#10b981'};">₦${Math.max(0, bal).toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div class="qr-barcode-section">
+                <div>
+                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}" alt="QR Code" style="width: 80px; height: 80px;" />
+                  <div style="font-size: 9px; color: #94a3b8; margin-top: 4px; text-align: center;">Scan to Verify</div>
+                </div>
+                <div style="text-align: right;">
+                  <div class="barcode-visual">||| | |||| | || ||| ||</div>
+                  <div style="font-size: 10px; color: #94a3b8; font-family: monospace;">SERIAL: ${serialNo}</div>
                 </div>
               </div>
 
@@ -534,6 +559,10 @@ const BursarDashboard = () => {
 
     const printReceipt = () => {
       const s = receipt.student;
+      const txnId = s.lastTransactionId || "TXN-" + Math.floor(10000000 + Math.random() * 90000000);
+      const serialNo = s.lastSerialNo || "SN-" + Math.floor(100000 + Math.random() * 900000);
+      const qrData = `Receipt: ${s.name || s['STUDENT NAME']} | Amount: ₦${receipt.amount.toLocaleString()} | Txn: ${txnId}`;
+
       const w = window.open('', '_blank');
       w.document.write(`<!DOCTYPE html><html><head><title>Receipt</title><style>
         body{font-family:Arial,sans-serif;padding:40px;color:#1e293b;max-width:600px;margin:0 auto}
@@ -543,16 +572,32 @@ const BursarDashboard = () => {
         .row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:15px}
         .lbl{color:#64748b;font-weight:700}.val{font-weight:900;color:#0f172a}
         .total{background:#f8fafc;border-radius:12px;padding:18px;margin-top:20px;display:flex;justify-content:space-between;font-size:20px;font-weight:900}
-        .sig{border-top:1px solid #cbd5e1;width:180px;padding-top:8px;text-align:center;font-weight:700;margin-top:50px;float:right;font-size:13px}
+        .sig{border-top:1px solid #cbd5e1;width:180px;padding-top:8px;text-align:center;font-weight:700;margin-top:40px;float:right;font-size:13px}
+        .qr-barcode-section { display: flex; justify-content: space-between; align-items: center; margin-top: 30px; padding-top: 20px; border-top: 2px dashed #cbd5e1; }
+        .barcode-visual { font-family: 'Courier New', monospace; font-size: 24px; letter-spacing: 1px; font-weight: bold; margin-bottom: 2px; }
       </style></head><body>
         <div class="hd"><div class="school">${schoolName||'School Name'}</div><div class="sub">Official Cash Payment Receipt</div></div>
         <div class="row"><span class="lbl">Date:</span><span class="val">${receipt.date}</span></div>
+        <div class="row"><span class="lbl">Serial No:</span><span class="val">${serialNo}</span></div>
+        <div class="row"><span class="lbl">Transaction ID:</span><span class="val">${txnId}</span></div>
         <div class="row"><span class="lbl">Student:</span><span class="val">${s.name||s['STUDENT NAME']}</span></div>
         <div class="row"><span class="lbl">Reg No:</span><span class="val">${s.regNo||s.REGNO||'N/A'}</span></div>
         <div class="row"><span class="lbl">Class:</span><span class="val">${s.className||s.CLASS||'N/A'}</span></div>
         <div class="row"><span class="lbl">Method:</span><span class="val">CASH</span></div>
         <div class="total"><span>Amount Paid:</span><span style="color:#10b981">\u20a6${receipt.amount.toLocaleString()}</span></div>
         <div class="row" style="margin-top:12px"><span class="lbl">Total Paid to Date:</span><span class="val">\u20a6${receipt.newPaid.toLocaleString()}</span></div>
+        
+        <div class="qr-barcode-section">
+          <div>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}" alt="QR Code" style="width: 80px; height: 80px;" />
+            <div style="font-size: 9px; color: #94a3b8; margin-top: 4px; text-align: center;">Scan to Verify</div>
+          </div>
+          <div style="text-align: right;">
+            <div class="barcode-visual">||| | |||| | || ||| ||</div>
+            <div style="font-size: 10px; color: #94a3b8; font-family: monospace;">SERIAL: ${serialNo}</div>
+          </div>
+        </div>
+
         <div class="sig">Bursar's Signature</div>
         <div style="clear:both;margin-top:40px;text-align:center;font-size:11px;color:#94a3b8">Computer-generated receipt \u2014 ${schoolName||'School Name'} Bursary</div>
         <script>window.print();</script></body></html>`);
