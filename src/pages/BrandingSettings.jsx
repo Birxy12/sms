@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { Save, RefreshCcw, Palette, School, BookOpen, CheckCircle, Loader2 } from 'lucide-react';
+import { Save, RefreshCcw, Palette, School, BookOpen, CheckCircle, Loader2, Calendar, GraduationCap, Users, ChevronDown, AlertTriangle, ArrowRight, X, CheckSquare } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { runAutoPromotion, fetchStudentsForClass, promoteOneSS1Student } from '../utils/promotion';
+import { SS1_SUBJECTS } from '../utils/subjectConfig';
 
 const BrandingSettings = () => {
   const { 
@@ -17,7 +19,8 @@ const BrandingSettings = () => {
     principalSignature, setPrincipalSignature,
     principalStamp, setPrincipalStamp,
     bursarSignature, setBursarSignature,
-    bursarStamp, setBursarStamp
+    bursarStamp, setBursarStamp,
+    currentSession, setCurrentSession
   } = useTheme();
 
   // Local state for form buffers
@@ -40,6 +43,20 @@ const BrandingSettings = () => {
   const [configLoading, setConfigLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState({ type: '', message: '' });
 
+  // Session Configuration
+  const SESSION_LIST = ['2023/2024', '2024/2025', '2025/2026', '2026/2027', '2027/2028'];
+  const [sessionInput, setSessionInput] = useState(currentSession || '2025/2026');
+  const [sessionSaving, setSessionSaving] = useState(false);
+  const [sessionSaved, setSessionSaved] = useState(false);
+
+  // Move Students Modal
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [promotionStep, setPromotionStep] = useState('idle'); // idle | loading | auto_done | ss1_placement | done
+  const [promotionResult, setPromotionResult] = useState(null);
+  const [ss1Students, setSs1Students] = useState([]);
+  const [ss1Assignments, setSs1Assignments] = useState({}); // { [studentId]: 'SS2 ART' | 'SS2 SCIENCE' }
+  const [ss1Saving, setSs1Saving] = useState(false);
+
   // Sync with context once loaded
   React.useEffect(() => {
     setName(schoolName);
@@ -55,6 +72,10 @@ const BrandingSettings = () => {
     setBSig(bursarSignature);
     setBStamp(bursarStamp);
   }, [schoolName, primaryColor, secondaryColor, schoolLogo, navbarBg, footerBg, navbarTextColor, footerTextColor, principalSignature, principalStamp, bursarSignature, bursarStamp]);
+
+  React.useEffect(() => {
+    setSessionInput(currentSession || '2025/2026');
+  }, [currentSession]);
 
   // Fetch Academic Config
   React.useEffect(() => {
@@ -105,6 +126,57 @@ const BrandingSettings = () => {
       console.error('Error toggling admission:', err);
       setAdmissionEnabled(!newValue);
       setStatusMsg({ type: 'error', message: 'Failed to update setting.' });
+    }
+  };
+
+  const handleSaveSession = async () => {
+    setSessionSaving(true);
+    try {
+      setCurrentSession(sessionInput);
+      await setDoc(doc(db, 'settings', 'branding'), { currentSession: sessionInput }, { merge: true });
+      setSessionSaved(true);
+      setTimeout(() => setSessionSaved(false), 3000);
+    } catch (err) {
+      console.error('Error saving session:', err);
+    } finally {
+      setSessionSaving(false);
+    }
+  };
+
+  const handleRunPromotion = async () => {
+    setPromotionStep('loading');
+    try {
+      const result = await runAutoPromotion(sessionInput || currentSession, 45);
+      setPromotionResult(result);
+
+      // Load SS1 students for manual placement
+      const ss1 = await fetchStudentsForClass('SS1');
+      setSs1Students(ss1);
+      const defaultAssignments = {};
+      ss1.forEach(s => { defaultAssignments[s.id] = 'SS2 SCIENCE'; });
+      setSs1Assignments(defaultAssignments);
+
+      setPromotionStep(ss1.length > 0 ? 'ss1_placement' : 'done');
+    } catch (err) {
+      console.error('Promotion error:', err);
+      setPromotionStep('idle');
+      alert('An error occurred during promotion. Check the console.');
+    }
+  };
+
+  const handleSaveSS1Placement = async () => {
+    setSs1Saving(true);
+    try {
+      const promises = ss1Students.map(s =>
+        promoteOneSS1Student(s.id, ss1Assignments[s.id] || 'SS2 SCIENCE')
+      );
+      await Promise.all(promises);
+      setPromotionStep('done');
+    } catch (err) {
+      console.error('SS1 placement error:', err);
+      alert('Error saving SS1 stream placement.');
+    } finally {
+      setSs1Saving(false);
     }
   };
 
@@ -259,7 +331,87 @@ const BrandingSettings = () => {
           </div>
         </div>
 
-        {/* Academic Configuration Card */}
+        {/* Session Configuration Card */}
+        <div className="card-white branding-card">
+          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <Calendar color="var(--primary)" />
+            <h3>Academic Session</h3>
+          </div>
+          <div className="input-group">
+            <label style={{ fontWeight: '700', fontSize: '13px', color: '#334155', display: 'block', marginBottom: '8px' }}>Current Academic Session</label>
+            <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>This session label is used across fee receipts, ID cards, result sheets, and the markbook.</p>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative', flex: 1, minWidth: '160px' }}>
+                <select
+                  value={sessionInput}
+                  onChange={e => setSessionInput(e.target.value)}
+                  style={{
+                    width: '100%', padding: '10px 36px 10px 14px', borderRadius: '10px',
+                    border: '2px solid #e2e8f0', fontSize: '14px', fontWeight: '700',
+                    background: '#f8fafc', appearance: 'none', cursor: 'pointer',
+                    color: '#1e293b', outline: 'none'
+                  }}
+                >
+                  {SESSION_LIST.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <ChevronDown size={16} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#64748b' }} />
+              </div>
+              <button
+                onClick={handleSaveSession}
+                disabled={sessionSaving}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '10px 20px', borderRadius: '10px', fontWeight: '800',
+                  fontSize: '13px', cursor: 'pointer', border: 'none',
+                  background: sessionSaved ? '#10b981' : 'var(--primary)',
+                  color: '#fff', transition: 'all 0.2s'
+                }}
+              >
+                {sessionSaving ? <Loader2 size={16} className="animate-spin" /> : sessionSaved ? <CheckCircle size={16} /> : <Save size={16} />}
+                {sessionSaving ? 'Saving...' : sessionSaved ? 'Saved!' : 'Set Session'}
+              </button>
+            </div>
+            <p style={{ marginTop: '10px', fontSize: '11px', color: '#94a3b8' }}>
+              Active: <strong style={{ color: '#1e293b' }}>{currentSession}</strong>
+            </p>
+          </div>
+        </div>
+
+        {/* Move Students Card */}
+        <div className="card-white branding-card" style={{ borderLeft: '4px solid #f59e0b' }}>
+          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <GraduationCap color="#f59e0b" />
+            <div>
+              <h3 style={{ margin: 0 }}>Move Students</h3>
+              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>End-of-year class promotion (Third Term)</p>
+            </div>
+          </div>
+          <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              <AlertTriangle size={16} style={{ color: '#d97706', flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <p style={{ fontSize: '13px', fontWeight: '700', color: '#92400e', margin: '0 0 4px' }}>Use only after Third Term results are published</p>
+                <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '12px', color: '#78350f', lineHeight: '1.8' }}>
+                  <li>JSS1 → JSS2, JSS2 → JSS3, JSS3 → SS1 (auto, avg ≥ 45%)</li>
+                  <li>SS2 Art → SS3 Art, SS2 Science → SS3 Science (auto, avg ≥ 45%)</li>
+                  <li>SS1 → SS2 Art or SS2 Science (manual — you pick per student based on 9 subjects)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => { setShowMoveModal(true); setPromotionStep('idle'); setPromotionResult(null); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '12px 24px', borderRadius: '12px', fontWeight: '800',
+              fontSize: '14px', cursor: 'pointer', border: 'none',
+              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              color: '#fff', boxShadow: '0 4px 14px #fde68a'
+            }}
+          >
+            <Users size={18} /> Move Students to Next Class
+          </button>
+        </div>
         <div className="card-white branding-card">
           <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
             <BookOpen color="var(--primary)" />
@@ -267,9 +419,9 @@ const BrandingSettings = () => {
           </div>
           
           <div className="input-group">
-            <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="academic-config-row">
               <div>
-                <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#1e293b', display: 'block', marginBottom: '4px' }}>Subject Registration Portal</label>
+                <label className="academic-config-label">Subject Registration Portal</label>
                 <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>Allow SS2 and SS3 students to register their 9 subjects.</p>
               </div>
               
@@ -285,9 +437,9 @@ const BrandingSettings = () => {
               )}
             </div>
 
-            <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
+            <div className="academic-config-row" style={{ marginTop: '16px' }}>
               <div>
-                <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <label className="academic-config-label">
                   Admission Portal 
                   <span style={{ fontSize: '10px', backgroundColor: '#8b5cf6', color: 'white', padding: '2px 8px', borderRadius: '12px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Advance Pro</span>
                 </label>
@@ -427,6 +579,189 @@ const BrandingSettings = () => {
           <div style={{ color: primary, fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>Link Hover State</div>
         </div>
       </div>
+
+      {/* ===== MOVE STUDENTS MODAL ===== */}
+      {showMoveModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: '24px', width: '100%', maxWidth: '680px',
+            maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.3)'
+          }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 28px', borderBottom: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '42px', height: '42px', background: 'linear-gradient(135deg,#f59e0b,#d97706)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <GraduationCap size={20} color="#fff" />
+                </div>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#1e293b' }}>Move Students</h2>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Session: {sessionInput || currentSession}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowMoveModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px' }}>
+                <X size={22} />
+              </button>
+            </div>
+
+            <div style={{ padding: '28px' }}>
+
+              {/* STEP: idle */}
+              {promotionStep === 'idle' && (
+                <div>
+                  <div style={{ background: '#f8fafc', borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
+                    <p style={{ fontWeight: '700', color: '#1e293b', marginBottom: '12px', fontSize: '15px' }}>What will happen:</p>
+                    {[
+                      { from: 'JSS1', to: 'JSS2', type: 'auto' },
+                      { from: 'JSS2', to: 'JSS3', type: 'auto' },
+                      { from: 'JSS3', to: 'SS1', type: 'auto' },
+                      { from: 'SS2 ART', to: 'SS3 ART', type: 'auto' },
+                      { from: 'SS2 SCIENCE', to: 'SS3 SCIENCE', type: 'auto' },
+                      { from: 'SS1', to: 'SS2 ART / SS2 SCIENCE', type: 'manual' },
+                    ].map((row, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                        <span style={{ background: row.type === 'auto' ? '#dbeafe' : '#fef3c7', color: row.type === 'auto' ? '#1d4ed8' : '#92400e', fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '6px', minWidth: '48px', textAlign: 'center', textTransform: 'uppercase' }}>{row.type}</span>
+                        <span style={{ fontWeight: '700', color: '#475569', fontSize: '14px' }}>{row.from}</span>
+                        <ArrowRight size={14} color="#94a3b8" />
+                        <span style={{ fontWeight: '700', color: '#1e293b', fontSize: '14px' }}>{row.to}</span>
+                        {row.type === 'auto' && <span style={{ fontSize: '11px', color: '#94a3b8' }}>(avg ≥ 45%)</span>}
+                        {row.type === 'manual' && <span style={{ fontSize: '11px', color: '#d97706' }}>(you choose stream)</span>}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                    <button onClick={() => setShowMoveModal(false)} style={{ padding: '11px 22px', borderRadius: '10px', border: '2px solid #e2e8f0', background: '#fff', fontWeight: '700', cursor: 'pointer', color: '#475569' }}>
+                      Cancel
+                    </button>
+                    <button onClick={handleRunPromotion} style={{ padding: '11px 28px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
+                      <Users size={16} /> Run Promotion
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP: loading */}
+              {promotionStep === 'loading' && (
+                <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                  <Loader2 size={48} style={{ color: '#f59e0b', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+                  <p style={{ fontWeight: '700', color: '#1e293b', fontSize: '16px' }}>Promoting students…</p>
+                  <p style={{ color: '#64748b', fontSize: '13px' }}>Fetching Third Term marks and updating classes. Please wait.</p>
+                </div>
+              )}
+
+              {/* STEP: ss1_placement (auto done, now handle SS1 manually) */}
+              {promotionStep === 'ss1_placement' && (
+                <div>
+                  {/* Auto-promotion summary */}
+                  {promotionResult && (
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '14px', padding: '16px', marginBottom: '24px' }}>
+                      <p style={{ fontWeight: '800', color: '#166534', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <CheckCircle size={16} /> Auto-promotion complete
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                        {[
+                          { label: 'Promoted', value: promotionResult.promoted.length, color: '#16a34a' },
+                          { label: 'Below 45%', value: promotionResult.failed.length, color: '#dc2626' },
+                          { label: 'No Marks', value: promotionResult.skipped.length, color: '#d97706' },
+                        ].map(stat => (
+                          <div key={stat.label} style={{ background: '#fff', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+                            <p style={{ fontSize: '22px', fontWeight: '900', color: stat.color, margin: 0 }}>{stat.value}</p>
+                            <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>{stat.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SS1 Manual Placement */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <p style={{ fontWeight: '800', color: '#1e293b', fontSize: '15px', marginBottom: '6px' }}>SS1 Stream Placement</p>
+                    <p style={{ color: '#64748b', fontSize: '13px', marginBottom: '16px' }}>
+                      Assign each SS1 student to either <strong>Art</strong> or <strong>Science</strong> stream for SS2, based on their registered subjects.
+                    </p>
+                    {ss1Students.length === 0 ? (
+                      <p style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>No SS1 students found.</p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '280px', overflowY: 'auto' }}>
+                        {ss1Students.map(student => (
+                          <div key={student.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', borderRadius: '12px', padding: '12px 16px', gap: '16px' }}>
+                            <div>
+                              <p style={{ margin: 0, fontWeight: '700', color: '#1e293b', fontSize: '14px' }}>{student.name}</p>
+                              <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{student.regNo}</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                              {['SS2 ART', 'SS2 SCIENCE'].map(stream => (
+                                <button
+                                  key={stream}
+                                  onClick={() => setSs1Assignments(prev => ({ ...prev, [student.id]: stream }))}
+                                  style={{
+                                    padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: '2px solid',
+                                    borderColor: ss1Assignments[student.id] === stream ? (stream === 'SS2 ART' ? '#8b5cf6' : '#0ea5e9') : '#e2e8f0',
+                                    background: ss1Assignments[student.id] === stream ? (stream === 'SS2 ART' ? '#ede9fe' : '#e0f2fe') : '#fff',
+                                    color: ss1Assignments[student.id] === stream ? (stream === 'SS2 ART' ? '#7c3aed' : '#0369a1') : '#94a3b8',
+                                    transition: 'all 0.15s'
+                                  }}
+                                >
+                                  {stream === 'SS2 ART' ? 'Art' : 'Science'}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                    <button onClick={() => setShowMoveModal(false)} style={{ padding: '11px 22px', borderRadius: '10px', border: '2px solid #e2e8f0', background: '#fff', fontWeight: '700', cursor: 'pointer', color: '#475569' }}>
+                      Close
+                    </button>
+                    <button onClick={handleSaveSS1Placement} disabled={ss1Saving} style={{ padding: '11px 28px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg,#8b5cf6,#7c3aed)', color: '#fff', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
+                      {ss1Saving ? <Loader2 size={16} className="animate-spin" /> : <CheckSquare size={16} />}
+                      {ss1Saving ? 'Saving...' : 'Save Stream Placement'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP: done */}
+              {promotionStep === 'done' && (
+                <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                  <div style={{ width: '72px', height: '72px', background: 'linear-gradient(135deg,#10b981,#059669)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                    <CheckCircle size={36} color="#fff" />
+                  </div>
+                  <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#1e293b', marginBottom: '8px' }}>Promotion Complete!</h3>
+                  <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '24px' }}>
+                    All students have been moved to their new classes. The changes are live in Firestore.
+                  </p>
+                  {promotionResult && (
+                    <div style={{ display: 'inline-grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+                      {[
+                        { label: 'Promoted', value: promotionResult.promoted.length, bg: '#f0fdf4', color: '#16a34a' },
+                        { label: 'Held Back', value: promotionResult.failed.length, bg: '#fff1f2', color: '#dc2626' },
+                        { label: 'Skipped', value: promotionResult.skipped.length, bg: '#fffbeb', color: '#d97706' },
+                      ].map(s => (
+                        <div key={s.label} style={{ background: s.bg, borderRadius: '12px', padding: '14px 20px' }}>
+                          <p style={{ fontSize: '28px', fontWeight: '900', color: s.color, margin: 0 }}>{s.value}</p>
+                          <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{s.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button onClick={() => setShowMoveModal(false)} style={{ padding: '12px 32px', borderRadius: '12px', border: 'none', background: '#1e293b', color: '#fff', fontWeight: '800', cursor: 'pointer', fontSize: '14px' }}>
+                    Close
+                  </button>
+                </div>
+              )}
+
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

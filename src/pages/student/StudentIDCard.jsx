@@ -10,7 +10,7 @@ import bdsLogo from '../../assets/bdslogo.jpg';
 
 const StudentIDCard = () => {
   const { currentStudent } = useStudentAuth();
-  const { schoolName, schoolLogo, primaryColor = '#4f46e5' } = useTheme();
+  const { schoolName, schoolLogo, primaryColor = '#4f46e5', currentSession } = useTheme();
   const cardRef = useRef();
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeView, setActiveView] = useState('front');
@@ -22,7 +22,7 @@ const StudentIDCard = () => {
       name: currentStudent?.name || 'N/A',
       class: currentStudent?.className || 'N/A',
       school: schoolName || 'BONUS DOMINUS',
-      session: '2025/2026',
+      session: currentStudent?.session || currentSession || '2025/2026',
       issued: new Date().toISOString(),
       type: 'student_id'
     };
@@ -84,7 +84,7 @@ const StudentIDCard = () => {
               <h2 className="id-header-title">Digital ID Card</h2>
               <div className="id-header-subtitle">
                 <Sparkles size={14} className="text-amber-500" />
-                <p>Official school identity • Session 2025/26</p>
+                <p>Official school identity • Session {currentSession}</p>
               </div>
             </div>
           </div>
@@ -142,7 +142,7 @@ const StudentIDCard = () => {
                 { icon: QrCode, label: 'Encrypted QR Code', desc: 'Contains verified student data' },
                 { icon: Fingerprint, label: 'Holographic Seal', desc: 'Anti-counterfeit shimmer effect' },
                 { icon: CheckCircle2, label: 'Micro-Text', desc: 'Fine print security pattern' },
-                { icon: AlertCircle, label: 'Valid Until', desc: 'Session 2025/2026 only' }
+                { icon: AlertCircle, label: 'Valid Until', desc: `Session ${currentSession} only` }
               ].map((feature, idx) => (
                 <div key={idx} className="security-feature-item">
                   <feature.icon size={18} className="text-amber-600" />
@@ -186,13 +186,13 @@ const StudentIDCard = () => {
                       <h1>{schoolName || 'BONUS DOMINUS'}</h1>
                       <div className="card-subtitle">
                         <Award size={8} className="text-amber-500" />
-                        <p>Official Student ID • Valid 2025/26</p>
+                        <p>Official Student ID • Valid {currentSession}</p>
                       </div>
                     </div>
                   </div>
                   <div className="session-badge">
                     <p className="session-label">Session</p>
-                    <p className="session-value">2025/26</p>
+                    <p className="session-value">{currentSession}</p>
                   </div>
                 </div>
 

@@ -12,7 +12,7 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 import '../assets/Marksheet.css';
 
 const Marksheet = ({ className: propClassName }) => {
-  const { primaryColor, darkMode } = useTheme();
+  const { primaryColor, darkMode, currentSession } = useTheme();
   const { authReady } = useAdminAuth();
 
   const thStyle = {
@@ -45,7 +45,7 @@ const Marksheet = ({ className: propClassName }) => {
   const [searchTerm, setSearchTerm] = useState('');
   
   const [selectedClass, setSelectedClass] = useState(() => localStorage.getItem('marksheet_class') || propClassName || 'JSS1');
-  const [selectedSession, setSelectedSession] = useState(() => localStorage.getItem('marksheet_session') || '2025/2026');
+  const [selectedSession, setSelectedSession] = useState(() => localStorage.getItem('marksheet_session') || currentSession || '2025/2026');
   const [selectedTerm, setSelectedTerm] = useState(() => localStorage.getItem('marksheet_term') || 'Second Term');
   
   const [publishing, setPublishing] = useState(false);

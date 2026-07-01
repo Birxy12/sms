@@ -8,7 +8,7 @@ import ReceiptScanner from '../../components/ReceiptScanner';
 
 const StudentFees = () => {
   const { currentStudent } = useStudentAuth();
-  const { primaryColor } = useTheme();
+  const { primaryColor, currentSession } = useTheme();
   const [feeData, setFeeData] = useState({ expected: 0, paid: 0, lastDate: 'N/A' });
   const [loading, setLoading] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
@@ -82,7 +82,7 @@ const StudentFees = () => {
           <DollarSign size={80} style={{ position: 'absolute', right: '-10px', top: '-10px', opacity: 0.15 }} />
           <p className="text-xs font-black text-indigo-100 uppercase tracking-widest mb-4">Total Required</p>
           <h3 className="text-4xl font-black mb-1">₦{feeData.expected.toLocaleString()}</h3>
-          <p className="text-xs font-bold text-indigo-200">Current Session: 2025/2026</p>
+          <p className="text-xs font-bold text-indigo-200">Current Session: {currentSession}</p>
         </div>
 
         <div className={`lg:col-span-1 p-8 rounded-3xl shadow-lg relative overflow-hidden ${isCleared ? 'bg-emerald-600 shadow-emerald-100' : 'bg-rose-600 shadow-rose-100'} text-white transition-all`}>

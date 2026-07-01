@@ -42,8 +42,10 @@ const StudentSubjectRegistration = () => {
   useEffect(() => {
     if (!currentStudent) return;
     
-    // Ensure student is SS2 or SS3
-    const isEligible = currentStudent.className.startsWith('SS2') || currentStudent.className.startsWith('SS3');
+    // Ensure student is SS1, SS2 or SS3
+    const isEligible = currentStudent.className === 'SS1' ||
+      currentStudent.className.startsWith('SS2') ||
+      currentStudent.className.startsWith('SS3');
     if (!isEligible) {
       // If someone navigates here manually but isn't eligible
       navigate('/students/dashboard');
@@ -172,7 +174,11 @@ const StudentSubjectRegistration = () => {
             <div className="p-6 md:p-8 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row items-center justify-between gap-4">
               <div>
                 <h4 className="text-lg font-black text-slate-800">Available Subjects</h4>
-                <p className="text-sm text-slate-500 font-medium">Select exactly 9 subjects for WAEC/NECO.</p>
+                <p className="text-sm text-slate-500 font-medium">
+                  {currentStudent?.className === 'SS1'
+                    ? 'Select your 9 subjects — this determines your Art or Science stream in SS2.'
+                    : 'Select exactly 9 subjects for WAEC/NECO.'}
+                </p>
               </div>
               <div className="bg-white px-6 py-3 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Selected</span>

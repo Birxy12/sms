@@ -64,6 +64,7 @@ const allNavItems = [
     { name: 'School Fees',        path: '/students/fees',       icon: CreditCard,      roles: ['student'] },
     { name: 'My Profile',         path: '/students/profile',    icon: UserCircle,      roles: ['student'] },
     { name: 'ID Card',            path: '/students/idcard',     icon: GraduationCap,   roles: ['student'] },
+    { name: 'Register Subjects',  path: '/students/registration', icon: BookOpen,      roles: ['student'] },
   ];
 
 

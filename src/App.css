@@ -84,7 +84,7 @@
 }
 
 /* ── Desktop sidebar hidden on mobile ── */
-@media (max-width: 767px) {
+@media (max-width: 1024px) {
   .sidebar {
     position: fixed;
     top: 0; left: 0;
@@ -120,7 +120,7 @@
   align-items: center;
   justify-content: center;
 }
-@media (max-width: 767px) {
+@media (max-width: 1024px) {
   .hamburger-btn { display: flex; }
 }
 
@@ -145,7 +145,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-@media (max-width: 767px) {
+@media (max-width: 1024px) {
   .mobile-top-strip { display: flex; }
 }
 
@@ -954,7 +954,7 @@ h1, h2, h3, h4, h5, h6 {
    GENERAL MOBILE LAYOUT FIXES
    ========================================= */
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   /* Reduce padding on page content */
   .page-content {
     padding: 1rem !important;
@@ -1028,8 +1028,24 @@ h1, h2, h3, h4, h5, h6 {
 
   /* Table fallback — allow horizontal scroll if table is shown on some pages */
   .overflow-x-auto {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    width: 100% !important;
+    display: block !important;
+  }
+
+  /* Prevent table cell wrapping so scrolling works nicely */
+  table th, table td {
+    white-space: nowrap !important;
+  }
+
+  /* Force hover action buttons (edit/delete/promote) to be always visible on mobile/touch screens */
+  td .opacity-0,
+  tr .opacity-0,
+  .opacity-0.group-hover\:opacity-100,
+  .group:hover .group-hover\:opacity-100 {
+    opacity: 1 !important;
+    visibility: visible !important;
   }
 
   /* Dashboard title wraps cleanly */

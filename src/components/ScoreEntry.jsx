@@ -7,12 +7,14 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { compressMarks, expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../utils/firestoreSchema';
+import { useTheme } from '../context/ThemeContext';
 
 const ScoreEntry = () => {
   const { currentAdmin } = useAdminAuth();
+  const { currentSession } = useTheme();
   const [selectedClass, setSelectedClass] = useState(() => localStorage.getItem('scoreEntry_class') || '');
   const [selectedSubject, setSelectedSubject] = useState(() => localStorage.getItem('scoreEntry_subject') || '');
-  const [selectedSession, setSelectedSession] = useState(() => localStorage.getItem('scoreEntry_session') || '2025/2026');
+  const [selectedSession, setSelectedSession] = useState(() => localStorage.getItem('scoreEntry_session') || currentSession || '2025/2026');
   const [selectedTerm, setSelectedTerm] = useState(() => localStorage.getItem('scoreEntry_term') || 'Second Term');
   const [selectedFile, setSelectedFile] = useState(null);
   const [students, setStudents] = useState([]);

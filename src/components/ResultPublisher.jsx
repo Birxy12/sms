@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { doc, setDoc, serverTimestamp, collection, getDocs, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { FileUp, CheckCircle, AlertCircle, Save, Trash2, Calendar, Users, Loader2 } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 // import { promoteStudents } from '../utils/promotion'; // temporarily disabled
 
 const ResultPublisher = () => {
+  const { currentSession } = useTheme();
   const [examName, setExamName] = useState('');
-  const [session, setSession] = useState('2025/2026');
+  const [session, setSession] = useState(currentSession || '2025/2026');
   const [term, setTerm] = useState('Second Term');
   const [targetClass, setTargetClass] = useState('All Classes');
   const [status, setStatus] = useState({ type: '', message: '' });
@@ -116,7 +118,7 @@ const ResultPublisher = () => {
                 onChange={(e) => setSession(e.target.value)}
               >
                 <option value="2024/2025">2024/2025</option>
-                <option value="2025/2026">2025/2026</option>
+                <option value={currentSession}>{currentSession}</option>
                 <option value="2026/2027">2026/2027</option>
               </select>
             </div>

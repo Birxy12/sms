@@ -14,7 +14,8 @@ const ThemeContext = createContext({
   principalSignature: null,
   principalStamp: null,
   bursarSignature: null,
-  bursarStamp: null
+  bursarStamp: null,
+  currentSession: '2025/2026'
 });
 
 export const ThemeProvider = ({ children }) => {
@@ -31,6 +32,7 @@ export const ThemeProvider = ({ children }) => {
   const [principalStamp, setPrincipalStamp] = useState(null);
   const [bursarSignature, setBursarSignature] = useState(null);
   const [bursarStamp, setBursarStamp] = useState(null);
+  const [currentSession, setCurrentSession] = useState('2025/2026');
   const [whiteColor] = useState('#ffffff');
   const [loading, setLoading] = useState(true);
 
@@ -91,6 +93,7 @@ export const ThemeProvider = ({ children }) => {
               if (data.principalStamp) setPrincipalStamp(data.principalStamp);
               if (data.bursarSignature) setBursarSignature(data.bursarSignature);
               if (data.bursarStamp) setBursarStamp(data.bursarStamp);
+              if (data.currentSession) setCurrentSession(data.currentSession);
             }
           } catch (e) {
             console.warn('Could not load branding from Firestore. Using local defaults.', e.code || e.message);
@@ -133,6 +136,7 @@ export const ThemeProvider = ({ children }) => {
           schoolName, primaryColor, secondaryColor, schoolLogo,
           navbarBg, footerBg, navbarTextColor, footerTextColor,
           principalSignature, principalStamp, bursarSignature, bursarStamp,
+          currentSession,
           lastUpdated: new Date().toISOString()
         });
       } catch (e) {
@@ -142,7 +146,7 @@ export const ThemeProvider = ({ children }) => {
     };
 
     persistBranding();
-  }, [schoolName, primaryColor, secondaryColor, schoolLogo, navbarBg, footerBg, navbarTextColor, footerTextColor, principalSignature, principalStamp, bursarSignature, bursarStamp, loading]);
+  }, [schoolName, primaryColor, secondaryColor, schoolLogo, navbarBg, footerBg, navbarTextColor, footerTextColor, principalSignature, principalStamp, bursarSignature, bursarStamp, currentSession, loading]);
 
   // Wrapped setters that mark the state as user-edited before updating
   const handleSet = (setter) => (value) => {
@@ -182,6 +186,7 @@ export const ThemeProvider = ({ children }) => {
       principalStamp, setPrincipalStamp: handleSet(setPrincipalStamp),
       bursarSignature, setBursarSignature: handleSet(setBursarSignature),
       bursarStamp, setBursarStamp: handleSet(setBursarStamp),
+      currentSession, setCurrentSession: handleSet(setCurrentSession),
       whiteColor,
       darkMode,
       toggleDarkMode
@@ -207,6 +212,8 @@ export const useTheme = () => {
       principalStamp: null,
       bursarSignature: null,
       bursarStamp: null,
+      currentSession: '2025/2026',
+      setCurrentSession: () => {},
       darkMode: false,
       toggleDarkMode: () => {}
     };

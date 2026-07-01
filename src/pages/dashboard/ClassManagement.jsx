@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, query, getDocs, where, doc, setDoc, getDoc } from 'firebase/firestore';
 import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info, UserCheck, X, Calendar, CheckSquare, Square, ChevronDown, Save, Check, Download } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 
 const ClassManagement = () => {
+  const { currentSession } = useTheme();
   const [classStats, setClassStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [staff, setStaff] = useState([]);
@@ -232,7 +234,7 @@ const ClassManagement = () => {
         <div className="flex gap-3">
           <div className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 border border-emerald-100">
             <TrendingUp size={16} />
-            Academic Session 2025/2026
+            Academic Session {currentSession}
           </div>
         </div>
       </div>

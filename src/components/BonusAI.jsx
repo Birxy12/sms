@@ -109,12 +109,15 @@ How can I assist you today?`
     }
 
     // 4. PORTAL & NAVIGATION QUESTIONS (INTERNAL)
-    if (msg.includes('result') || msg.includes('pin') || msg.includes('marksheet') || msg.includes('profile') || msg.includes('dashboard') || msg.includes('fees') || msg.includes('bill') || msg.includes('dark mode')) {
+    if (msg.includes('result') || msg.includes('pin') || msg.includes('marksheet') || msg.includes('profile') || msg.includes('dashboard') || msg.includes('fees') || msg.includes('bill') || msg.includes('dark mode') || msg.includes('admission') || msg.includes('pro') || msg.includes('registration') || msg.includes('promote') || msg.includes('promotion') || msg.includes('move student')) {
       if (msg.includes('result') || msg.includes('pin')) return "To access student report cards, go to the 'Check Result' page on the navigation bar, select the class/session/term, and enter the student's Registration Number and secure 6-digit access PIN.";
       if (msg.includes('profile')) return "You can view your profile by clicking your avatar in the navbar or accessing the 'Profile' section from your dashboard panel.";
       if (msg.includes('marksheet')) return "Admin and Staff can view and manage comprehensive marksheets in the 'Academics' tab of their dashboard. You can search students, view all scores, publish results, or export to Excel.";
       if (msg.includes('fees') || msg.includes('bill')) return "Fees and bills are managed in the 'Finance' section of the dashboard. Ensure that term payments are registered to maintain active access.";
       if (msg.includes('dark mode') || msg.includes('theme')) return "You can toggle between Dark Mode and Light Mode by clicking the Moon/Sun icon next to the profile menu at the top-right corner of the navbar.";
+      if (msg.includes('admission') || msg.includes('pro')) return "The Admission Portal (Advance Pro) allows prospective students to register online. Administrators can toggle it on/off under 'Academic Configuration' in the 'School Branding' settings.";
+      if (msg.includes('registration') || msg.includes('subject')) return "The Subject Registration Portal enables SS1, SS2, and SS3 students to register their 9 subjects. This portal can be opened/closed by the admin in Settings -> School Branding under Academic Configuration.";
+      if (msg.includes('promote') || msg.includes('promotion') || msg.includes('move student')) return "The 'Move Students' utility promotes students automatically if their Third Term average is 45% or above. SS1 students are placed manually into Art or Science streams by the admin.";
       return "For school portal actions, check the top navigation bar. Students can view results and profiles, while staff and admins have full access to management tools, marksheets, and settings.";
     }
 
