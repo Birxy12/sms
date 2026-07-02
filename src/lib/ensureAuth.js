@@ -16,6 +16,12 @@ export async function ensureFirebaseAuth() {
     return auth.currentUser;
   }
 
+  // If offline, return immediately to avoid 8s timeout wait
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    console.warn('[ensureFirebaseAuth] Browser is offline. Skipping auth wait.');
+    return auth.currentUser;
+  }
+
   // Sign in anonymously
   try {
     await signInAnonymously(auth);

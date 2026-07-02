@@ -162,7 +162,12 @@ const BursarDashboard = () => {
       }
     } catch (error) {
       console.error(error);
-      setStatus({ type: 'error', message: 'Failed to load financial records.' });
+      setStatus({ 
+        type: 'error', 
+        message: (typeof navigator !== 'undefined' && !navigator.onLine)
+          ? 'Offline: Showing cached school financial data.' 
+          : 'Failed to load financial records.' 
+      });
     } finally {
       setLoading(false);
     }
@@ -1198,6 +1203,12 @@ const BursarDashboard = () => {
         setPayments(paySnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds));
       } catch (err) {
         console.error(err);
+        setStatus({
+          type: 'error',
+          message: (typeof navigator !== 'undefined' && !navigator.onLine)
+            ? 'Offline: Showing cached staff payroll data.'
+            : 'Access denied: Unable to fetch staff database.'
+        });
       } finally {
         setLoadingStaff(false);
       }
