@@ -96,37 +96,35 @@ const ScoreEntry = () => {
       
       setStudents(studentList);
       
-      // Fetch existing scores for this class/period/subject from Firestore
-      let marksQuery = query(
-        collection(db, 'marks'),
-        where(MARKS_KEYS.className, '==', selectedClass),
-        where(MARKS_KEYS.session, '==', selectedSession),
-        where(MARKS_KEYS.term, '==', selectedTerm)
-      );
-      let marksSnap = await getDocs(marksQuery);
-      if (marksSnap.empty) {
-        marksQuery = query(
-          collection(db, 'marks'),
+      // Fetch existing scores for this class/period/subject from Firestore (compressed + legacy in parallel)
+      const [snapC, snapClassName, snapClass_Name] = await Promise.all([
+        getDocs(query(collection(db, 'marks'),
+          where(MARKS_KEYS.className, '==', selectedClass),
+          where(MARKS_KEYS.session, '==', selectedSession),
+          where(MARKS_KEYS.term, '==', selectedTerm)
+        )),
+        getDocs(query(collection(db, 'marks'),
+          where('className', '==', selectedClass),
+          where('session', '==', selectedSession),
+          where('term', '==', selectedTerm)
+        )),
+        getDocs(query(collection(db, 'marks'),
           where('class_name', '==', selectedClass),
           where('session', '==', selectedSession),
           where('term', '==', selectedTerm)
-        );
-        marksSnap = await getDocs(marksQuery);
-        if (marksSnap.empty) {
-          marksQuery = query(
-            collection(db, 'marks'),
-            where('className', '==', selectedClass),
-            where('session', '==', selectedSession),
-            where('term', '==', selectedTerm)
-          );
-          marksSnap = await getDocs(marksQuery);
-        }
-      }
+        ))
+      ]);
+
+      const scoreDocMap = new Map();
+      [...snapC.docs, ...snapClassName.docs, ...snapClass_Name.docs].forEach(doc => {
+        scoreDocMap.set(doc.id, doc);
+      });
+      const marksDocs = Array.from(scoreDocMap.values());
       
       const newScores = {};
       const newDbMarks = {};
       
-      marksSnap.forEach(doc => {
+      marksDocs.forEach(doc => {
         const data = expandMarks(doc.data());
         newDbMarks[data.regNo] = data.marks || {};
         

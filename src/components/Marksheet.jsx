@@ -222,33 +222,30 @@ const Marksheet = ({ className: propClassName }) => {
           }
         }
         
-        // Fetch marks from Firestore
-        let marksQuery = query(
-          collection(db, 'marks'),
-          where(MARKS_KEYS.session, '==', selectedSession),
-          where(MARKS_KEYS.className, '==', selectedClass),
-          where(MARKS_KEYS.term, '==', selectedTerm)
-        );
-        let marksSnapshot = await getDocs(marksQuery);
-        if (marksSnapshot.empty) {
-          marksQuery = query(
-            collection(db, 'marks'),
+        // Fetch marks from Firestore (compressed + legacy uncompressed in parallel)
+        const [snapM, snapMLegacy1, snapMLegacy2] = await Promise.all([
+          getDocs(query(collection(db, 'marks'),
+            where(MARKS_KEYS.session, '==', selectedSession),
+            where(MARKS_KEYS.className, '==', selectedClass),
+            where(MARKS_KEYS.term, '==', selectedTerm)
+          )),
+          getDocs(query(collection(db, 'marks'),
             where('session', '==', selectedSession),
             where('class_name', '==', selectedClass),
             where('term', '==', selectedTerm)
-          );
-          marksSnapshot = await getDocs(marksQuery);
-          if (marksSnapshot.empty) {
-            marksQuery = query(
-              collection(db, 'marks'),
-              where('session', '==', selectedSession),
-              where('className', '==', selectedClass),
-              where('term', '==', selectedTerm)
-            );
-            marksSnapshot = await getDocs(marksQuery);
-          }
-        }
-        const marksData = marksSnapshot.docs.map(doc => expandMarks(doc.data()));
+          )),
+          getDocs(query(collection(db, 'marks'),
+            where('session', '==', selectedSession),
+            where('className', '==', selectedClass),
+            where('term', '==', selectedTerm)
+          ))
+        ]);
+        const marksDocMap = new Map();
+        [...snapM.docs, ...snapMLegacy1.docs, ...snapMLegacy2.docs].forEach(doc => {
+          marksDocMap.set(doc.id, doc.data());
+        });
+        const marksData = Array.from(marksDocMap.values()).map(data => expandMarks(data));
+
         
         const dbMarks = {};
         (marksData || []).forEach(docData => {

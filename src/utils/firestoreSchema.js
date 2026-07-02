@@ -90,6 +90,36 @@ export const expandMarks = (compressed) => {
   
   // Detect if it's already expanded (legacy)
   if (compressed.regNo || compressed.reg_no) {
+    // Start with the nested marks object
+    const marksObj = { ...(compressed.marks || {}) };
+
+    // Also collect any flat top-level 'marks.SUBJECT' keys (mixed legacy format)
+    Object.keys(compressed).forEach(key => {
+      if (key.startsWith('marks.')) {
+        const subjectName = key.slice('marks.'.length);
+        // Only add if not already present from the nested object
+        if (!marksObj[subjectName]) {
+          marksObj[subjectName] = compressed[key];
+        }
+      }
+    });
+
+    // Also merge from nested 'm' compressed field if present alongside legacy keys
+    if (compressed.m && typeof compressed.m === 'object') {
+      Object.entries(compressed.m).forEach(([subj, m]) => {
+        if (!marksObj[subj]) {
+          marksObj[subj] = {
+            cat1: m.c1,
+            cat2: m.c2,
+            exam: m.ex,
+            total: m.to,
+            percent: m.pc,
+            grade: m.gr
+          };
+        }
+      });
+    }
+
     return {
       regNo: compressed.regNo || compressed.reg_no,
       studentName: compressed.studentName || compressed.student_name,
@@ -97,7 +127,7 @@ export const expandMarks = (compressed) => {
       session: compressed.session,
       term: compressed.term,
       updatedAt: compressed.updatedAt || compressed.updated_at,
-      marks: compressed.marks || {}
+      marks: marksObj
     };
   }
 

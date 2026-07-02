@@ -6,6 +6,7 @@ import { Trophy, Medal, Star, Users, GraduationCap, ArrowRight, Loader2, Award }
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/MainFooter';
 import { expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../../utils/firestoreSchema';
+import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import './LeaderboardPage.css';
 
 // Ordered class list for sorting
@@ -90,27 +91,28 @@ const LeaderboardPage = () => {
       
       setLoading(true);
       try {
-        // 1. Fetch all marks for this session/term
-        let marksQuery = query(
-          collection(db, 'marks'),
-          where(MARKS_KEYS.session, '==', selectedSession),
-          where(MARKS_KEYS.term, '==', selectedTerm)
-        );
-        let marksSnap = await getDocs(marksQuery);
-        
-        if (marksSnap.empty) {
-          marksQuery = query(
-            collection(db, 'marks'),
+        await ensureFirebaseAuth();
+        // 1. Fetch all marks for this session/term (compressed + legacy uncompressed in parallel)
+        const [snapS, snapSession] = await Promise.all([
+          getDocs(query(collection(db, 'marks'),
+            where(MARKS_KEYS.session, '==', selectedSession),
+            where(MARKS_KEYS.term, '==', selectedTerm)
+          )),
+          getDocs(query(collection(db, 'marks'),
             where('session', '==', selectedSession),
             where('term', '==', selectedTerm)
-          );
-          marksSnap = await getDocs(marksQuery);
-        }
-        
+          ))
+        ]);
+
+        const docMap = new Map();
+        [...snapS.docs, ...snapSession.docs].forEach(doc => {
+          docMap.set(doc.id, doc.data());
+        });
+
         const classRankings = {};
 
-        marksSnap.forEach(docSnap => {
-          const data = expandMarks(docSnap.data());
+        docMap.forEach(rawDocData => {
+          const data = expandMarks(rawDocData);
           if (!data) return;
           
           const rawClassName = data.className;

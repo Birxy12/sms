@@ -8,6 +8,7 @@ import { Award, AlertCircle, Printer, Download, ChevronLeft, User, ArrowLeft } f
 import bdsLogo from '../../assets/bdslogo.jpg';
 import resultStamp from '../../assets/stamp.jpeg';
 import { expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../../utils/firestoreSchema';
+import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import Navbar from '../../components/Navbar';
 
 const StudentResults = ({ isPublic }) => {
@@ -121,33 +122,34 @@ setLoading(false);
 
 useEffect(() => {
 const fetchResults = async () => {
-if (!authReady || !selectedTermId || !regNum) return;
-if (authError) {
-setResultsError(authError);
-setStudentMarks(null);
-setLoading(false);
-return;
+// Allow admin bypass (adminRegNo set) OR logged-in student flow
+if (!selectedTermId || !regNum) return;
+if (!adminRegNo && authError) {
+  setResultsError(authError);
+  setStudentMarks(null);
+  setLoading(false);
+  return;
 }
 
 setLoading(true);
 try {
-setResultsError('');
-const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
-if (!selectedPub) return;
+  setResultsError('');
+  await ensureFirebaseAuth();
+  const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
+  if (!selectedPub) return;
 
-        // ── 1. Fetch ALL marks for this student by regNo only from Firestore
-        let marksQuery = query(collection(db, 'marks'), where(MARKS_KEYS.regNo, '==', regNum));
-        let marksSnap = await getDocs(marksQuery);
-        // Fallback to legacy key if empty
-        if (marksSnap.empty) {
-          marksQuery = query(collection(db, 'marks'), where('reg_no', '==', regNum));
-          marksSnap = await getDocs(marksQuery);
-          if (marksSnap.empty) {
-            marksQuery = query(collection(db, 'marks'), where('regNo', '==', regNum));
-            marksSnap = await getDocs(marksQuery);
-          }
-        }
-        const marksData = marksSnap.docs.map(doc => expandMarks(doc.data()));
+        // ── 1. Fetch ALL marks for this student by regNo from Firestore (compressed and legacy uncompressed)
+        const [snapR, snapRegNo, snapReg_No] = await Promise.all([
+          getDocs(query(collection(db, 'marks'), where(MARKS_KEYS.regNo, '==', regNum))),
+          getDocs(query(collection(db, 'marks'), where('regNo', '==', regNum))),
+          getDocs(query(collection(db, 'marks'), where('reg_no', '==', regNum)))
+        ]);
+
+        const docMap = new Map();
+        [...snapR.docs, ...snapRegNo.docs, ...snapReg_No.docs].forEach(doc => {
+          docMap.set(doc.id, doc.data());
+        });
+        const marksData = Array.from(docMap.values()).map(data => expandMarks(data));
 
         // Normalise term string for comparison (e.g. 'Second Term' === 'secondterm')
         const normTerm = (t = '') => t.toLowerCase().replace(/\s+/g, '');
@@ -164,18 +166,17 @@ if (!selectedPub) return;
         });
 
         // ── 2. Compute class standing: fetch all marks for class/session from Firestore
-        let allMarksQuery = query(collection(db, 'marks'), where(MARKS_KEYS.className, '==', studentClass));
-        let allMarksSnap = await getDocs(allMarksQuery);
-        // Fallback to legacy key
-        if (allMarksSnap.empty) {
-          allMarksQuery = query(collection(db, 'marks'), where('class_name', '==', studentClass));
-          allMarksSnap = await getDocs(allMarksQuery);
-          if (allMarksSnap.empty) {
-            allMarksQuery = query(collection(db, 'marks'), where('className', '==', studentClass));
-            allMarksSnap = await getDocs(allMarksQuery);
-          }
-        }
-        const allMarksData = allMarksSnap.docs.map(doc => expandMarks(doc.data()));
+        const [snapC, snapClassName, snapClass_Name] = await Promise.all([
+          getDocs(query(collection(db, 'marks'), where(MARKS_KEYS.className, '==', studentClass))),
+          getDocs(query(collection(db, 'marks'), where('className', '==', studentClass))),
+          getDocs(query(collection(db, 'marks'), where('class_name', '==', studentClass)))
+        ]);
+
+        const allDocMap = new Map();
+        [...snapC.docs, ...snapClassName.docs, ...snapClass_Name.docs].forEach(doc => {
+          allDocMap.set(doc.id, doc.data());
+        });
+        const allMarksData = Array.from(allDocMap.values()).map(data => expandMarks(data));
 
         const studentTotals = {};
         (allMarksData || []).forEach(d => {
