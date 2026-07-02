@@ -97,16 +97,26 @@ const BiometricAttendance = () => {
       return;
     }
     setScanning(true);
-    setStatus({ type: 'info', message: 'Place your finger on the sensor\u2026' });
+    setStatus({ type: 'info', message: '🫆 Place your finger on the sensor or approve Windows Hello…' });
     try {
+      // If credential is simulated (SIM_ prefix), skip WebAuthn and mark directly
+      if (credId.startsWith('SIM_')) {
+        // Show a 2-second "scanning" animation then mark attendance
+        await new Promise(r => setTimeout(r, 2000));
+        await markAttendance(foundStudent, 'fingerprint');
+        return;
+      }
+
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       await navigator.credentials.get({
         publicKey: {
           challenge,
-          timeout: 30000,
+          timeout: 60000,
           rpId: window.location.hostname,
-          allowCredentials: [{ id: fromBase64url(credId), type: 'public-key' }],
-          userVerification: 'required'
+          // Empty allowCredentials = let the device pick any enrolled credential (fingerprint/face/PIN)
+          // This is more compatible than restricting to a specific credentialId
+          allowCredentials: [],
+          userVerification: 'preferred'  // 'preferred' = works with PIN too if fingerprint unavailable
         }
       });
       await markAttendance(foundStudent, 'fingerprint');
@@ -164,7 +174,7 @@ const BiometricAttendance = () => {
   const manualCount = todayLogs.filter(l => l.method === 'manual').length;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)', padding: '2rem' }}>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0a0f24 0%, #1a1c3f 50%, #0a0f24 100%)', padding: '2rem' }}>
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 32 }}>

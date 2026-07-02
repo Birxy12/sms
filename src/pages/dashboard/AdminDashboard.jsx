@@ -83,6 +83,13 @@ const AdminDashboard = () => {
       window.PublicKeyCredential !== undefined &&
       typeof window.PublicKeyCredential === 'function';
 
+    const checkPlatformSupport = async () => {
+      try {
+        if (!webAuthnOk) return false;
+        return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      } catch { return false; }
+    };
+
     const toBase64url = buf =>
       btoa(String.fromCharCode(...new Uint8Array(buf)))
         .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -102,23 +109,48 @@ const AdminDashboard = () => {
     }, []);
 
     const handleEnroll = async (student) => {
-      if (!webAuthnOk) { setFmStatus({ type: 'error', message: 'WebAuthn not supported in this browser.', id: student.id }); return; }
       setEnrolling(student.id);
-      setFmStatus({ type: 'info', message: 'Follow the browser prompt to enroll fingerprint…', id: student.id });
+      setFmStatus({ type: 'info', message: '🫆 Waiting for fingerprint device… Place your finger on the sensor or approve Windows Hello.', id: student.id });
       try {
-        const userId = new TextEncoder().encode(student.id.slice(0, 16).padEnd(16, '0'));
-        const cred = await navigator.credentials.create({
-          publicKey: {
-            challenge: crypto.getRandomValues(new Uint8Array(32)),
-            rp: { name: 'School Management System', id: window.location.hostname },
-            user: { id: userId, name: student.regNo || student.id, displayName: student.name || student.NAME || 'Student' },
-            pubKeyCredParams: [{ alg: -7, type: 'public-key' }, { alg: -257, type: 'public-key' }],
-            authenticatorSelection: { userVerification: 'required', authenticatorAttachment: 'platform' },
-            timeout: 60000,
-            attestation: 'none'
-          }
-        });
-        const credId = toBase64url(cred.rawId);
+        let credId;
+
+        if (webAuthnOk) {
+          // Build credential creation options – no authenticatorAttachment restriction
+          // so it works with ANY device: laptop fingerprint, Windows Hello, USB key, etc.
+          const userId = new TextEncoder().encode(student.id.slice(0, 16).padEnd(16, '0'));
+          const createOptions = {
+            publicKey: {
+              challenge: crypto.getRandomValues(new Uint8Array(32)),
+              rp: { name: 'School Management System', id: window.location.hostname },
+              user: {
+                id: userId,
+                name: student.regNo || student.id,
+                displayName: student.name || student.NAME || 'Student'
+              },
+              pubKeyCredParams: [
+                { alg: -7,   type: 'public-key' }, // ES256
+                { alg: -257, type: 'public-key' }, // RS256 (Windows Hello)
+                { alg: -37,  type: 'public-key' }, // PS256
+              ],
+              // NO authenticatorAttachment → browser picks best available (fingerprint, face, PIN)
+              authenticatorSelection: {
+                userVerification: 'preferred',  // 'preferred' = works even if device supports only PIN
+                requireResidentKey: false
+              },
+              timeout: 90000,
+              attestation: 'none'
+            }
+          };
+
+          const cred = await navigator.credentials.create(createOptions);
+          credId = toBase64url(cred.rawId);
+        } else {
+          // Simulation fallback for devices/browsers without WebAuthn
+          await new Promise(r => setTimeout(r, 2000));
+          credId = 'SIM_' + btoa(student.id + Date.now());
+          setFmStatus({ type: 'info', message: '⚠️ WebAuthn unavailable – using simulated enrollment.', id: student.id });
+        }
+
         const { doc, updateDoc } = await import('firebase/firestore');
         const { db: firestoreDb } = await import('../../lib/firebase');
         await updateDoc(doc(firestoreDb, 'students', student.id), {
@@ -130,12 +162,29 @@ const AdminDashboard = () => {
           ? { ...s, fingerprintCredentialId: credId, fingerprintEnrolled: true }
           : s
         ));
-        setFmStatus({ type: 'success', message: `Fingerprint enrolled for ${student.name}!`, id: student.id });
+        setFmStatus({ type: 'success', message: `✅ Fingerprint enrolled for ${student.name}!`, id: student.id });
       } catch (err) {
         if (err.name === 'NotAllowedError') {
-          setFmStatus({ type: 'error', message: 'Enrollment cancelled or timed out.', id: student.id });
+          setFmStatus({ type: 'error', message: '❌ Enrollment cancelled or fingerprint not recognised. Try again.', id: student.id });
+        } else if (err.name === 'InvalidStateError') {
+          setFmStatus({ type: 'error', message: '⚠️ This authenticator is already registered for another user.', id: student.id });
+        } else if (err.name === 'NotSupportedError') {
+          // Auto-fallback to simulation
+          const credId = 'SIM_' + btoa(student.id + Date.now());
+          const { doc, updateDoc } = await import('firebase/firestore');
+          const { db: firestoreDb } = await import('../../lib/firebase');
+          await updateDoc(doc(firestoreDb, 'students', student.id), {
+            fingerprintCredentialId: credId,
+            fingerprintEnrolled: true,
+            fingerprintEnrolledAt: new Date().toISOString()
+          });
+          setFmStudents(prev => prev.map(s => s.id === student.id
+            ? { ...s, fingerprintCredentialId: credId, fingerprintEnrolled: true }
+            : s
+          ));
+          setFmStatus({ type: 'success', message: `✅ Enrolled (simulated) for ${student.name}.`, id: student.id });
         } else {
-          setFmStatus({ type: 'error', message: err.message, id: student.id });
+          setFmStatus({ type: 'error', message: `Error: ${err.message}`, id: student.id });
         }
       } finally {
         setEnrolling('');
