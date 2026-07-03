@@ -3,6 +3,7 @@ import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { Calendar, CheckSquare, Square, Loader2, Save, Users, AlertCircle, Check } from 'lucide-react';
+import { CLASS_LIST } from '../utils/subjectConfig';
 
 const TeacherAttendance = () => {
   const { currentAdmin } = useAdminAuth();
@@ -20,12 +21,20 @@ const TeacherAttendance = () => {
     const fetchAssignedClasses = async () => {
       if (!currentAdmin?.id) return;
       try {
-        const q = query(collection(db, 'classes'), where('formTeacherId', '==', currentAdmin.id));
-        const snap = await getDocs(q);
-        const classes = snap.docs.map(doc => doc.id);
-        setAssignedClasses(classes);
-        if (classes.length > 0) {
-          setSelectedClass(classes[0]);
+        if (currentAdmin.role !== 'teacher') {
+          // Admins, principals, bursars can manage attendance for ANY class
+          setAssignedClasses(CLASS_LIST);
+          if (CLASS_LIST.length > 0) {
+            setSelectedClass(CLASS_LIST[0]);
+          }
+        } else {
+          const q = query(collection(db, 'classes'), where('formTeacherId', '==', currentAdmin.id));
+          const snap = await getDocs(q);
+          const classes = snap.docs.map(doc => doc.id);
+          setAssignedClasses(classes);
+          if (classes.length > 0) {
+            setSelectedClass(classes[0]);
+          }
         }
       } catch (error) {
         console.error("Error fetching assigned classes:", error);
@@ -93,7 +102,7 @@ const TeacherAttendance = () => {
         className: selectedClass,
         date: attendanceDate,
         presentStudents,
-        recordedBy: currentAdmin.name,
+        recordedBy: currentAdmin.name || currentAdmin.displayName || 'Administrator',
         updatedAt: new Date().toISOString()
       }, { merge: true });
       alert('Attendance saved successfully!');

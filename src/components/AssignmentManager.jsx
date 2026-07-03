@@ -3,6 +3,7 @@ import { db } from '../lib/firebase';
 import { collection, addDoc, getDocs, query, deleteDoc, doc, orderBy } from 'firebase/firestore';
 import { Plus, Trash2, Calendar, Book, Users, Loader2, CheckCircle, X } from 'lucide-react';
 import { formatDateForInput } from '../utils/dateFormatter';
+import { CLASS_LIST } from '../utils/subjectConfig';
 
 const AssignmentManager = () => {
   const [assignments, setAssignments] = useState([]);
@@ -19,7 +20,7 @@ const AssignmentManager = () => {
     description: ''
   });
 
-  const classes = ['JSS 1', 'JSS 2', 'JSS 3', 'SS 1', 'SS 2 ART', 'SS 2 SCIENCE', 'SS 3 ART', 'SS 3 SCIENCE'];
+  const classes = CLASS_LIST;
 
   useEffect(() => {
     fetchAssignments();

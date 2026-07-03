@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, addDoc, getDocs, query, deleteDoc, doc, orderBy } from 'firebase/firestore';
 import { Plus, Trash2, BookOpen, Link, Users, Loader2, CheckCircle, X, FileText } from 'lucide-react';
+import { CLASS_LIST } from '../utils/subjectConfig';
 
 const NoteManager = () => {
   const [notes, setNotes] = useState([]);
@@ -18,7 +19,7 @@ const NoteManager = () => {
     fileType: 'PDF'
   });
 
-  const classes = ['JSS 1', 'JSS 2', 'JSS 3', 'SS 1', 'SS 2 ART', 'SS 2 SCIENCE', 'SS 3 ART', 'SS 3 SCIENCE'];
+  const classes = CLASS_LIST;
 
   useEffect(() => {
     fetchNotes();
