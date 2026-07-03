@@ -105,7 +105,11 @@ const ProfileSettings = () => {
     setUploadingPhoto(true);
     try {
       const file = new File([croppedBlob], `avatar_${Date.now()}.jpg`, { type: 'image/jpeg' });
-      const url = await uploadAvatar(file, isStudent ? currentStudent.id : (currentAdmin.id || currentAdmin.staffId));
+      // Use id, staffId, or email slug as upload key so hardcoded admins don't crash
+      const uploadKey = isStudent
+        ? currentStudent.id
+        : (currentAdmin.id || currentAdmin.staffId || currentAdmin.email?.replace(/[^a-z0-9]/gi, '_'));
+      const url = await uploadAvatar(file, uploadKey);
       const updateFn = isStudent ? updateStudentProfile : updateAdminProfile;
       await updateFn({ photo: url, photoURL: url });
       setPhotoURL(url);
@@ -158,7 +162,7 @@ const ProfileSettings = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* ── Sidebar ────────────────────────────────────────────────────── */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 text-center sticky top-8 overflow-hidden">
+          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 text-center overflow-hidden">
 
             {/* Cover / Photo Banner */}
             <div className="relative" style={{ height: '120px' }}>

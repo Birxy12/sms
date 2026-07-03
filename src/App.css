@@ -80,7 +80,7 @@
   display: flex;
   width: 100%;
   height: 100vh;
-  overflow: hidden;
+  overflow: hidden; /* sidebar stays fixed; main-content scrolls internally */
 }
 
 /* ── Desktop sidebar hidden on mobile ── */
@@ -273,9 +273,11 @@
   background-color: var(--bg-secondary);
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Allow the profile page and all long pages to scroll */
+  scroll-behavior: smooth;
 }
 
 .top-header {
@@ -340,9 +342,7 @@
 .page-content {
   padding: 32px;
   flex-grow: 1;
-  overflow-y: auto;
-  overflow-x: auto;
-  min-height: 0;
+  /* Do NOT restrict height or use overflow:hidden here — let content scroll */
   display: flex;
   flex-direction: column;
   align-items: center;
