@@ -19,7 +19,8 @@ const TeacherAttendance = () => {
 
   useEffect(() => {
     const fetchAssignedClasses = async () => {
-      if (!currentAdmin?.id) return;
+      if (!currentAdmin) return;
+      if (currentAdmin.role === 'teacher' && !currentAdmin.id) return;
       try {
         if (currentAdmin.role !== 'teacher') {
           // Admins, principals, bursars can manage attendance for ANY class
