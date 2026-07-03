@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import StatCard from '../../components/StatCard';
 import Marksheet from '../../components/Marksheet';
 import ScoreEntry from '../../components/ScoreEntry';
@@ -6,14 +6,45 @@ import AssignmentManager from '../../components/AssignmentManager';
 import NoteManager from '../../components/NoteManager';
 import TeacherAttendance from '../../components/TeacherAttendance';
 import { Book, CheckCircle, Clock, Edit3, List, Calendar as CalendarIcon, FileText, ClipboardList, Users } from 'lucide-react';
+import { useAdminAuth } from '../../context/AdminAuthContext';
+import { db } from '../../lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const StaffDashboard = () => {
   const [activeTab, setActiveTab] = useState('entry'); // schedule, marksheet, entry, assignments, materials
+  const { currentAdmin } = useAdminAuth();
+  const [stats, setStats] = useState({ classes: 0, subjects: 0, attendance: '100%', tasks: 3 });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!currentAdmin?.id) return;
+      try {
+        const subjectsQ = query(collection(db, 'subjects'), where('teacherId', '==', currentAdmin.id));
+        const subjectsSnap = await getDocs(subjectsQ);
+        const subjectsCount = subjectsSnap.docs.length;
+
+        const classesSet = new Set();
+        subjectsSnap.docs.forEach(doc => {
+          const data = doc.data();
+          if (data.class) classesSet.add(data.class);
+        });
+
+        const classesQ = query(collection(db, 'classes'), where('formTeacherId', '==', currentAdmin.id));
+        const classesSnap = await getDocs(classesQ);
+        classesSnap.docs.forEach(doc => classesSet.add(doc.id));
+
+        setStats(prev => ({ ...prev, classes: classesSet.size, subjects: subjectsCount }));
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      }
+    };
+    fetchStats();
+  }, [currentAdmin]);
 
   const teacherStats = [
-    { title: 'My Classes', value: '4', icon: Book, color: '#ff6b00' },
-    { title: 'Attendance Marked', value: '100%', icon: CheckCircle, color: '#111111' },
-    { title: 'Pending Tasks', value: '3', icon: Clock, color: '#ff6b00' },
+    { title: 'My Classes', value: stats.classes.toString(), icon: Book, color: '#ff6b00' },
+    { title: 'Total Subjects', value: stats.subjects.toString(), icon: Book, color: '#2563eb' },
+    { title: 'Pending Tasks', value: stats.tasks.toString(), icon: Clock, color: '#111111' },
   ];
 
   const tabs = [
