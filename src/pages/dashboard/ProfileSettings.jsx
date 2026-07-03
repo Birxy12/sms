@@ -39,6 +39,15 @@ const ProfileSettings = () => {
   const [photoURL, setPhotoURL] = useState(user?.photo || user?.photoURL || '');
   const [cropImageSrc, setCropImageSrc] = useState(null);
 
+  // Sync state if user changes/loads later
+  React.useEffect(() => {
+    if (user) {
+      setName(user.name || user['STUDENT NAME'] || '');
+      setEmail(user.email || '');
+      setPhotoURL(user.photo || user.photoURL || '');
+    }
+  }, [user]);
+
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleCancelEdit = () => {
     setName(user?.name || user?.['STUDENT NAME'] || '');
@@ -241,6 +250,7 @@ const ProfileSettings = () => {
               {/* Edit / Cancel toggle */}
               {!editMode ? (
                 <button
+                  type="button"
                   onClick={() => setEditMode(true)}
                   className="flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black text-sm px-5 py-2.5 rounded-xl transition-all active:scale-95"
                 >
@@ -249,6 +259,7 @@ const ProfileSettings = () => {
                 </button>
               ) : (
                 <button
+                  type="button"
                   onClick={handleCancelEdit}
                   className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-sm px-5 py-2.5 rounded-xl transition-all active:scale-95"
                 >
