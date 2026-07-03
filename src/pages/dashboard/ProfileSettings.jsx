@@ -3,7 +3,7 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { 
   User, Mail, Shield, CheckCircle, AlertCircle, Loader2, Save, 
-  ArrowLeft, Camera, Lock, Eye, EyeOff, UploadCloud, Trash2 
+  ArrowLeft, Camera, Lock, Eye, EyeOff, Edit2, X, Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { uploadAvatar } from '../../lib/supabase';
@@ -18,37 +18,43 @@ const ProfileSettings = () => {
   const user = currentAdmin || currentStudent;
   const isStudent = !!currentStudent;
   const isStaff = !!currentAdmin;
-  
-  // Basic Info State
+  const isAdminOrSuper = currentAdmin && (currentAdmin.role === 'admin' || currentAdmin.isSuperAdmin);
+  // Bypass default password warning for admins
+  const isUsingDefaultPassword = isStaff && !user?.password && !isAdminOrSuper;
+
+  // ── Edit mode ─────────────────────────────────────────────────────────────
+  const [editMode, setEditMode] = useState(false);
   const [name, setName] = useState(user?.name || user?.['STUDENT NAME'] || '');
   const [email, setEmail] = useState(user?.email || '');
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
 
-  // Password State
-  const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
+  // ── Password ──────────────────────────────────────────────────────────────
+  const [passwords, setPasswords] = useState({ new: '', confirm: '' });
   const [showPasswords, setShowPasswords] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
 
-  // Photo State
+  // ── Photo ─────────────────────────────────────────────────────────────────
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoURL, setPhotoURL] = useState(user?.photo || user?.photoURL || '');
   const [cropImageSrc, setCropImageSrc] = useState(null);
 
-  // Detect if staff is using default password (134)
-  const isUsingDefaultPassword = isStaff && !user.password;
-  const isAdminOrSuper = currentAdmin && (currentAdmin.role === 'admin' || currentAdmin.isSuperAdmin);
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  const handleCancelEdit = () => {
+    setName(user?.name || user?.['STUDENT NAME'] || '');
+    setEmail(user?.email || '');
+    setEditMode(false);
+  };
 
   const handleSaveInfo = async (e) => {
     e.preventDefault();
     setSaving(true);
     setStatus({ type: '', message: '' });
-
     const updateFn = isStudent ? updateStudentProfile : updateAdminProfile;
     const result = await updateFn({ name, email });
-
     if (result.success) {
-      setStatus({ type: 'success', message: 'Profile information updated!' });
+      setStatus({ type: 'success', message: 'Profile updated successfully!' });
+      setEditMode(false);
       setTimeout(() => setStatus({ type: '', message: '' }), 3000);
     } else {
       setStatus({ type: 'error', message: result.message });
@@ -66,17 +72,13 @@ const ProfileSettings = () => {
       setStatus({ type: 'error', message: 'Password must be at least 3 characters.' });
       return;
     }
-
     setChangingPassword(true);
     setStatus({ type: '', message: '' });
-
     const updateFn = isStudent ? updateStudentProfile : updateAdminProfile;
-    // For simplicity in this mock-up, we update the 'password' field in Firestore
     const result = await updateFn({ password: passwords.new });
-
     if (result.success) {
       setStatus({ type: 'success', message: 'Password updated successfully!' });
-      setPasswords({ current: '', new: '', confirm: '' });
+      setPasswords({ new: '', confirm: '' });
       setTimeout(() => setStatus({ type: '', message: '' }), 3000);
     } else {
       setStatus({ type: 'error', message: result.message });
@@ -87,12 +89,10 @@ const ProfileSettings = () => {
   const handlePhotoSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     if (file.size > 2 * 1024 * 1024) {
       setStatus({ type: 'error', message: 'File too large. Max 2MB.' });
       return;
     }
-
     const reader = new FileReader();
     reader.onload = () => setCropImageSrc(reader.result);
     reader.readAsDataURL(file);
@@ -102,17 +102,15 @@ const ProfileSettings = () => {
   const handleCropComplete = async (croppedBlob) => {
     setCropImageSrc(null);
     if (!croppedBlob) return;
-
     setUploadingPhoto(true);
     try {
       const file = new File([croppedBlob], `avatar_${Date.now()}.jpg`, { type: 'image/jpeg' });
-      const url = await uploadAvatar(file, isStudent ? currentStudent.id : currentAdmin.id);
-      
+      const url = await uploadAvatar(file, isStudent ? currentStudent.id : (currentAdmin.id || currentAdmin.staffId));
       const updateFn = isStudent ? updateStudentProfile : updateAdminProfile;
       await updateFn({ photo: url, photoURL: url });
-      
       setPhotoURL(url);
-      setStatus({ type: 'success', message: 'Profile picture updated on Supabase!' });
+      setStatus({ type: 'success', message: 'Profile picture updated!' });
+      setTimeout(() => setStatus({ type: '', message: '' }), 3000);
     } catch (error) {
       console.error('Upload error:', error);
       setStatus({ type: 'error', message: 'Failed to upload image.' });
@@ -127,7 +125,7 @@ const ProfileSettings = () => {
           <User size={32} />
         </div>
         <h3 className="text-xl font-bold text-slate-800">Authentication Required</h3>
-        <p className="text-slate-500 mb-6">Please log in to your account to view and edit settings.</p>
+        <p className="text-slate-500 mb-6">Please log in to view and edit settings.</p>
         <button onClick={() => navigate('/')} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold">Go to Login</button>
       </div>
     );
@@ -135,28 +133,30 @@ const ProfileSettings = () => {
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <button onClick={() => navigate(-1)} className="p-2.5 hover:bg-slate-100 rounded-2xl transition-colors">
           <ArrowLeft size={24} className="text-slate-600" />
         </button>
         <h2 className="text-2xl font-black text-slate-800 tracking-tight">Account Settings</h2>
-        <div className="w-10"></div>
+        <div className="w-10" />
       </div>
 
+      {/* Default password warning — only for non-admins */}
       {isUsingDefaultPassword && (
-        <div className="mb-8 p-6 bg-amber-50 border-2 border-amber-200 rounded-3xl flex items-start gap-4 animate-pulse">
+        <div className="mb-8 p-6 bg-amber-50 border-2 border-amber-200 rounded-3xl flex items-start gap-4">
           <div className="p-3 bg-amber-100 text-amber-600 rounded-2xl">
             <Shield size={24} />
           </div>
           <div>
             <h4 className="font-black text-amber-900 text-lg">Action Required: Change Password</h4>
-            <p className="text-amber-700 font-bold text-sm">You are still using the default password (134). For security reasons, please update your password below.</p>
+            <p className="text-amber-700 font-bold text-sm">You are still using the default password. Please update it below for security.</p>
           </div>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Sidebar: Profile Photo */}
+        {/* ── Sidebar ────────────────────────────────────────────────────── */}
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 text-center sticky top-8 overflow-hidden">
 
@@ -168,7 +168,7 @@ const ProfileSettings = () => {
                 <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #6366f140, #6366f115)' }} />
               )}
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.35))' }} />
-              {/* Click to upload */}
+              {/* Hover overlay to change photo */}
               <label
                 onClick={() => fileInputRef.current?.click()}
                 className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer transition-opacity opacity-0 hover:opacity-100"
@@ -182,23 +182,30 @@ const ProfileSettings = () => {
               <input type="file" ref={fileInputRef} onChange={handlePhotoSelect} className="hidden" accept="image/*" />
             </div>
 
-            {/* Avatar circle overlapping banner */}
+            {/* Avatar */}
             <div style={{ marginTop: '-28px', position: 'relative', zIndex: 10 }} className="flex justify-center mb-3">
-              <div className="w-14 h-14 rounded-full border-4 border-white shadow-lg bg-indigo-100 flex items-center justify-center overflow-hidden">
-                {photoURL ? (
+              <div
+                className="w-14 h-14 rounded-full border-4 border-white shadow-lg bg-indigo-100 flex items-center justify-center overflow-hidden cursor-pointer relative group"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploadingPhoto ? (
+                  <Loader2 size={20} className="animate-spin text-indigo-500" />
+                ) : photoURL ? (
                   <img src={photoURL} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-xl font-black text-indigo-600">{(name[0] || '?').toUpperCase()}</span>
                 )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 rounded-full flex items-center justify-center transition-opacity">
+                  <Camera size={14} className="text-white" />
+                </div>
               </div>
             </div>
 
             <div className="px-8 pb-8">
               <h3 className="text-xl font-black text-slate-900 mb-1">{name}</h3>
               <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">
-                {isStudent ? 'Student Account' : (currentAdmin.role === 'admin' ? 'Super Admin' : 'Staff Member')}
+                {isStudent ? 'Student Account' : (currentAdmin.role === 'admin' ? 'Super Admin' : currentAdmin.role === 'principal' ? 'Principal' : currentAdmin.role === 'bursar' ? 'Bursar' : 'Staff Member')}
               </p>
-              
               <div className="pt-6 border-t border-slate-100 space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{isStudent ? 'REG NO' : 'STAFF ID'}</span>
@@ -207,7 +214,7 @@ const ProfileSettings = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">STATUS</span>
                   <span className="text-emerald-600 font-black text-[10px] flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-full uppercase tracking-tighter">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div> Verified
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Verified
                   </span>
                 </div>
               </div>
@@ -215,64 +222,98 @@ const ProfileSettings = () => {
           </div>
         </div>
 
-        {/* Main Content: Forms */}
+        {/* ── Main Content ───────────────────────────────────────────────── */}
         <div className="lg:col-span-8 space-y-8">
-          {/* General Information */}
+
+          {/* Personal Information Card */}
           <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                <User size={20} />
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                  <User size={20} />
+                </div>
+                <h4 className="text-lg font-black text-slate-800">Personal Information</h4>
               </div>
-              <h4 className="text-lg font-black text-slate-800">Personal Information</h4>
+              {/* Edit / Cancel toggle */}
+              {!editMode ? (
+                <button
+                  onClick={() => setEditMode(true)}
+                  className="flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black text-sm px-5 py-2.5 rounded-xl transition-all active:scale-95"
+                >
+                  <Edit2 size={15} />
+                  Edit Profile
+                </button>
+              ) : (
+                <button
+                  onClick={handleCancelEdit}
+                  className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-sm px-5 py-2.5 rounded-xl transition-all active:scale-95"
+                >
+                  <X size={15} />
+                  Cancel
+                </button>
+              )}
             </div>
 
             <form onSubmit={handleSaveInfo} className="space-y-6">
+              {/* Full Name */}
               <div className="space-y-2">
                 <label className="text-xs font-black text-slate-500 ml-1 uppercase tracking-widest">Full Name</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <input 
-                    type="text" 
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-700 shadow-sm"
-                  />
+                  {editMode ? (
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      autoFocus
+                      className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border-2 border-indigo-300 focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-700 shadow-sm"
+                    />
+                  ) : (
+                    <div className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border-2 border-transparent font-bold text-slate-700">
+                      {name || <span className="text-slate-400">—</span>}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className={`space-y-2 ${!isAdminOrSuper ? 'opacity-60' : ''}`}>
+              {/* Email */}
+              <div className={`space-y-2 ${!isAdminOrSuper && !editMode ? 'opacity-60' : ''}`}>
                 <label className="text-xs font-black text-slate-500 ml-1 uppercase tracking-widest">Email Address</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <input 
-                    type="email" 
-                    value={email} 
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={!isAdminOrSuper}
-                    className={`w-full pl-12 pr-4 py-4 rounded-2xl font-bold ${
-                      !isAdminOrSuper 
-                        ? 'bg-slate-100 border-none text-slate-500 cursor-not-allowed' 
-                        : 'bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none transition-all text-slate-700 shadow-sm'
-                    }`}
-                  />
+                  {editMode && isAdminOrSuper ? (
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border-2 border-indigo-300 focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-700 shadow-sm"
+                    />
+                  ) : (
+                    <div className={`w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-transparent font-bold ${!isAdminOrSuper ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 text-slate-700'}`}>
+                      {email || <span className="text-slate-400">—</span>}
+                    </div>
+                  )}
                 </div>
+                {editMode && !isAdminOrSuper && (
+                  <p className="text-xs text-slate-400 ml-1">Email can only be changed by administrators.</p>
+                )}
               </div>
 
-              <button 
-                type="submit" 
-                disabled={saving || (name === (user.name || user['STUDENT NAME']) && email === (user.email || ''))}
-                className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black hover:bg-black transition-all shadow-xl disabled:opacity-40 disabled:shadow-none active:scale-[0.98]"
-              >
-                {saving ? <Loader2 size={24} className="animate-spin" /> : <>
-                  <Save size={20} />
-                  Update Profile
-                </>}
-              </button>
+              {/* Save button — only visible in edit mode */}
+              {editMode && (
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-black transition-all shadow-xl shadow-indigo-100 disabled:opacity-50 disabled:shadow-none active:scale-[0.98]"
+                >
+                  {saving ? <Loader2 size={22} className="animate-spin" /> : <><Save size={20} /> Save Changes</>}
+                </button>
+              )}
             </form>
           </div>
 
-          {/* Security / Password */}
+          {/* Account Security */}
           <div className={`bg-white p-8 rounded-[2rem] shadow-sm border-2 ${isUsingDefaultPassword ? 'border-amber-400' : 'border-slate-200'}`}>
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
@@ -281,8 +322,8 @@ const ProfileSettings = () => {
                 </div>
                 <h4 className="text-lg font-black text-slate-800">Account Security</h4>
               </div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setShowPasswords(!showPasswords)}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
               >
@@ -294,10 +335,10 @@ const ProfileSettings = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-xs font-black text-slate-500 ml-1 uppercase tracking-widest">New Password</label>
-                  <input 
-                    type={showPasswords ? "text" : "password"} 
+                  <input
+                    type={showPasswords ? 'text' : 'password'}
                     value={passwords.new}
-                    onChange={(e) => setPasswords({...passwords, new: e.target.value})}
+                    onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
                     required
                     placeholder="Min 3 characters"
                     className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-700 shadow-sm"
@@ -305,10 +346,10 @@ const ProfileSettings = () => {
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-black text-slate-500 ml-1 uppercase tracking-widest">Confirm Password</label>
-                  <input 
-                    type={showPasswords ? "text" : "password"} 
+                  <input
+                    type={showPasswords ? 'text' : 'password'}
                     value={passwords.confirm}
-                    onChange={(e) => setPasswords({...passwords, confirm: e.target.value})}
+                    onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                     required
                     placeholder="Repeat new password"
                     className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-700 shadow-sm"
@@ -316,29 +357,28 @@ const ProfileSettings = () => {
                 </div>
               </div>
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={changingPassword || !passwords.new || passwords.new !== passwords.confirm}
                 className={`w-full flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-black transition-all shadow-xl active:scale-[0.98] disabled:opacity-40 disabled:shadow-none ${
                   isUsingDefaultPassword ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200'
                 }`}
               >
-                {changingPassword ? <Loader2 size={24} className="animate-spin" /> : <>
-                  <Shield size={20} />
-                  {isUsingDefaultPassword ? 'Update Default Password' : 'Change Password'}
-                </>}
+                {changingPassword ? <Loader2 size={24} className="animate-spin" /> : (
+                  <><Shield size={20} />{isUsingDefaultPassword ? 'Update Default Password' : 'Change Password'}</>
+                )}
               </button>
             </form>
           </div>
 
-          {/* Toast Notifications */}
+          {/* Toast */}
           {status.message && (
             <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 p-5 rounded-[1.5rem] flex items-center gap-3 shadow-2xl z-50 animate-in slide-in-from-bottom-8 duration-300 min-w-[320px] ${
               status.type === 'success' ? 'bg-slate-900 text-white' : 'bg-rose-600 text-white'
             }`}>
               {status.type === 'success' ? <CheckCircle size={22} className="text-emerald-400" /> : <AlertCircle size={22} />}
               <p className="font-black text-sm tracking-tight">{status.message}</p>
-              <button onClick={() => setStatus({type:'', message:''})} className="ml-auto p-1 hover:bg-white/10 rounded-lg">
+              <button onClick={() => setStatus({ type: '', message: '' })} className="ml-auto p-1 hover:bg-white/10 rounded-lg">
                 <Trash2 size={16} />
               </button>
             </div>
