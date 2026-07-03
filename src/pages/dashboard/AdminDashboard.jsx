@@ -79,6 +79,8 @@ const AdminDashboard = () => {
     const [fmStatus, setFmStatus] = React.useState({ type: '', message: '', id: '' });
     const [enrolling, setEnrolling] = React.useState('');
 
+    const enrollingStudent = fmStudents.find(s => s.id === enrolling);
+
     const webAuthnOk = typeof window !== 'undefined' &&
       window.PublicKeyCredential !== undefined &&
       typeof window.PublicKeyCredential === 'function';
@@ -222,6 +224,78 @@ const AdminDashboard = () => {
 
     return (
       <div className="space-y-6">
+        {enrollingStudent && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl border border-slate-100 text-center space-y-6 relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-24 h-24 bg-indigo-500/5 rounded-full blur-xl" />
+              <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-indigo-500/5 rounded-full blur-xl" />
+              
+              <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Biometric Registration</h3>
+              
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 inline-block mx-auto">
+                <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+                  <Fingerprint size={32} className="animate-pulse" />
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Enrolling Student</p>
+                <h4 className="text-base font-black text-slate-800 mt-1">{enrollingStudent.name || enrollingStudent.NAME}</h4>
+                <p className="text-[11px] text-indigo-600 font-bold mt-1 uppercase">
+                  {enrollingStudent.regNo || enrollingStudent.reg_no} · {enrollingStudent.className || enrollingStudent.class_name}
+                </p>
+              </div>
+              
+              <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                <p className="text-xs font-bold text-indigo-700">
+                  {fmStatus.message || 'Please place your finger on the biometric scanner...'}
+                </p>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const credId = 'SIM_' + btoa(enrollingStudent.id + Date.now());
+                    try {
+                      const { doc, updateDoc } = await import('firebase/firestore');
+                      const { db: firestoreDb } = await import('../../lib/firebase');
+                      await updateDoc(doc(firestoreDb, 'students', enrollingStudent.id), {
+                        fingerprintCredentialId: credId,
+                        fingerprintEnrolled: true,
+                        fingerprintEnrolledAt: new Date().toISOString()
+                      });
+                      setFmStudents(prev => prev.map(s => s.id === enrollingStudent.id
+                        ? { ...s, fingerprintCredentialId: credId, fingerprintEnrolled: true }
+                        : s
+                      ));
+                      setFmStatus({ type: 'success', message: `✅ Simulated enrollment successful!`, id: enrollingStudent.id });
+                    } catch (err) {
+                      setFmStatus({ type: 'error', message: `Simulation failed: ${err.message}`, id: enrollingStudent.id });
+                    } finally {
+                      setEnrolling('');
+                    }
+                  }}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+                >
+                  Simulate Scan
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEnrolling('');
+                    setFmStatus({ type: '', message: '', id: '' });
+                  }}
+                  className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-3xl p-8 text-white relative overflow-hidden shadow-2xl">
           <div className="absolute -right-12 -top-12 w-48 h-48 bg-white/5 rounded-full" />
           <div className="absolute right-24 bottom-8 w-24 h-24 bg-white/5 rounded-full" />

@@ -81,7 +81,7 @@ const CheckResult = () => {
         {/* Enterprise Background Accents */}
         <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
           <div className={`absolute top-[-10%] right-[-10%] w-[500px] h-[500px] ${darkMode ? 'bg-indigo-950/20' : 'bg-indigo-50'} rounded-full blur-3xl opacity-60`}></div>
-          <div className={`absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] ${darkMode ? 'bg-slate-950/20' : 'bg-slate-100'} rounded-full blur-3xl opacity-60`}></div>
+          <div className={`absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] ${darkMode ? 'bg-indigo-900/20' : 'bg-indigo-900/20'} rounded-full blur-3xl opacity-60`}></div>
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] pointer-events-none"></div>
         </div>
 
