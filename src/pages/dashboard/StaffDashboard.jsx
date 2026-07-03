@@ -17,21 +17,34 @@ const StaffDashboard = () => {
 
   useEffect(() => {
     const fetchStats = async () => {
-      if (!currentAdmin?.id) return;
+      if (!currentAdmin) return;
       try {
-        const subjectsQ = query(collection(db, 'subjects'), where('teacherId', '==', currentAdmin.id));
-        const subjectsSnap = await getDocs(subjectsQ);
+        let subjectsSnap, classesSnap;
+        
+        if (currentAdmin.role === 'admin' || currentAdmin.isSuperAdmin) {
+          subjectsSnap = await getDocs(collection(db, 'subjects'));
+          classesSnap = await getDocs(collection(db, 'classes'));
+        } else {
+          if (!currentAdmin.id) return;
+          const subjectsQ = query(collection(db, 'subjects'), where('teacherId', '==', currentAdmin.id));
+          subjectsSnap = await getDocs(subjectsQ);
+          
+          const classesQ = query(collection(db, 'classes'), where('formTeacherId', '==', currentAdmin.id));
+          classesSnap = await getDocs(classesQ);
+        }
+
         const subjectsCount = subjectsSnap.docs.length;
 
         const classesSet = new Set();
-        subjectsSnap.docs.forEach(doc => {
-          const data = doc.data();
-          if (data.class) classesSet.add(data.class);
-        });
-
-        const classesQ = query(collection(db, 'classes'), where('formTeacherId', '==', currentAdmin.id));
-        const classesSnap = await getDocs(classesQ);
-        classesSnap.docs.forEach(doc => classesSet.add(doc.id));
+        if (currentAdmin.role === 'admin' || currentAdmin.isSuperAdmin) {
+          classesSnap.docs.forEach(doc => classesSet.add(doc.id));
+        } else {
+          subjectsSnap.docs.forEach(doc => {
+            const data = doc.data();
+            if (data.class) classesSet.add(data.class);
+          });
+          classesSnap.docs.forEach(doc => classesSet.add(doc.id));
+        }
 
         setStats(prev => ({ ...prev, classes: classesSet.size, subjects: subjectsCount }));
       } catch (error) {

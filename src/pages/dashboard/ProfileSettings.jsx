@@ -21,6 +21,7 @@ const ProfileSettings = () => {
   
   // Basic Info State
   const [name, setName] = useState(user?.name || user?.['STUDENT NAME'] || '');
+  const [email, setEmail] = useState(user?.email || '');
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
 
@@ -36,6 +37,7 @@ const ProfileSettings = () => {
 
   // Detect if staff is using default password (134)
   const isUsingDefaultPassword = isStaff && !user.password;
+  const isAdminOrSuper = currentAdmin && (currentAdmin.role === 'admin' || currentAdmin.isSuperAdmin);
 
   const handleSaveInfo = async (e) => {
     e.preventDefault();
@@ -43,7 +45,7 @@ const ProfileSettings = () => {
     setStatus({ type: '', message: '' });
 
     const updateFn = isStudent ? updateStudentProfile : updateAdminProfile;
-    const result = await updateFn({ name });
+    const result = await updateFn({ name, email });
 
     if (result.success) {
       setStatus({ type: 'success', message: 'Profile information updated!' });
@@ -239,27 +241,32 @@ const ProfileSettings = () => {
                 </div>
               </div>
 
-              <div className="space-y-2 opacity-60">
+              <div className={`space-y-2 ${!isAdminOrSuper ? 'opacity-60' : ''}`}>
                 <label className="text-xs font-black text-slate-500 ml-1 uppercase tracking-widest">Email Address</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                   <input 
                     type="email" 
-                    value={user.email || 'N/A'} 
-                    disabled 
-                    className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-100 border-none text-slate-500 cursor-not-allowed font-bold"
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={!isAdminOrSuper}
+                    className={`w-full pl-12 pr-4 py-4 rounded-2xl font-bold ${
+                      !isAdminOrSuper 
+                        ? 'bg-slate-100 border-none text-slate-500 cursor-not-allowed' 
+                        : 'bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none transition-all text-slate-700 shadow-sm'
+                    }`}
                   />
                 </div>
               </div>
 
               <button 
                 type="submit" 
-                disabled={saving || name === (user.name || user['STUDENT NAME'])}
+                disabled={saving || (name === (user.name || user['STUDENT NAME']) && email === (user.email || ''))}
                 className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black hover:bg-black transition-all shadow-xl disabled:opacity-40 disabled:shadow-none active:scale-[0.98]"
               >
                 {saving ? <Loader2 size={24} className="animate-spin" /> : <>
                   <Save size={20} />
-                  Update Name
+                  Update Profile
                 </>}
               </button>
             </form>
