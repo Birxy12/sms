@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { Calendar, CheckSquare, Square, Loader2, Save, Users, AlertCircle, Check } from 'lucide-react';
+import { Calendar, CheckSquare, Square, Loader2, Save, Users, AlertCircle, Check, Fingerprint } from 'lucide-react';
 import { CLASS_LIST } from '../utils/subjectConfig';
 
 const TeacherAttendance = () => {
@@ -91,6 +91,52 @@ const TeacherAttendance = () => {
       setPresentStudents([]);
     } else {
       setPresentStudents(classStudents.map(s => s.id));
+    }
+  };
+
+  const [scanningStudent, setScanningStudent] = useState(null);
+
+  const handleFingerprintScan = async (e, student) => {
+    e.stopPropagation(); // prevent triggering the manual toggle
+    if (!window.PublicKeyCredential) {
+      alert('Biometrics not supported on this browser/device.');
+      return;
+    }
+    
+    // For test simulation
+    if (student.fingerprintCredentialId && student.fingerprintCredentialId.startsWith('SIM_')) {
+      setScanningStudent(student.id);
+      setTimeout(() => {
+        if (!presentStudents.includes(student.id)) {
+          setPresentStudents(prev => [...prev, student.id]);
+        }
+        setScanningStudent(null);
+      }, 1500);
+      return;
+    }
+
+    try {
+      setScanningStudent(student.id);
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      await navigator.credentials.get({
+        publicKey: {
+          challenge,
+          timeout: 60000,
+          rpId: window.location.hostname,
+          allowCredentials: [],
+          userVerification: 'preferred'
+        }
+      });
+      // Verification success
+      if (!presentStudents.includes(student.id)) {
+        setPresentStudents(prev => [...prev, student.id]);
+      }
+    } catch (err) {
+      if (err.name !== 'NotAllowedError') {
+        alert(`Biometric verification failed: ${err.message}`);
+      }
+    } finally {
+      setScanningStudent(null);
     }
   };
 
@@ -286,6 +332,20 @@ const TeacherAttendance = () => {
                       <h5 className={`font-black text-sm truncate transition-colors ${isPresent ? 'text-emerald-900' : 'text-slate-800'}`}>{student.name}</h5>
                       <p className={`text-xs font-bold truncate transition-colors ${isPresent ? 'text-emerald-600/80' : 'text-slate-400'}`}>{student.regNo} • {student.gender}</p>
                     </div>
+
+                    {/* Fingerprint check-in button */}
+                    <button
+                      onClick={(e) => handleFingerprintScan(e, student)}
+                      title="Check in with Fingerprint"
+                      className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-slate-200 text-slate-400 hover:text-indigo-600 transition-colors flex-shrink-0 relative"
+                    >
+                      {scanningStudent === student.id ? (
+                        <Loader2 size={18} className="animate-spin text-indigo-600" />
+                      ) : (
+                        <Fingerprint size={18} />
+                      )}
+                    </button>
+
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
                       isPresent ? 'bg-emerald-500 text-white scale-110 shadow-md shadow-emerald-300' : 'bg-slate-100 text-slate-300'
                     }`}>

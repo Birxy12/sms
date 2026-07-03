@@ -89,19 +89,48 @@ export const AdminAuthProvider = ({ children }) => {
     // 1. Check hardcoded Admin credentials (fallback to prevent lockout)
     if (identifier === 'admin@birxysms.edu' && password === '@@@@@&&&&&') {
       await ensureAuth();
-      userToVerify = { email: identifier, role: 'admin', name: 'System Administrator', staffId: 'ADMIN/001' };
+      try {
+        const { db } = await import('../lib/firebase');
+        const { collection, query, where, getDocs } = await import('firebase/firestore');
+        const snap = await getDocs(query(collection(db, 'staff'), where('email', '==', identifier)));
+        if (!snap.empty) {
+          userToVerify = { ...snap.docs[0].data(), id: snap.docs[0].id };
+        } else {
+          userToVerify = { email: identifier, role: 'admin', name: 'System Administrator', staffId: 'ADMIN/001' };
+        }
+      } catch {
+        userToVerify = { email: identifier, role: 'admin', name: 'System Administrator', staffId: 'ADMIN/001' };
+      }
     }
     // New Super Admin requested by user
     else if (identifier === 'globixtechinc@gmail.com' && password === 'J123456@@') {
       await ensureAuth();
-      userToVerify = { 
-        email: identifier, 
-        role: 'admin', 
-        name: 'Globix Admin', 
-        staffId: 'ADMIN/002',
-        firstLogin: true,
-        isSuperAdmin: true
-      };
+      try {
+        const { db } = await import('../lib/firebase');
+        const { collection, query, where, getDocs } = await import('firebase/firestore');
+        const snap = await getDocs(query(collection(db, 'staff'), where('email', '==', identifier)));
+        if (!snap.empty) {
+          userToVerify = { ...snap.docs[0].data(), id: snap.docs[0].id };
+        } else {
+          userToVerify = { 
+            email: identifier, 
+            role: 'admin', 
+            name: 'Globix Admin', 
+            staffId: 'ADMIN/002',
+            firstLogin: true,
+            isSuperAdmin: true
+          };
+        }
+      } catch {
+        userToVerify = { 
+          email: identifier, 
+          role: 'admin', 
+          name: 'Globix Admin', 
+          staffId: 'ADMIN/002',
+          firstLogin: true,
+          isSuperAdmin: true
+        };
+      }
     }
     // Principal hardcoded login
     else if ((identifier === 'principal@birxysms.edu' || identifier === 'pricipal@birxysms.edu') && password === '@@@@@@') {
