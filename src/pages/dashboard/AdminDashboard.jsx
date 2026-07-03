@@ -150,7 +150,6 @@ const AdminDashboard = () => {
           // Simulation fallback for devices/browsers without WebAuthn
           await new Promise(r => setTimeout(r, 2000));
           credId = 'SIM_' + btoa(student.id + Date.now());
-          setFmStatus({ type: 'info', message: '⚠️ WebAuthn unavailable – using simulated enrollment.', id: student.id });
         }
 
         const { doc, updateDoc } = await import('firebase/firestore');
@@ -165,6 +164,10 @@ const AdminDashboard = () => {
           : s
         ));
         setFmStatus({ type: 'success', message: `✅ Fingerprint enrolled for ${student.name}!`, id: student.id });
+        // Auto-close on success after 2.5 seconds
+        setTimeout(() => {
+          setEnrolling(curr => curr === student.id ? '' : curr);
+        }, 2500);
       } catch (err) {
         if (err.name === 'NotAllowedError') {
           setFmStatus({ type: 'error', message: '❌ Enrollment cancelled or fingerprint not recognised. Try again.', id: student.id });
@@ -185,11 +188,12 @@ const AdminDashboard = () => {
             : s
           ));
           setFmStatus({ type: 'success', message: `✅ Enrolled (simulated) for ${student.name}.`, id: student.id });
+          setTimeout(() => {
+            setEnrolling(curr => curr === student.id ? '' : curr);
+          }, 2500);
         } else {
           setFmStatus({ type: 'error', message: `Error: ${err.message}`, id: student.id });
         }
-      } finally {
-        setEnrolling('');
       }
     };
 
@@ -253,44 +257,80 @@ const AdminDashboard = () => {
               </div>
               
               <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const credId = 'SIM_' + btoa(enrollingStudent.id + Date.now());
-                    try {
-                      const { doc, updateDoc } = await import('firebase/firestore');
-                      const { db: firestoreDb } = await import('../../lib/firebase');
-                      await updateDoc(doc(firestoreDb, 'students', enrollingStudent.id), {
-                        fingerprintCredentialId: credId,
-                        fingerprintEnrolled: true,
-                        fingerprintEnrolledAt: new Date().toISOString()
-                      });
-                      setFmStudents(prev => prev.map(s => s.id === enrollingStudent.id
-                        ? { ...s, fingerprintCredentialId: credId, fingerprintEnrolled: true }
-                        : s
-                      ));
-                      setFmStatus({ type: 'success', message: `✅ Simulated enrollment successful!`, id: enrollingStudent.id });
-                    } catch (err) {
-                      setFmStatus({ type: 'error', message: `Simulation failed: ${err.message}`, id: enrollingStudent.id });
-                    } finally {
+                {fmStatus.type === 'success' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
                       setEnrolling('');
-                    }
-                  }}
-                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
-                >
-                  Simulate Scan
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEnrolling('');
-                    setFmStatus({ type: '', message: '', id: '' });
-                  }}
-                  className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
-                >
-                  Cancel
-                </button>
+                      setFmStatus({ type: '', message: '', id: '' });
+                    }}
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+                  >
+                    Done
+                  </button>
+                ) : fmStatus.type === 'error' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleEnroll(enrollingStudent)}
+                      className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+                    >
+                      Try Again
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEnrolling('');
+                        setFmStatus({ type: '', message: '', id: '' });
+                      }}
+                      className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+                    >
+                      Close
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const credId = 'SIM_' + btoa(enrollingStudent.id + Date.now());
+                        try {
+                          const { doc, updateDoc } = await import('firebase/firestore');
+                          const { db: firestoreDb } = await import('../../lib/firebase');
+                          await updateDoc(doc(firestoreDb, 'students', enrollingStudent.id), {
+                            fingerprintCredentialId: credId,
+                            fingerprintEnrolled: true,
+                            fingerprintEnrolledAt: new Date().toISOString()
+                          });
+                          setFmStudents(prev => prev.map(s => s.id === enrollingStudent.id
+                            ? { ...s, fingerprintCredentialId: credId, fingerprintEnrolled: true }
+                            : s
+                          ));
+                          setFmStatus({ type: 'success', message: `✅ Simulated enrollment successful!`, id: enrollingStudent.id });
+                          setTimeout(() => {
+                            setEnrolling(curr => curr === enrollingStudent.id ? '' : curr);
+                          }, 2500);
+                        } catch (err) {
+                          setFmStatus({ type: 'error', message: `Simulation failed: ${err.message}`, id: enrollingStudent.id });
+                        }
+                      }}
+                      className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+                    >
+                      Simulate Scan
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEnrolling('');
+                        setFmStatus({ type: '', message: '', id: '' });
+                      }}
+                      className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
