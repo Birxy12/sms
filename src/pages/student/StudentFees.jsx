@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { db } from '../../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import FBNCheckout from 'firstchekout';
 import { useTheme } from '../../context/ThemeContext';
 import { DollarSign, CreditCard, Clock, AlertTriangle, CheckCircle, ArrowRight, Printer, X } from 'lucide-react';
 import ReceiptScanner from '../../components/ReceiptScanner';
@@ -12,6 +13,8 @@ const StudentFees = () => {
   const [feeData, setFeeData] = useState({ expected: 0, paid: 0, lastDate: 'N/A', term: 'First Term', session: '', txnId: '', serialNo: '' });
   const [loading, setLoading] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
+  const [payAmount, setPayAmount] = useState('');
+  const [paying, setPaying] = useState(false);
 
   useEffect(() => {
     const fetchFeeInfo = async () => {
@@ -63,6 +66,136 @@ const StudentFees = () => {
   const balance = feeData.expected - feeData.paid;
   const isCleared = balance <= 0;
   const percentPaid = Math.min(100, Math.round((feeData.paid / feeData.expected) * 100)) || 0;
+
+  // Set default payAmount when outstanding balance is fetched
+  useEffect(() => {
+    if (balance > 0) {
+      setPayAmount(balance.toString());
+    } else {
+      setPayAmount('');
+    }
+  }, [feeData.expected, feeData.paid]);
+
+  const handleOnlinePayment = async () => {
+    const amount = parseFloat(payAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert('Please enter a valid payment amount.');
+      return;
+    }
+    if (amount > balance) {
+      alert(`Payment amount cannot exceed the outstanding balance of ₦${balance.toLocaleString()}`);
+      return;
+    }
+
+    setPaying(true);
+
+    try {
+      // 1. Generate unique 12-character transaction reference
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let txnRef = '';
+      for (let i = 0; i < 12; i++) {
+        txnRef += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+
+      // 2. Formulate customer name split
+      const nameParts = (currentStudent?.name || 'Student User').trim().split(' ');
+      const firstname = nameParts[0] || 'Student';
+      const lastname = nameParts.slice(1).join(' ') || 'User';
+
+      const live = import.meta.env.VITE_FBN_LIVE === 'true';
+      const publicKey = import.meta.env.VITE_FBN_PUBLIC_KEY || 'sb-pk-placeholder-key';
+      
+      const baseFrame = live 
+        ? 'https://checkout.firstchekout.com' 
+        : 'https://sandbox.firstchekout.com';
+      const initiatePaymentURI = live 
+        ? 'https://checkout.firstchekout.com/api/v1/checkout/initialize' 
+        : 'https://sandbox.firstchekout.com/api/v1/checkout/initialize';
+
+      const txn = {
+        live,
+        ref: txnRef,
+        amount: amount,
+        customer: {
+          firstname,
+          lastname,
+          email: currentStudent?.email || 'student@school.com',
+          id: currentStudent?.id || 'anonymous_id',
+        },
+        publicKey,
+        description: `School Fee Payment - ${feeData.term || 'First Term'} (${feeData.session || currentSession || '2025/2026'})`,
+        currency: 'NGN',
+        callback: async (res) => {
+          console.log('FBN Callback:', res);
+          // FBNChekOut returns success status on payment completion
+          if (res.status === 'success' || res.status === 'successful' || res.event === 'success') {
+            try {
+              const oldPaid = parseFloat(feeData.paid) || 0;
+              const newPaid = oldPaid + amount;
+              const serialNo = 'SN-' + Math.floor(100000 + Math.random() * 900000);
+
+              const studentRef = doc(db, 'students', currentStudent.id);
+              await updateDoc(studentRef, {
+                paidFee: newPaid,
+                paidAmount: newPaid,
+                lastPaymentDate: new Date().toLocaleDateString('en-NG'),
+                lastTransactionId: res.reference || txnRef,
+                lastSerialNo: serialNo,
+                lastPaymentTerm: feeData.term || 'First Term',
+                lastPaymentSession: feeData.session || currentSession || '2025/2026',
+              });
+
+              await addDoc(collection(db, 'payment_messages'), {
+                studentName: currentStudent.name || currentStudent['STUDENT NAME'] || 'Student',
+                className: currentStudent.className || currentStudent.class_name || currentStudent.CLASS || 'N/A',
+                regNo: currentStudent.regNo || currentStudent.REGNO || 'N/A',
+                amount,
+                method: 'Online Payment (FirstChekOut)',
+                term: feeData.term || 'First Term',
+                session: feeData.session || currentSession || '2025/2026',
+                transactionId: res.reference || txnRef,
+                serialNo,
+                message: `Online payment of ₦${amount.toLocaleString()} received via FirstChekOut.`,
+                createdAt: serverTimestamp(),
+              });
+
+              setFeeData(prev => ({
+                ...prev,
+                paid: newPaid,
+                lastDate: new Date().toLocaleDateString('en-NG'),
+                txnId: res.reference || txnRef,
+                serialNo
+              }));
+
+              alert('Payment Successful! Your school fee record has been updated.');
+            } catch (err) {
+              console.error('Error updating records after payment:', err);
+              alert('Payment succeeded but there was an error updating your dashboard. Please contact the Bursar.');
+            }
+          } else {
+            alert(`Payment status: ${res.status || 'Failed'}. Please try again.`);
+          }
+          setPaying(false);
+        },
+        onClose: () => {
+          console.log('Payment modal closed');
+          setPaying(false);
+        }
+      };
+
+      const addressUrl = {
+        BaseFrame: baseFrame,
+        InitiatePaymentURI: initiatePaymentURI
+      };
+
+      await FBNCheckout.initiateTransactionAsync(txn, addressUrl);
+
+    } catch (error) {
+      console.error('Error starting FirstChekOut payment:', error);
+      alert('Failed to initialize payment gateway: ' + error.message);
+      setPaying(false);
+    }
+  };
 
   const handlePrintReceipt = () => {
     const pFee = feeData.paid;
@@ -285,6 +418,43 @@ const StudentFees = () => {
 
         {/* Payment Instructions */}
         <div className="space-y-6">
+          <div className="card-white dark:bg-slate-800 dark:border-slate-700 rounded-3xl border border-slate-200 shadow-sm p-8 border-t-4 border-t-emerald-500">
+            <h4 className="text-lg font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+              <CreditCard size={20} className="text-emerald-500" />
+              Pay Online (FirstChekOut)
+            </h4>
+            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
+              Pay your fees instantly using First Bank's secure payment gateway. Supports cards, bank transfers, USSD, and direct bank account debit.
+            </p>
+            
+            {!isCleared ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Amount to Pay (₦)</label>
+                  <input
+                    type="number"
+                    max={balance}
+                    value={payAmount}
+                    onChange={(e) => setPayAmount(e.target.value)}
+                    placeholder="Enter amount"
+                    className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 font-black text-slate-800 dark:text-white text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <button
+                  onClick={handleOnlinePayment}
+                  disabled={paying}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 dark:shadow-none hover:shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  {paying ? 'Processing Checkout...' : `Pay ₦${parseFloat(payAmount || 0).toLocaleString()} Now`}
+                </button>
+              </div>
+            ) : (
+              <div className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl text-sm font-bold text-center">
+                All school fees for this term are fully cleared. No payments pending!
+              </div>
+            )}
+          </div>
+
           <div className="card-white dark:bg-slate-800 dark:border-slate-700 rounded-3xl border border-slate-200 shadow-sm p-8 border-t-4 border-t-indigo-500">
             <h4 className="text-lg font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
               <AlertTriangle size={20} className="text-amber-500" />
