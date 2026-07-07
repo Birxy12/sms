@@ -86,27 +86,33 @@ const StudentDashboard = () => {
         setResultsCount(rSnap.size);
         
         if (!rSnap.empty) {
-          // Sort by session/term to get latest
-          const allResults = rSnap.docs.map(doc => expandMarks(doc.data()));
-          // Sort logic: latest session, latest term (simplified)
-          allResults.sort((a, b) => (b.session || '').localeCompare(a.session || ''));
-          
-          const latestResult = allResults[0];
-          const marks = latestResult.marks || {};
-          let total = 0;
-          let count = 0;
+          // Compute cumulative GPA across ALL result documents (each doc = one term)
+          const allResults = rSnap.docs.map(d => expandMarks(d.data()));
+          let grandTotal = 0;
+          let grandCount = 0;
 
-          if (marks._meta && marks._meta.average) {
-            setAvgScore(marks._meta.average);
-          } else {
-            Object.keys(marks).forEach(k => {
-              if (k !== '_meta' && marks[k].total) {
-                total += parseFloat(marks[k].total);
-                count++;
+          allResults.forEach(result => {
+            const marks = result.marks || {};
+            if (marks._meta && marks._meta.average) {
+              grandTotal += parseFloat(marks._meta.average);
+              grandCount++;
+            } else {
+              let termTotal = 0;
+              let termCount = 0;
+              Object.keys(marks).forEach(k => {
+                if (k !== '_meta' && marks[k].total) {
+                  termTotal += parseFloat(marks[k].total);
+                  termCount++;
+                }
+              });
+              if (termCount > 0) {
+                grandTotal += termTotal / termCount;
+                grandCount++;
               }
-            });
-            if (count > 0) setAvgScore((total / count).toFixed(1));
-          }
+            }
+          });
+
+          if (grandCount > 0) setAvgScore((grandTotal / grandCount).toFixed(1));
         }
 
         // 3. Fetch Fees Info
@@ -138,10 +144,27 @@ const StudentDashboard = () => {
     loadData();
   }, [currentStudent, className, regNum, authReady]);
 
+  const termsPerSession = 3;
+  const examsThisTerm = resultsCount % termsPerSession || (resultsCount > 0 ? termsPerSession : 0);
+  const totalSessions = Math.floor(resultsCount / termsPerSession);
+  const feeIsCleared = feeData.balance <= 0;
+
   const mainStats = [
     { label: 'GPA Average', value: `${avgScore}%`, icon: Zap, color: '#6366f1', trend: '+2.4%' },
-    { label: 'Exams Taken', value: resultsCount, icon: Trophy, color: '#10b981', trend: 'Completed' },
-    { label: 'Pending Fees', value: `₦${feeData.balance.toLocaleString()}`, icon: Wallet, color: '#f59e0b', trend: feeData.balance <= 0 ? 'Cleared' : 'Awaiting Payment' },
+    { 
+      label: 'Exams Taken', 
+      value: `${examsThisTerm}/${termsPerSession}`, 
+      icon: Trophy, 
+      color: '#10b981', 
+      trend: `${resultsCount} Total` 
+    },
+    { 
+      label: feeIsCleared ? 'Fees Cleared' : 'Pending Fees', 
+      value: feeIsCleared ? 'Cleared ✓' : `₦${feeData.balance.toLocaleString()}`, 
+      icon: Wallet, 
+      color: feeIsCleared ? '#10b981' : '#f59e0b', 
+      trend: feeIsCleared ? 'All Clear' : 'Awaiting Payment' 
+    },
     { label: 'Attendance', value: '94%', icon: Calendar, color: '#ec4899', trend: 'Excellent' },
   ];
 

@@ -116,6 +116,7 @@ const StudentFees = () => {
         live,
         ref: txnRef,
         amount: amount,
+        fees: [{ amount: amount, label: 'School Fee' }],
         customer: {
           firstname,
           lastname,
@@ -125,6 +126,12 @@ const StudentFees = () => {
         publicKey,
         description: `School Fee Payment - ${feeData.term || 'First Term'} (${feeData.session || currentSession || '2025/2026'})`,
         currency: 'NGN',
+        meta: {
+          studentId: currentStudent?.id || '',
+          regNo: currentStudent?.regNo || '',
+          term: feeData.term || 'First Term',
+          session: feeData.session || currentSession || '2025/2026',
+        },
         callback: async (res) => {
           console.log('FBN Callback:', res);
           // FBNChekOut returns success status on payment completion
