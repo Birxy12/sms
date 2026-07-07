@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">BDSPORTAL</string>
+    <string name="title_activity_main">BDSPORTAL</string>
+    <string name="package_name">com.bdsportal.sms</string>
+    <string name="custom_url_scheme">com.bdsportal.sms</string>
+</resources>

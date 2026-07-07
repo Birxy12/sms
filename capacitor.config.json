@@ -1,0 +1,8 @@
+{
+  "appId": "com.bdsportal.sms",
+  "appName": "BDSPORTAL",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
