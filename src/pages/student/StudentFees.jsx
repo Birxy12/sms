@@ -108,9 +108,10 @@ const StudentFees = () => {
       const baseFrame = live 
         ? 'https://checkout.firstchekout.com' 
         : 'https://sandbox.firstchekout.com';
-      const initiatePaymentURI = live 
-        ? 'https://checkout.firstchekout.com/api/v1/checkout/initialize' 
-        : 'https://sandbox.firstchekout.com/api/v1/checkout/initialize';
+      const apiBase = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
+        ? 'https://bdsportals.vercel.app'
+        : window.location.origin;
+      const initiatePaymentURI = `${apiBase}/api/fbn-checkout`;
 
       const txn = {
         live,
@@ -471,18 +472,47 @@ const StudentFees = () => {
               To settle your outstanding balance, please proceed with a bank transfer to the school's official account listed below. Ensure you include your <strong className="dark:text-white">Registration Number</strong> in the transaction description.
             </p>
             
-            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-6 space-y-4">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500 dark:text-slate-400 font-bold">Bank Name</span>
-                <span className="text-slate-900 dark:text-white font-black uppercase">First Bank of Nigeria</span>
+            <div className="space-y-4">
+              <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-5 border border-slate-100 dark:border-slate-800">
+                <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-2 flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                  Option 1: First Bank (School Account)
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500 dark:text-slate-400 font-bold">Bank Name</span>
+                    <span className="text-slate-900 dark:text-white font-black uppercase">First Bank of Nigeria</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500 dark:text-slate-400 font-bold">Account Name</span>
+                    <span className="text-slate-900 dark:text-white font-black uppercase">Bonus Dominus School</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500 dark:text-slate-400 font-bold">Account Number</span>
+                    <span className="text-slate-900 dark:text-white font-black font-mono text-sm">2022829027</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500 dark:text-slate-400 font-bold">Account Name</span>
-                <span className="text-slate-900 dark:text-white font-black uppercase">Bonus Dominus School</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500 dark:text-slate-400 font-bold">Account Number</span>
-                <span className="text-slate-900 dark:text-white font-black font-mono text-lg">2022829027</span>
+
+              <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-5 border border-slate-100 dark:border-slate-800">
+                <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-2 flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Option 2: OPay (Emmanuel Anyaegbu)
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500 dark:text-slate-400 font-bold">Bank Name</span>
+                    <span className="text-slate-900 dark:text-white font-black uppercase">OPay</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500 dark:text-slate-400 font-bold">Account Name</span>
+                    <span className="text-slate-900 dark:text-white font-black uppercase">Anyaegbu Emmanuel Chinedu</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500 dark:text-slate-400 font-bold">Account Number</span>
+                    <span className="text-slate-900 dark:text-white font-black font-mono text-sm">9017588338</span>
+                  </div>
+                </div>
               </div>
             </div>
 

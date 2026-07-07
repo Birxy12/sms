@@ -17,7 +17,7 @@ import { useSearchParams } from 'react-router-dom';
 
 const StudentDashboard = () => {
   const { currentStudent, authError, authReady } = useStudentAuth();
-  const { primaryColor } = useTheme();
+  const { primaryColor, currentSession } = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const publicPin = searchParams.get('pin');
@@ -31,6 +31,8 @@ const StudentDashboard = () => {
   const [inboxCount, setInboxCount]     = useState(0);
   const [resultsCount, setResultsCount] = useState(0);
   const [avgScore, setAvgScore]         = useState(0);
+  const [currentSessionExamsCount, setCurrentSessionExamsCount] = useState(0);
+  const [totalExamsCount, setTotalExamsCount] = useState(0);
   const [loading, setLoading]           = useState(true);
   const [dashboardError, setDashboardError] = useState('');
   const [recentNotifications, setRecentNotifications] = useState([]);
@@ -72,7 +74,20 @@ const StudentDashboard = () => {
         setRecentNotifications(allNotifs.slice(0, 3));
         setInboxCount(new Set(allNotifs.map(n => n.id)).size);
 
-        // 2. Fetch Results & Calculate Average
+        // 2. Fetch Publications of type 'Result'
+        const pubQuery = query(collection(db, 'publications'), where('type', '==', 'Result'));
+        const pubSnap = await getDocs(pubQuery);
+        const publishedTerms = pubSnap.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            session: data.session,
+            term: data.term,
+            targetClass: data.targetClass || 'All Classes'
+          };
+        }).filter(pub => pub.targetClass === 'All Classes' || pub.targetClass === className);
+
+        // Fetch Results & Calculate Average
         // Try compressed key first
         let marksQuery = query(collection(db, 'marks'), where(MARKS_KEYS.regNo, '==', regNum));
         let rSnap = await getDocs(marksQuery);
@@ -83,24 +98,41 @@ const StudentDashboard = () => {
           rSnap = await getDocs(marksQuery);
         }
 
-        setResultsCount(rSnap.size);
+        const allResults = rSnap.docs.map(doc => expandMarks(doc.data()));
+        const normTerm = (t = '') => t.toLowerCase().replace(/\s+/g, '');
+
+        // Filter results that have a matching published term/session
+        const publishedMarks = allResults.filter(d => {
+          return publishedTerms.some(pub => {
+            const sessionMatch = d.session === pub.session;
+            const termMatch =
+              normTerm(d.term) === normTerm(pub.term) ||
+              pub.term.toLowerCase().includes((d.term || '').toLowerCase());
+            return sessionMatch && termMatch;
+          });
+        });
+
+        const currentSessionPublishedMarks = publishedMarks.filter(d => d.session === (currentSession || '2025/2026'));
         
-        if (!rSnap.empty) {
-          // Compute cumulative GPA across ALL result documents (each doc = one term)
-          const allResults = rSnap.docs.map(d => expandMarks(d.data()));
+        setResultsCount(publishedMarks.length);
+        setCurrentSessionExamsCount(currentSessionPublishedMarks.length);
+        setTotalExamsCount(publishedMarks.length);
+
+        if (publishedMarks.length > 0) {
+          // GPA Average calculation (average for each term divided by number of exams taken)
           let grandTotal = 0;
           let grandCount = 0;
 
-          allResults.forEach(result => {
+          publishedMarks.forEach(result => {
             const marks = result.marks || {};
-            if (marks._meta && marks._meta.average) {
+            if (marks._meta && marks._meta.average !== undefined) {
               grandTotal += parseFloat(marks._meta.average);
               grandCount++;
             } else {
               let termTotal = 0;
               let termCount = 0;
               Object.keys(marks).forEach(k => {
-                if (k !== '_meta' && marks[k].total) {
+                if (k !== '_meta' && marks[k].total !== undefined) {
                   termTotal += parseFloat(marks[k].total);
                   termCount++;
                 }
@@ -112,7 +144,13 @@ const StudentDashboard = () => {
             }
           });
 
-          if (grandCount > 0) setAvgScore((grandTotal / grandCount).toFixed(1));
+          if (grandCount > 0) {
+            setAvgScore((grandTotal / grandCount).toFixed(1));
+          } else {
+            setAvgScore('0.0');
+          }
+        } else {
+          setAvgScore('0.0');
         }
 
         // 3. Fetch Fees Info
@@ -142,21 +180,19 @@ const StudentDashboard = () => {
     };
     
     loadData();
-  }, [currentStudent, className, regNum, authReady]);
+  }, [currentStudent, className, regNum, authReady, currentSession]);
 
   const termsPerSession = 3;
-  const examsThisTerm = resultsCount % termsPerSession || (resultsCount > 0 ? termsPerSession : 0);
-  const totalSessions = Math.floor(resultsCount / termsPerSession);
   const feeIsCleared = feeData.balance <= 0;
 
   const mainStats = [
     { label: 'GPA Average', value: `${avgScore}%`, icon: Zap, color: '#6366f1', trend: '+2.4%' },
     { 
       label: 'Exams Taken', 
-      value: `${examsThisTerm}/${termsPerSession}`, 
+      value: `${currentSessionExamsCount}/${termsPerSession}`, 
       icon: Trophy, 
       color: '#10b981', 
-      trend: `${resultsCount} Total` 
+      trend: `${totalExamsCount} Total` 
     },
     { 
       label: feeIsCleared ? 'Fees Cleared' : 'Pending Fees', 
