@@ -143,19 +143,6 @@ const ContentCMS = () => {
     if (activeTab === 'testimonies') fetchTestimonies();
     if (activeTab === 'dates') fetchSchoolDates();
   }, [activeTab]);
-
-  // Listener for keypress "Enter" to automatically save cropped image
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (editorOpen && e.key === 'Enter') {
-        e.preventDefault();
-        handleEditorConfirm();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editorOpen, handleEditorConfirm]);
-
   const fetchGlobalSettings = async () => {
     try {
       const docSnap = await getDoc(doc(db, 'settings', 'public_content'));
@@ -366,6 +353,18 @@ const ContentCMS = () => {
       setUploading(false);
     }
   }, [editorSrc, filters, editorFolder, editorCallback]);
+
+  // Listener for keypress "Enter" to automatically save cropped image
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (editorOpen && e.key === 'Enter') {
+        e.preventDefault();
+        handleEditorConfirm();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editorOpen, handleEditorConfirm]);
 
   const resetFilters = () => setFilters({ brightness: 100, contrast: 100, saturation: 100, grayscale: 0 });
 
