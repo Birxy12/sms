@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { db } from '../../lib/firebase';
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import { collection, query, getDocs, orderBy, limit, doc, getDoc, setDoc } from 'firebase/firestore';
@@ -13,6 +13,17 @@ import StudentDashboard from './StudentDashboard';
 import { expandStudent } from '../../utils/firestoreSchema';
 import { Users, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+// Isolated clock component — ticks every second without re-rendering AdminDashboard
+const LiveClock = memo(() => {
+  const [time, setTime] = useState(new Date().toLocaleTimeString());
+  useEffect(() => {
+    const t = setInterval(() => setTime(new Date().toLocaleTimeString()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return <span className="text-xl font-mono font-black text-white mt-1 block">{time}</span>;
+});
+LiveClock.displayName = 'LiveClock';
+
 const AdminDashboard = () => {
   const { currentAdmin, changePassword, authReady } = useAdminAuth();
   const [viewMode, setViewMode] = useState('admin'); // admin, staff, student
@@ -33,14 +44,6 @@ const AdminDashboard = () => {
     { time: '17:15:30', text: 'Automatic report card compiler ran for JSS2.' }
   ]);
   const [latencyHistory, setLatencyHistory] = useState([12, 14, 11, 15, 12, 13, 10, 12, 14, 11]);
-  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date().toLocaleTimeString());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     if (activeTab !== 'Overview') return;
@@ -717,9 +720,9 @@ const AdminDashboard = () => {
                   </div>
                   <div className="bg-white/10 backdrop-blur-md px-6 py-4 rounded-3xl border border-white/10 text-right md:min-w-[200px]">
                     <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest block">System Live Time</span>
-                    <span className="text-xl font-mono font-black text-white mt-1 block">{currentTime}</span>
+                    <LiveClock />
                     <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1.5 justify-end mt-1">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span> Live Connection
+                      <span className="live-dot-wrapper"><span className="live-dot-ring"></span><span className="live-dot-core"></span></span> Live Connection
                     </span>
                   </div>
                 </div>
@@ -731,7 +734,7 @@ const AdminDashboard = () => {
                   <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-2">
                       <span className="relative flex h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="live-dot-ring" style={{position:'absolute',inset:0,borderRadius:'9999px',background:'#34d399',opacity:0.6}}></span>
                         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                       </span>
                       <h3 className="text-sm font-black text-slate-700 uppercase tracking-wider">Live System Stream</h3>
