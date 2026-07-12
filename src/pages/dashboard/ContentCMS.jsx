@@ -298,7 +298,7 @@ const ContentCMS = () => {
 
   const resetFilters = () => setFilters({ brightness: 100, contrast: 100, saturation: 100, grayscale: 0 });
 
-  // ── Inline Image Upload Component (non-team, no editor) ────────
+  // ── Inline Image Upload Component (with editor support) ──────────
   const FileUploader = ({ onUpload, label, currentUrl, folder }) => (
     <div className="space-y-3">
       <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">{label}</label>
@@ -314,24 +314,32 @@ const ContentCMS = () => {
         )}
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-slate-500 mb-1 truncate">{currentUrl || 'No image selected'}</p>
-          <div className="relative">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={async (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                  const url = await handleFileUpload(file, 'images', `${folder}/`);
-                  if (url) onUpload(url);
-                }
-              }}
-              className="absolute inset-0 opacity-0 cursor-pointer"
-              disabled={uploading}
-            />
-            <button className="flex items-center gap-2 text-indigo-600 font-black text-sm px-4 py-2 bg-white rounded-lg border border-indigo-100 hover:bg-indigo-50 transition-colors">
-              {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-              {currentUrl ? 'Change Image' : 'Upload Image'}
-            </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) openEditorFromFile(file, folder, onUpload);
+                }}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                disabled={uploading}
+              />
+              <button className="flex items-center gap-1.5 text-indigo-600 font-black text-xs px-3 py-2 bg-white rounded-lg border border-indigo-100 hover:bg-indigo-50 transition-colors">
+                {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                {currentUrl ? 'Change Image' : 'Upload Image'}
+              </button>
+            </div>
+            {currentUrl && (
+              <button
+                type="button"
+                onClick={() => openEditor(currentUrl, folder, onUpload)}
+                className="flex items-center gap-1.5 text-slate-600 font-black text-xs px-3 py-2 bg-white rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+              >
+                <CropIcon size={14} /> Edit / Crop
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -709,15 +717,73 @@ const ContentCMS = () => {
                         className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none font-medium"
                       />
                     </div>
-                    <div className="pt-2">
-                      <FileUploader 
-                        label="Member Photo (Optional)"
-                        currentUrl={member.image}
-                        folder="team"
-                        onUpload={(url) => {
-                          setManagementTeam(prev => prev.map((m, i) => i === idx ? { ...m, image: url } : m));
-                        }}
-                      />
+                    {/* Photo with About-page-identical avatar preview */}
+                    <div className="flex items-center gap-6 pt-2 p-4 bg-white rounded-2xl border border-slate-200">
+                      {/* Avatar — pixel-identical to AboutPage .about-team-avatar */}
+                      <div style={{
+                        width: '5rem',
+                        height: '5rem',
+                        backgroundColor: '#e2e8f0',
+                        borderRadius: '0.75rem',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.5rem',
+                        fontWeight: 900,
+                        color: '#64748b',
+                        flexShrink: 0,
+                        border: '2px solid #f1f5f9'
+                      }}>
+                        {member.image ? (
+                          <img src={member.image} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          member.name ? member.name[0] : <ImageIcon size={24} className="text-slate-400" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[10px] font-black uppercase text-slate-400 mb-2">Member Photo</p>
+                        <p className="text-xs text-slate-400 mb-3 font-medium">Preview matches exactly how it appears on the public About page.</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {/* Upload new → open editor */}
+                          <label className="flex items-center gap-1.5 text-indigo-600 font-black text-xs px-3 py-2 bg-indigo-50 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer">
+                            <Upload size={14} /> {member.image ? 'Replace Photo' : 'Upload Photo'}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={e => {
+                                const file = e.target.files[0];
+                                if (file) openEditorFromFile(file, 'team', (url) => {
+                                  setManagementTeam(prev => prev.map((m, i) => i === idx ? { ...m, image: url } : m));
+                                });
+                              }}
+                            />
+                          </label>
+                          {/* Edit existing → open editor */}
+                          {member.image && (
+                            <button
+                              onClick={() => openEditor(member.image, 'team', (url) => {
+                                setManagementTeam(prev => prev.map((m, i) => i === idx ? { ...m, image: url } : m));
+                              })}
+                              className="flex items-center gap-1.5 text-slate-600 font-black text-xs px-3 py-2 bg-slate-100 rounded-lg border border-slate-200 hover:bg-slate-200 transition-colors"
+                            >
+                              <CropIcon size={14} /> Edit / Crop
+                            </button>
+                          )}
+                          {/* Remove photo */}
+                          {member.image && (
+                            <button
+                              onClick={() => {
+                                setManagementTeam(prev => prev.map((m, i) => i === idx ? { ...m, image: '' } : m));
+                              }}
+                              className="flex items-center gap-1.5 text-rose-500 font-black text-xs px-3 py-2 bg-rose-50 rounded-lg border border-rose-100 hover:bg-rose-100 transition-colors"
+                            >
+                              <X size={14} /> Remove
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                  </div>
                ))}
