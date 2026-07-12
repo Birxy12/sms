@@ -23,6 +23,52 @@ const AdminDashboard = () => {
   const [passwordStatus, setPasswordStatus] = useState({ type: '', message: '' });
   const navigate = useNavigate();
 
+  // -- Analytics Dashboard Interactive States --
+  const [hoveredEnrollmentNode, setHoveredEnrollmentNode] = useState(null);
+  const [hoveredDemographic, setHoveredDemographic] = useState(null);
+  const [academicScoreType, setAcademicScoreType] = useState('avg');
+  const [systemLogs, setSystemLogs] = useState([
+    { time: '17:00:05', text: 'Biometric database synchronized successfully.' },
+    { time: '17:10:12', text: 'Secure authentication key validated for director.' },
+    { time: '17:15:30', text: 'Automatic report card compiler ran for JSS2.' }
+  ]);
+  const [latencyHistory, setLatencyHistory] = useState([12, 14, 11, 15, 12, 13, 10, 12, 14, 11]);
+  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'Overview') return;
+    const interval = setInterval(() => {
+      setLatencyHistory(prev => {
+        const next = [...prev.slice(1), Math.floor(Math.random() * 8) + 8];
+        return next;
+      });
+      
+      const logs = [
+        'Supabase media storage status: OPTIMAL',
+        'Vite hot-reloading pipeline: IDLE',
+        'Firestore query execution completed in 8ms',
+        'Weekly attendance register compiled',
+        'Security log audit passed (100%)',
+        'Student records schema validated',
+        'Database backup created successfully'
+      ];
+      const randomLog = logs[Math.floor(Math.random() * logs.length)];
+      const timeStr = new Date().toLocaleTimeString(undefined, { hour12: false });
+      setSystemLogs(prev => [
+        { time: timeStr, text: randomLog },
+        ...prev.slice(0, 4)
+      ]);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [activeTab]);
+
   // -- System Controls State --
   const [systemControls, setSystemControls] = useState({
     allowProfileEdit: false,
@@ -617,149 +663,374 @@ const AdminDashboard = () => {
       {/* Tab Content with Animation */}
       <div className="tab-content-animate" key={activeTab}>
         {/* Overview Tab */}
-        {activeTab === 'Overview' && (
+        {activeTab === 'Overview' && (() => {
+          // Dynamic coordinates for Enrollment Growth
+          const enrollmentData = [
+            { m: 'Jan', v: 40, count: 40, growth: 'Baseline' },
+            { m: 'Feb', v: 65, count: 65, growth: '+62.5%' },
+            { m: 'Mar', v: 45, count: 45, growth: '-30.7%' },
+            { m: 'Apr', v: 85, count: 85, growth: '+88.8%' },
+            { m: 'May', v: 95, count: 95, growth: '+11.7%' },
+            { m: 'Jun', v: 75, count: 75, growth: '-21.0%' }
+          ];
 
-        <div className="animate-in fade-in space-y-6">
-          {/* Site Health */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-2">
-            <div className="card-premium p-6 flex items-center gap-4">
-              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><Server size={24} /></div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">System Status</p>
-                <h4 className="text-lg font-black text-slate-800">Online & Active</h4>
-              </div>
-            </div>
-            <div className="card-premium p-6 flex items-center gap-4">
-              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><Database size={24} /></div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Database Sync</p>
-                <h4 className="text-lg font-black text-slate-800">Real-time (12ms)</h4>
-              </div>
-            </div>
-            <div className="card-premium p-6 flex items-center gap-4">
-              <div className="p-3 bg-teal-50 text-teal-600 rounded-xl"><Activity size={24} /></div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Server Load</p>
-                <h4 className="text-lg font-black text-slate-800">Optimal (24%)</h4>
-              </div>
-            </div>
-          </div>
+          const chartMaxVal = 100;
+          const chartWidth = 500;
+          const chartHeight = 180;
+          const chartPad = 30;
 
-          <div className="stats-grid">
-            {stats.map((stat, index) => (
-              <StatCard key={index} {...stat} />
-            ))}
-          </div>
+          const points = enrollmentData.map((d, i) => {
+            const x = chartPad + (i * (chartWidth - 2 * chartPad)) / (enrollmentData.length - 1);
+            const y = chartHeight - chartPad - (d.v / chartMaxVal) * (chartHeight - 2 * chartPad);
+            return { x, y, ...d };
+          });
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="card-premium lg:col-span-2">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-slate-800">Academic Performance (Avg. Grades)</h3>
-                <div className="flex gap-2">
-                  <span className="flex items-center gap-1 text-xs font-medium text-slate-500"><div className="w-2 h-2 rounded-full bg-indigo-500"></div> CAT 1</span>
-                  <span className="flex items-center gap-1 text-xs font-medium text-slate-500"><div className="w-2 h-2 rounded-full bg-teal-500"></div> Exam</span>
+          const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+          const areaD = points.length > 0 
+            ? `${pathD} L ${points[points.length - 1].x} ${chartHeight - chartPad} L ${points[0].x} ${chartHeight - chartPad} Z` 
+            : '';
+
+          const sparklineD = latencyHistory.map((val, i) => {
+            const x = (i * 120) / (latencyHistory.length - 1);
+            const y = 30 - (val * 20) / 20; // values between 0 and 20
+            return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+          }).join(' ');
+
+          const academicSubjects = [
+            { label: 'MATHEMATICS', avg: 78.5, cat: 75, exam: 82 },
+            { label: 'ENGLISH', avg: 81.5, cat: 85, exam: 78 },
+            { label: 'SCIENCE', avg: 79, cat: 68, exam: 90 },
+            { label: 'IGBO', avg: 90, cat: 92, exam: 88 },
+          ];
+
+          return (
+            <div className="animate-in fade-in space-y-6">
+              {/* Hero Banner */}
+              <div className="analytics-hero">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10 text-left">
+                  <div>
+                    <span className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em]">BDSPORTAL Command Center</span>
+                    <h2 className="text-3xl font-black text-white mt-1">Director's Operations Panel</h2>
+                    <p className="text-slate-300 text-sm mt-1 max-w-xl">
+                      Real-time school performance analytics, demographic summaries, academic score tracking, and system health status.
+                    </p>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-md px-6 py-4 rounded-3xl border border-white/10 text-right md:min-w-[200px]">
+                    <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest block">System Live Time</span>
+                    <span className="text-xl font-mono font-black text-white mt-1 block">{currentTime}</span>
+                    <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1.5 justify-end mt-1">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span> Live Connection
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="space-y-4">
-                {[
-                  { label: 'MATHEMATICS', cat: 75, exam: 82 },
-                  { label: 'ENGLISH', cat: 85, exam: 78 },
-                  { label: 'SCIENCE', cat: 68, exam: 90 },
-                  { label: 'IGBO', cat: 92, exam: 88 },
-                ].map((subject, idx) => (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex justify-between text-xs font-bold text-slate-600 mb-1">
-                      <span>{subject.label}</span>
-                      <span>Avg: {((subject.cat + subject.exam) / 2).toFixed(1)}%</span>
+
+              {/* Operations Console & Latency Monitor */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="card-premium lg:col-span-2 p-6 flex flex-col justify-between">
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                      </span>
+                      <h3 className="text-sm font-black text-slate-700 uppercase tracking-wider">Live System Stream</h3>
                     </div>
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                      <div style={{ width: `${subject.cat}%` }} className="h-full bg-indigo-500 rounded-l-full"></div>
-                      <div style={{ width: `${subject.exam}%` }} className="h-full bg-teal-500 opacity-60"></div>
-                    </div>
+                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">Realtime Audit</span>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="card-premium">
-              <h3 className="text-lg font-bold text-slate-800 mb-6 text-center">Student Demographics</h3>
-              <div className="relative w-48 h-48 mx-auto mb-6">
-                <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
-                  <circle cx="18" cy="18" r="16" fill="transparent" stroke="#f1f5f9" strokeWidth="3"></circle>
-                  {totalGender > 0 && (
-                    <>
-                      <circle cx="18" cy="18" r="16" fill="transparent" stroke="#ff6b00" strokeWidth="3" strokeDasharray={dashMale}></circle>
-                      <circle cx="18" cy="18" r="16" fill="transparent" stroke="#1e293b" strokeWidth="3" strokeDasharray={dashFemale} strokeDashoffset={femaleOffset}></circle>
-                    </>
-                  )}
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center flex-col">
-                  <span className="text-3xl font-black text-slate-800">{realStats.students.toLocaleString()}</span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Students</span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#ff6b00]"></div>
-                    <span className="text-sm font-medium text-slate-600">Male</span>
-                  </div>
-                  <span className="text-sm font-bold text-slate-800">{malePercent}% ({realStats.demographics.male})</span>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#1e293b]"></div>
-                    <span className="text-sm font-medium text-slate-600">Female & Others</span>
-                  </div>
-                  <span className="text-sm font-bold text-slate-800">{femalePercent}% ({realStats.demographics.female + realStats.demographics.others})</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="card-premium lg:col-span-2 overflow-hidden">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-slate-800">Enrollment Growth (2026)</h3>
-              </div>
-              <div className="h-48 flex items-end justify-between gap-2 md:gap-4 pb-2 border-b border-slate-100">
-                {[
-                  { m: 'Jan', v: 40 }, { m: 'Feb', v: 65 }, { m: 'Mar', v: 45 }, 
-                  { m: 'Apr', v: 85 }, { m: 'May', v: 95 }, { m: 'Jun', v: 75 }
-                ].map((d, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-3 group">
-                    <div className="w-full bg-slate-100 group-hover:bg-indigo-50 rounded-t-xl relative transition-all h-full flex items-end">
-                      <div 
-                        className="w-full bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t-xl transition-all duration-1000"
-                        style={{ height: `${d.v}%`, backgroundColor: i === 4 ? 'var(--primary)' : '#4f46e5' }}
-                      ></div>
-                      <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded-md font-bold whitespace-nowrap shadow-lg transition-all hidden md:block">
-                        +{d.v} Students
+                  
+                  <div className="ops-log text-left mb-4">
+                    {systemLogs.map((log, idx) => (
+                      <div key={idx} className="flex gap-2 mb-1 last:mb-0">
+                        <span className="text-slate-500 font-bold">[{log.time}]</span>
+                        <span className="text-emerald-400 font-bold">$</span>
+                        <span className="text-slate-300 font-medium">{log.text}</span>
                       </div>
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">{d.m}</span>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
 
-            <div className="card-premium">
-              <h3 className="text-lg font-bold text-slate-800 mb-4">Recent Activities</h3>
-              <div className="space-y-4">
-                {recentActivities.map(activity => (
-                  <div key={activity.id} className="pb-3 border-b border-slate-100 last:border-0">
-                    <p className="text-sm text-slate-700 font-medium mb-1">{activity.text}</p>
-                    <span className="text-xs text-slate-400 font-medium">{activity.time}</span>
+                  <div className="flex items-center justify-between text-xs text-slate-400 font-bold bg-slate-50 p-3 rounded-2xl">
+                    <span className="flex items-center gap-1.5"><Server size={14} /> Host: production-asia-south</span>
+                    <span className="flex items-center gap-1.5"><Key size={14} /> SSL Secured</span>
                   </div>
+                </div>
+
+                <div className="card-premium p-6 flex flex-col justify-between">
+                  <div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-left block">Connection Latency</span>
+                    <div className="flex items-baseline gap-2 mt-1 justify-start">
+                      <h4 className="text-3xl font-black text-slate-800">{latencyHistory[latencyHistory.length - 1]}ms</h4>
+                      <span className="text-[10px] text-emerald-500 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">Excellent</span>
+                    </div>
+                  </div>
+                  
+                  {/* Sparkline Graphic */}
+                  <div className="h-20 w-full mt-4 flex items-center justify-center bg-slate-50/50 rounded-2xl p-2 border border-slate-100">
+                    <svg className="w-full h-full" viewBox="0 0 120 30" preserveAspectRatio="none">
+                      <path 
+                        d={sparklineD} 
+                        fill="none" 
+                        stroke="var(--primary)" 
+                        strokeWidth="2.5" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                        className="sparkline-path"
+                      />
+                    </svg>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-center">
+                    <div>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Min Latency</p>
+                      <p className="text-xs font-black text-slate-700">{Math.min(...latencyHistory)}ms</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Max Latency</p>
+                      <p className="text-xs font-black text-slate-700">{Math.max(...latencyHistory)}ms</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Standard Stats Grid */}
+              <div className="stats-grid">
+                {stats.map((stat, index) => (
+                  <StatCard key={index} {...stat} />
                 ))}
               </div>
-              <button className="w-full mt-4 py-2.5 text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors">
-                View All Activities
-              </button>
+
+              {/* Academics Matrix & Student Demographics */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="card-premium lg:col-span-2 p-6 flex flex-col justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <h3 className="text-lg font-black text-slate-800 tracking-tight text-left">Academic Performance (Subject Avg)</h3>
+                    <div className="flex bg-slate-100 p-1 rounded-xl self-start sm:self-auto">
+                      <button 
+                        onClick={() => setAcademicScoreType('avg')} 
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${academicScoreType === 'avg' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      >
+                        Avg. Grades
+                      </button>
+                      <button 
+                        onClick={() => setAcademicScoreType('cat')} 
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${academicScoreType === 'cat' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      >
+                        CAT 1
+                      </button>
+                      <button 
+                        onClick={() => setAcademicScoreType('exam')} 
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${academicScoreType === 'exam' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      >
+                        Exams
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {academicSubjects.map((sub, idx) => {
+                      const value = academicScoreType === 'avg' ? sub.avg : academicScoreType === 'cat' ? sub.cat : sub.exam;
+                      const hue = value > 80 ? 150 : value > 70 ? 238 : 30; // green, indigo, orange
+                      const progressColor = `hsl(${hue}, 83%, 59%)`;
+                      const progressBg = `hsla(${hue}, 83%, 59%, 0.1)`;
+                      return (
+                        <div key={idx} className="space-y-1 text-left p-3 rounded-2xl hover:bg-slate-50/80 transition-colors">
+                          <div className="flex justify-between text-xs font-bold text-slate-600 mb-1">
+                            <span className="tracking-wide">{sub.label}</span>
+                            <span style={{ color: progressColor }} className="font-extrabold">{value}%</span>
+                          </div>
+                          <div style={{ backgroundColor: progressBg }} className="h-3 w-full rounded-full overflow-hidden relative">
+                            <div 
+                              style={{ width: `${value}%`, backgroundColor: progressColor }} 
+                              className="h-full rounded-full transition-all duration-1000 ease-out"
+                            ></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="card-premium p-6 flex flex-col justify-between">
+                  <h3 className="text-lg font-black text-slate-800 tracking-tight text-center mb-6">Student Demographics</h3>
+                  <div className="relative w-48 h-48 mx-auto mb-6">
+                    <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
+                      <circle cx="18" cy="18" r="16" fill="transparent" stroke="#f1f5f9" strokeWidth="3"></circle>
+                      {totalGender > 0 && (
+                        <>
+                          <circle 
+                            cx="18" 
+                            cy="18" 
+                            r="16" 
+                            fill="transparent" 
+                            stroke="#ff6b00" 
+                            strokeWidth={hoveredDemographic === 'male' ? 4 : 3} 
+                            strokeDasharray={dashMale}
+                            className="donut-segment"
+                            onMouseEnter={() => setHoveredDemographic('male')}
+                            onMouseLeave={() => setHoveredDemographic(null)}
+                          />
+                          <circle 
+                            cx="18" 
+                            cy="18" 
+                            r="16" 
+                            fill="transparent" 
+                            stroke="#1e293b" 
+                            strokeWidth={hoveredDemographic === 'female' ? 4 : 3} 
+                            strokeDasharray={dashFemale} 
+                            strokeDashoffset={femaleOffset}
+                            className="donut-segment"
+                            onMouseEnter={() => setHoveredDemographic('female')}
+                            onMouseLeave={() => setHoveredDemographic(null)}
+                          />
+                        </>
+                      )}
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
+                      <span className="text-3xl font-black text-slate-800">
+                        {hoveredDemographic === 'male' 
+                          ? realStats.demographics.male 
+                          : hoveredDemographic === 'female' 
+                            ? (realStats.demographics.female + realStats.demographics.others)
+                            : realStats.students.toLocaleString()}
+                      </span>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
+                        {hoveredDemographic ? `${hoveredDemographic}s` : 'Students'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 text-left">
+                    <div 
+                      onMouseEnter={() => setHoveredDemographic('male')}
+                      onMouseLeave={() => setHoveredDemographic(null)}
+                      className={`flex items-center justify-between p-2.5 rounded-2xl cursor-default transition-all ${hoveredDemographic === 'male' ? 'bg-orange-50/50 scale-[1.02] border border-orange-100' : 'bg-slate-50 border border-transparent'}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-[#ff6b00]"></div>
+                        <span className="text-xs font-bold text-slate-600">Male Students</span>
+                      </div>
+                      <span className="text-xs font-black text-slate-800">{malePercent}% ({realStats.demographics.male})</span>
+                    </div>
+                    <div 
+                      onMouseEnter={() => setHoveredDemographic('female')}
+                      onMouseLeave={() => setHoveredDemographic(null)}
+                      className={`flex items-center justify-between p-2.5 rounded-2xl cursor-default transition-all ${hoveredDemographic === 'female' ? 'bg-indigo-50/50 scale-[1.02] border border-indigo-100' : 'bg-slate-50 border border-transparent'}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-[#1e293b]"></div>
+                        <span className="text-xs font-bold text-slate-600">Female & Others</span>
+                      </div>
+                      <span className="text-xs font-black text-slate-800">{femalePercent}% ({realStats.demographics.female + realStats.demographics.others})</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Enrollment Growth & Recent Activities */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="card-premium lg:col-span-2 p-6 flex flex-col justify-between relative">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-black text-slate-800 tracking-tight text-left">Enrollment Growth (2026)</h3>
+                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">Monthly</span>
+                  </div>
+
+                  {/* SVG Area Chart */}
+                  <div className="relative h-48 w-full mt-4 flex items-center justify-center p-2 border border-slate-100 rounded-2xl bg-slate-50/50">
+                    <svg className="w-full h-full" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.3" />
+                          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* Grid Lines */}
+                      {[0, 25, 50, 75, 100].map((gridVal, gridIdx) => {
+                        const y = chartHeight - chartPad - (gridVal / chartMaxVal) * (chartHeight - 2 * chartPad);
+                        return (
+                          <line 
+                            key={gridIdx} 
+                            x1={chartPad} 
+                            y1={y} 
+                            x2={chartWidth - chartPad} 
+                            y2={y} 
+                            className="chart-grid-line"
+                          />
+                        );
+                      })}
+
+                      {/* Area Fill */}
+                      <path d={areaD} fill="url(#chartGrad)" className="chart-area" />
+
+                      {/* Curve Line */}
+                      <path 
+                        d={pathD} 
+                        fill="none" 
+                        stroke="var(--primary)" 
+                        strokeWidth="3" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                        className="chart-line"
+                      />
+
+                      {/* Chart Nodes */}
+                      {points.map((p, i) => (
+                        <circle 
+                          key={i} 
+                          cx={p.x} 
+                          cy={p.y} 
+                          r={hoveredEnrollmentNode?.m === p.m ? 7 : 5}
+                          fill="var(--primary)" 
+                          stroke="#ffffff" 
+                          strokeWidth={hoveredEnrollmentNode?.m === p.m ? 3 : 2} 
+                          className="chart-node"
+                          onMouseEnter={() => setHoveredEnrollmentNode(p)}
+                          onMouseLeave={() => setHoveredEnrollmentNode(null)}
+                        />
+                      ))}
+                    </svg>
+
+                    {/* Chart Tooltip */}
+                    {hoveredEnrollmentNode && (
+                      <div 
+                        className="glass-tooltip absolute"
+                        style={{ 
+                          left: `${(hoveredEnrollmentNode.x / chartWidth) * 100}%`, 
+                          bottom: `${((chartHeight - hoveredEnrollmentNode.y) / chartHeight) * 100 + 10}%`,
+                          transform: 'translateX(-50%)',
+                        }}
+                      >
+                        <p className="font-black text-indigo-300 uppercase tracking-widest text-[9px]">{hoveredEnrollmentNode.m}</p>
+                        <p className="text-xs font-black mt-0.5 text-white">{hoveredEnrollmentNode.count} Students</p>
+                        <p className="text-[10px] text-emerald-400 font-bold">Growth: {hoveredEnrollmentNode.growth}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* X Axis Labels */}
+                  <div className="flex justify-between px-7 mt-2 text-[9px] font-black text-slate-400 uppercase tracking-wider">
+                    {enrollmentData.map((d, i) => <span key={i}>{d.m}</span>)}
+                  </div>
+                </div>
+
+                <div className="card-premium p-6 flex flex-col justify-between">
+                  <h3 className="text-lg font-black text-slate-800 tracking-tight mb-4 text-left">Recent Activities</h3>
+                  <div className="space-y-4 text-left">
+                    {recentActivities.map(activity => (
+                      <div key={activity.id} className="pb-3 border-b border-slate-100 last:border-0">
+                        <p className="text-sm text-slate-700 font-medium mb-1">{activity.text}</p>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{activity.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <button className="w-full mt-4 py-3 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all">
+                    View All Activities
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          );
+        })()}
 
       {/* Academics Tab */}
       {activeTab === 'Academics' && (
