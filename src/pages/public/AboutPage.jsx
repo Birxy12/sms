@@ -19,6 +19,7 @@ const fadeRight = { hidden: { opacity: 0, x: 32 }, show: { opacity: 1, x: 0 } };
 const AboutPage = () => {
   const { schoolName } = useTheme();
   const [content, setContent] = useState('');
+  const [aboutImage, setAboutImage] = useState('');
   const [managementTeam, setManagementTeam] = useState([]);
   const [principal, setPrincipal] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -32,6 +33,7 @@ const AboutPage = () => {
         if (docSnap.exists()) {
           const data = docSnap.data();
           if (data.aboutHtml) setContent(data.aboutHtml);
+          if (data.aboutImage) setAboutImage(data.aboutImage);
           if (data.managementTeam) setManagementTeam(data.managementTeam);
           if (data.principalData) setPrincipal(data.principalData);
         } else {
@@ -230,7 +232,13 @@ const AboutPage = () => {
               >
                 <div className="about-team-card-accent" />
                 <div className="about-team-card-body">
-                  <div className="about-team-avatar">{member.name[0]}</div>
+                  <div className="about-team-avatar">
+                    {member.image ? (
+                      <img src={member.image} alt={member.name} />
+                    ) : (
+                      member.name ? member.name[0] : '?'
+                    )}
+                  </div>
                   <h3 className="about-team-name">{member.name}</h3>
                   <p className="about-team-role">{member.role}</p>
                   <div className="about-team-divider" />
@@ -254,6 +262,11 @@ const AboutPage = () => {
                 <p className="about-content-header-subtitle">Documenting two decades of evolution</p>
               </div>
             </div>
+            {aboutImage && (
+              <div className="about-history-image">
+                <img src={aboutImage} alt="School History" />
+              </div>
+            )}
             <div
               className="about-prose"
               dangerouslySetInnerHTML={{ __html: content }}

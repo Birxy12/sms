@@ -23,6 +23,7 @@ const ContentCMS = () => {
 
    // About State
    const [aboutHtml, setAboutHtml] = useState('');
+   const [aboutImage, setAboutImage] = useState('');
    const [managementTeam, setManagementTeam] = useState([]);
    const [principalData, setPrincipalData] = useState({
      name: 'MRS. ETUZU ANITA',
@@ -76,6 +77,7 @@ const ContentCMS = () => {
       if (docSnap.exists()) {
         const data = docSnap.data();
          if (data.aboutHtml) setAboutHtml(data.aboutHtml);
+         if (data.aboutImage) setAboutImage(data.aboutImage);
          if (data.contactDetails) setContactData(data.contactDetails);
          if (data.landingPage) setLandingData(data.landingPage);
          if (data.managementTeam) setManagementTeam(data.managementTeam);
@@ -138,8 +140,8 @@ const ContentCMS = () => {
     try {
       const docRef = doc(db, 'settings', 'public_content');
       if (type === 'about') {
-        // Save everything in the About tab: principal info + HTML content
-        await setDoc(docRef, { aboutHtml, principalData }, { merge: true });
+        // Save everything in the About tab: principal info + HTML content + history image
+        await setDoc(docRef, { aboutHtml, principalData, aboutImage }, { merge: true });
       } else if (type === 'contact') {
         await setDoc(docRef, { contactDetails: contactData }, { merge: true });
        } else if (type === 'landing') {
@@ -426,15 +428,25 @@ const ContentCMS = () => {
              </div>
            </div>
 
-           <div className="space-y-2">
-             <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Detailed History & Mission (HTML)</label>
-             <textarea 
-               value={aboutHtml}
-               onChange={(e) => setAboutHtml(e.target.value)}
-               className="w-full h-64 p-6 rounded-2xl bg-slate-50 border-2 border-slate-200 focus:border-indigo-500 outline-none font-mono text-sm leading-relaxed"
-               placeholder="<h3>Our History</h3><p>...</p>"
-             />
-           </div>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Detailed History & Mission (HTML)</label>
+                <textarea 
+                  value={aboutHtml}
+                  onChange={(e) => setAboutHtml(e.target.value)}
+                  className="w-full h-64 p-6 rounded-2xl bg-slate-50 border-2 border-slate-200 focus:border-indigo-500 outline-none font-mono text-sm leading-relaxed"
+                  placeholder="<h3>Our History</h3><p>...</p>"
+                />
+              </div>
+              <div className="flex flex-col justify-end">
+                <FileUploader 
+                  label="History Section Illustration / Image"
+                  currentUrl={aboutImage}
+                  folder="about"
+                  onUpload={(url) => setAboutImage(url)}
+                />
+              </div>
+            </div>
 
            <div className="mt-12 pt-12 border-t border-slate-100">
              <div className="mb-6 flex justify-between items-center">
@@ -486,22 +498,32 @@ const ContentCMS = () => {
                      </div>
                    </div>
                    <div className="space-y-1">
-                     <label className="text-[10px] font-black uppercase text-slate-400">Biography / Quote</label>
-                     <textarea 
-                       rows="2" 
-                       value={member.bio} 
-                       onChange={e => {
-                         const val = e.target.value;
-                         setManagementTeam(prev => prev.map((m, i) => i === idx ? { ...m, bio: val } : m));
-                       }}
-                       className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none font-medium"
-                     />
-                   </div>
+                      <label className="text-[10px] font-black uppercase text-slate-400">Biography / Quote</label>
+                      <textarea 
+                        rows="2" 
+                        value={member.bio} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          setManagementTeam(prev => prev.map((m, i) => i === idx ? { ...m, bio: val } : m));
+                        }}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none font-medium"
+                      />
+                    </div>
+                    <div className="pt-2">
+                      <FileUploader 
+                        label="Member Photo (Optional)"
+                        currentUrl={member.image}
+                        folder="team"
+                        onUpload={(url) => {
+                          setManagementTeam(prev => prev.map((m, i) => i === idx ? { ...m, image: url } : m));
+                        }}
+                      />
+                    </div>
                  </div>
                ))}
 
                <button 
-                 onClick={() => setManagementTeam([...managementTeam, { name: '', role: '', bio: '' }])}
+                 onClick={() => setManagementTeam([...managementTeam, { name: '', role: '', bio: '', image: '' }])}
                  className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center justify-center gap-2"
                >
                  <Plus size={20} /> Add New Team Member
