@@ -29,6 +29,9 @@ export default defineConfig({
   },
   build: {
     sourcemap: true
+  },
+  optimizeDeps: {
+    include: ['react-easy-crop']
   }
 })
 

@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { db } from '../../lib/firebase';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { uploadFileToSupabase } from '../../lib/supabase';
-import { Save, FileText, Image as ImageIcon, MessageSquare, Trash2, Edit2, Loader2, CheckCircle, AlertCircle, Phone, MapPin, Plus, Info, Upload, Crop, SlidersHorizontal, X, Check, RotateCcw } from 'lucide-react';
+import { Save, FileText, Image as ImageIcon, MessageSquare, Trash2, Edit2, Loader2, CheckCircle, AlertCircle, Phone, MapPin, Plus, Info, Upload, Crop as CropIcon, SlidersHorizontal, X, Check, RotateCcw } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 
 
@@ -354,13 +354,13 @@ const ContentCMS = () => {
         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style={{ maxHeight: '95vh' }}>
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2"><Crop size={20} className="text-indigo-600" /> Photo Editor</h3>
+            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2"><CropIcon size={20} className="text-indigo-600" /> Photo Editor</h3>
             <button onClick={() => setEditorOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors"><X size={20} /></button>
           </div>
 
           {/* Tabs */}
           <div className="flex gap-1 px-6 pt-4">
-            {[{ id: 'crop', label: 'Crop & Rotate', icon: <Crop size={14}/> }, { id: 'filter', label: 'Filters', icon: <SlidersHorizontal size={14}/> }].map(t => (
+            {[{ id: 'crop', label: 'Crop & Rotate', icon: <CropIcon size={14}/> }, { id: 'filter', label: 'Filters', icon: <SlidersHorizontal size={14}/> }].map(t => (
               <button key={t.id} onClick={() => setActiveEditorTab(t.id)}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
                   activeEditorTab === t.id ? 'bg-indigo-600 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
