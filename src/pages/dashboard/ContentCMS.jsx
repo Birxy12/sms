@@ -362,8 +362,32 @@ const ContentCMS = () => {
         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style={{ maxHeight: '95vh' }}>
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2"><CropIcon size={20} className="text-indigo-600" /> Photo Editor</h3>
-            <button onClick={() => setEditorOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors"><X size={20} /></button>
+            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+              <CropIcon size={20} className="text-indigo-600" /> Photo Editor
+            </h3>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 px-3 py-1.5 rounded-lg cursor-pointer transition-all">
+                <Upload size={12} /> Replace Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={e => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      const objectUrl = URL.createObjectURL(file);
+                      setEditorSrc(objectUrl);
+                      setCrop({ x: 0, y: 0 });
+                      setZoom(1);
+                      setRotation(0);
+                    }
+                  }}
+                />
+              </label>
+              <button onClick={() => setEditorOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+                <X size={20} />
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}
@@ -724,60 +748,76 @@ const ContentCMS = () => {
                     {/* Photo with About-page-identical avatar preview */}
                     <div className="flex items-center gap-6 pt-2 p-4 bg-white rounded-2xl border border-slate-200">
                       {/* Avatar — pixel-identical to AboutPage .about-team-avatar */}
-                      <div style={{
-                        width: '5rem',
-                        height: '5rem',
-                        backgroundColor: '#e2e8f0',
-                        borderRadius: '0.75rem',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '1.5rem',
-                        fontWeight: 900,
-                        color: '#64748b',
-                        flexShrink: 0,
-                        border: '2px solid #f1f5f9'
-                      }}>
+                      <div 
+                        onClick={() => {
+                          if (member.image) {
+                            openEditor(member.image, 'team', (url) => {
+                              setManagementTeam(prev => prev.map((m, i) => i === idx ? { ...m, image: url } : m));
+                            });
+                          } else {
+                            document.getElementById(`team-file-input-${idx}`).click();
+                          }
+                        }}
+                        className="relative group cursor-pointer overflow-hidden border-2 border-slate-100 hover:border-indigo-400 hover:scale-105 active:scale-95 transition-all duration-200 shrink-0"
+                        style={{
+                          width: '5rem',
+                          height: '5rem',
+                          backgroundColor: '#e2e8f0',
+                          borderRadius: '0.75rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '1.5rem',
+                          fontWeight: 900,
+                          color: '#64748b',
+                        }}
+                      >
                         {member.image ? (
                           <img src={member.image} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
                           member.name ? member.name[0] : <ImageIcon size={24} className="text-slate-400" />
                         )}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-bold gap-1">
+                          <Edit2 size={14} />
+                          <span>Edit</span>
+                        </div>
                       </div>
+
+                      <input
+                        id={`team-file-input-${idx}`}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={e => {
+                          const file = e.target.files[0];
+                          if (file) openEditorFromFile(file, 'team', (url) => {
+                            setManagementTeam(prev => prev.map((m, i) => i === idx ? { ...m, image: url } : m));
+                          });
+                        }}
+                      />
+
                       <div className="flex-1">
                         <p className="text-[10px] font-black uppercase text-slate-400 mb-2">Member Photo</p>
-                        <p className="text-xs text-slate-400 mb-3 font-medium">Preview matches exactly how it appears on the public About page.</p>
+                        <p className="text-xs text-slate-400 mb-3 font-medium">Click photo preview or the edit button to adjust image.</p>
                         <div className="flex gap-2 flex-wrap">
-                          {/* Upload new → open editor */}
-                          <label className="flex items-center gap-1.5 text-indigo-600 font-black text-xs px-3 py-2 bg-indigo-50 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer">
-                            <Upload size={14} /> {member.image ? 'Replace Photo' : 'Upload Photo'}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={e => {
-                                const file = e.target.files[0];
-                                if (file) openEditorFromFile(file, 'team', (url) => {
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (member.image) {
+                                openEditor(member.image, 'team', (url) => {
                                   setManagementTeam(prev => prev.map((m, i) => i === idx ? { ...m, image: url } : m));
                                 });
-                              }}
-                            />
-                          </label>
-                          {/* Edit existing → open editor */}
+                              } else {
+                                document.getElementById(`team-file-input-${idx}`).click();
+                              }
+                            }}
+                            className="flex items-center gap-1.5 text-indigo-600 font-black text-xs px-3 py-2 bg-indigo-50 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                          >
+                            <CropIcon size={14} /> {member.image ? 'Edit Photo' : 'Upload Photo'}
+                          </button>
                           {member.image && (
                             <button
-                              onClick={() => openEditor(member.image, 'team', (url) => {
-                                setManagementTeam(prev => prev.map((m, i) => i === idx ? { ...m, image: url } : m));
-                              })}
-                              className="flex items-center gap-1.5 text-slate-600 font-black text-xs px-3 py-2 bg-slate-100 rounded-lg border border-slate-200 hover:bg-slate-200 transition-colors"
-                            >
-                              <CropIcon size={14} /> Edit / Crop
-                            </button>
-                          )}
-                          {/* Remove photo */}
-                          {member.image && (
-                            <button
+                              type="button"
                               onClick={() => {
                                 setManagementTeam(prev => prev.map((m, i) => i === idx ? { ...m, image: '' } : m));
                               }}
