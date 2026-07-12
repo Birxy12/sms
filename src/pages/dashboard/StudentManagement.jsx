@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList } from 'lucide-react';
 import { getSubjectsForClass } from '../../utils/subjectConfig';
 import ImageCropperModal from '../../components/ImageCropperModal';
+import { formatDateForInput } from '../../utils/dateFormatter';
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
@@ -606,9 +607,7 @@ const StudentManagement = () => {
                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Date of Birth</label>
                     <input 
                       type="date" 
-                      value={currentStudent.dob && currentStudent.dob.includes('/') 
-                        ? currentStudent.dob.split('/').reverse().join('-') 
-                        : (currentStudent.dob || '')}
+                      value={formatDateForInput(currentStudent.dob)}
                       onChange={(e) => setCurrentStudent({...currentStudent, dob: e.target.value})}
                       className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
                     />

@@ -22,16 +22,47 @@ const StudentProfile = () => {
   const [status, setStatus] = useState({ type: '', message: '' });
   
   // -- Date Formatting --
-  const formatDateForInput = (dateString) => {
-    if (!dateString) return '';
-    if (dateString.includes('/')) {
-      const parts = dateString.split('/');
+  const formatDateForInput = (dateVal) => {
+    if (!dateVal) return '';
+    
+    // Handle Firestore Timestamp / object
+    if (dateVal && typeof dateVal === 'object') {
+      if (typeof dateVal.toDate === 'function') {
+        dateVal = dateVal.toDate();
+      } else if (typeof dateVal.seconds === 'number') {
+        dateVal = new Date(dateVal.seconds * 1000);
+      }
+    }
+
+    // Handle number (milliseconds timestamp)
+    if (typeof dateVal === 'number') {
+      dateVal = new Date(dateVal);
+    }
+
+    if (dateVal instanceof Date) {
+      if (isNaN(dateVal.getTime())) return '';
+      const y = dateVal.getFullYear();
+      const m = String(dateVal.getMonth() + 1).padStart(2, '0');
+      const d = String(dateVal.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    if (typeof dateVal !== 'string') {
+      dateVal = String(dateVal);
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+      return dateVal;
+    }
+
+    if (dateVal.includes('/')) {
+      const parts = dateVal.split('/');
       if (parts.length === 3) {
-        if (parts[0].length === 4) return dateString.replace(/\//g, '-');
+        if (parts[0].length === 4) return dateVal.replace(/\//g, '-');
         return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
       }
     }
-    return dateString;
+    return dateVal;
   };
 
   const [formData, setFormData] = useState({

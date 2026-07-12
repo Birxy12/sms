@@ -7,6 +7,20 @@
 export const formatDateForInput = (dateVal) => {
   if (!dateVal) return '';
   
+  // Handle Firestore Timestamp / object
+  if (dateVal && typeof dateVal === 'object') {
+    if (typeof dateVal.toDate === 'function') {
+      dateVal = dateVal.toDate();
+    } else if (typeof dateVal.seconds === 'number') {
+      dateVal = new Date(dateVal.seconds * 1000);
+    }
+  }
+
+  // Handle number (milliseconds timestamp)
+  if (typeof dateVal === 'number') {
+    dateVal = new Date(dateVal);
+  }
+
   // If it's already in YYYY-MM-DD format, return it
   if (typeof dateVal === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
     return dateVal;
