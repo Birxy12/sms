@@ -144,6 +144,18 @@ const ContentCMS = () => {
     if (activeTab === 'dates') fetchSchoolDates();
   }, [activeTab]);
 
+  // Listener for keypress "Enter" to automatically save cropped image
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (editorOpen && e.key === 'Enter') {
+        e.preventDefault();
+        handleEditorConfirm();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editorOpen, handleEditorConfirm]);
+
   const fetchGlobalSettings = async () => {
     try {
       const docSnap = await getDoc(doc(db, 'settings', 'public_content'));
@@ -336,7 +348,7 @@ const ContentCMS = () => {
     openEditor(objectUrl, folder, callback);
   };
 
-  const handleEditorConfirm = async () => {
+  const handleEditorConfirm = useCallback(async () => {
     const { croppedAreaPixels, rotation } = cropperStateRef.current;
     if (!editorSrc || !croppedAreaPixels) return;
     setUploading(true);
@@ -353,7 +365,7 @@ const ContentCMS = () => {
     } finally {
       setUploading(false);
     }
-  };
+  }, [editorSrc, filters, editorFolder, editorCallback]);
 
   const resetFilters = () => setFilters({ brightness: 100, contrast: 100, saturation: 100, grayscale: 0 });
 
@@ -436,13 +448,18 @@ const ContentCMS = () => {
                     if (file) {
                       const objectUrl = URL.createObjectURL(file);
                       setEditorSrc(objectUrl);
-                      setCrop({ x: 0, y: 0 });
-                      setZoom(1);
-                      setRotation(0);
+                      cropperStateRef.current = { croppedAreaPixels: null, rotation: 0 };
                     }
                   }}
                 />
               </label>
+              <button
+                onClick={handleEditorConfirm}
+                disabled={uploading}
+                className="flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-all"
+              >
+                {uploading ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Save
+              </button>
               <button onClick={() => setEditorOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
                 <X size={20} />
               </button>
@@ -475,6 +492,7 @@ const ContentCMS = () => {
                 </div>
               </div>
               <ImageCropperContainer
+                key={editorSrc}
                 image={editorSrc}
                 aspectRatio={aspectRatio}
                 filterStyle={filterStyle}
