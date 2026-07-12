@@ -1,10 +1,70 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { db } from '../../lib/firebase';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { uploadFileToSupabase } from '../../lib/supabase';
 import { Save, FileText, Image as ImageIcon, MessageSquare, Trash2, Edit2, Loader2, CheckCircle, AlertCircle, Phone, MapPin, Plus, Info, Upload, Crop as CropIcon, SlidersHorizontal, X, Check, RotateCcw } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 
+// ── Standalone Image Cropper Container (Isolates layout & render state) ──
+const ImageCropperContainer = React.memo(({ image, aspectRatio, filterStyle, cropperStateRef }) => {
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
+
+  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
+    cropperStateRef.current = { croppedAreaPixels, rotation };
+  }, [rotation, cropperStateRef]);
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Cropper Canvas */}
+      <div className="relative bg-slate-900 rounded-2xl overflow-hidden" style={{ height: 320 }}>
+        <style>{`
+          .react-easy-crop-container img, .react-easy-crop-media {
+            filter: ${filterStyle} !important;
+          }
+        `}</style>
+        <Cropper
+          image={image}
+          crop={crop}
+          zoom={zoom}
+          rotation={rotation}
+          aspect={aspectRatio}
+          onCropChange={setCrop}
+          onZoomChange={setZoom}
+          onRotationChange={setRotation}
+          onCropComplete={onCropComplete}
+        />
+      </div>
+      {/* Zoom */}
+      <div>
+        <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Zoom — {zoom.toFixed(1)}x</p>
+        <input 
+          type="range" 
+          min={1} 
+          max={3} 
+          step={0.05} 
+          value={zoom} 
+          onChange={e => setZoom(+e.target.value)} 
+          className="w-full accent-indigo-600" 
+        />
+      </div>
+      {/* Rotation */}
+      <div>
+        <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Rotation — {rotation}°</p>
+        <input 
+          type="range" 
+          min={-180} 
+          max={180} 
+          step={1} 
+          value={rotation} 
+          onChange={e => setRotation(+e.target.value)} 
+          className="w-full accent-indigo-600" 
+        />
+      </div>
+    </div>
+  );
+});
 
 const ContentCMS = () => {
   const [activeTab, setActiveTab] = useState('about');
@@ -17,13 +77,12 @@ const ContentCMS = () => {
   const [editorSrc, setEditorSrc] = useState(null);
   const [editorCallback, setEditorCallback] = useState(null);
   const [editorFolder, setEditorFolder] = useState('team');
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [rotation, setRotation] = useState(0);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [aspectRatio, setAspectRatio] = useState(1);
   const [filters, setFilters] = useState({ brightness: 100, contrast: 100, saturation: 100, grayscale: 0 });
   const [activeEditorTab, setActiveEditorTab] = useState('crop');
+
+  // Stable reference to hold live crop layout data without triggering parent re-renders
+  const cropperStateRef = useRef({ croppedAreaPixels: null, rotation: 0 });
 
   const cmsTabs = [
     { id: 'landing', label: 'Landing Page', icon: ImageIcon },
@@ -264,9 +323,8 @@ const ContentCMS = () => {
     setEditorSrc(currentUrl);
     setEditorFolder(folder);
     setEditorCallback(() => callback);
-    setCrop({ x: 0, y: 0 });
-    setZoom(1);
-    setRotation(0);
+    // Reset layout references
+    cropperStateRef.current = { croppedAreaPixels: null, rotation: 0 };
     setAspectRatio(1);
     setFilters({ brightness: 100, contrast: 100, saturation: 100, grayscale: 0 });
     setActiveEditorTab('crop');
@@ -279,6 +337,7 @@ const ContentCMS = () => {
   };
 
   const handleEditorConfirm = async () => {
+    const { croppedAreaPixels, rotation } = cropperStateRef.current;
     if (!editorSrc || !croppedAreaPixels) return;
     setUploading(true);
     setEditorOpen(false);
@@ -415,34 +474,12 @@ const ContentCMS = () => {
                   ))}
                 </div>
               </div>
-              {/* Cropper Canvas */}
-              <div className="relative bg-slate-900 rounded-2xl overflow-hidden" style={{ height: 320 }}>
-                <style>{`
-                  .react-easy-crop-container img, .react-easy-crop-media {
-                    filter: ${filterStyle} !important;
-                  }
-                `}</style>
-                <Cropper
-                  image={editorSrc}
-                  crop={crop}
-                  zoom={zoom}
-                  rotation={rotation}
-                  aspect={aspectRatio}
-                  onCropChange={setCrop}
-                  onZoomChange={setZoom}
-                  onCropComplete={onCropComplete}
-                />
-              </div>
-              {/* Zoom */}
-              <div>
-                <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Zoom — {zoom.toFixed(1)}x</p>
-                <input type="range" min={1} max={3} step={0.05} value={zoom} onChange={e => setZoom(+e.target.value)} className="w-full accent-indigo-600" />
-              </div>
-              {/* Rotation */}
-              <div>
-                <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Rotation — {rotation}°</p>
-                <input type="range" min={-180} max={180} step={1} value={rotation} onChange={e => setRotation(+e.target.value)} className="w-full accent-indigo-600" />
-              </div>
+              <ImageCropperContainer
+                image={editorSrc}
+                aspectRatio={aspectRatio}
+                filterStyle={filterStyle}
+                cropperStateRef={cropperStateRef}
+              />
             </div>
           )}
 
