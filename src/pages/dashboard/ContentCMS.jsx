@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { db } from '../../lib/firebase';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { uploadFileToSupabase } from '../../lib/supabase';
-import { Save, FileText, Image as ImageIcon, MessageSquare, Trash2, Edit2, Loader2, CheckCircle, AlertCircle, Phone, MapPin, Plus, Info, Upload } from 'lucide-react';
+import { Save, FileText, Image as ImageIcon, MessageSquare, Trash2, Edit2, Loader2, CheckCircle, AlertCircle, Phone, MapPin, Plus, Info, Upload, Crop, SlidersHorizontal, X, Check, RotateCcw } from 'lucide-react';
+import Cropper from 'react-easy-crop';
 
 
 const ContentCMS = () => {
@@ -10,6 +11,19 @@ const ContentCMS = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
+
+  // Image Editor State
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorSrc, setEditorSrc] = useState(null);
+  const [editorCallback, setEditorCallback] = useState(null);
+  const [editorFolder, setEditorFolder] = useState('team');
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [aspectRatio, setAspectRatio] = useState(1);
+  const [filters, setFilters] = useState({ brightness: 100, contrast: 100, saturation: 100, grayscale: 0 });
+  const [activeEditorTab, setActiveEditorTab] = useState('crop');
 
   const cmsTabs = [
     { id: 'landing', label: 'Landing Page', icon: ImageIcon },
@@ -213,14 +227,85 @@ const ContentCMS = () => {
     }
   };
 
-  // Inline Image Upload Component
+  // ── Helpers for image editor ──────────────────────────────────
+  const onCropComplete = useCallback((_, pixels) => setCroppedAreaPixels(pixels), []);
+
+  const getCroppedCanvas = async (src, pixelCrop, rotation, filterState) => {
+    const image = await new Promise((res, rej) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => res(img);
+      img.onerror = rej;
+      img.src = src;
+    });
+    const offscreen = document.createElement('canvas');
+    offscreen.width = pixelCrop.width;
+    offscreen.height = pixelCrop.height;
+    const ctx = offscreen.getContext('2d');
+    ctx.filter = `brightness(${filterState.brightness}%) contrast(${filterState.contrast}%) saturate(${filterState.saturation}%) grayscale(${filterState.grayscale}%)`;
+    // handle rotation
+    const radians = (rotation * Math.PI) / 180;
+    const cos = Math.abs(Math.cos(radians));
+    const sin = Math.abs(Math.sin(radians));
+    const rotW = image.width * cos + image.height * sin;
+    const rotH = image.width * sin + image.height * cos;
+    const rotCanvas = document.createElement('canvas');
+    rotCanvas.width = rotW;
+    rotCanvas.height = rotH;
+    const rotCtx = rotCanvas.getContext('2d');
+    rotCtx.translate(rotW / 2, rotH / 2);
+    rotCtx.rotate(radians);
+    rotCtx.drawImage(image, -image.width / 2, -image.height / 2);
+    ctx.drawImage(rotCanvas, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, pixelCrop.width, pixelCrop.height);
+    return offscreen;
+  };
+
+  const openEditor = (currentUrl, folder, callback) => {
+    setEditorSrc(currentUrl);
+    setEditorFolder(folder);
+    setEditorCallback(() => callback);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setRotation(0);
+    setAspectRatio(1);
+    setFilters({ brightness: 100, contrast: 100, saturation: 100, grayscale: 0 });
+    setActiveEditorTab('crop');
+    setEditorOpen(true);
+  };
+
+  const openEditorFromFile = (file, folder, callback) => {
+    const objectUrl = URL.createObjectURL(file);
+    openEditor(objectUrl, folder, callback);
+  };
+
+  const handleEditorConfirm = async () => {
+    if (!editorSrc || !croppedAreaPixels) return;
+    setUploading(true);
+    setEditorOpen(false);
+    try {
+      const canvas = await getCroppedCanvas(editorSrc, croppedAreaPixels, rotation, filters);
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+      const file = new File([blob], `${Date.now()}.jpg`, { type: 'image/jpeg' });
+      const url = await handleFileUpload(file, 'images', `${editorFolder}/`);
+      if (url && editorCallback) editorCallback(url);
+    } catch (e) {
+      console.error('Editor confirm error', e);
+      setStatus({ type: 'error', message: 'Image processing failed.' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const resetFilters = () => setFilters({ brightness: 100, contrast: 100, saturation: 100, grayscale: 0 });
+
+  // ── Inline Image Upload Component (non-team, no editor) ────────
   const FileUploader = ({ onUpload, label, currentUrl, folder }) => (
     <div className="space-y-3">
       <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">{label}</label>
       <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border-2 border-slate-100 hover:border-indigo-200 transition-all">
         {currentUrl ? (
-          <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 bg-white shrink-0 shadow-sm flex items-center justify-center">
-            <img src={currentUrl} alt="Preview" className="w-full h-full object-contain" />
+          <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 bg-white shrink-0 shadow-sm">
+            <img src={currentUrl} alt="Preview" className="w-full h-full object-cover" />
           </div>
         ) : (
           <div className="w-16 h-16 rounded-xl bg-slate-200 flex items-center justify-center shrink-0">
@@ -230,17 +315,17 @@ const ContentCMS = () => {
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-slate-500 mb-1 truncate">{currentUrl || 'No image selected'}</p>
           <div className="relative">
-            <input 
-              type="file" 
-              accept="image/*" 
+            <input
+              type="file"
+              accept="image/*"
               onChange={async (e) => {
                 const file = e.target.files[0];
                 if (file) {
                   const url = await handleFileUpload(file, 'images', `${folder}/`);
                   if (url) onUpload(url);
                 }
-              }} 
-              className="absolute inset-0 opacity-0 cursor-pointer" 
+              }}
+              className="absolute inset-0 opacity-0 cursor-pointer"
               disabled={uploading}
             />
             <button className="flex items-center gap-2 text-indigo-600 font-black text-sm px-4 py-2 bg-white rounded-lg border border-indigo-100 hover:bg-indigo-50 transition-colors">
@@ -253,7 +338,122 @@ const ContentCMS = () => {
     </div>
   );
 
+  // ── Image Editor Modal ──────────────────────────────────────────
+  const ImageEditorModal = () => {
+    if (!editorOpen || !editorSrc) return null;
+    const aspectOptions = [
+      { label: '1:1', value: 1 },
+      { label: '4:3', value: 4/3 },
+      { label: '3:4', value: 3/4 },
+      { label: '16:9', value: 16/9 },
+      { label: 'Free', value: undefined },
+    ];
+    const filterStyle = `brightness(${filters.brightness}%) contrast(${filters.contrast}%) saturate(${filters.saturation}%) grayscale(${filters.grayscale}%)`;
+    return (
+      <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style={{ maxHeight: '95vh' }}>
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2"><Crop size={20} className="text-indigo-600" /> Photo Editor</h3>
+            <button onClick={() => setEditorOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors"><X size={20} /></button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-1 px-6 pt-4">
+            {[{ id: 'crop', label: 'Crop & Rotate', icon: <Crop size={14}/> }, { id: 'filter', label: 'Filters', icon: <SlidersHorizontal size={14}/> }].map(t => (
+              <button key={t.id} onClick={() => setActiveEditorTab(t.id)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                  activeEditorTab === t.id ? 'bg-indigo-600 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}>{t.icon}{t.label}</button>
+            ))}
+          </div>
+
+          {/* Crop Panel */}
+          {activeEditorTab === 'crop' && (
+            <div className="flex flex-col gap-4 px-6 py-4 overflow-y-auto flex-1">
+              {/* Aspect Ratio */}
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400 mb-2">Aspect Ratio</p>
+                <div className="flex gap-2 flex-wrap">
+                  {aspectOptions.map(opt => (
+                    <button key={opt.label} onClick={() => setAspectRatio(opt.value)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all ${
+                        aspectRatio === opt.value ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:border-indigo-300'
+                      }`}>{opt.label}</button>
+                  ))}
+                </div>
+              </div>
+              {/* Cropper Canvas */}
+              <div className="relative bg-slate-900 rounded-2xl overflow-hidden" style={{ height: 320 }}>
+                <Cropper
+                  image={editorSrc}
+                  crop={crop}
+                  zoom={zoom}
+                  rotation={rotation}
+                  aspect={aspectRatio}
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onCropComplete={onCropComplete}
+                  style={{ containerStyle: { borderRadius: '1rem' }, mediaStyle: { filter: filterStyle } }}
+                />
+              </div>
+              {/* Zoom */}
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Zoom — {zoom.toFixed(1)}x</p>
+                <input type="range" min={1} max={3} step={0.05} value={zoom} onChange={e => setZoom(+e.target.value)} className="w-full accent-indigo-600" />
+              </div>
+              {/* Rotation */}
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Rotation — {rotation}°</p>
+                <input type="range" min={-180} max={180} step={1} value={rotation} onChange={e => setRotation(+e.target.value)} className="w-full accent-indigo-600" />
+              </div>
+            </div>
+          )}
+
+          {/* Filter Panel */}
+          {activeEditorTab === 'filter' && (
+            <div className="flex flex-col gap-4 px-6 py-4 overflow-y-auto flex-1">
+              {/* Live Preview */}
+              <div className="flex justify-center">
+                <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-slate-200 shadow-md" style={{ filter: filterStyle }}>
+                  <img src={editorSrc} alt="preview" className="w-full h-full object-cover" />
+                </div>
+              </div>
+              {[
+                { key: 'brightness', label: 'Brightness', min: 50, max: 200 },
+                { key: 'contrast', label: 'Contrast', min: 50, max: 200 },
+                { key: 'saturation', label: 'Saturation', min: 0, max: 200 },
+                { key: 'grayscale', label: 'Grayscale', min: 0, max: 100 },
+              ].map(f => (
+                <div key={f.key}>
+                  <p className="text-[10px] font-black uppercase text-slate-400 mb-1">{f.label} — {filters[f.key]}{f.key === 'grayscale' ? '%' : '%'}</p>
+                  <input type="range" min={f.min} max={f.max} value={filters[f.key]}
+                    onChange={e => setFilters(prev => ({ ...prev, [f.key]: +e.target.value }))}
+                    className="w-full accent-indigo-600" />
+                </div>
+              ))}
+              <button onClick={resetFilters} className="flex items-center gap-2 text-slate-500 text-sm font-bold hover:text-indigo-600 transition-colors self-start">
+                <RotateCcw size={14} /> Reset Filters
+              </button>
+            </div>
+          )}
+
+          {/* Footer actions */}
+          <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50">
+            <button onClick={() => setEditorOpen(false)} className="px-5 py-2.5 rounded-xl border-2 border-slate-200 font-bold text-slate-600 hover:bg-slate-100 transition-colors">Cancel</button>
+            <button onClick={handleEditorConfirm} disabled={uploading}
+              className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold flex items-center gap-2 hover:bg-indigo-700 transition-colors disabled:opacity-50">
+              {uploading ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Apply & Save
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
+    <>
+    <ImageEditorModal />
     <div className="p-4 md:p-8 max-w-6xl mx-auto animate-in fade-in duration-500">
       <div className="mb-8">
         <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
@@ -758,6 +958,7 @@ const ContentCMS = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 
