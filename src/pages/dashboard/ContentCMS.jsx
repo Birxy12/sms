@@ -393,6 +393,11 @@ const ContentCMS = () => {
               </div>
               {/* Cropper Canvas */}
               <div className="relative bg-slate-900 rounded-2xl overflow-hidden" style={{ height: 320 }}>
+                <style>{`
+                  .react-easy-crop-container img, .react-easy-crop-media {
+                    filter: ${filterStyle} !important;
+                  }
+                `}</style>
                 <Cropper
                   image={editorSrc}
                   crop={crop}
@@ -402,7 +407,6 @@ const ContentCMS = () => {
                   onCropChange={setCrop}
                   onZoomChange={setZoom}
                   onCropComplete={onCropComplete}
-                  style={{ containerStyle: { borderRadius: '1rem' }, mediaStyle: { filter: filterStyle } }}
                 />
               </div>
               {/* Zoom */}
