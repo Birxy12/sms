@@ -284,7 +284,7 @@ const AdminDashboard = () => {
               
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 inline-block mx-auto">
                 <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
-                  <Fingerprint size={32} className="animate-pulse" />
+                  <Fingerprint size={32} />
                 </div>
               </div>
               
