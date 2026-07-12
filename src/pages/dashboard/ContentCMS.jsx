@@ -299,7 +299,7 @@ const ContentCMS = () => {
   const resetFilters = () => setFilters({ brightness: 100, contrast: 100, saturation: 100, grayscale: 0 });
 
   // ── Inline Image Upload Component (with editor support) ──────────
-  const FileUploader = ({ onUpload, label, currentUrl, folder }) => (
+  const renderFileUploader = ({ onUpload, label, currentUrl, folder }) => (
     <div className="space-y-3">
       <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">{label}</label>
       <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border-2 border-slate-100 hover:border-indigo-200 transition-all">
@@ -347,7 +347,7 @@ const ContentCMS = () => {
   );
 
   // ── Image Editor Modal ──────────────────────────────────────────
-  const ImageEditorModal = () => {
+  const renderImageEditorModal = () => {
     if (!editorOpen || !editorSrc) return null;
     const aspectOptions = [
       { label: '1:1', value: 1 },
@@ -465,7 +465,7 @@ const ContentCMS = () => {
 
   return (
     <>
-    <ImageEditorModal />
+    {renderImageEditorModal()}
     <div className="p-4 md:p-8 max-w-6xl mx-auto animate-in fade-in duration-500">
       <div className="mb-8">
         <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
@@ -529,16 +529,16 @@ const ContentCMS = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {(landingData.heroImages || []).map((img, idx) => (
                     <div key={idx} className="relative">
-                      <FileUploader 
-                        label={`Slide ${idx + 1}`}
-                        currentUrl={img}
-                        folder="landing"
-                        onUpload={(url) => {
+                      {renderFileUploader({
+                        label: `Slide ${idx + 1}`,
+                        currentUrl: img,
+                        folder: "landing",
+                        onUpload: (url) => {
                           const newImgs = [...landingData.heroImages];
                           newImgs[idx] = url;
                           setLandingData({...landingData, heroImages: newImgs});
-                        }}
-                      />
+                        }
+                      })}
                       <button 
                         onClick={() => {
                           const newImgs = landingData.heroImages.filter((_, i) => i !== idx);
@@ -620,12 +620,12 @@ const ContentCMS = () => {
                     className="w-full px-5 py-3 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold" 
                   />
                 </div>
-                <FileUploader 
-                  label="Principal's Official Photo"
-                  currentUrl={principalData.image}
-                  folder="principal"
-                  onUpload={(url) => setPrincipalData({...principalData, image: url})}
-                />
+                 {renderFileUploader({
+                   label: "Principal's Official Photo",
+                   currentUrl: principalData.image,
+                   folder: "principal",
+                   onUpload: (url) => setPrincipalData({...principalData, image: url})
+                 })}
              </div>
              
              <div className="space-y-2">
@@ -651,12 +651,12 @@ const ContentCMS = () => {
                 />
               </div>
               <div className="flex flex-col justify-end">
-                <FileUploader 
-                  label="History Section Illustration / Image"
-                  currentUrl={aboutImage}
-                  folder="about"
-                  onUpload={(url) => setAboutImage(url)}
-                />
+                 {renderFileUploader({
+                   label: "History Section Illustration / Image",
+                   currentUrl: aboutImage,
+                   folder: "about",
+                   onUpload: (url) => setAboutImage(url)
+                 })}
               </div>
             </div>
 
