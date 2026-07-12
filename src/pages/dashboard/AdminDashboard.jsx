@@ -722,7 +722,7 @@ const AdminDashboard = () => {
                     <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest block">System Live Time</span>
                     <LiveClock />
                     <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1.5 justify-end mt-1">
-                      <span className="live-dot-wrapper"><span className="live-dot-ring"></span><span className="live-dot-core"></span></span> Live Connection
+                      <span style={{width:'8px',height:'8px',borderRadius:'50%',background:'#10b981',display:'inline-block',flexShrink:0}}></span> Live Connection
                     </span>
                   </div>
                 </div>
@@ -734,7 +734,7 @@ const AdminDashboard = () => {
                   <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-2">
                       <span className="relative flex h-2.5 w-2.5">
-                        <span className="live-dot-ring" style={{position:'absolute',inset:0,borderRadius:'9999px',background:'#34d399',opacity:0.6}}></span>
+
                         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                       </span>
                       <h3 className="text-sm font-black text-slate-700 uppercase tracking-wider">Live System Stream</h3>
