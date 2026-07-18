@@ -12,10 +12,15 @@
     "cap:build-android": "npm run build && npx cap sync android",
     "cap:build-ios": "npm run build && npx cap sync ios",
     "cap:open-android": "npx cap open android",
-    "cap:open-ios": "npx cap open ios"
+    "cap:open-ios": "npx cap open ios",
+    "git:push": "git add -A && git commit -m \"auto: sync changes\" && git push origin main",
+    "deploy:android": "npm run build && npx cap sync android && git add -A && git commit -m \"deploy: android build and sync\" && git push origin main",
+    "deploy:ios": "npm run build && npx cap sync ios && git add -A && git commit -m \"deploy: ios build and sync\" && git push origin main",
+    "deploy:all": "npm run build && npx cap sync && git add -A && git commit -m \"deploy: full build and sync\" && git push origin main"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
+    "@capacitor/app": "^8.1.1",
     "@capacitor/cli": "^8.4.1",
     "@capacitor/core": "^8.4.1",
     "@capacitor/ios": "^8.4.1",

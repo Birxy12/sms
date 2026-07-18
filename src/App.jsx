@@ -1,5 +1,6 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { App as CapApp } from '@capacitor/app';
 import Layout from './components/Layout';
 import LandingPage from './pages/home';
 import Login from './pages/Login';
@@ -76,6 +77,34 @@ const ProtectedAdminRoute = ({ children, requiredRole }) => {
 };
 
 function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const handleBackButton = async () => {
+      const backButtonListener = await CapApp.addListener('backButton', ({ canGoBack }) => {
+        const currentPath = location.pathname;
+        const homePaths = ['/', '/login', '/students', '/admin', '/principal', '/finance', '/teachers'];
+        
+        if (homePaths.includes(currentPath) || !canGoBack) {
+          const confirmClose = window.confirm("Do you want to exit the app?");
+          if (confirmClose) {
+            CapApp.exitApp();
+          }
+        } else {
+          navigate(-1);
+        }
+      });
+      return backButtonListener;
+    };
+
+    let listenerPromise = handleBackButton();
+
+    return () => {
+      listenerPromise.then(listener => listener.remove());
+    };
+  }, [location, navigate]);
+
   return (
     <>
       <Routes>
