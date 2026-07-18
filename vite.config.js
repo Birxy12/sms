@@ -26,6 +26,9 @@ export default defineConfig({
     hmr: {
       host: '127.0.0.1',
     },
+    watch: {
+      ignored: ['**/android/**', '**/ios/**']
+    }
   },
   build: {
     sourcemap: true
