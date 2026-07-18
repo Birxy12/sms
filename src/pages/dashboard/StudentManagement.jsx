@@ -4,7 +4,7 @@ import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, where, setDoc } from 'firebase/firestore';
 import { uploadAvatar } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList } from 'lucide-react';
+import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList, Printer } from 'lucide-react';
 import { getSubjectsForClass } from '../../utils/subjectConfig';
 import ImageCropperModal from '../../components/ImageCropperModal';
 import { formatDateForInput } from '../../utils/dateFormatter';
@@ -345,6 +345,22 @@ const StudentManagement = () => {
                   <td className="px-8 py-5 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
                       <button onClick={() => navigate(`/admin/student-results?regNo=${encodeURIComponent(student.regNo)}&className=${encodeURIComponent(student.className)}&name=${encodeURIComponent(student.name)}`)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg" title="View Results"><Award size={16} /></button>
+                      <button 
+                        onClick={() => {
+                          // Open result in a new window for printing
+                          const printUrl = `/admin/student-results?regNo=${encodeURIComponent(student.regNo)}&className=${encodeURIComponent(student.className)}&name=${encodeURIComponent(student.name)}&print=1`;
+                          const win = window.open(printUrl, '_blank', 'width=900,height=700');
+                          if (win) {
+                            win.onload = () => {
+                              setTimeout(() => win.print(), 1200);
+                            };
+                          }
+                        }}
+                        className="p-2 text-slate-400 hover:text-purple-600 hover:bg-white rounded-lg" 
+                        title="Print Student Result"
+                      >
+                        <Printer size={16} />
+                      </button>
                       <button onClick={() => { setPromoteModal({ student }); setNewClass(student.className); }} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-white rounded-lg" title="Promote / Demote"><ArrowUpDown size={16} /></button>
                       {(student.className?.startsWith('SS2') || student.className?.startsWith('SS3')) && (
                         <button onClick={() => openSubjectRegModal(student)} className="p-2 text-slate-400 hover:text-pink-600 hover:bg-white rounded-lg" title="Subject Registration"><ClipboardList size={16} /></button>

@@ -33,6 +33,8 @@ const location = useLocation();
 const searchParams = new URLSearchParams(location.search);
 const adminRegNo = searchParams.get('regNo');
 const publicPin = searchParams.get('pin');
+const urlPubId = searchParams.get('pubId');
+const urlPrint = searchParams.get('print') === '1';
 
 const [adminFetchedStudent, setAdminFetchedStudent] = useState(null);
 const currentStudent = adminFetchedStudent || loggedInStudent;
@@ -103,7 +105,9 @@ terms.sort((a, b) => b.session.localeCompare(a.session));
 
 setPublishedTerms(terms);
 if (terms.length > 0) {
-setSelectedTermId(terms[0].id);
+// If a specific pubId was passed in the URL (from CheckResult page), use it
+const preSelected = urlPubId ? terms.find(t => t.id === urlPubId) : null;
+setSelectedTermId(preSelected ? preSelected.id : terms[0].id);
 } else {
 setLoading(false);
 }
@@ -385,6 +389,19 @@ console.error("Error fetching form teacher", e);
 fetchFormTeacher();
 }, [studentClass]);
 
+// Auto-trigger print when opened from admin with print=1 param
+useEffect(() => {
+  if (urlPrint && studentMarks && !loading) {
+    const timer = setTimeout(() => {
+      setIsPrinting(true);
+      setTimeout(() => {
+        window.print();
+        setIsPrinting(false);
+      }, 1000);
+    }, 800);
+    return () => clearTimeout(timer);
+  }
+}, [urlPrint, studentMarks, loading]);
 
 const handlePrint = () => {
 setIsPrinting(true);

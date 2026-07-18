@@ -6,7 +6,7 @@ import { collection, query, getDocs, where, limit, orderBy, doc, getDoc } from '
 import { 
   LayoutDashboard, Award, CreditCard, Calendar, Bell, ChevronRight, 
   Inbox as InboxIcon, Trophy, Wallet, BookOpen, Library, MonitorCheck, 
-  AlertCircle, Star, ArrowUpRight, Clock, User, Zap, GraduationCap
+  AlertCircle, Star, ArrowUpRight, Clock, User, Zap, GraduationCap, ChevronDown
 } from 'lucide-react';
 import { MARKS_KEYS, expandMarks } from '../../utils/firestoreSchema';
 import { useNavigate } from 'react-router-dom';
@@ -37,6 +37,8 @@ const StudentDashboard = () => {
   const [dashboardError, setDashboardError] = useState('');
   const [recentNotifications, setRecentNotifications] = useState([]);
   const [feeData, setFeeData]           = useState({ expected: 0, paid: 0, balance: 0, lastDate: 'N/A' });
+  const [publishedTerms, setPublishedTerms] = useState([]);
+  const [selectedTermId, setSelectedTermId] = useState('');
 
   useEffect(() => {
     if (!currentStudent || !regNum) {
@@ -77,15 +79,20 @@ const StudentDashboard = () => {
         // 2. Fetch Publications of type 'Result'
         const pubQuery = query(collection(db, 'publications'), where('type', '==', 'Result'));
         const pubSnap = await getDocs(pubQuery);
-        const publishedTerms = pubSnap.docs.map(doc => {
+        const publishedTermsList = pubSnap.docs.map(doc => {
           const data = doc.data();
           return {
             id: doc.id,
             session: data.session,
             term: data.term,
+            examName: data.examName,
             targetClass: data.targetClass || 'All Classes'
           };
         }).filter(pub => pub.targetClass === 'All Classes' || pub.targetClass === className);
+        publishedTermsList.sort((a, b) => b.session.localeCompare(a.session));
+        setPublishedTerms(publishedTermsList);
+        if (publishedTermsList.length > 0) setSelectedTermId(publishedTermsList[0].id);
+        const publishedTerms = publishedTermsList;
 
         // Fetch Results & Calculate Average
         // Try compressed key first
@@ -361,28 +368,63 @@ const StudentDashboard = () => {
               )}
 
               {activeTab === 'academic' && (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {[
-                    { label: 'Exam Results', icon: Trophy, color: '#10b981', path: '/students/results', desc: 'Detailed score breakdown' },
-                    { label: 'CBT Portal', icon: MonitorCheck, color: '#f59e0b', path: '/students/cbt', desc: 'Computer based tests' },
-                    { label: 'Study Notes', icon: BookOpen, color: '#6366f1', path: '/students/notes', desc: 'Course materials' },
-                    { label: 'Assignments', icon: Library, color: '#8b5cf6', path: '/students/assignments', desc: 'Pending homework' },
-                    ...(className.startsWith('SS2') || className.startsWith('SS3') ? [{ label: 'Subject Registration', icon: BookOpen, color: '#ec4899', path: '/students/registration', desc: 'Register 9 subjects' }] : [])
-                  ].map((module, idx) => (
-                    <button 
-                      key={idx}
-                      onClick={() => navigate(module.path)}
-                      className="p-8 bg-white border border-slate-100 rounded-[2rem] text-left hover:shadow-2xl hover:shadow-slate-200/50 transition-all space-y-4"
-                    >
-                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: `${module.color}15` }}>
-                        <module.icon size={28} style={{ color: module.color }} />
+                <div className="space-y-6">
+                  {/* Term & Session Quick Selector */}
+                  {publishedTerms.length > 0 && (
+                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                      <h3 className="text-lg font-black text-slate-800 mb-4">View Report Card</h3>
+                      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
+                        <div className="flex-1">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Select Term / Examination</label>
+                          <div className="relative">
+                            <select
+                              value={selectedTermId}
+                              onChange={(e) => setSelectedTermId(e.target.value)}
+                              className="w-full px-5 py-3 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-indigo-500 outline-none font-bold text-slate-700 appearance-none cursor-pointer transition-all"
+                            >
+                              {publishedTerms.map(pub => (
+                                <option key={pub.id} value={pub.id}>
+                                  {pub.examName || pub.term} — {pub.session}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => navigate(`/students/results?pubId=${encodeURIComponent(selectedTermId)}`)}
+                          disabled={!selectedTermId}
+                          className="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50 whitespace-nowrap"
+                        >
+                          View Results →
+                        </button>
                       </div>
-                      <div>
-                        <p className="text-lg font-black text-slate-800">{module.label}</p>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">{module.desc}</p>
-                      </div>
-                    </button>
-                  ))}
+                    </div>
+                  )}
+                  {/* Academic Modules Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    {[
+                      { label: 'Exam Results', icon: Trophy, color: '#10b981', path: '/students/results', desc: 'Detailed score breakdown' },
+                      { label: 'CBT Portal', icon: MonitorCheck, color: '#f59e0b', path: '/students/cbt', desc: 'Computer based tests' },
+                      { label: 'Study Notes', icon: BookOpen, color: '#6366f1', path: '/students/notes', desc: 'Course materials' },
+                      { label: 'Assignments', icon: Library, color: '#8b5cf6', path: '/students/assignments', desc: 'Pending homework' },
+                      ...(className.startsWith('SS2') || className.startsWith('SS3') ? [{ label: 'Subject Registration', icon: BookOpen, color: '#ec4899', path: '/students/registration', desc: 'Register 9 subjects' }] : [])
+                    ].map((module, idx) => (
+                      <button 
+                        key={idx}
+                        onClick={() => navigate(module.path)}
+                        className="p-8 bg-white border border-slate-100 rounded-[2rem] text-left hover:shadow-2xl hover:shadow-slate-200/50 transition-all space-y-4"
+                      >
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: `${module.color}15` }}>
+                          <module.icon size={28} style={{ color: module.color }} />
+                        </div>
+                        <div>
+                          <p className="text-lg font-black text-slate-800">{module.label}</p>
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">{module.desc}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 

@@ -2,6 +2,7 @@
   "appId": "com.bdsportal.sms",
   "appName": "BDSPORTAL",
   "webDir": "dist",
+  "zoomEnabled": true,
   "server": {
     "androidScheme": "https"
   }

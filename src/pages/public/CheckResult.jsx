@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
-import { ShieldCheck, Search, Loader2, AlertCircle, ArrowRight, GraduationCap, Key, Hash, School, HelpCircle } from 'lucide-react';
+import { ShieldCheck, Search, Loader2, AlertCircle, ArrowRight, GraduationCap, Key, Hash, School, HelpCircle, BookOpen, Calendar } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/MainFooter';
 import { expandStudent, STUDENT_KEYS } from '../../utils/firestoreSchema';
@@ -19,10 +19,65 @@ const CheckResult = () => {
   const [error, setError] = useState('');
   const [hoveredField, setHoveredField] = useState(null);
 
+  // Term & Session selection
+  const [selectedTerm, setSelectedTerm] = useState('');
+  const [selectedSession, setSelectedSession] = useState('');
+  const [publishedTerms, setPublishedTerms] = useState([]);
+  const [loadingTerms, setLoadingTerms] = useState(true);
+
+  // Available sessions derived from published terms
+  const availableSessions = [...new Set(publishedTerms.map(t => t.session))].sort((a, b) => b.localeCompare(a));
+  const availableTerms = publishedTerms
+    .filter(t => !selectedSession || t.session === selectedSession)
+    .map(t => ({ id: t.id, term: t.term, examName: t.examName }))
+    .filter((t, i, arr) => arr.findIndex(x => x.term === t.term) === i);
+
+  useEffect(() => {
+    const fetchPublishedTerms = async () => {
+      setLoadingTerms(true);
+      try {
+        const q = query(collection(db, 'publications'), where('type', '==', 'Result'));
+        const snap = await getDocs(q);
+        const terms = snap.docs.map(d => ({
+          id: d.id,
+          examName: d.data().examName,
+          session: d.data().session,
+          term: d.data().term,
+          targetClass: d.data().targetClass || 'All Classes',
+          publishedAt: d.data().publishedAt
+        }));
+        terms.sort((a, b) => b.session.localeCompare(a.session));
+        setPublishedTerms(terms);
+
+        // Set defaults
+        if (terms.length > 0) {
+          setSelectedSession(terms[0].session);
+          setSelectedTerm(terms[0].term);
+        }
+      } catch (err) {
+        console.error('Error fetching published terms:', err);
+      } finally {
+        setLoadingTerms(false);
+      }
+    };
+    fetchPublishedTerms();
+  }, []);
+
+  // Update term when session changes
+  const handleSessionChange = (session) => {
+    setSelectedSession(session);
+    const firstTermInSession = publishedTerms.find(t => t.session === session);
+    if (firstTermInSession) setSelectedTerm(firstTermInSession.term);
+  };
+
   const handleCheck = async (e) => {
     e.preventDefault();
     if (!regNo || !pin) {
       setError('Please provide both Registration Number and PIN.');
+      return;
+    }
+    if (!selectedTerm || !selectedSession) {
+      setError('Please select an academic term and session to check results for.');
       return;
     }
 
@@ -60,8 +115,10 @@ const CheckResult = () => {
         return;
       }
 
-      // 3. Navigate to results page
-      navigate(`/results?regNo=${encodeURIComponent(regNo.toUpperCase().trim())}&pin=${encodeURIComponent(pin)}`);
+      // 3. Navigate to results page with term & session
+      const matchedPub = publishedTerms.find(t => t.session === selectedSession && t.term === selectedTerm);
+      const pubId = matchedPub?.id || '';
+      navigate(`/results?regNo=${encodeURIComponent(regNo.toUpperCase().trim())}&pin=${encodeURIComponent(pin)}&term=${encodeURIComponent(selectedTerm)}&session=${encodeURIComponent(selectedSession)}&pubId=${encodeURIComponent(pubId)}`);
       
     } catch (err) {
       console.error('Error checking result:', err);
@@ -119,6 +176,53 @@ const CheckResult = () => {
             className={`bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 p-10 md:p-12 relative w-full ${darkMode ? 'shadow-2xl shadow-slate-950/80' : 'shadow-2xl shadow-slate-200/60'}`}
           >
             <form onSubmit={handleCheck} className="space-y-8">
+
+              {/* Session Selector */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-center gap-2">
+                  <Calendar size={14} className="text-slate-400" />
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Academic Session</label>
+                </div>
+                {loadingTerms ? (
+                  <div className="flex justify-center py-2">
+                    <Loader2 size={20} className="animate-spin text-indigo-500" />
+                  </div>
+                ) : availableSessions.length > 0 ? (
+                  <select
+                    value={selectedSession}
+                    onChange={(e) => handleSessionChange(e.target.value)}
+                    className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-slate-200 focus:border-indigo-500 outline-none font-bold text-slate-700 text-center appearance-none cursor-pointer transition-all"
+                  >
+                    {availableSessions.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-center text-xs text-slate-400 font-bold italic py-2">No published results available</p>
+                )}
+              </div>
+
+              {/* Term Selector */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-center gap-2">
+                  <BookOpen size={14} className="text-slate-400" />
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Term / Examination</label>
+                </div>
+                {availableTerms.length > 0 ? (
+                  <select
+                    value={selectedTerm}
+                    onChange={(e) => setSelectedTerm(e.target.value)}
+                    className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-slate-200 focus:border-indigo-500 outline-none font-bold text-slate-700 text-center appearance-none cursor-pointer transition-all"
+                  >
+                    {availableTerms.map(t => (
+                      <option key={t.id} value={t.term}>{t.examName || t.term}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-center text-xs text-slate-400 font-bold italic py-2">Select a session first</p>
+                )}
+              </div>
+
               {/* Registration Number Field */}
               <div className="space-y-3">
                 <div className="flex items-center justify-center gap-2">
@@ -218,14 +322,14 @@ const CheckResult = () => {
 
               <button 
                 type="submit"
-                disabled={loading}
+                disabled={loading || availableSessions.length === 0}
                 className="btn-glow w-full flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
               >
                 {loading ? (
                   <Loader2 size={24} className="animate-spin" />
                 ) : (
                   <>
-                    <span className="text-sm font-black uppercase tracking-widest">Verify & Access</span>
+                    <span className="text-sm font-black uppercase tracking-widest">Verify &amp; Access</span>
                     <ArrowRight size={20} />
                   </>
                 )}
