@@ -272,6 +272,15 @@ const Navbar = () => {
         </div>
       </nav>
 
+      {/* Floating Hamburger FAB – mobile only */}
+      <button
+        className={`floating-hamburger${isMobileMenuOpen ? ' floating-hamburger--open' : ''}`}
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        aria-label="Toggle navigation menu"
+      >
+        {isMobileMenuOpen ? <X size={22} strokeWidth={2.5} /> : <Menu size={22} strokeWidth={2.5} />}
+      </button>
+
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="mobile-overlay" onClick={() => setIsMobileMenuOpen(false)}>
