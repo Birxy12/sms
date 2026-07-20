@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { db } from '../../lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
-import { ShieldCheck, Search, Loader2, AlertCircle, ArrowRight, GraduationCap, Key, Hash, School, HelpCircle, BookOpen, Calendar } from 'lucide-react';
+import { ShieldCheck, Search, Loader2, AlertCircle, ArrowRight, GraduationCap, Key, Hash, School, HelpCircle, BookOpen, Calendar, ChevronDown } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/MainFooter';
 import { expandStudent, STUDENT_KEYS } from '../../utils/firestoreSchema';
 import { motion, AnimatePresence } from 'framer-motion';
 import brandLogo from '../../assets/bdslogo.jpg';
+import '../Auth.css';
 
 const CheckResult = () => {
   const navigate = useNavigate();
@@ -139,133 +140,140 @@ const CheckResult = () => {
         <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
           <div className={`absolute top-[-10%] right-[-10%] w-[500px] h-[500px] ${darkMode ? 'bg-indigo-950/20' : 'bg-indigo-50'} rounded-full blur-3xl opacity-60`}></div>
           <div className={`absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] ${darkMode ? 'bg-indigo-900/20' : 'bg-indigo-900/20'} rounded-full blur-3xl opacity-60`}></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] pointer-events-none"></div>
         </div>
 
-        {/* Transparent School Logo Background Watermark */}
-        {logoUrl && (
-          <div 
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] pointer-events-none opacity-[0.04] select-none z-0"
-            style={{
-              backgroundImage: `url(${logoUrl})`,
-              backgroundSize: 'contain',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              filter: darkMode ? 'grayscale(100%) brightness(150%) contrast(120%)' : 'grayscale(100%) contrast(120%)'
-            }}
-          />
-        )}
-
-        <div className="w-full max-w-md mx-auto relative z-10 flex flex-col items-center justify-center">
+        <div className="w-full max-w-md mx-auto relative z-10">
           <motion.div 
+            className="auth-card"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-10"
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            style={{ 
+              background: darkMode ? '#1e293b' : '#ffffff',
+              borderColor: darkMode ? '#334155' : '#e2e8f0'
+            }}
           >
-            <div className={`inline-flex items-center justify-center w-20 h-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 mb-6 group transition-all duration-300 hover:scale-105 hover:border-indigo-500 ${darkMode ? 'shadow-lg shadow-slate-950/50' : 'shadow-xl shadow-indigo-100'}`}>
-              <ShieldCheck size={40} className="text-indigo-600" />
+            <div className="auth-header">
+              <motion.div 
+                className="logo-badge"
+                style={{ borderColor: primaryColor || '#4f46e5' }}
+                animate={{ boxShadow: `0 0 0 4px ${(primaryColor || '#4f46e5')}15` }}
+                transition={{ duration: 2, repeat: Infinity, repeatType: 'reverse' }}
+              >
+                <img src={logoUrl} alt="School Logo" />
+              </motion.div>
+              <h1 style={{ color: darkMode ? '#ffffff' : '#0f172a' }}>{schoolName || 'Bright Day School'}</h1>
+              <p className="subtitle">Result Portal</p>
             </div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-2 uppercase">Result Portal</h1>
-            <p className="text-slate-500 dark:text-slate-400 font-bold text-sm tracking-widest uppercase">Secure Academic Verification</p>
-          </motion.div>
 
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1 }}
-            className={`bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 p-10 md:p-12 relative w-full ${darkMode ? 'shadow-2xl shadow-slate-950/80' : 'shadow-2xl shadow-slate-200/60'}`}
-          >
-            <form onSubmit={handleCheck} className="space-y-8">
-
+            <form onSubmit={handleCheck} className="auth-form">
               {/* Session Selector */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-center gap-2">
-                  <Calendar size={14} className="text-slate-400" />
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Academic Session</label>
+              <div className="input-wrapper">
+                <label className="input-label">
+                  <Calendar size={14} />
+                  Academic Session
+                </label>
+                <div className="input-container select-container">
+                  {loadingTerms ? (
+                    <div className="flex justify-center py-2">
+                      <Loader2 size={20} className="animate-spin text-indigo-500" />
+                    </div>
+                  ) : availableSessions.length > 0 ? (
+                    <select
+                      value={selectedSession}
+                      onChange={(e) => handleSessionChange(e.target.value)}
+                      className="modern-input select-input"
+                    >
+                      {availableSessions.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-center text-xs text-slate-400 font-bold italic py-2">No published results available</p>
+                  )}
+                  {!loadingTerms && availableSessions.length > 0 && <ChevronDown size={16} className="select-chevron" />}
                 </div>
-                {loadingTerms ? (
-                  <div className="flex justify-center py-2">
-                    <Loader2 size={20} className="animate-spin text-indigo-500" />
-                  </div>
-                ) : availableSessions.length > 0 ? (
-                  <select
-                    value={selectedSession}
-                    onChange={(e) => handleSessionChange(e.target.value)}
-                    className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-slate-200 focus:border-indigo-500 outline-none font-bold text-slate-700 text-center appearance-none cursor-pointer transition-all"
-                  >
-                    {availableSessions.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="text-center text-xs text-slate-400 font-bold italic py-2">No published results available</p>
-                )}
               </div>
 
               {/* Term Selector */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-center gap-2">
-                  <BookOpen size={14} className="text-slate-400" />
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Term / Examination</label>
+              <div className="input-wrapper">
+                <label className="input-label">
+                  <BookOpen size={14} />
+                  Term / Examination
+                </label>
+                <div className="input-container select-container">
+                  {availableTerms.length > 0 ? (
+                    <select
+                      value={selectedTerm}
+                      onChange={(e) => setSelectedTerm(e.target.value)}
+                      className="modern-input select-input"
+                    >
+                      {availableTerms.map(t => (
+                        <option key={t.id} value={t.term}>{t.examName || t.term}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-center text-xs text-slate-400 font-bold italic py-2">Select a session first</p>
+                  )}
+                  {availableTerms.length > 0 && <ChevronDown size={16} className="select-chevron" />}
                 </div>
-                {availableTerms.length > 0 ? (
-                  <select
-                    value={selectedTerm}
-                    onChange={(e) => setSelectedTerm(e.target.value)}
-                    className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-slate-200 focus:border-indigo-500 outline-none font-bold text-slate-700 text-center appearance-none cursor-pointer transition-all"
-                  >
-                    {availableTerms.map(t => (
-                      <option key={t.id} value={t.term}>{t.examName || t.term}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="text-center text-xs text-slate-400 font-bold italic py-2">Select a session first</p>
-                )}
               </div>
 
               {/* Registration Number Field */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-center gap-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Registration ID</label>
-                  <div className="relative group">
+              <div className="input-wrapper">
+                <label className="input-label">
+                  <GraduationCap size={14} />
+                  Registration ID
+                  <div className="relative group inline-block ml-1">
                     <HelpCircle size={14} className="text-slate-300 cursor-help" onMouseEnter={() => setHoveredField('reg')} onMouseLeave={() => setHoveredField(null)} />
                     <AnimatePresence>
                       {hoveredField === 'reg' && (
-                        <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute bottom-full right-0 mb-2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl z-50">
+                        <motion.div 
+                          initial={{ opacity: 0, y: 5 }} 
+                          animate={{ opacity: 1, y: 0 }} 
+                          exit={{ opacity: 0 }} 
+                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl z-50 text-center"
+                        >
                           Enter your unique student ID (e.g., BDS/2024/001)
                         </motion.div>
                       )}
                     </AnimatePresence>
                   </div>
-                </div>
-                <div className="relative group flex justify-center">
+                </label>
+                <div className="input-container">
                   <input 
                     type="text"
                     value={regNo}
                     onChange={(e) => setRegNo(e.target.value)}
                     placeholder="BDS/2024/001"
-                    className="input-premium text-center font-black text-slate-800 placeholder:text-slate-200 placeholder:font-medium w-full"
+                    className="modern-input text-center font-bold"
                     required
                   />
                 </div>
               </div>
 
               {/* Access PIN Field */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-center gap-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Secure Access PIN</label>
-                  <div className="relative group">
+              <div className="input-wrapper">
+                <label className="input-label">
+                  <Key size={14} />
+                  Secure Access PIN
+                  <div className="relative group inline-block ml-1">
                     <HelpCircle size={14} className="text-slate-300 cursor-help" onMouseEnter={() => setHoveredField('pin')} onMouseLeave={() => setHoveredField(null)} />
                     <AnimatePresence>
                       {hoveredField === 'pin' && (
-                        <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute bottom-full right-0 mb-2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl z-50">
+                        <motion.div 
+                          initial={{ opacity: 0, y: 5 }} 
+                          animate={{ opacity: 1, y: 0 }} 
+                          exit={{ opacity: 0 }} 
+                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl z-50 text-center"
+                        >
                           Enter your private 6-digit verification code.
                         </motion.div>
                       )}
                     </AnimatePresence>
                   </div>
-                </div>
-                <div className="flex justify-center gap-3">
+                </label>
+                <div className="pin-inputs">
                   {[0, 1, 2, 3, 4, 5].map((index) => (
                     <input
                       key={index}
@@ -299,7 +307,7 @@ const CheckResult = () => {
                           }, 10);
                         }
                       }}
-                      className="w-12 h-14 text-center font-black text-2xl text-slate-800 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:bg-white outline-none transition-all"
+                      className="pin-digit"
                       required
                     />
                   ))}
@@ -312,32 +320,35 @@ const CheckResult = () => {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-start gap-3"
+                    className="auth-error"
                   >
-                    <AlertCircle size={18} className="text-rose-500 shrink-0 mt-0.5" />
-                    <p className="text-xs font-bold text-rose-600 leading-relaxed">{error}</p>
+                    <AlertCircle size={16} className="shrink-0" />
+                    <span>{error}</span>
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              <button 
+              <motion.button 
                 type="submit"
                 disabled={loading || availableSessions.length === 0}
-                className="btn-glow w-full flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+                className="submit-btn"
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                style={{ background: primaryColor || '#4f46e5' }}
               >
                 {loading ? (
-                  <Loader2 size={24} className="animate-spin" />
+                  <Loader2 size={18} className="spin" />
                 ) : (
                   <>
-                    <span className="text-sm font-black uppercase tracking-widest">Verify &amp; Access</span>
-                    <ArrowRight size={20} />
+                    <span>Verify &amp; Access</span>
+                    <ArrowRight size={16} />
                   </>
                 )}
-              </button>
+              </motion.button>
             </form>
 
-            <div className="mt-10 pt-8 border-t border-slate-50 dark:border-slate-700 text-center">
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-loose">
+            <div className="auth-footer">
+              <p style={{ color: darkMode ? '#64748b' : '#cbd5e1' }}>
                 Confidentiality Notice:<br />
                 Your academic records are protected by end-to-end encryption.
               </p>

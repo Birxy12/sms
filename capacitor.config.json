@@ -4,6 +4,8 @@
   "webDir": "dist",
   "zoomEnabled": true,
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "url": "https://bds-portal.vercel.app",
+    "cleartext": false
   }
 }

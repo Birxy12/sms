@@ -20,7 +20,7 @@ const StaffManagement = () => {
   const [saving, setSaving] = useState(false);
 
   // Advanced admin actions state
-  const [activeDropdownId, setActiveDropdownId] = useState(null);
+  const [activeActionStaff, setActiveActionStaff] = useState(null);
   const [resetPasswordStaff, setResetPasswordStaff] = useState(null);
   const [newPasswordVal, setNewPasswordVal] = useState('');
 
@@ -283,7 +283,11 @@ const StaffManagement = () => {
                   </td>
                 </tr>
               ) : filteredStaff.length > 0 ? filteredStaff.map((person) => (
-                <tr key={person.id} className="hover:bg-slate-50/50 transition-colors group">
+                <tr 
+                  key={person.id} 
+                  onClick={() => isAdmin && setActiveActionStaff(person)}
+                  className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                >
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 overflow-hidden border border-slate-200">
@@ -316,55 +320,13 @@ const StaffManagement = () => {
                     </span>
                   </td>
                   {isAdmin && (
-                    <td className="px-8 py-5 text-right relative">
+                    <td className="px-8 py-5 text-right relative" onClick={(e) => e.stopPropagation()}>
                       <button 
-                        onClick={() => setActiveDropdownId(activeDropdownId === person.id ? null : person.id)}
+                        onClick={() => setActiveActionStaff(person)}
                         className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                       >
                         <MoreVertical size={18} />
                       </button>
-                      {activeDropdownId === person.id && (
-                        <div className="absolute right-8 top-12 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-30 animate-in fade-in slide-in-from-top-2 text-left">
-                          <button 
-                            onClick={() => { 
-                              setIsEditing(true); 
-                              setCurrentStaff(person); 
-                              setShowModal(true); 
-                              setActiveDropdownId(null); 
-                            }}
-                            className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors border-b border-slate-50"
-                          >
-                            <Edit2 size={16} /> Edit Profile
-                          </button>
-                          <button 
-                            onClick={() => { 
-                              openResetPasswordModal(person); 
-                              setActiveDropdownId(null); 
-                            }}
-                            className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors border-b border-slate-50"
-                          >
-                            <Lock size={16} /> Reset Password
-                          </button>
-                          <button 
-                            onClick={() => { 
-                              handleResetPin(person); 
-                              setActiveDropdownId(null); 
-                            }}
-                            className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors border-b border-slate-50"
-                          >
-                            <Key size={16} /> Reset PIN
-                          </button>
-                          <button 
-                            onClick={() => { 
-                              handleDelete(person.id); 
-                              setActiveDropdownId(null); 
-                            }}
-                            className="w-full px-4 py-3 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors"
-                          >
-                            <Trash2 size={16} /> Delete Staff
-                          </button>
-                        </div>
-                      )}
                     </td>
                   )}
                 </tr>
@@ -405,7 +367,7 @@ const StaffManagement = () => {
             <form onSubmit={handleSave} className="p-8 space-y-6 text-left overflow-y-auto flex-1 custom-scrollbar">
               <div className="flex justify-center mb-6">
                 <div className="relative group">
-                  <div className="w-24 h-24 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden group-hover:border-indigo-400 transition-all">
+                  <div className="w-24 h-24 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden group-hover:border-indigo-400 transition-all">
                     {uploadingPhoto ? (
                       <Loader2 className="animate-spin text-indigo-600" />
                     ) : currentStaff.photo ? (
@@ -414,7 +376,7 @@ const StaffManagement = () => {
                       <Camera className="text-slate-400" size={32} />
                     )}
                   </div>
-                  <label className="absolute -bottom-2 -right-2 bg-indigo-600 text-white p-2 rounded-xl cursor-pointer shadow-lg hover:bg-indigo-700 transition-all">
+                  <label className="absolute bottom-0 right-0 bg-indigo-600 text-white p-2 rounded-full cursor-pointer shadow-lg hover:bg-indigo-700 transition-all">
                     <Upload size={16} />
                     <input type="file" accept="image/*" onChange={handlePhotoSelect} className="hidden" />
                   </label>
@@ -582,6 +544,115 @@ const StaffManagement = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Staff Details & Actions Card Modal */}
+      {activeActionStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
+              <h3 className="text-xl font-bold text-slate-900">Staff Member Details</h3>
+              <button 
+                onClick={() => setActiveActionStaff(null)} 
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar text-center">
+              {/* Profile Photo - Circle */}
+              <div className="relative w-28 h-28 mx-auto">
+                <div className="w-28 h-28 rounded-full bg-slate-100 flex items-center justify-center font-extrabold text-slate-600 overflow-hidden border-4 border-indigo-50 shadow-md">
+                  {activeActionStaff.photo ? (
+                    <img src={activeActionStaff.photo} alt={activeActionStaff.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-3xl">{activeActionStaff.name[0]}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Staff Main Info */}
+              <div>
+                <h4 className="text-2xl font-black text-slate-900">{activeActionStaff.name}</h4>
+                <p className="text-sm font-mono text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full inline-block mt-2 font-bold">
+                  {activeActionStaff.staffId}
+                </p>
+              </div>
+
+              {/* Staff Detailed Fields */}
+              <div className="bg-slate-50 rounded-2xl p-5 text-left space-y-4">
+                <div className="flex justify-between items-center text-sm border-b border-slate-200/60 pb-3">
+                  <span className="text-slate-400 font-bold flex items-center gap-2"><Briefcase size={16} /> Department</span>
+                  <span className="font-extrabold text-slate-800">{activeActionStaff.department}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm border-b border-slate-200/60 pb-3">
+                  <span className="text-slate-400 font-bold flex items-center gap-2"><ShieldCheck size={16} /> Role</span>
+                  <span className="font-extrabold text-slate-800 capitalize">{activeActionStaff.role}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm border-b border-slate-200/60 pb-3">
+                  <span className="text-slate-400 font-bold flex items-center gap-2"><Mail size={16} /> Email</span>
+                  <span className="font-extrabold text-slate-800 select-all">{activeActionStaff.email}</span>
+                </div>
+                {activeActionStaff.phone && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-400 font-bold flex items-center gap-2"><Phone size={16} /> Phone</span>
+                    <span className="font-extrabold text-slate-800 select-all">{activeActionStaff.phone}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions Grid */}
+              <div className="space-y-3 pt-2 text-left">
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Administrative Actions</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => { 
+                      setIsEditing(true); 
+                      setCurrentStaff(activeActionStaff); 
+                      setShowModal(true); 
+                      setActiveActionStaff(null); 
+                    }}
+                    className="p-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95"
+                  >
+                    <Edit2 size={20} />
+                    <span className="text-xs">Edit Profile</span>
+                  </button>
+                  <button 
+                    onClick={() => { 
+                      openResetPasswordModal(activeActionStaff); 
+                      setActiveActionStaff(null); 
+                    }}
+                    className="p-4 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95"
+                  >
+                    <Lock size={20} />
+                    <span className="text-xs">Reset Password</span>
+                  </button>
+                  <button 
+                    onClick={() => { 
+                      handleResetPin(activeActionStaff); 
+                      setActiveActionStaff(null); 
+                    }}
+                    className="p-4 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95"
+                  >
+                    <Key size={20} />
+                    <span className="text-xs">Reset PIN</span>
+                  </button>
+                  <button 
+                    onClick={() => { 
+                      handleDelete(activeActionStaff.id); 
+                      setActiveActionStaff(null); 
+                    }}
+                    className="p-4 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 col-span-2"
+                  >
+                    <Trash2 size={20} />
+                    <span className="text-xs">Delete Staff</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

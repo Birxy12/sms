@@ -742,171 +742,171 @@ return (
 );
 }
 
-return (
-<div className="space-y-6 no-print">
-<div className="card-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-<div>
-<h3 className="text-lg font-bold text-slate-800 m-0">Term Reports</h3>
-<p className="text-xs text-slate-500 font-medium">Select a published session to view your report card.</p>
-</div>
-<select
-value={selectedTermId}
-onChange={(e) => setSelectedTermId(e.target.value)}
-className="w-full sm:w-auto px-4 py-3 rounded-xl border-2 border-slate-100 outline-none bg-slate-50 font-black text-slate-700 focus:border-indigo-500 transition-all"
->
-{publishedTerms.map(pub => (
-<option key={pub.id} value={pub.id}>{pub.examName} ({pub.session})</option>
-))}
-</select>
-</div>
+  return (
+    <div className="space-y-6 no-print">
+      <div className="card-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white m-0">Term Reports</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Select a published session to view your report card.</p>
+        </div>
+        <select
+          value={selectedTermId}
+          onChange={(e) => setSelectedTermId(e.target.value)}
+          className="w-full sm:w-auto px-4 py-3 rounded-xl border-2 border-slate-100 dark:border-slate-700 outline-none bg-slate-50 dark:bg-slate-800 font-black text-slate-700 dark:text-slate-200 focus:border-indigo-500 transition-all"
+        >
+          {publishedTerms.map(pub => (
+            <option key={pub.id} value={pub.id}>{pub.examName} ({pub.session})</option>
+          ))}
+        </select>
+      </div>
 
-{!studentMarks ? (
-<div className="card-white" style={{ padding: '40px', textAlign: 'center' }}>
-<div className="w-16 h-16 mx-auto mb-4 bg-amber-50 text-amber-400 rounded-full flex items-center justify-center">
-<AlertCircle size={32} />
-</div>
-<h3 className="text-lg font-bold text-slate-800 mb-2">Scores Not Yet Available</h3>
-<p className="text-slate-500 text-sm">Your subject scores have not been entered for this term yet. Please check back later or contact your class teacher.</p>
-</div>
-) : (
-<div className="card-white overflow-hidden p-0 shadow-lg border-indigo-100 border-t-4">
-<div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center bg-slate-50/50 gap-4">
-<div className="text-center md:text-left">
-<h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">Performance Summary</h3>
-<p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{selectedPub?.examName}</p>
-</div>
-<div className="flex gap-4">
-<div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm text-center">
-<p className="text-[10px] font-black text-slate-500 uppercase">Grand Total</p>
-<p className="text-lg font-black text-indigo-600">{studentMarks.overallTotal}</p>
-</div>
-<div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm text-center">
-<p className="text-[10px] font-black text-slate-500 uppercase">Average</p>
-<p className="text-lg font-black text-emerald-600">{studentMarks.average}%</p>
-</div>
-<div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm text-center">
-<p className="text-[10px] font-black text-slate-500 uppercase">Position</p>
-<p className="text-lg font-black text-amber-600">{classStats.position}</p>
-</div>
-</div>
-</div>
-<div className="overflow-x-auto">
-<table className="w-full text-left border-collapse min-w-[750px]">
-<thead>
-<tr className="bg-white border-b border-slate-200">
-<th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Subject</th>
-<th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">CAT 1 (20)</th>
-<th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">CAT 2 (20)</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Exam (60)</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Total (100)</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Grade</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Remarks</th>
-              </tr>
-</thead>
-<tbody className="divide-y divide-slate-100">
-{studentMarks.subjects.map((sub, idx) => (
-<tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-<td className="px-6 py-4 text-sm font-black text-slate-800">{sub.subject}</td>
-<td className="px-6 py-4 text-sm font-bold text-slate-500 text-center">{sub.cat1}</td>
-<td className="px-6 py-4 text-sm font-bold text-slate-500 text-center">{sub.cat2}</td>
-<td className="px-6 py-4 text-sm font-bold text-slate-500 text-center">{sub.exam}</td>
-<td className="px-6 py-4 text-sm font-black text-slate-900 text-center">
-<div className={`inline-block px-3 py-1 rounded-lg ${sub.total < 40 ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'}`}>
-{sub.total}
-</div>
-</td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl text-sm font-black shadow-sm ${
-                      sub.grade.startsWith('A') ? 'bg-emerald-500 text-white shadow-emerald-200' :
-                      sub.grade.startsWith('B') ? 'bg-indigo-500 text-white shadow-indigo-200' :
-                      sub.grade.startsWith('C') ? 'bg-amber-500 text-white shadow-amber-200' :
-                      'bg-rose-500 text-white shadow-rose-200'
-                    }`}>
-                      {sub.grade}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`text-[10px] font-bold uppercase ${
-                      sub.total >= 50 ? 'text-emerald-600' : 'text-rose-600'
-                    }`}>
-                      {sub.total >= 75 ? 'Excellent' :
-                       sub.total >= 60 ? 'Very Good' :
-                       sub.total >= 50 ? 'Good' :
-                       sub.total >= 40 ? 'Average' : 'Below Average'}
-                    </span>
-                  </td>
-</tr>
-))}
-</tbody>
-</table>
-</div>
-</div>
-)}
-</div>
-);
+      {!studentMarks ? (
+        <div className="card-white" style={{ padding: '40px', textAlign: 'center' }}>
+          <div className="w-16 h-16 mx-auto mb-4 bg-amber-50 dark:bg-amber-950/20 text-amber-400 rounded-full flex items-center justify-center">
+            <AlertCircle size={32} />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Scores Not Yet Available</h3>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Your subject scores have not been entered for this term yet. Please check back later or contact your class teacher.</p>
+        </div>
+      ) : (
+        <div className="card-white overflow-hidden p-0 shadow-lg border-indigo-100 dark:border-indigo-900 border-t-4">
+          <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex flex-col md:flex-row justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 gap-4">
+            <div className="text-center md:text-left">
+              <h3 className="font-black text-slate-800 dark:text-white text-lg uppercase tracking-tight">Performance Summary</h3>
+              <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{selectedPub?.examName}</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 w-full md:w-auto md:flex md:gap-4">
+              <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm text-center">
+                <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase">Grand Total</p>
+                <p className="text-lg font-black text-indigo-600 dark:text-indigo-400">{studentMarks.overallTotal}</p>
+              </div>
+              <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm text-center">
+                <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase">Average</p>
+                <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">{studentMarks.average}%</p>
+              </div>
+              <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm text-center">
+                <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase">Position</p>
+                <p className="text-lg font-black text-amber-600 dark:text-amber-400">{classStats.position}</p>
+              </div>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[750px]">
+              <thead>
+                <tr className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Subject</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">CAT 1 (20)</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">CAT 2 (20)</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Exam (60)</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Total (100)</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Grade</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Remarks</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                {studentMarks.subjects.map((sub, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-700/50 transition-colors">
+                    <td className="px-6 py-4 text-sm font-black text-slate-800 dark:text-slate-100">{sub.subject}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-slate-500 dark:text-slate-300 text-center">{sub.cat1}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-slate-500 dark:text-slate-300 text-center">{sub.cat2}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-slate-500 dark:text-slate-300 text-center">{sub.exam}</td>
+                    <td className="px-6 py-4 text-sm font-black text-slate-900 dark:text-white text-center">
+                      <div className={`inline-block px-3 py-1 rounded-lg ${sub.total < 40 ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400' : 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400'}`}>
+                        {sub.total}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl text-sm font-black shadow-sm ${
+                        sub.grade.startsWith('A') ? 'bg-emerald-500 text-white shadow-emerald-200 dark:shadow-none' :
+                        sub.grade.startsWith('B') ? 'bg-indigo-500 text-white shadow-indigo-200 dark:shadow-none' :
+                        sub.grade.startsWith('C') ? 'bg-amber-500 text-white shadow-amber-200 dark:shadow-none' :
+                        'bg-rose-500 text-white shadow-rose-200 dark:shadow-none'
+                      }`}>
+                        {sub.grade}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`text-[10px] font-bold uppercase ${
+                        sub.total >= 50 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                      }`}>
+                        {sub.total >= 75 ? 'Excellent' :
+                         sub.total >= 60 ? 'Very Good' :
+                         sub.total >= 50 ? 'Good' :
+                         sub.total >= 40 ? 'Average' : 'Below Average'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
 
 return (
-<div className={isPublic ? "min-h-screen bg-slate-50 flex flex-col" : "dashboard-wrapper"}>
-{isPublic && <Navbar />}
+  <div className={isPublic ? `min-h-screen flex flex-col ${darkMode ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-800'} transition-colors duration-300` : "dashboard-wrapper"}>
+    {isPublic && <Navbar />}
 
-<div className={isPublic ? "flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full" : ""}>
-{isPrinting ? (
-renderPrintView()
-) : (
-<>
-{isPublic && (
-<div className="mb-8 flex items-center justify-between no-print">
-<button 
-onClick={() => window.history.back()}
-className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-black text-xs uppercase tracking-widest transition-colors"
->
-<ArrowLeft size={16} /> Back to Search
-</button>
-</div>
-)}
+    <div className={isPublic ? "flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full" : ""}>
+      {isPrinting ? (
+        renderPrintView()
+      ) : (
+        <>
+          {isPublic && (
+            <div className="mb-8 flex items-center justify-between no-print">
+              <button 
+                onClick={() => window.history.back()}
+                className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-black text-xs uppercase tracking-widest transition-colors animate-in fade-in"
+              >
+                <ArrowLeft size={16} /> Back to Search
+              </button>
+            </div>
+          )}
 
-<div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4 no-print">
-<div>
-<h2 style={{ fontWeight: '900', fontSize: '28px', marginBottom: '8px', color: '#1e293b' }}>Report Card</h2>
-<p style={{ color: '#64748b', fontSize: '14px' }}>Official termly academic performance summary.</p>
-</div>
-<div className="flex flex-wrap items-center gap-4 md:gap-8">
-<div className="flex flex-col items-end">
-<div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white shadow-xl bg-slate-50 mb-1">
-{currentStudent?.photo || currentStudent?.photoURL ? (
-<img src={currentStudent.photo || currentStudent.photoURL} alt="Student" className="w-full h-full object-cover" />
-) : (
-<div className="w-full h-full flex items-center justify-center text-slate-300">
-<User size={24} />
-</div>
-)}
-</div>
-<p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{currentStudent?.name}</p>
-</div>
-<div className="flex gap-3">
-<button
-onClick={handlePrint}
-className="flex items-center gap-2 bg-white border-2 border-slate-200 px-5 py-3 rounded-2xl font-black text-slate-700 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
->
-<Printer size={18} /> Print Report Card
-</button>
-<button
-onClick={handleDownloadPDF}
-className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95"
->
-<Download size={18} /> Download PDF
-</button>
-</div>
-</div>
-</div>
-{renderScreenView()}
-</>
-)}
-</div>
-</div>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-6 no-print">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white mb-2">Report Card</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Official termly academic performance summary.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 md:gap-8">
+              <div className="flex flex-col items-end">
+                <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-800 shadow-xl bg-slate-50 dark:bg-slate-800 mb-1">
+                  {currentStudent?.photo || currentStudent?.photoURL ? (
+                    <img src={currentStudent.photo || currentStudent.photoURL} alt="Student" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-600">
+                      <User size={24} />
+                    </div>
+                  )}
+                </div>
+                <p className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{currentStudent?.name}</p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={handlePrint}
+                  className="flex items-center gap-2 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 px-5 py-3 rounded-2xl font-black text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition-all shadow-sm active:scale-95"
+                >
+                  <Printer size={18} /> Print Report Card
+                </button>
+                <button
+                  onClick={handleDownloadPDF}
+                  className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95"
+                >
+                  <Download size={18} /> Download PDF
+                </button>
+              </div>
+            </div>
+          </div>
+          {renderScreenView()}
+        </>
+      )}
+    </div>
+  </div>
 );
 };
 
