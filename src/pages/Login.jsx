@@ -423,7 +423,7 @@ const Login = () => {
           <Lock size={14} />
           Enter 6-Digit PIN
         </label>
-        <div className="pin-inputs">
+        <div className={`pin-inputs ${formData.pin.length === 6 ? 'is-complete' : ''}`}>
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <input
               key={i}
@@ -432,7 +432,7 @@ const Login = () => {
               inputMode="numeric"
               pattern="[0-9]*"
               maxLength={1}
-              className="pin-digit"
+              className={`pin-digit ${formData.pin[i] ? 'has-value' : ''}`}
               value={formData.pin[i] || ''}
               autoFocus={i === 0}
               onChange={(e) => {

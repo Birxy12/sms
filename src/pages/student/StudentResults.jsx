@@ -13,7 +13,7 @@ import Navbar from '../../components/Navbar';
 
 const StudentResults = ({ isPublic }) => {
 const { currentStudent: loggedInStudent, authError, authReady } = useStudentAuth();
-const { schoolName, schoolLogo, primaryColor, principalSignature, principalStamp } = useTheme();
+const { schoolName, schoolLogo, primaryColor, principalSignature, principalStamp, darkMode } = useTheme();
 const printRef = useRef();
 
 const [publishedTerms, setPublishedTerms] = useState([]);

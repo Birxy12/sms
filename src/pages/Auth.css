@@ -644,3 +644,38 @@ body.dark-mode .auth-error {
   border-color: #7f1d1d;
   color: #fca5a5;
 }
+
+/* ─── State-Driven PIN Digits Layout Enhancement ─── */
+.pin-inputs {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pin-digit {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* When the digit has a value inside it */
+.pin-digit.has-value {
+  border-color: #4f46e5;
+  background: #f5f3ff;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+body.dark-mode .pin-digit.has-value {
+  border-color: #818cf8;
+  background: #1e1e38;
+}
+
+/* When the full 6 digits are complete */
+.pin-inputs.is-complete .pin-digit {
+  border-color: #10b981 !important;
+  background: #ecfdf5 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+}
+
+body.dark-mode .pin-inputs.is-complete .pin-digit {
+  border-color: #34d399 !important;
+  background: #064e3b !important;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.15) !important;
+  color: #a7f3d0 !important;
+}

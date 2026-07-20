@@ -273,7 +273,7 @@ const CheckResult = () => {
                     </AnimatePresence>
                   </div>
                 </label>
-                <div className="pin-inputs">
+                <div className={`pin-inputs ${pin.length === 6 ? 'is-complete' : ''}`}>
                   {[0, 1, 2, 3, 4, 5].map((index) => (
                     <input
                       key={index}
@@ -307,7 +307,7 @@ const CheckResult = () => {
                           }, 10);
                         }
                       }}
-                      className="pin-digit"
+                      className={`pin-digit ${pin[index] ? 'has-value' : ''}`}
                       required
                     />
                   ))}
