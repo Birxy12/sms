@@ -191,6 +191,32 @@ const CameraView = ({ onCapture, onSwitchToUpload }) => {
     setCapturing(false);
   }, [capturing, onCapture]);
 
+  const stopCameraStream = useCallback(() => {
+    const video = webcamRef.current?.video;
+    if (!video) return;
+
+    try {
+      video.pause();
+    } catch {
+      // ignore pause errors during unmount
+    }
+
+    if (video.srcObject && typeof video.srcObject.getTracks === 'function') {
+      video.srcObject.getTracks().forEach((track) => track.stop());
+    }
+
+    if (video.srcObject) {
+      video.srcObject = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopCameraStream();
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, [stopCameraStream]);
+
   return (
     <div className="camera-view">
       <div className="camera-header">
@@ -198,7 +224,14 @@ const CameraView = ({ onCapture, onSwitchToUpload }) => {
           <ScanLine size={18} />
           <span>Scan Receipt</span>
         </div>
-        <button onClick={onSwitchToUpload} className="close-btn" aria-label="Close camera">
+        <button
+          onClick={() => {
+            stopCameraStream();
+            onSwitchToUpload();
+          }}
+          className="close-btn"
+          aria-label="Close camera"
+        >
           <X size={22} />
         </button>
       </div>
@@ -206,6 +239,8 @@ const CameraView = ({ onCapture, onSwitchToUpload }) => {
       <div className="webcam-container">
         <Webcam
           audio={false}
+          muted
+          playsInline
           ref={webcamRef}
           screenshotFormat="image/jpeg"
           screenshotQuality={0.92}
