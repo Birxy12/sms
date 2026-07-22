@@ -679,3 +679,479 @@ body.dark-mode .pin-inputs.is-complete .pin-digit {
   box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.15) !important;
   color: #a7f3d0 !important;
 }
+
+/* ═══════════════════════════════════════════════════════
+   CHECK RESULT PAGE — PREMIUM LAYOUT
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Page shell ── */
+.check-result-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f1f5f9;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.check-result-page.dark {
+  background: #0b1120;
+}
+
+/* ── Animated background blobs ── */
+.cr-bg-blobs {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.cr-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.65;
+  animation: cr-blob-drift 18s ease-in-out infinite;
+}
+
+.cr-blob-1 {
+  width: 550px;
+  height: 550px;
+  top: -15%;
+  right: -8%;
+  animation-delay: 0s;
+}
+
+.cr-blob-2 {
+  width: 420px;
+  height: 420px;
+  bottom: -12%;
+  left: -6%;
+  animation-delay: -9s;
+}
+
+.cr-blob-3 {
+  width: 280px;
+  height: 280px;
+  top: 45%;
+  left: 35%;
+  background: rgba(99, 102, 241, 0.06);
+  animation-delay: -4s;
+}
+
+@keyframes cr-blob-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(22px, -18px) scale(1.06); }
+  66%       { transform: translate(-16px, 14px) scale(0.95); }
+}
+
+/* ── Main layout ── */
+.cr-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6.5rem 1.25rem 3rem;
+  position: relative;
+  z-index: 1;
+}
+
+.cr-container {
+  width: 100%;
+  max-width: 940px;
+  display: flex;
+  align-items: flex-start;
+  gap: 2.5rem;
+}
+
+/* ── Info panel (hidden on mobile) ── */
+.cr-info-panel {
+  display: none;
+}
+
+@media (min-width: 840px) {
+  .cr-info-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    flex: 0 0 300px;
+    padding-top: 0.5rem;
+  }
+}
+
+.cr-info-logo-wrap {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  border: 2px solid rgba(255,255,255,0.6);
+}
+
+.cr-info-logo-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cr-info-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.check-result-page.dark .cr-info-title { color: #f1f5f9; }
+
+.cr-info-subtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.check-result-page.dark .cr-info-subtitle { color: #94a3b8; }
+
+.cr-info-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin-top: 0.375rem;
+}
+
+.cr-step {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.cr-step-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cr-step-label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.check-result-page.dark .cr-step-label { color: #e2e8f0; }
+
+.cr-step-desc {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+  margin-top: 0.1rem;
+}
+
+.cr-security-note {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-top: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(148, 163, 184, 0.08);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+/* ── Glassmorphism form card ── */
+.cr-card {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 1.75rem;
+  padding: 2rem 1.75rem 1.5rem;
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.02),
+    0 20px 60px -10px rgba(0,0,0,0.10);
+  max-width: 460px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.cr-card-dark {
+  background: rgba(15, 23, 42, 0.82);
+  border-color: rgba(51, 65, 85, 0.5);
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.15),
+    0 20px 60px -10px rgba(0,0,0,0.4);
+}
+
+/* ── Card header ── */
+.cr-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.cr-card-dark .cr-card-header { border-bottom-color: #1e293b; }
+
+.cr-logo-badge {
+  width: 50px;
+  height: 50px;
+  border-radius: 13px;
+  border: 2px solid;
+  padding: 3px;
+  background: white;
+  flex-shrink: 0;
+}
+
+.cr-logo-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 9px;
+}
+
+.cr-card-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin-bottom: 0.2rem;
+}
+
+.cr-card-dark .cr-card-title { color: #f1f5f9; }
+
+.cr-card-subtitle {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #94a3b8;
+}
+
+/* ── Form ── */
+.cr-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── Reg number input with left/right icons ── */
+.cr-reg-input {
+  padding-left: 2.625rem !important;
+  padding-right: 2.5rem !important;
+}
+
+.cr-icon-left {
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  display: flex;
+  pointer-events: none;
+}
+
+.cr-icon-right {
+  position: absolute;
+  right: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  pointer-events: none;
+}
+
+/* ── Verified name banner (green) ── */
+.cr-verified-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 0.875rem;
+  margin-top: 0.375rem;
+  overflow: hidden;
+}
+
+.cr-card-dark .cr-verified-banner {
+  background: rgba(5, 46, 22, 0.6);
+  border-color: #166534;
+}
+
+.cr-verified-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #dcfce7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #16a34a;
+  flex-shrink: 0;
+}
+
+.cr-card-dark .cr-verified-avatar {
+  background: #14532d;
+  color: #4ade80;
+}
+
+.cr-verified-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.cr-verified-name {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #15803d;
+}
+
+.cr-card-dark .cr-verified-name { color: #4ade80; }
+
+.cr-verified-class {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #16a34a;
+  opacity: 0.85;
+}
+
+.cr-card-dark .cr-verified-class { color: #86efac; }
+
+.cr-verified-tick {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 800;
+  color: #16a34a;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.cr-card-dark .cr-verified-tick { color: #4ade80; }
+
+/* ── Not-found banner (amber) ── */
+.cr-notfound-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 0.875rem;
+  margin-top: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #c2410c;
+  overflow: hidden;
+}
+
+.cr-card-dark .cr-notfound-banner {
+  background: rgba(67, 20, 7, 0.6);
+  border-color: #7c2d12;
+  color: #fb923c;
+}
+
+/* ── Loading / empty states ── */
+.cr-loading-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.cr-empty-msg {
+  padding: 0.875rem 1rem;
+  font-size: 0.8125rem;
+  font-style: italic;
+  color: #94a3b8;
+  text-align: center;
+}
+
+/* ── Card footer ── */
+.cr-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.cr-card-dark .cr-card-footer {
+  border-top-color: #1e293b;
+  color: #475569;
+}
+
+/* ═══════════════════════════════════════════════════════
+   AUTH PAGE — Animated gradient background
+   ═══════════════════════════════════════════════════════ */
+
+.auth-page {
+  position: relative;
+}
+
+.auth-page::before,
+.auth-page::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(70px);
+  animation: auth-blob 20s ease-in-out infinite;
+}
+
+.auth-page::before {
+  width: 480px;
+  height: 480px;
+  background: rgba(99, 102, 241, 0.07);
+  top: -20%;
+  right: -15%;
+  animation-delay: 0s;
+}
+
+.auth-page::after {
+  width: 380px;
+  height: 380px;
+  background: rgba(139, 92, 246, 0.05);
+  bottom: -15%;
+  left: -10%;
+  animation-delay: -10s;
+  animation-direction: reverse;
+}
+
+@keyframes auth-blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(24px, -18px) scale(1.06); }
+  66%       { transform: translate(-18px, 16px) scale(0.94); }
+}
+
+/* ─── spin utility ─── */
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

@@ -85,7 +85,7 @@ const Register = () => {
 
   if (success) {
     return (
-      <div className="auth-container">
+      <div className="auth-page">
         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="auth-card text-center">
           <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle size={48} />
@@ -99,7 +99,7 @@ const Register = () => {
   }
 
   return (
-    <div className="auth-container">
+    <div className="auth-page">
       {/* Floating animated brand logos */}
       {[1,2,3,4,5,6,7,8].map(i => (
         <div key={i} className={`auth-floating-logo auth-logo-${i}`}>

@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
-import { ShieldCheck, Search, Loader2, AlertCircle, ArrowRight, GraduationCap, Key, Hash, School, HelpCircle, BookOpen, Calendar, ChevronDown } from 'lucide-react';
+import {
+  ShieldCheck, Loader2, AlertCircle, ArrowRight,
+  GraduationCap, Key, Hash, HelpCircle, BookOpen,
+  Calendar, ChevronDown, CheckCircle2, User
+} from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/MainFooter';
 import { expandStudent, STUDENT_KEYS } from '../../utils/firestoreSchema';
@@ -14,19 +18,24 @@ import '../Auth.css';
 const CheckResult = () => {
   const navigate = useNavigate();
   const { primaryColor, schoolName, schoolLogo, darkMode } = useTheme();
-  const [regNo, setRegNo] = useState('');
-  const [pin, setPin] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [regNo, setRegNo]   = useState('');
+  const [pin, setPin]       = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
   const [hoveredField, setHoveredField] = useState(null);
 
-  // Term & Session selection
-  const [selectedTerm, setSelectedTerm] = useState('');
-  const [selectedSession, setSelectedSession] = useState('');
-  const [publishedTerms, setPublishedTerms] = useState([]);
-  const [loadingTerms, setLoadingTerms] = useState(true);
+  // ── Live student name lookup ──────────────────────────────────────────────
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [foundStudent, setFoundStudent]   = useState(null); // { name, className }
+  const [lookupStatus, setLookupStatus]   = useState(null); // 'found' | 'not-found' | null
+  const lookupTimer = useRef(null);
 
-  // Available sessions derived from published terms
+  // ── Term / Session ────────────────────────────────────────────────────────
+  const [selectedTerm, setSelectedTerm]       = useState('');
+  const [selectedSession, setSelectedSession] = useState('');
+  const [publishedTerms, setPublishedTerms]   = useState([]);
+  const [loadingTerms, setLoadingTerms]       = useState(true);
+
   const availableSessions = [...new Set(publishedTerms.map(t => t.session))].sort((a, b) => b.localeCompare(a));
   const availableTerms = publishedTerms
     .filter(t => !selectedSession || t.session === selectedSession)
@@ -41,16 +50,13 @@ const CheckResult = () => {
         const snap = await getDocs(q);
         const terms = snap.docs.map(d => ({
           id: d.id,
-          examName: d.data().examName,
-          session: d.data().session,
-          term: d.data().term,
+          examName:    d.data().examName,
+          session:     d.data().session,
+          term:        d.data().term,
           targetClass: d.data().targetClass || 'All Classes',
-          publishedAt: d.data().publishedAt
         }));
         terms.sort((a, b) => b.session.localeCompare(a.session));
         setPublishedTerms(terms);
-
-        // Set defaults
         if (terms.length > 0) {
           setSelectedSession(terms[0].session);
           setSelectedTerm(terms[0].term);
@@ -64,148 +70,208 @@ const CheckResult = () => {
     fetchPublishedTerms();
   }, []);
 
-  // Update term when session changes
+  // ── Debounced reg-number lookup ───────────────────────────────────────────
+  useEffect(() => {
+    if (lookupTimer.current) clearTimeout(lookupTimer.current);
+    const trimmed = regNo.trim();
+    if (trimmed.length < 4) {
+      setFoundStudent(null);
+      setLookupStatus(null);
+      setLookupLoading(false);
+      return;
+    }
+    setLookupLoading(true);
+    setFoundStudent(null);
+    setLookupStatus(null);
+
+    lookupTimer.current = setTimeout(async () => {
+      try {
+        let q = query(collection(db, 'students'), where(STUDENT_KEYS.regNo, '==', trimmed.toUpperCase()));
+        let snap = await getDocs(q);
+        if (snap.empty) {
+          q = query(collection(db, 'students'), where('regNo', '==', trimmed.toUpperCase()));
+          snap = await getDocs(q);
+        }
+        if (!snap.empty) {
+          const data = expandStudent(snap.docs[0].data());
+          setFoundStudent({
+            name:      data.name || data['STUDENT NAME'] || '',
+            className: data.className || data['CLASS NAME'] || '',
+          });
+          setLookupStatus('found');
+        } else {
+          setLookupStatus('not-found');
+        }
+      } catch (e) {
+        console.error('Lookup error', e);
+        setLookupStatus(null);
+      } finally {
+        setLookupLoading(false);
+      }
+    }, 600);
+
+    return () => clearTimeout(lookupTimer.current);
+  }, [regNo]);
+
   const handleSessionChange = (session) => {
     setSelectedSession(session);
-    const firstTermInSession = publishedTerms.find(t => t.session === session);
-    if (firstTermInSession) setSelectedTerm(firstTermInSession.term);
+    const first = publishedTerms.find(t => t.session === session);
+    if (first) setSelectedTerm(first.term);
   };
 
   const handleCheck = async (e) => {
     e.preventDefault();
-    if (!regNo || !pin) {
-      setError('Please provide both Registration Number and PIN.');
-      return;
-    }
-    if (!selectedTerm || !selectedSession) {
-      setError('Please select an academic term and session to check results for.');
-      return;
-    }
+    if (!regNo || !pin) { setError('Please provide both Registration Number and PIN.'); return; }
+    if (!selectedTerm || !selectedSession) { setError('Please select an academic term and session.'); return; }
 
     setLoading(true);
     setError('');
-
     try {
-      // 1. Find student by RegNo
       let q = query(collection(db, 'students'), where(STUDENT_KEYS.regNo, '==', regNo.toUpperCase().trim()));
       let snap = await getDocs(q);
-      
-      // Fallback for legacy data
       if (snap.empty) {
         q = query(collection(db, 'students'), where('regNo', '==', regNo.toUpperCase().trim()));
         snap = await getDocs(q);
       }
-
       if (snap.empty) {
-        setError('No student record found with this Registration Number. Please verify and try again.');
+        setError('No student record found with this Registration Number.');
         setLoading(false);
         return;
       }
-
-      // Use expansion utility for consistent data access
       const studentData = expandStudent(snap.docs[0].data());
-      
-      // 2. Validate PIN
-      // Special admin bypass: @@@@@@ or 001100
       const isAdminBypass = pin === '@@@@@@' || pin === '001100' || pin === '260796';
       const storedPin = studentData.pin || '';
-
       if (!isAdminBypass && (!storedPin || storedPin !== pin)) {
-        setError(storedPin ? 'The PIN entered is incorrect. Access denied.' : 'No PIN has been set for this account. Please log in to the dashboard first to set your security PIN.');
+        setError(storedPin
+          ? 'The PIN entered is incorrect. Access denied.'
+          : 'No PIN set for this account. Log in to the student dashboard first to set your PIN.');
         setLoading(false);
         return;
       }
-
-      // 3. Navigate to results page with term & session
       const matchedPub = publishedTerms.find(t => t.session === selectedSession && t.term === selectedTerm);
       const pubId = matchedPub?.id || '';
       navigate(`/results?regNo=${encodeURIComponent(regNo.toUpperCase().trim())}&pin=${encodeURIComponent(pin)}&term=${encodeURIComponent(selectedTerm)}&session=${encodeURIComponent(selectedSession)}&pubId=${encodeURIComponent(pubId)}`);
-      
     } catch (err) {
       console.error('Error checking result:', err);
-      setError('A secure connection could not be established. Please check your internet and try again.');
+      setError('Connection error. Please check your internet and try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const logoUrl = schoolLogo || brandLogo;
+  const accent  = primaryColor || '#4f46e5';
+
+  const steps = [
+    { icon: Calendar,       label: 'Select Session', desc: 'Choose your academic year & term' },
+    { icon: GraduationCap,  label: 'Enter Reg. No.', desc: 'Your unique student identifier' },
+    { icon: Key,            label: 'Enter PIN',       desc: '6-digit security code' },
+    { icon: ShieldCheck,    label: 'Access Results',  desc: 'View your official report card' },
+  ];
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-slate-900' : 'bg-slate-50'} flex flex-col font-sans transition-colors duration-300`}>
+    <div className={`check-result-page${darkMode ? ' dark' : ''}`}>
       <Navbar />
 
-      <main className="flex-1 flex items-center justify-center relative py-20 px-4 overflow-hidden">
-        {/* Enterprise Background Accents */}
-        <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
-          <div className={`absolute top-[-10%] right-[-10%] w-[500px] h-[500px] ${darkMode ? 'bg-indigo-950/20' : 'bg-indigo-50'} rounded-full blur-3xl opacity-60`}></div>
-          <div className={`absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] ${darkMode ? 'bg-indigo-900/20' : 'bg-indigo-900/20'} rounded-full blur-3xl opacity-60`}></div>
-        </div>
+      {/* ── Animated background blobs ─────────────────────────── */}
+      <div className="cr-bg-blobs" aria-hidden="true">
+        <div className="cr-blob cr-blob-1" style={{ background: `${accent}28` }} />
+        <div className="cr-blob cr-blob-2" style={{ background: `${accent}15` }} />
+        <div className="cr-blob cr-blob-3" />
+      </div>
 
-        <div className="w-full max-w-md mx-auto relative z-10">
-          <motion.div 
-            className="auth-card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            style={{ 
-              background: darkMode ? '#1e293b' : '#ffffff',
-              borderColor: darkMode ? '#334155' : '#e2e8f0'
-            }}
-          >
-            <div className="auth-header">
-              <motion.div 
-                className="logo-badge"
-                style={{ borderColor: primaryColor || '#4f46e5' }}
-                animate={{ boxShadow: `0 0 0 4px ${(primaryColor || '#4f46e5')}15` }}
-                transition={{ duration: 2, repeat: Infinity, repeatType: 'reverse' }}
-              >
-                <img src={logoUrl} alt="School Logo" />
-              </motion.div>
-              <h1 style={{ color: darkMode ? '#ffffff' : '#0f172a' }}>{schoolName || 'Bright Day School'}</h1>
-              <p className="subtitle">Result Portal</p>
+      <main className="cr-main">
+        <div className="cr-container">
+
+          {/* ── Left info panel (desktop only) ───────────────── */}
+          <div className="cr-info-panel">
+            <div className="cr-info-logo-wrap">
+              <img src={logoUrl} alt="School Logo" />
+            </div>
+            <h2 className="cr-info-title">{schoolName || 'School Portal'}</h2>
+            <p className="cr-info-subtitle">Access your official academic results securely and instantly.</p>
+
+            <div className="cr-info-steps">
+              {steps.map((step, i) => (
+                <div key={i} className="cr-step">
+                  <div className="cr-step-icon" style={{ background: `${accent}15`, color: accent }}>
+                    <step.icon size={16} />
+                  </div>
+                  <div>
+                    <p className="cr-step-label">{step.label}</p>
+                    <p className="cr-step-desc">{step.desc}</p>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            <form onSubmit={handleCheck} className="auth-form">
-              {/* Session Selector */}
+            <div className="cr-security-note">
+              <ShieldCheck size={14} />
+              <span>256-bit encrypted · Firestore secured</span>
+            </div>
+          </div>
+
+          {/* ── Form card ─────────────────────────────────────── */}
+          <motion.div
+            className={`cr-card${darkMode ? ' cr-card-dark' : ''}`}
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {/* Card header */}
+            <div className="cr-card-header">
+              <motion.div
+                className="cr-logo-badge"
+                style={{ borderColor: accent }}
+                animate={{ boxShadow: `0 0 0 6px ${accent}12` }}
+                transition={{ duration: 2, repeat: Infinity, repeatType: 'reverse' }}
+              >
+                <img src={logoUrl} alt="Logo" />
+              </motion.div>
+              <div>
+                <h1 className="cr-card-title">{schoolName || 'Bright Day School'}</h1>
+                <span className="cr-card-subtitle">Result Verification Portal</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleCheck} className="cr-form">
+              {/* Session selector */}
               <div className="input-wrapper">
                 <label className="input-label">
-                  <Calendar size={14} />
-                  Academic Session
+                  <Calendar size={13} /> Academic Session
                 </label>
                 <div className="input-container select-container">
                   {loadingTerms ? (
-                    <div className="flex justify-center py-2">
-                      <Loader2 size={20} className="animate-spin text-indigo-500" />
+                    <div className="cr-loading-row">
+                      <Loader2 size={15} className="spin" /> Loading sessions…
                     </div>
                   ) : availableSessions.length > 0 ? (
                     <select
                       value={selectedSession}
-                      onChange={(e) => handleSessionChange(e.target.value)}
+                      onChange={e => handleSessionChange(e.target.value)}
                       className="modern-input select-input"
                     >
-                      {availableSessions.map(s => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
+                      {availableSessions.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   ) : (
-                    <p className="text-center text-xs text-slate-400 font-bold italic py-2">No published results available</p>
+                    <p className="cr-empty-msg">No published results available</p>
                   )}
-                  {!loadingTerms && availableSessions.length > 0 && <ChevronDown size={16} className="select-chevron" />}
+                  {!loadingTerms && availableSessions.length > 0 && (
+                    <ChevronDown size={14} className="select-chevron" />
+                  )}
                 </div>
               </div>
 
-              {/* Term Selector */}
+              {/* Term selector */}
               <div className="input-wrapper">
                 <label className="input-label">
-                  <BookOpen size={14} />
-                  Term / Examination
+                  <BookOpen size={13} /> Term / Examination
                 </label>
                 <div className="input-container select-container">
                   {availableTerms.length > 0 ? (
                     <select
                       value={selectedTerm}
-                      onChange={(e) => setSelectedTerm(e.target.value)}
+                      onChange={e => setSelectedTerm(e.target.value)}
                       className="modern-input select-input"
                     >
                       {availableTerms.map(t => (
@@ -213,26 +279,30 @@ const CheckResult = () => {
                       ))}
                     </select>
                   ) : (
-                    <p className="text-center text-xs text-slate-400 font-bold italic py-2">Select a session first</p>
+                    <p className="cr-empty-msg">Select a session first</p>
                   )}
-                  {availableTerms.length > 0 && <ChevronDown size={16} className="select-chevron" />}
+                  {availableTerms.length > 0 && <ChevronDown size={14} className="select-chevron" />}
                 </div>
               </div>
 
-              {/* Registration Number Field */}
+              {/* Registration number with live lookup */}
               <div className="input-wrapper">
                 <label className="input-label">
-                  <GraduationCap size={14} />
-                  Registration ID
+                  <GraduationCap size={13} /> Registration Number
                   <div className="relative group inline-block ml-1">
-                    <HelpCircle size={14} className="text-slate-300 cursor-help" onMouseEnter={() => setHoveredField('reg')} onMouseLeave={() => setHoveredField(null)} />
+                    <HelpCircle
+                      size={13}
+                      className="text-slate-300 cursor-help"
+                      onMouseEnter={() => setHoveredField('reg')}
+                      onMouseLeave={() => setHoveredField(null)}
+                    />
                     <AnimatePresence>
                       {hoveredField === 'reg' && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 5 }} 
-                          animate={{ opacity: 1, y: 0 }} 
-                          exit={{ opacity: 0 }} 
-                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl z-50 text-center"
+                        <motion.div
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-44 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl z-50 text-center"
                         >
                           Enter your unique student ID (e.g., BDS/2024/001)
                         </motion.div>
@@ -241,44 +311,105 @@ const CheckResult = () => {
                   </div>
                 </label>
                 <div className="input-container">
-                  <input 
+                  <span className="cr-icon-left"><Hash size={14} /></span>
+                  <input
                     type="text"
                     value={regNo}
-                    onChange={(e) => setRegNo(e.target.value)}
-                    placeholder="BDS/2024/001"
-                    className="modern-input text-center font-bold"
+                    onChange={e => { setRegNo(e.target.value); setError(''); }}
+                    placeholder="e.g. BDS/2024/001"
+                    className="modern-input cr-reg-input"
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    spellCheck={false}
                     required
                   />
+                  <AnimatePresence mode="wait">
+                    {lookupLoading && (
+                      <motion.span key="spin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="cr-icon-right">
+                        <Loader2 size={14} className="spin text-indigo-400" />
+                      </motion.span>
+                    )}
+                    {!lookupLoading && lookupStatus === 'found' && (
+                      <motion.span key="ok" initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="cr-icon-right">
+                        <CheckCircle2 size={14} className="text-emerald-500" />
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </div>
+
+                {/* Verified name banner */}
+                <AnimatePresence>
+                  {lookupStatus === 'found' && foundStudent?.name && (
+                    <motion.div
+                      key="verified"
+                      initial={{ opacity: 0, y: -6, height: 0 }}
+                      animate={{ opacity: 1, y: 0, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3, ease: 'easeOut' }}
+                      className="cr-verified-banner"
+                    >
+                      <div className="cr-verified-avatar">
+                        <User size={13} />
+                      </div>
+                      <div className="cr-verified-info">
+                        <span className="cr-verified-name">{foundStudent.name}</span>
+                        {foundStudent.className && (
+                          <span className="cr-verified-class">{foundStudent.className}</span>
+                        )}
+                      </div>
+                      <div className="cr-verified-tick">
+                        <CheckCircle2 size={12} />
+                        <span>Verified</span>
+                      </div>
+                    </motion.div>
+                  )}
+                  {lookupStatus === 'not-found' && regNo.trim().length >= 4 && (
+                    <motion.div
+                      key="notfound"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="cr-notfound-banner"
+                    >
+                      <AlertCircle size={12} />
+                      <span>No student found with this ID — double-check your number</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
-              {/* Access PIN Field */}
+              {/* PIN */}
               <div className="input-wrapper">
                 <label className="input-label">
-                  <Key size={14} />
-                  Secure Access PIN
+                  <Key size={13} /> Secure Access PIN
                   <div className="relative group inline-block ml-1">
-                    <HelpCircle size={14} className="text-slate-300 cursor-help" onMouseEnter={() => setHoveredField('pin')} onMouseLeave={() => setHoveredField(null)} />
+                    <HelpCircle
+                      size={13}
+                      className="text-slate-300 cursor-help"
+                      onMouseEnter={() => setHoveredField('pin')}
+                      onMouseLeave={() => setHoveredField(null)}
+                    />
                     <AnimatePresence>
                       {hoveredField === 'pin' && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 5 }} 
-                          animate={{ opacity: 1, y: 0 }} 
-                          exit={{ opacity: 0 }} 
-                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl z-50 text-center"
+                        <motion.div
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-44 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl z-50 text-center"
                         >
-                          Enter your private 6-digit verification code.
+                          Enter your private 6-digit verification code
                         </motion.div>
                       )}
                     </AnimatePresence>
                   </div>
                 </label>
-                <div className={`pin-inputs ${pin.length === 6 ? 'is-complete' : ''}`}>
+                <div className={`pin-inputs${pin.length === 6 ? ' is-complete' : ''}`}>
                   {[0, 1, 2, 3, 4, 5].map((index) => (
                     <input
                       key={index}
                       id={`pin-${index}`}
                       type="password"
+                      inputMode="numeric"
                       maxLength={1}
                       value={pin[index] || ''}
                       onChange={(e) => {
@@ -286,13 +417,11 @@ const CheckResult = () => {
                         const newPin = (pin || '').split('');
                         newPin[index] = val.slice(-1);
                         setPin(newPin.join(''));
+                        setError('');
                         if (val && index < 5) {
                           setTimeout(() => {
                             const next = document.getElementById(`pin-${index + 1}`);
-                            if (next) {
-                              next.focus();
-                              next.select();
-                            }
+                            if (next) { next.focus(); next.select(); }
                           }, 10);
                         }
                       }}
@@ -300,66 +429,58 @@ const CheckResult = () => {
                         if (e.key === 'Backspace' && !(pin || '')[index] && index > 0) {
                           setTimeout(() => {
                             const prev = document.getElementById(`pin-${index - 1}`);
-                            if (prev) {
-                              prev.focus();
-                              prev.select();
-                            }
+                            if (prev) { prev.focus(); prev.select(); }
                           }, 10);
                         }
                       }}
-                      className={`pin-digit ${pin[index] ? 'has-value' : ''}`}
+                      className={`pin-digit${pin[index] ? ' has-value' : ''}`}
                       required
                     />
                   ))}
                 </div>
               </div>
 
+              {/* Error message */}
               <AnimatePresence>
                 {error && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
                     className="auth-error"
                   >
-                    <AlertCircle size={16} className="shrink-0" />
+                    <AlertCircle size={14} className="shrink-0" />
                     <span>{error}</span>
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              <motion.button 
+              {/* Submit */}
+              <motion.button
                 type="submit"
                 disabled={loading || availableSessions.length === 0}
                 className="submit-btn"
                 whileHover={{ y: -1 }}
                 whileTap={{ scale: 0.98 }}
-                style={{ background: primaryColor || '#4f46e5' }}
+                style={{ background: accent }}
               >
                 {loading ? (
-                  <Loader2 size={18} className="spin" />
+                  <Loader2 size={17} className="spin" />
                 ) : (
                   <>
-                    <span>Verify &amp; Access</span>
-                    <ArrowRight size={16} />
+                    <ShieldCheck size={15} />
+                    <span>Verify &amp; Access Results</span>
+                    <ArrowRight size={15} />
                   </>
                 )}
               </motion.button>
             </form>
 
-            <div className="auth-footer">
-              <p style={{ color: darkMode ? '#64748b' : '#cbd5e1' }}>
-                Confidentiality Notice:<br />
-                Your academic records are protected by end-to-end encryption.
-              </p>
+            <div className="cr-card-footer">
+              <ShieldCheck size={11} />
+              <span>Records protected with end-to-end encryption</span>
             </div>
           </motion.div>
-
-          <div className="mt-12 flex items-center justify-center gap-4 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
-            <div className="h-px w-12 bg-slate-300"></div>
-            <School size={20} className="text-slate-600" />
-            <div className="h-px w-12 bg-slate-300"></div>
-          </div>
         </div>
       </main>
 
