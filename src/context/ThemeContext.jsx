@@ -33,6 +33,16 @@ export const ThemeProvider = ({ children }) => {
   const [bursarSignature, setBursarSignature] = useState(null);
   const [bursarStamp, setBursarStamp] = useState(null);
   const [currentSession, setCurrentSession] = useState('2025/2026');
+  const [cat1Limit, setCat1Limit] = useState(20);
+  const [cat2Limit, setCat2Limit] = useState(20);
+  const [examLimit, setExamLimit] = useState(60);
+  const [currentTerm, setCurrentTerm] = useState('1st Term');
+  const [termStartDate, setTermStartDate] = useState('');
+  const [termEndDate, setTermEndDate] = useState('');
+  const [nextTermBeginsDate, setNextTermBeginsDate] = useState('');
+  const [promotionPassMark, setPromotionPassMark] = useState(45);
+  const [autoCommentsEnabled, setAutoCommentsEnabled] = useState(true);
+  const [commentTemplates, setCommentTemplates] = useState(null);
   const [whiteColor] = useState('#ffffff');
   const [loading, setLoading] = useState(true);
 
@@ -94,6 +104,16 @@ export const ThemeProvider = ({ children }) => {
               if (data.bursarSignature) setBursarSignature(data.bursarSignature);
               if (data.bursarStamp) setBursarStamp(data.bursarStamp);
               if (data.currentSession) setCurrentSession(data.currentSession);
+              if (data.cat1Limit !== undefined) setCat1Limit(Number(data.cat1Limit));
+              if (data.cat2Limit !== undefined) setCat2Limit(Number(data.cat2Limit));
+              if (data.examLimit !== undefined) setExamLimit(Number(data.examLimit));
+              if (data.currentTerm) setCurrentTerm(data.currentTerm);
+              if (data.termStartDate) setTermStartDate(data.termStartDate);
+              if (data.termEndDate) setTermEndDate(data.termEndDate);
+              if (data.nextTermBeginsDate) setNextTermBeginsDate(data.nextTermBeginsDate);
+              if (data.promotionPassMark !== undefined) setPromotionPassMark(Number(data.promotionPassMark));
+              if (data.autoCommentsEnabled !== undefined) setAutoCommentsEnabled(data.autoCommentsEnabled);
+              if (data.commentTemplates) setCommentTemplates(data.commentTemplates);
             }
           } catch (e) {
             console.warn('Could not load branding from Firestore. Using local defaults.', e.code || e.message);
@@ -136,7 +156,9 @@ export const ThemeProvider = ({ children }) => {
           schoolName, primaryColor, secondaryColor, schoolLogo,
           navbarBg, footerBg, navbarTextColor, footerTextColor,
           principalSignature, principalStamp, bursarSignature, bursarStamp,
-          currentSession,
+          currentSession, cat1Limit, cat2Limit, examLimit,
+          currentTerm, termStartDate, termEndDate, nextTermBeginsDate,
+          promotionPassMark, autoCommentsEnabled, commentTemplates,
           lastUpdated: new Date().toISOString()
         });
       } catch (e) {
@@ -146,7 +168,7 @@ export const ThemeProvider = ({ children }) => {
     };
 
     persistBranding();
-  }, [schoolName, primaryColor, secondaryColor, schoolLogo, navbarBg, footerBg, navbarTextColor, footerTextColor, principalSignature, principalStamp, bursarSignature, bursarStamp, currentSession, loading]);
+  }, [schoolName, primaryColor, secondaryColor, schoolLogo, navbarBg, footerBg, navbarTextColor, footerTextColor, principalSignature, principalStamp, bursarSignature, bursarStamp, currentSession, cat1Limit, cat2Limit, examLimit, currentTerm, termStartDate, termEndDate, nextTermBeginsDate, promotionPassMark, autoCommentsEnabled, commentTemplates, loading]);
 
   // Wrapped setters that mark the state as user-edited before updating
   const handleSet = (setter) => (value) => {
@@ -187,6 +209,16 @@ export const ThemeProvider = ({ children }) => {
       bursarSignature, setBursarSignature: handleSet(setBursarSignature),
       bursarStamp, setBursarStamp: handleSet(setBursarStamp),
       currentSession, setCurrentSession: handleSet(setCurrentSession),
+      cat1Limit, setCat1Limit: handleSet(setCat1Limit),
+      cat2Limit, setCat2Limit: handleSet(setCat2Limit),
+      examLimit, setExamLimit: handleSet(setExamLimit),
+      currentTerm, setCurrentTerm: handleSet(setCurrentTerm),
+      termStartDate, setTermStartDate: handleSet(setTermStartDate),
+      termEndDate, setTermEndDate: handleSet(setTermEndDate),
+      nextTermBeginsDate, setNextTermBeginsDate: handleSet(setNextTermBeginsDate),
+      promotionPassMark, setPromotionPassMark: handleSet(setPromotionPassMark),
+      autoCommentsEnabled, setAutoCommentsEnabled: handleSet(setAutoCommentsEnabled),
+      commentTemplates, setCommentTemplates: handleSet(setCommentTemplates),
       whiteColor,
       darkMode,
       toggleDarkMode

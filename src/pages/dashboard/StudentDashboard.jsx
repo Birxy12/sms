@@ -6,8 +6,10 @@ import { collection, query, getDocs, where, limit, orderBy, doc, getDoc } from '
 import { 
   LayoutDashboard, Award, CreditCard, Calendar, Bell, ChevronRight, 
   Inbox as InboxIcon, Trophy, Wallet, BookOpen, Library, MonitorCheck, 
-  AlertCircle, Star, ArrowUpRight, Clock, User, Zap, GraduationCap, ChevronDown
+  AlertCircle, Star, ArrowUpRight, ArrowDownRight, Clock, User, Zap, GraduationCap, ChevronDown,
+  Eye, EyeOff, PlusCircle, Search, CheckCircle2, X, RefreshCw
 } from 'lucide-react';
+import { getStudentWallet, fundStudentWallet, debitStudentWallet } from '../../utils/wallet';
 import { MARKS_KEYS, expandMarks } from '../../utils/firestoreSchema';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -39,6 +41,28 @@ const StudentDashboard = () => {
   const [feeData, setFeeData]           = useState({ expected: 0, paid: 0, balance: 0, lastDate: 'N/A' });
   const [publishedTerms, setPublishedTerms] = useState([]);
   const [selectedTermId, setSelectedTermId] = useState('');
+
+  // Wallet System States
+  const [walletData, setWalletData]     = useState({ balance: 0, transactions: [] });
+  const [showBalance, setShowBalance]   = useState(true);
+  const [showFundModal, setShowFundModal] = useState(false);
+  const [fundAmount, setFundAmount]     = useState('5000');
+  const [fundMethod, setFundMethod]     = useState('Card Payment');
+  const [fundingProcessing, setFundingProcessing] = useState(false);
+  const [fundSuccessMsg, setFundSuccessMsg] = useState('');
+  const [walletSearch, setWalletSearch] = useState('');
+  const [walletFilter, setWalletFilter] = useState('ALL');
+  const [showFeePayModal, setShowFeePayModal] = useState(false);
+
+  const loadWallet = async (studentId) => {
+    if (!studentId) return;
+    try {
+      const data = await getStudentWallet(studentId);
+      setWalletData(data);
+    } catch (e) {
+      console.warn('Error loading student wallet:', e);
+    }
+  };
 
   useEffect(() => {
     if (!currentStudent || !regNum) {
@@ -176,6 +200,9 @@ const StudentDashboard = () => {
         }
         setFeeData({ expected, paid, balance: Math.max(0, expected - paid), lastDate });
 
+        // 4. Load Student Wallet
+        await loadWallet(currentStudent?.id || regNum);
+
       } catch (e) {
         console.error("Dashboard error:", e);
         if (e?.code === 'permission-denied') {
@@ -188,6 +215,61 @@ const StudentDashboard = () => {
     
     loadData();
   }, [currentStudent, className, regNum, authReady, currentSession]);
+
+  const handleFundSubmit = async (e) => {
+    e.preventDefault();
+    const amount = Number(fundAmount);
+    if (!amount || amount <= 0) return;
+    setFundingProcessing(true);
+    setFundSuccessMsg('');
+    try {
+      // Simulate network request for payment processing
+      await new Promise(r => setTimeout(r, 1200));
+      const ref = `REF-${Math.floor(100000 + Math.random() * 900000)}`;
+      const updated = await fundStudentWallet(currentStudent?.id || regNum, amount, fundMethod, ref);
+      setWalletData(updated);
+      setFundSuccessMsg(`Successfully credited ₦${amount.toLocaleString()} via ${fundMethod}!`);
+      setTimeout(() => {
+        setFundSuccessMsg('');
+        setShowFundModal(false);
+      }, 1800);
+    } catch (err) {
+      alert(err.message || 'Payment failed');
+    } finally {
+      setFundingProcessing(false);
+    }
+  };
+
+  const handlePayFeeWithWallet = async () => {
+    const amountToPay = feeData.balance;
+    if (amountToPay <= 0) return alert('No pending school fees balance!');
+    if (walletData.balance < amountToPay) {
+      return alert(`Insufficient wallet balance. Available: ₦${walletData.balance.toLocaleString()}, Fee Due: ₦${amountToPay.toLocaleString()}`);
+    }
+    try {
+      setFundingProcessing(true);
+      const ref = `PAY-FEE-${Math.floor(100000 + Math.random() * 900000)}`;
+      const updated = await debitStudentWallet(currentStudent?.id || regNum, amountToPay, `School Fee Payment for ${currentSession}`, ref);
+      setWalletData(updated);
+
+      // Update Firestore student record
+      if (currentStudent?.id) {
+        const newPaid = feeData.paid + amountToPay;
+        await setDoc(doc(db, 'students', currentStudent.id), {
+          paidFee: newPaid,
+          paidAmount: newPaid,
+          lastPaymentDate: new Date().toISOString()
+        }, { merge: true }).catch(() => {});
+        setFeeData(prev => ({ ...prev, paid: newPaid, balance: 0, lastDate: 'Today' }));
+      }
+      alert(`Payment of ₦${amountToPay.toLocaleString()} successful! Your school fees are fully cleared.`);
+      setShowFeePayModal(false);
+    } catch (err) {
+      alert(err.message || 'Fee payment failed');
+    } finally {
+      setFundingProcessing(false);
+    }
+  };
 
   const termsPerSession = 3;
   const feeIsCleared = feeData.balance <= 0;
@@ -213,7 +295,8 @@ const StudentDashboard = () => {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard, color: '#6366f1' },
-    { id: 'academic', label: 'Academic', icon: GraduationCap, color: '#10b981' },
+    { id: 'wallet', label: 'Student Wallet', icon: Wallet, color: '#10b981' },
+    { id: 'academic', label: 'Academic', icon: GraduationCap, color: '#3b82f6' },
     { id: 'notices', label: 'Notices', icon: Bell, color: '#f59e0b' },
     { id: 'finance', label: 'Finance', icon: CreditCard, color: '#ec4899' },
   ];
@@ -273,8 +356,18 @@ const StudentDashboard = () => {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-3">
-                  <button onClick={() => navigate('/students/profile')} className="px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl font-bold transition-all text-sm">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/30 px-4 py-2 rounded-xl text-emerald-300 font-black text-sm">
+                    <Wallet size={16} className="text-emerald-400" />
+                    <span>Wallet: {showBalance ? `₦${walletData.balance.toLocaleString()}` : '••••••'}</span>
+                    <button onClick={() => setShowBalance(!showBalance)} className="ml-1 text-emerald-300 hover:text-white">
+                      {showBalance ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                  <button onClick={() => { setActiveTab('wallet'); setShowFundModal(true); }} className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 font-black text-white rounded-xl transition-all text-sm flex items-center gap-2 shadow-lg shadow-emerald-500/20">
+                    <PlusCircle size={16} /> Fund Wallet
+                  </button>
+                  <button onClick={() => navigate('/students/profile')} className="px-6 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl font-bold transition-all text-sm">
                     Profile Settings
                   </button>
                 </div>
@@ -365,6 +458,151 @@ const StudentDashboard = () => {
                     </div>
                   </div>
                 </>
+              )}
+
+              {activeTab === 'wallet' && (
+                <div className="space-y-8">
+                  {/* Wallet Balance Hero Card */}
+                  <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 p-8 md:p-10 text-white shadow-2xl border border-emerald-500/20">
+                    <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 bg-emerald-500/20 blur-[90px] rounded-full" />
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                      <div>
+                        <div className="flex items-center gap-3 text-emerald-400 font-black text-xs uppercase tracking-wider mb-2">
+                          <Wallet size={18} />
+                          <span>Student Digital e-Wallet</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white">
+                            {showBalance ? `₦${walletData.balance.toLocaleString()}` : '••••••••'}
+                          </h2>
+                          <button
+                            onClick={() => setShowBalance(!showBalance)}
+                            className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all text-slate-300 hover:text-white"
+                            title="Toggle Balance Visibility"
+                          >
+                            {showBalance ? <EyeOff size={20} /> : <Eye size={20} />}
+                          </button>
+                        </div>
+                        <p className="text-xs text-slate-400 font-semibold mt-2">
+                          Available for instant fee payment, CBT tokens, and school shop purchases.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-3 w-full md:w-auto">
+                        <button
+                          onClick={() => setShowFundModal(true)}
+                          className="flex-1 md:flex-none px-6 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-2xl transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20 text-sm"
+                        >
+                          <PlusCircle size={18} /> Fund Wallet
+                        </button>
+                        {feeData.balance > 0 && (
+                          <button
+                            onClick={() => setShowFeePayModal(true)}
+                            className="flex-1 md:flex-none px-6 py-3.5 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white font-black rounded-2xl transition-all flex items-center justify-center gap-2 text-sm border border-white/10"
+                          >
+                            <CreditCard size={18} /> Pay School Fees (₦{feeData.balance.toLocaleString()})
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Transaction History Section */}
+                  <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm space-y-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6 border-b border-slate-100">
+                      <div>
+                        <h3 className="text-xl font-black text-slate-800">Transaction History</h3>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Real-time ledger of credits & debits</p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                        {/* Search Bar */}
+                        <div className="relative flex-1 md:w-60">
+                          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            type="text"
+                            placeholder="Search reference or detail..."
+                            value={walletSearch}
+                            onChange={(e) => setWalletSearch(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        {/* Filter Buttons */}
+                        <div className="flex bg-slate-100 p-1 rounded-xl">
+                          {['ALL', 'CREDIT', 'DEBIT'].map(type => (
+                            <button
+                              key={type}
+                              onClick={() => setWalletFilter(type)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
+                                walletFilter === type ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                              }`}
+                            >
+                              {type}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Transactions List */}
+                    <div className="divide-y divide-slate-100">
+                      {walletData.transactions
+                        .filter(tx => {
+                          if (walletFilter !== 'ALL' && tx.type !== walletFilter) return false;
+                          if (walletSearch) {
+                            const q = walletSearch.toLowerCase();
+                            return (
+                              (tx.id || '').toLowerCase().includes(q) ||
+                              (tx.description || '').toLowerCase().includes(q) ||
+                              (tx.method || '').toLowerCase().includes(q)
+                            );
+                          }
+                          return true;
+                        })
+                        .map((tx, idx) => (
+                          <div key={tx.id || idx} className="py-4 flex items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors px-2 rounded-xl">
+                            <div className="flex items-center gap-4">
+                              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black ${
+                                tx.type === 'CREDIT' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+                              }`}>
+                                {tx.type === 'CREDIT' ? <ArrowDownRight size={22} /> : <ArrowUpRight size={22} />}
+                              </div>
+                              <div>
+                                <p className="font-black text-slate-800 text-sm">{tx.description}</p>
+                                <div className="flex items-center gap-3 text-xs text-slate-400 font-semibold mt-0.5">
+                                  <span>{tx.method || 'Direct'}</span>
+                                  <span>•</span>
+                                  <span>{tx.date ? new Date(tx.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently'}</span>
+                                  <span>•</span>
+                                  <span className="font-mono text-[11px] text-slate-500">{tx.id}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="text-right">
+                              <span className={`text-base font-black ${tx.type === 'CREDIT' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                {tx.type === 'CREDIT' ? '+' : '-'}₦{Number(tx.amount || 0).toLocaleString()}
+                              </span>
+                              <div className="mt-1">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700">
+                                  ✓ Successful
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+
+                      {walletData.transactions.length === 0 && (
+                        <div className="py-16 text-center text-slate-400">
+                          <Wallet size={40} className="mx-auto mb-3 opacity-30" />
+                          <p className="font-bold text-sm">No wallet transactions recorded yet.</p>
+                          <p className="text-xs mt-1">Click "Fund Wallet" to add funds.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
 
               {activeTab === 'academic' && (
@@ -474,9 +712,16 @@ const StudentDashboard = () => {
                         {feeData.balance <= 0 ? 'Fully Cleared' : 'Awaiting Payment'}
                       </div>
                     </div>
-                    <button onClick={() => navigate('/students/fees')} className="mt-10 py-5 bg-slate-900 text-white rounded-3xl font-black text-sm shadow-xl">
-                      Make Payment Now
-                    </button>
+                    <div className="mt-8 space-y-3">
+                      {feeData.balance > 0 ? (
+                        <button onClick={() => setShowFeePayModal(true)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2">
+                          <Wallet size={18} /> Pay Fee via Student Wallet
+                        </button>
+                      ) : null}
+                      <button onClick={() => navigate('/students/fees')} className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm shadow-xl">
+                        Open Full Fee Portal
+                      </button>
+                    </div>
                   </div>
                   <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 border-dashed flex flex-col items-center justify-center text-center">
                     <div className="w-20 h-20 bg-white rounded-full shadow-sm flex items-center justify-center text-slate-300 mb-6">
@@ -484,7 +729,7 @@ const StudentDashboard = () => {
                     </div>
                     <h3 className="text-lg font-black text-slate-800 mb-2">Payment Receipts</h3>
                     <p className="text-sm text-slate-400 font-medium max-w-[200px]">View and download all your previous payment receipts.</p>
-                    <button className="mt-6 text-sm font-black text-indigo-600">View History →</button>
+                    <button onClick={() => navigate('/students/fees')} className="mt-6 text-sm font-black text-indigo-600">View History →</button>
                   </div>
                 </div>
               )}
@@ -493,6 +738,153 @@ const StudentDashboard = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ===== FUND WALLET MODAL ===== */}
+      {showFundModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[2rem] max-w-md w-full p-8 shadow-2xl space-y-6 relative">
+            <button onClick={() => setShowFundModal(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600">
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 font-black">
+                <PlusCircle size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-800">Fund Wallet</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase">Instant Credit Gateway</p>
+              </div>
+            </div>
+
+            {fundSuccessMsg ? (
+              <div className="p-6 bg-emerald-50 border border-emerald-200 rounded-2xl text-center space-y-3">
+                <CheckCircle2 size={40} className="mx-auto text-emerald-500" />
+                <p className="font-black text-emerald-800 text-sm">{fundSuccessMsg}</p>
+              </div>
+            ) : (
+              <form onSubmit={handleFundSubmit} className="space-y-6">
+                <div>
+                  <label className="text-xs font-black text-slate-500 uppercase block mb-2">Deposit Amount (₦)</label>
+                  <input
+                    type="number"
+                    min="500"
+                    max="500000"
+                    required
+                    value={fundAmount}
+                    onChange={(e) => setFundAmount(e.target.value)}
+                    className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-slate-200 font-black text-xl text-slate-800 outline-none focus:border-emerald-500"
+                  />
+                  {/* Preset Chips */}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {['2000', '5000', '10000', '20000', '50000'].map(amt => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => setFundAmount(amt)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black border transition-all ${
+                          fundAmount === amt ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        +₦{Number(amt).toLocaleString()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-black text-slate-500 uppercase block mb-2">Payment Method</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'Card Payment', label: 'Debit Card' },
+                      { id: 'Bank Transfer', label: 'Transfer' },
+                      { id: 'USSD', label: 'USSD Code' }
+                    ].map(m => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setFundMethod(m.id)}
+                        className={`py-3 px-2 rounded-2xl text-xs font-black border text-center transition-all ${
+                          fundMethod === m.id ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={fundingProcessing}
+                  className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-black text-base rounded-2xl transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2"
+                >
+                  {fundingProcessing ? <RefreshCw size={20} className="animate-spin" /> : <PlusCircle size={20} />}
+                  {fundingProcessing ? 'Processing Payment...' : `Confirm Deposit (₦${Number(fundAmount || 0).toLocaleString()})`}
+                </button>
+              </form>
+            )}
+          </motion.div>
+        </div>
+      )}
+
+      {/* ===== PAY FEE VIA WALLET MODAL ===== */}
+      {showFeePayModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[2rem] max-w-md w-full p-8 shadow-2xl space-y-6 relative">
+            <button onClick={() => setShowFeePayModal(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600">
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black">
+                <CreditCard size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-800">Pay School Fees</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase">Direct Wallet Debit</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 bg-slate-50 p-5 rounded-2xl border border-slate-100 text-sm">
+              <div className="flex justify-between font-bold text-slate-600">
+                <span>Fee Amount Due:</span>
+                <span className="font-black text-rose-600">₦{feeData.balance.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between font-bold text-slate-600">
+                <span>Your Wallet Balance:</span>
+                <span className="font-black text-emerald-600">₦{walletData.balance.toLocaleString()}</span>
+              </div>
+              <div className="border-t border-slate-200 pt-2 flex justify-between font-black text-slate-800">
+                <span>Balance After Payment:</span>
+                <span>₦{(walletData.balance - feeData.balance).toLocaleString()}</span>
+              </div>
+            </div>
+
+            {walletData.balance < feeData.balance ? (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs font-bold text-amber-800 space-y-2">
+                <p>Your wallet balance is insufficient to pay this fee balance.</p>
+                <button
+                  onClick={() => { setShowFeePayModal(false); setShowFundModal(true); }}
+                  className="px-4 py-2 bg-amber-500 text-white rounded-xl font-black text-xs inline-block"
+                >
+                  Fund Wallet First →
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handlePayFeeWithWallet}
+                disabled={fundingProcessing}
+                className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-black text-base rounded-2xl transition-all shadow-xl flex items-center justify-center gap-2"
+              >
+                {fundingProcessing ? <RefreshCw size={20} className="animate-spin" /> : <CheckCircle2 size={20} />}
+                {fundingProcessing ? 'Processing Fee Debit...' : 'Pay Fee Now'}
+              </button>
+            )}
+          </motion.div>
+        </div>
+      )}
+
       <PinSetupModal />
     </div>
   );

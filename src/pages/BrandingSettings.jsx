@@ -5,6 +5,7 @@ import { db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { runAutoPromotion, fetchStudentsForClass, promoteOneSS1Student } from '../utils/promotion';
 import { SS1_SUBJECTS } from '../utils/subjectConfig';
+import { DEFAULT_COMMENT_TEMPLATES } from '../utils/commentGenerator';
 
 const BrandingSettings = () => {
   const { 
@@ -20,7 +21,17 @@ const BrandingSettings = () => {
     principalStamp, setPrincipalStamp,
     bursarSignature, setBursarSignature,
     bursarStamp, setBursarStamp,
-    currentSession, setCurrentSession
+    currentSession, setCurrentSession,
+    cat1Limit, setCat1Limit,
+    cat2Limit, setCat2Limit,
+    examLimit, setExamLimit,
+    currentTerm, setCurrentTerm,
+    termStartDate, setTermStartDate,
+    termEndDate, setTermEndDate,
+    nextTermBeginsDate, setNextTermBeginsDate,
+    promotionPassMark, setPromotionPassMark,
+    autoCommentsEnabled, setAutoCommentsEnabled,
+    commentTemplates, setCommentTemplates
   } = useTheme();
 
   // Local state for form buffers
@@ -36,6 +47,21 @@ const BrandingSettings = () => {
   const [pStamp, setPStamp] = useState(principalStamp);
   const [bSig, setBSig] = useState(bursarSignature);
   const [bStamp, setBStamp] = useState(bursarStamp);
+
+  // New Academic Settings Buffers
+  const [cat1Val, setCat1Val] = useState(cat1Limit ?? 20);
+  const [cat2Val, setCat2Val] = useState(cat2Limit ?? 20);
+  const [examVal, setExamVal] = useState(examLimit ?? 60);
+
+  const [termInput, setTermInput] = useState(currentTerm || '1st Term');
+  const [termStart, setTermStart] = useState(termStartDate || '');
+  const [termEnd, setTermEnd] = useState(termEndDate || '');
+  const [nextTerm, setNextTerm] = useState(nextTermBeginsDate || '');
+
+  const [passMarkInput, setPassMarkInput] = useState(promotionPassMark ?? 45);
+
+  const [commentsEnabled, setCommentsEnabled] = useState(autoCommentsEnabled ?? true);
+  const [tpls, setTpls] = useState(commentTemplates || DEFAULT_COMMENT_TEMPLATES);
 
   // Academic Configuration State
   const [subjectRegistrationEnabled, setSubjectRegistrationEnabled] = useState(false);
@@ -71,11 +97,47 @@ const BrandingSettings = () => {
     setPStamp(principalStamp);
     setBSig(bursarSignature);
     setBStamp(bursarStamp);
-  }, [schoolName, primaryColor, secondaryColor, schoolLogo, navbarBg, footerBg, navbarTextColor, footerTextColor, principalSignature, principalStamp, bursarSignature, bursarStamp]);
+    setCat1Val(cat1Limit ?? 20);
+    setCat2Val(cat2Limit ?? 20);
+    setExamVal(examLimit ?? 60);
+    setTermInput(currentTerm || '1st Term');
+    setTermStart(termStartDate || '');
+    setTermEnd(termEndDate || '');
+    setNextTerm(nextTermBeginsDate || '');
+    setPassMarkInput(promotionPassMark ?? 45);
+    setCommentsEnabled(autoCommentsEnabled ?? true);
+    setTpls(commentTemplates || DEFAULT_COMMENT_TEMPLATES);
+  }, [schoolName, primaryColor, secondaryColor, schoolLogo, navbarBg, footerBg, navbarTextColor, footerTextColor, principalSignature, principalStamp, bursarSignature, bursarStamp, cat1Limit, cat2Limit, examLimit, currentTerm, termStartDate, termEndDate, nextTermBeginsDate, promotionPassMark, autoCommentsEnabled, commentTemplates]);
 
   React.useEffect(() => {
     setSessionInput(currentSession || '2025/2026');
   }, [currentSession]);
+
+  const handleSave = () => {
+    setSchoolName(name);
+    setPrimaryColor(primary);
+    setSecondaryColor(secondary);
+    setSchoolLogo(logoPreview);
+    setNavbarBg(navBg);
+    setFooterBg(footBg);
+    setNavbarTextColor(navText);
+    setFooterTextColor(footText);
+    setPrincipalSignature(pSig);
+    setPrincipalStamp(pStamp);
+    setBursarSignature(bSig);
+    setBursarStamp(bStamp);
+    setCat1Limit(Number(cat1Val));
+    setCat2Limit(Number(cat2Val));
+    setExamLimit(Number(examVal));
+    setCurrentTerm(termInput);
+    setTermStartDate(termStart);
+    setTermEndDate(termEnd);
+    setNextTermBeginsDate(nextTerm);
+    setPromotionPassMark(Number(passMarkInput));
+    setAutoCommentsEnabled(commentsEnabled);
+    setCommentTemplates(tpls);
+    alert('Branding and Academic Settings updated successfully!');
+  };
 
   // Fetch Academic Config
   React.useEffect(() => {
@@ -146,7 +208,7 @@ const BrandingSettings = () => {
   const handleRunPromotion = async () => {
     setPromotionStep('loading');
     try {
-      const result = await runAutoPromotion(sessionInput || currentSession, 45);
+      const result = await runAutoPromotion(sessionInput || currentSession, Number(promotionPassMark) || 45);
       setPromotionResult(result);
 
       // Load SS1 students for manual placement
@@ -193,22 +255,6 @@ const BrandingSettings = () => {
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  const handleSave = () => {
-    setSchoolName(name);
-    setPrimaryColor(primary);
-    setSecondaryColor(secondary);
-    setSchoolLogo(logoPreview);
-    setNavbarBg(navBg);
-    setFooterBg(footBg);
-    setNavbarTextColor(navText);
-    setFooterTextColor(footText);
-    setPrincipalSignature(pSig);
-    setPrincipalStamp(pStamp);
-    setBursarSignature(bSig);
-    setBursarStamp(bStamp);
-    alert('Branding and Credentials updated successfully!');
   };
 
   const handleReset = () => {
@@ -430,9 +476,9 @@ const BrandingSettings = () => {
               ) : (
                 <button 
                   onClick={toggleSubjectRegistration}
-                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all focus:outline-none ${subjectRegistrationEnabled ? 'bg-purple-600' : 'bg-slate-300'}`}
+                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all focus:outline-none shadow-sm ${subjectRegistrationEnabled ? 'bg-blue-600' : 'bg-red-600'}`}
                 >
-                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${subjectRegistrationEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                  <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform ${subjectRegistrationEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
                 </button>
               )}
             </div>
@@ -451,9 +497,9 @@ const BrandingSettings = () => {
               ) : (
                 <button 
                   onClick={toggleAdmission}
-                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all focus:outline-none ${admissionEnabled ? 'bg-purple-600' : 'bg-slate-300'}`}
+                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all focus:outline-none shadow-sm ${admissionEnabled ? 'bg-blue-600' : 'bg-red-600'}`}
                 >
-                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${admissionEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                  <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform ${admissionEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
                 </button>
               )}
             </div>
@@ -463,6 +509,202 @@ const BrandingSettings = () => {
               </p>
             )}
           </div>
+        </div>
+
+        {/* Assessment Limit Card (CAT1, CAT2, Exam) */}
+        <div className="card-white branding-card">
+          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+            <BookOpen color="var(--primary)" />
+            <div>
+              <h3 style={{ margin: 0 }}>Continuous Assessment & Exam Limits</h3>
+              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Configure maximum score limit per subject test component.</p>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '16px' }}>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>1st Test (CAT 1)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={cat1Val}
+                onChange={(e) => setCat1Val(e.target.value)}
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e2e8f0', fontWeight: '700', fontSize: '14px' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>2nd Test (CAT 2)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={cat2Val}
+                onChange={(e) => setCat2Val(e.target.value)}
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e2e8f0', fontWeight: '700', fontSize: '14px' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>Exam Max</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={examVal}
+                onChange={(e) => setExamVal(e.target.value)}
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e2e8f0', fontWeight: '700', fontSize: '14px' }}
+              />
+            </div>
+          </div>
+          <div style={{ padding: '10px 14px', borderRadius: '10px', background: Number(cat1Val) + Number(cat2Val) + Number(examVal) === 100 ? '#f0fdf4' : '#fff1f2', border: `1px solid ${Number(cat1Val) + Number(cat2Val) + Number(examVal) === 100 ? '#bbf7d0' : '#fecdd3'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', fontWeight: '700', color: Number(cat1Val) + Number(cat2Val) + Number(examVal) === 100 ? '#166534' : '#991b1b' }}>
+              Total Max Marks: <strong>{Number(cat1Val) + Number(cat2Val) + Number(examVal)} Marks</strong>
+            </span>
+            {Number(cat1Val) + Number(cat2Val) + Number(examVal) !== 100 && (
+              <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: '700' }}>Warning: Sum should equal 100</span>
+            )}
+          </div>
+        </div>
+
+        {/* Term Schedule & Dates Card */}
+        <div className="card-white branding-card">
+          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+            <Calendar color="var(--primary)" />
+            <div>
+              <h3 style={{ margin: 0 }}>Term Schedule & Dates</h3>
+              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Specify current term and key academic calendar dates.</p>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>Active Academic Term</label>
+            <select
+              value={termInput}
+              onChange={(e) => setTermInput(e.target.value)}
+              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e2e8f0', fontWeight: '700', fontSize: '14px', background: '#f8fafc' }}
+            >
+              <option value="1st Term">1st Term</option>
+              <option value="2nd Term">2nd Term</option>
+              <option value="3rd Term">3rd Term</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '4px' }}>Term Start Date</label>
+              <input
+                type="date"
+                value={termStart}
+                onChange={(e) => setTermStart(e.target.value)}
+                style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '2px solid #e2e8f0', fontSize: '13px', fontWeight: '600' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '4px' }}>Term End Date</label>
+              <input
+                type="date"
+                value={termEnd}
+                onChange={(e) => setTermEnd(e.target.value)}
+                style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '2px solid #e2e8f0', fontSize: '13px', fontWeight: '600' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '4px' }}>Next Resumption</label>
+              <input
+                type="date"
+                value={nextTerm}
+                onChange={(e) => setNextTerm(e.target.value)}
+                style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '2px solid #e2e8f0', fontSize: '13px', fontWeight: '600' }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Promotion Pass Mark Threshold Card */}
+        <div className="card-white branding-card">
+          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+            <GraduationCap color="var(--primary)" />
+            <div>
+              <h3 style={{ margin: 0 }}>Student Promotion Pass Mark</h3>
+              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Minimum overall average score required for promotion to next class.</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>Pass Mark Threshold (%)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={passMarkInput}
+                onChange={(e) => setPassMarkInput(e.target.value)}
+                placeholder="e.g. 45"
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #e2e8f0', fontWeight: '800', fontSize: '16px' }}
+              />
+            </div>
+            <div style={{ padding: '12px 16px', background: '#e0f2fe', borderRadius: '12px', border: '1px solid #bae6fd', flex: 1.5 }}>
+              <p style={{ margin: 0, fontSize: '12px', color: '#0369a1', fontWeight: '700' }}>
+                Students with Third Term average ≥ <strong>{passMarkInput}%</strong> will automatically qualify for auto-promotion.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Auto Generation of Result Comments Card */}
+        <div className="card-white branding-card" style={{ gridColumn: '1 / -1' }}>
+          <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <CheckSquare color="var(--primary)" />
+              <div>
+                <h3 style={{ margin: 0 }}>Auto-Generation of Result Comments</h3>
+                <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Automatically populate Principal & Teacher remarks on report cards based on student average score.</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setCommentsEnabled(!commentsEnabled)}
+              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all focus:outline-none ${commentsEnabled ? 'bg-emerald-600' : 'bg-slate-300'}`}
+            >
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${commentsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+
+          {commentsEnabled && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginTop: '16px' }}>
+              {Object.keys(tpls).map((key) => (
+                <div key={key} style={{ padding: '14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '800', color: '#1e293b' }}>
+                    {tpls[key].label}
+                  </p>
+
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '4px' }}>Form Teacher Remark</label>
+                    <textarea
+                      rows={2}
+                      value={tpls[key].teacher}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setTpls(prev => ({ ...prev, [key]: { ...prev[key], teacher: val } }));
+                      }}
+                      style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', resize: 'vertical' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '4px' }}>Principal Remark</label>
+                    <textarea
+                      rows={2}
+                      value={tpls[key].principal}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setTpls(prev => ({ ...prev, [key]: { ...prev[key], principal: val } }));
+                      }}
+                      style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', resize: 'vertical' }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Theme Card */}

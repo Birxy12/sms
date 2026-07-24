@@ -4,8 +4,9 @@ import { db } from '../../lib/firebase';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import FBNCheckout from 'firstchekout';
 import { useTheme } from '../../context/ThemeContext';
-import { DollarSign, CreditCard, Clock, AlertTriangle, CheckCircle, ArrowRight, Printer, X } from 'lucide-react';
+import { DollarSign, CreditCard, Clock, AlertTriangle, CheckCircle, ArrowRight, Printer, X, Wallet } from 'lucide-react';
 import ReceiptScanner from '../../components/ReceiptScanner';
+import { getStudentWallet, debitStudentWallet } from '../../utils/wallet';
 
 const StudentFees = () => {
   const { currentStudent } = useStudentAuth();
@@ -15,6 +16,7 @@ const StudentFees = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [payAmount, setPayAmount] = useState('');
   const [paying, setPaying] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
 
   useEffect(() => {
     const fetchFeeInfo = async () => {
@@ -53,6 +55,11 @@ const StudentFees = () => {
           txnId,
           serialNo
         });
+
+        // Load wallet balance
+        const wData = await getStudentWallet(currentStudent.id || currentStudent.regNo);
+        setWalletBalance(wData.balance || 0);
+
       } catch (error) {
         console.error('Error fetching fees:', error);
       } finally {
@@ -62,6 +69,66 @@ const StudentFees = () => {
 
     if (currentStudent) fetchFeeInfo();
   }, [currentStudent]);
+
+  const handleWalletPayment = async () => {
+    const amount = parseFloat(payAmount);
+    if (isNaN(amount) || amount <= 0) return alert('Please enter a valid payment amount.');
+    if (amount > balance) return alert(`Payment amount cannot exceed outstanding balance of ₦${balance.toLocaleString()}`);
+    if (walletBalance < amount) return alert(`Insufficient wallet balance. Available: ₦${walletBalance.toLocaleString()}, Needed: ₦${amount.toLocaleString()}`);
+
+    setPaying(true);
+    try {
+      const serialNo = 'SN-' + Math.floor(100000 + Math.random() * 900000);
+      const ref = `PAY-W-${Math.floor(100000 + Math.random() * 900000)}`;
+
+      // 1. Debit Wallet
+      const updatedWallet = await debitStudentWallet(currentStudent.id || currentStudent.regNo, amount, `School Fee Payment for ${feeData.term} (${feeData.session})`, ref);
+      setWalletBalance(updatedWallet.balance);
+
+      // 2. Update Student Fee Record in Firestore
+      const oldPaid = parseFloat(feeData.paid) || 0;
+      const newPaid = oldPaid + amount;
+
+      const studentRef = doc(db, 'students', currentStudent.id);
+      await updateDoc(studentRef, {
+        paidFee: newPaid,
+        paidAmount: newPaid,
+        lastPaymentDate: new Date().toLocaleDateString('en-NG'),
+        lastTransactionId: ref,
+        lastSerialNo: serialNo,
+        lastPaymentTerm: feeData.term || 'First Term',
+        lastPaymentSession: feeData.session || currentSession || '2025/2026',
+      });
+
+      await addDoc(collection(db, 'payment_messages'), {
+        studentName: currentStudent.name || currentStudent['STUDENT NAME'] || 'Student',
+        className: currentStudent.className || currentStudent.class_name || currentStudent.CLASS || 'N/A',
+        regNo: currentStudent.regNo || currentStudent.REGNO || 'N/A',
+        amount,
+        method: 'Student e-Wallet',
+        term: feeData.term || 'First Term',
+        session: feeData.session || currentSession || '2025/2026',
+        transactionId: ref,
+        serialNo,
+        message: `Wallet payment of ₦${amount.toLocaleString()} received via Student Wallet.`,
+        createdAt: serverTimestamp(),
+      });
+
+      setFeeData(prev => ({
+        ...prev,
+        paid: newPaid,
+        lastDate: new Date().toLocaleDateString('en-NG'),
+        txnId: ref,
+        serialNo
+      }));
+
+      alert(`Success! ₦${amount.toLocaleString()} paid from your Student Wallet.`);
+    } catch (err) {
+      alert(err.message || 'Wallet payment failed');
+    } finally {
+      setPaying(false);
+    }
+  };
 
   const balance = feeData.expected - feeData.paid;
   const isCleared = balance <= 0;
@@ -426,10 +493,54 @@ const StudentFees = () => {
 
         {/* Payment Instructions */}
         <div className="space-y-6">
+          {/* Pay via Student e-Wallet */}
           <div className="card-white dark:bg-slate-800 dark:border-slate-700 rounded-3xl border border-slate-200 shadow-sm p-8 border-t-4 border-t-emerald-500">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+                <Wallet size={20} className="text-emerald-500" />
+                Pay via Student e-Wallet
+              </h4>
+              <span className="text-xs font-black px-3 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-full">
+                Balance: ₦{walletBalance.toLocaleString()}
+              </span>
+            </div>
+            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
+              Use funds directly from your pre-loaded student wallet for instant clearing without payment gateway charges.
+            </p>
+
+            {!isCleared ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Amount to Pay from Wallet (₦)</label>
+                  <input
+                    type="number"
+                    max={balance}
+                    value={payAmount}
+                    onChange={(e) => setPayAmount(e.target.value)}
+                    placeholder="Enter amount"
+                    className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 font-black text-slate-800 dark:text-white text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <button
+                  onClick={handleWalletPayment}
+                  disabled={paying || walletBalance < parseFloat(payAmount || 0)}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 dark:shadow-none hover:shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  <Wallet size={18} />
+                  {paying ? 'Processing Wallet Debit...' : `Pay ₦${parseFloat(payAmount || 0).toLocaleString()} via Wallet`}
+                </button>
+              </div>
+            ) : (
+              <div className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl text-sm font-bold text-center">
+                All school fees for this term are fully cleared. No payments pending!
+              </div>
+            )}
+          </div>
+
+          <div className="card-white dark:bg-slate-800 dark:border-slate-700 rounded-3xl border border-slate-200 shadow-sm p-8 border-t-4 border-t-indigo-500">
             <h4 className="text-lg font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-              <CreditCard size={20} className="text-emerald-500" />
-              Pay Online (FirstChekOut)
+              <CreditCard size={20} className="text-indigo-500" />
+              Pay Online (FirstChekOut / Card)
             </h4>
             <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
               Pay your fees instantly using First Bank's secure payment gateway. Supports cards, bank transfers, USSD, and direct bank account debit.
@@ -451,9 +562,9 @@ const StudentFees = () => {
                 <button
                   onClick={handleOnlinePayment}
                   disabled={paying}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 dark:shadow-none hover:shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 dark:shadow-none hover:shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  {paying ? 'Processing Checkout...' : `Pay ₦${parseFloat(payAmount || 0).toLocaleString()} Now`}
+                  {paying ? 'Processing Checkout...' : `Pay ₦${parseFloat(payAmount || 0).toLocaleString()} Online`}
                 </button>
               </div>
             ) : (
