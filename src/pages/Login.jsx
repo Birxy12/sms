@@ -5,7 +5,8 @@ import { useStudentAuth } from '../context/StudentAuthContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { db } from '../lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { expandStudent, STUDENT_KEYS } from '../utils/firestoreSchema';
 import { 
   GraduationCap, ShieldCheck, ArrowRight, ChevronLeft, Loader2,
   AlertCircle, HelpCircle, Phone, Lock, Mail, User, 
@@ -106,6 +107,10 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [pendingUser, setPendingUser] = useState(null);
+  
+  // Real-time name lookup for students
+  const [lookupName, setLookupName] = useState('');
+  const [lookupLoading, setLookupLoading] = useState(false);
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -124,13 +129,61 @@ const Login = () => {
     fetchClasses();
   }, []);
 
+  const isStudent = selectedRole === 'student';
+
+  // Debounced lookup for student name when regNo changes
+  useEffect(() => {
+    if (!isStudent || !formData.regNo || formData.regNo.length < 3) {
+      setLookupName('');
+      return;
+    }
+    const fetchStudentName = async () => {
+      setLookupLoading(true);
+      setLookupName('');
+      try {
+        const normalizedRegNo = formData.regNo.trim().toUpperCase();
+        
+        // Try upper-cased first
+        let q = query(collection(db, 'students'), where(STUDENT_KEYS.regNo, '==', normalizedRegNo));
+        let snap = await getDocs(q);
+        
+        if (snap.empty) {
+          q = query(collection(db, 'students'), where('regNo', '==', normalizedRegNo));
+          snap = await getDocs(q);
+        }
+
+        // Fallback to exact input (in case they saved it non-standard)
+        if (snap.empty) {
+           q = query(collection(db, 'students'), where(STUDENT_KEYS.regNo, '==', formData.regNo.trim()));
+           snap = await getDocs(q);
+           if (snap.empty) {
+             q = query(collection(db, 'students'), where('regNo', '==', formData.regNo.trim()));
+             snap = await getDocs(q);
+           }
+        }
+
+        if (!snap.empty) {
+          const sData = snap.docs[0].data();
+          const expanded = expandStudent(sData);
+          setLookupName(expanded.name);
+        }
+      } catch (err) {
+        console.warn("Error looking up student name:", err);
+      } finally {
+        setLookupLoading(false);
+      }
+    };
+
+    const timeoutId = setTimeout(fetchStudentName, 500);
+    return () => clearTimeout(timeoutId);
+  }, [formData.regNo, isStudent]);
+
   const navigate = useNavigate();
   const studentAuth = useStudentAuth();
   const adminAuth = useAdminAuth();
   const { schoolName } = useTheme();
 
   const currentRole = ROLES.find(r => r.id === selectedRole);
-  const isStudent = selectedRole === 'student';
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -558,6 +611,23 @@ const Login = () => {
                     value={formData.regNo}
                     onChange={handleInputChange}
                   />
+                  <AnimatePresence>
+                    {(lookupName || lookupLoading) && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -5, height: 0 }}
+                        animate={{ opacity: 1, y: 0, height: 'auto' }}
+                        exit={{ opacity: 0, y: -5, height: 0 }}
+                        className="text-[11px] font-bold -mt-2 mb-4 px-2 flex items-center overflow-hidden"
+                      >
+                        {lookupLoading ? (
+                           <span className="text-slate-400 flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Fetching name...</span>
+                        ) : (
+                           <span className="text-emerald-600 flex items-center gap-1.5"><CheckCircle size={12} /> {lookupName}</span>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  
                   <SelectField
                     label="Class"
                     name="className"
