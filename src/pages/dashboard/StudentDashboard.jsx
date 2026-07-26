@@ -299,6 +299,7 @@ const StudentDashboard = () => {
     { id: 'academic', label: 'Academic', icon: GraduationCap, color: '#3b82f6' },
     { id: 'notices', label: 'Notices', icon: Bell, color: '#f59e0b' },
     { id: 'finance', label: 'Finance', icon: CreditCard, color: '#ec4899' },
+    { id: 'profile', label: 'My Profile', icon: User, color: '#8b5cf6' },
   ];
 
   const container = {
@@ -731,6 +732,109 @@ const StudentDashboard = () => {
                     <p className="text-sm text-slate-400 font-medium max-w-[200px]">View and download all your previous payment receipts.</p>
                     <button onClick={() => navigate('/students/fees')} className="mt-6 text-sm font-black text-indigo-600">View History →</button>
                   </div>
+                </div>
+              )}
+
+              {activeTab === 'profile' && (
+                <div className="space-y-8">
+                  {/* Profile Hero Card */}
+                  <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-tr from-violet-600 via-purple-600 to-indigo-500 p-8 text-white shadow-2xl">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 blur-[80px] rounded-full -mr-20 -mt-20" />
+                    <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
+                      {/* Avatar */}
+                      <div className="relative shrink-0">
+                        <div className="w-32 h-32 rounded-[1.5rem] bg-white/10 border-4 border-white/30 overflow-hidden shadow-xl">
+                          {currentStudent?.photo ? (
+                            <img src={currentStudent.photo} alt={currentStudent?.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <span className="text-5xl font-black text-white/60">
+                                {(currentStudent?.name || 'S')[0].toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="absolute -bottom-2 -right-2 bg-emerald-500 w-7 h-7 rounded-full border-4 border-violet-600 flex items-center justify-center">
+                          <div className="w-2 h-2 bg-white rounded-full" />
+                        </div>
+                      </div>
+
+                      {/* Student Details */}
+                      <div className="flex-1">
+                        <p className="text-violet-200 text-xs font-black uppercase tracking-widest mb-1">Student Profile</p>
+                        <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-3">
+                          {currentStudent?.name || 'Student'}
+                        </h2>
+                        <div className="flex flex-wrap gap-3">
+                          <span className="px-4 py-1.5 rounded-full bg-white/15 border border-white/20 text-sm font-black">
+                            {currentStudent?.className || 'N/A'}
+                          </span>
+                          <span className="px-4 py-1.5 rounded-full bg-white/15 border border-white/20 text-sm font-black">
+                            ID: {currentStudent?.regNo || regNum}
+                          </span>
+                          {currentStudent?.gender && (
+                            <span className="px-4 py-1.5 rounded-full bg-white/15 border border-white/20 text-sm font-black capitalize">
+                              {currentStudent.gender}
+                            </span>
+                          )}
+                          {currentStudent?.house && (
+                            <span className="px-4 py-1.5 rounded-full bg-emerald-500/30 border border-emerald-400/40 text-sm font-black">
+                              🏠 {currentStudent.house}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => navigate('/students/profile')}
+                        className="px-6 py-3 bg-white/15 hover:bg-white/25 border border-white/20 rounded-2xl font-black text-sm transition-all backdrop-blur-sm whitespace-nowrap"
+                      >
+                        Edit Profile →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Info Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[
+                      { label: 'Full Name', value: currentStudent?.name || '—', icon: User, color: '#6366f1' },
+                      { label: 'Class', value: currentStudent?.className || '—', icon: GraduationCap, color: '#3b82f6' },
+                      { label: 'Reg. Number', value: currentStudent?.regNo || regNum || '—', icon: BookOpen, color: '#10b981' },
+                      { label: 'Gender', value: currentStudent?.gender || '—', icon: User, color: '#ec4899' },
+                      { label: 'Date of Birth', value: currentStudent?.dob || '—', icon: Calendar, color: '#f59e0b' },
+                      { label: 'House', value: currentStudent?.house || '—', icon: Star, color: '#8b5cf6' },
+                      { label: 'Phone', value: currentStudent?.phone || '—', icon: Zap, color: '#06b6d4' },
+                      { label: 'Email', value: currentStudent?.email || '—', icon: InboxIcon, color: '#f43f5e' },
+                      { label: 'Session', value: currentSession || '—', icon: Calendar, color: '#84cc16' },
+                    ].map((item, idx) => (
+                      <div key={idx} className="bg-white p-6 rounded-[1.5rem] border border-slate-100 shadow-sm flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${item.color}15` }}>
+                          <item.icon size={22} style={{ color: item.color }} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{item.label}</p>
+                          <p className="text-sm font-black text-slate-800 truncate">{item.value}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Photo Upload CTA */}
+                  {!currentStudent?.photo && (
+                    <div className="bg-amber-50 border-2 border-amber-200 border-dashed rounded-[2rem] p-8 text-center">
+                      <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <User size={32} className="text-amber-600" />
+                      </div>
+                      <h4 className="text-lg font-black text-amber-800 mb-1">No Profile Photo Yet</h4>
+                      <p className="text-sm text-amber-600 font-medium mb-4">Your profile photo will appear on your result card and ID card.</p>
+                      <button
+                        onClick={() => navigate('/students/profile')}
+                        className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black text-sm transition-all shadow-lg shadow-amber-200"
+                      >
+                        Upload Photo Now
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </motion.div>
