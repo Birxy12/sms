@@ -323,7 +323,7 @@ const StudentManagement = () => {
                 <tr key={student.id} className="hover:bg-indigo-50/30 transition-colors group">
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black overflow-hidden">
+                      <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-black overflow-hidden">
                         {student.photo ? (
                           <img src={student.photo} alt={student.name} className="w-full h-full object-cover" />
                         ) : (
@@ -392,7 +392,7 @@ const StudentManagement = () => {
             <div className="p-8 space-y-6">
               {/* Student Info */}
               <div className="flex items-center gap-4 bg-slate-50 rounded-2xl p-4">
-                <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-lg overflow-hidden">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-lg overflow-hidden">
                   {promoteModal.student.photo ? <img src={promoteModal.student.photo} alt="" className="w-full h-full object-cover" /> : promoteModal.student.name[0]}
                 </div>
                 <div className="text-left">

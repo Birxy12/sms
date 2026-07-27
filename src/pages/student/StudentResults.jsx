@@ -875,7 +875,7 @@ return (
             </div>
             <div className="flex flex-wrap items-center gap-4 md:gap-8">
               <div className="flex flex-col items-end">
-                <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-800 shadow-xl bg-slate-50 dark:bg-slate-800 mb-1">
+                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white dark:border-slate-800 shadow-xl bg-slate-50 dark:bg-slate-800 mb-1">
                   {currentStudent?.photo || currentStudent?.photoURL ? (
                     <img src={currentStudent.photo || currentStudent.photoURL} alt="Student" className="w-full h-full object-cover" />
                   ) : (
