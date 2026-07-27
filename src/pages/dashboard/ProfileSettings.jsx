@@ -38,6 +38,7 @@ const ProfileSettings = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoURL, setPhotoURL] = useState(user?.photo || user?.photoURL || '');
   const [cropImageSrc, setCropImageSrc] = useState(null);
+  const [activeTab, setActiveTab] = useState('info');
 
   // Sync state if user changes/loads later
   React.useEffect(() => {
@@ -145,261 +146,209 @@ const ProfileSettings = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <button onClick={() => navigate(-1)} className="p-2.5 hover:bg-slate-100 rounded-2xl transition-colors">
-          <ArrowLeft size={24} className="text-slate-600" />
+    <div className="max-w-3xl mx-auto pb-20 animate-in fade-in duration-500 bg-white min-h-screen">
+      {/* Top Header */}
+      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-slate-100">
+        <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+          <ArrowLeft size={24} className="text-slate-700" />
         </button>
-        <h2 className="text-2xl font-black text-slate-800 tracking-tight">Account Settings</h2>
+        <h2 className="text-lg font-black text-slate-900 tracking-tight">{name}</h2>
         <div className="w-10" />
       </div>
 
-      {/* Default password warning — only for non-admins */}
-      {isUsingDefaultPassword && (
-        <div className="mb-8 p-6 bg-amber-50 border-2 border-amber-200 rounded-3xl flex items-start gap-4">
-          <div className="p-3 bg-amber-100 text-amber-600 rounded-2xl">
-            <Shield size={24} />
+      {/* Profile Info (TikTok style) */}
+      <div className="flex flex-col items-center pt-6 px-4">
+        {/* Avatar */}
+        <div className="relative mb-3 group">
+          <div
+            className="w-28 h-28 rounded-full border-4 border-white shadow-xl bg-indigo-50 flex items-center justify-center overflow-hidden cursor-pointer"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {uploadingPhoto ? (
+              <Loader2 size={32} className="animate-spin text-indigo-500" />
+            ) : photoURL ? (
+              <img src={photoURL} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-4xl font-black text-indigo-600">{(name[0] || '?').toUpperCase()}</span>
+            )}
           </div>
-          <div>
-            <h4 className="font-black text-amber-900 text-lg">Action Required: Change Password</h4>
-            <p className="text-amber-700 font-bold text-sm">You are still using the default password. Please update it below for security.</p>
-          </div>
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute bottom-0 right-0 p-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-transform active:scale-95"
+          >
+            <Camera size={16} />
+          </button>
+          <input type="file" ref={fileInputRef} onChange={handlePhotoSelect} className="hidden" accept="image/*" />
         </div>
-      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* ── Sidebar ────────────────────────────────────────────────────── */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 text-center overflow-hidden">
+        {/* Names */}
+        <h1 className="text-2xl font-black text-slate-900">{name}</h1>
+        <p className="text-sm font-bold text-slate-500 mt-0.5">@{user.regNo || user.staffId || user.email?.split('@')[0] || 'user'}</p>
 
-            {/* Cover / Photo Banner */}
-            <div className="relative" style={{ height: '120px' }}>
-              {photoURL ? (
-                <img src={photoURL} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-              ) : (
-                <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #6366f140, #6366f115)' }} />
-              )}
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.35))' }} />
-              {/* Hover overlay to change photo */}
-              <label
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer transition-opacity opacity-0 hover:opacity-100"
-                style={{ background: 'rgba(0,0,0,0.45)', color: 'white' }}
-              >
-                {uploadingPhoto ? <Loader2 size={24} className="animate-spin" /> : <Camera size={24} />}
-                <span style={{ fontSize: '10px', fontWeight: 900, marginTop: '4px', textTransform: 'uppercase', letterSpacing: '2px' }}>
-                  {uploadingPhoto ? 'Uploading…' : 'Change Photo'}
-                </span>
-              </label>
-              <input type="file" ref={fileInputRef} onChange={handlePhotoSelect} className="hidden" accept="image/*" />
-            </div>
-
-            {/* Avatar */}
-            <div style={{ marginTop: '-28px', position: 'relative', zIndex: 10 }} className="flex justify-center mb-3">
-              <div
-                className="w-14 h-14 rounded-full border-4 border-white shadow-lg bg-indigo-100 flex items-center justify-center overflow-hidden cursor-pointer relative group"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {uploadingPhoto ? (
-                  <Loader2 size={20} className="animate-spin text-indigo-500" />
-                ) : photoURL ? (
-                  <img src={photoURL} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-xl font-black text-indigo-600">{(name[0] || '?').toUpperCase()}</span>
-                )}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 rounded-full flex items-center justify-center transition-opacity">
-                  <Camera size={14} className="text-white" />
-                </div>
-              </div>
-            </div>
-
-            <div className="px-8 pb-8">
-              <h3 className="text-xl font-black text-slate-900 mb-1">{name}</h3>
-              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">
-                {isStudent ? 'Student Account' : (currentAdmin.role === 'admin' ? 'Super Admin' : currentAdmin.role === 'principal' ? 'Principal' : currentAdmin.role === 'bursar' ? 'Bursar' : 'Staff Member')}
-              </p>
-              <div className="pt-6 border-t border-slate-100 space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{isStudent ? 'REG NO' : 'STAFF ID'}</span>
-                  <span className="text-sm font-black text-slate-700 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">{user.regNo || user.staffId || 'N/A'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">STATUS</span>
-                  <span className="text-emerald-600 font-black text-[10px] flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-full uppercase tracking-tighter">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Verified
-                  </span>
-                </div>
-              </div>
-            </div>
+        {/* Stats Row */}
+        <div className="flex items-center justify-center gap-8 mt-5 mb-6 w-full max-w-sm">
+          <div className="flex flex-col items-center">
+            <span className="text-lg font-black text-slate-900 capitalize">
+              {isStudent ? 'Student' : (currentAdmin?.role || 'Staff')}
+            </span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Role</span>
+          </div>
+          <div className="w-px h-8 bg-slate-200" />
+          <div className="flex flex-col items-center">
+            <span className="text-lg font-black text-slate-900">Active</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Status</span>
+          </div>
+          <div className="w-px h-8 bg-slate-200" />
+          <div className="flex flex-col items-center">
+            <span className="text-lg font-black text-slate-900">{isUsingDefaultPassword ? 'Weak' : 'Secure'}</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Security</span>
           </div>
         </div>
 
-        {/* ── Main Content ───────────────────────────────────────────────── */}
-        <div className="lg:col-span-8 space-y-8">
+        {/* Action Buttons */}
+        <div className="flex items-center gap-3 mb-4 w-full max-w-sm">
+          <button 
+            onClick={() => { setActiveTab('info'); setEditMode(true); }}
+            className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 rounded-lg transition-colors"
+          >
+            Edit profile
+          </button>
+          <button 
+            onClick={() => setActiveTab('security')}
+            className={`flex-1 font-bold py-2.5 rounded-lg transition-colors ${
+              isUsingDefaultPassword ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+            }`}
+          >
+            Security
+          </button>
+        </div>
+      </div>
 
-          {/* Personal Information Card */}
-          <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                  <User size={20} />
-                </div>
-                <h4 className="text-lg font-black text-slate-800">Personal Information</h4>
-              </div>
-              {/* Edit / Cancel toggle */}
-              {!editMode ? (
-                <button
-                  type="button"
-                  onClick={() => setEditMode(true)}
-                  className="flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black text-sm px-5 py-2.5 rounded-xl transition-all active:scale-95"
-                >
-                  <Edit2 size={15} />
-                  Edit Profile
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-sm px-5 py-2.5 rounded-xl transition-all active:scale-95"
-                >
-                  <X size={15} />
-                  Cancel
-                </button>
-              )}
-            </div>
+      {/* Tabs */}
+      <div className="flex border-b border-slate-200 sticky top-[53px] bg-white/95 backdrop-blur-md z-10">
+        <button 
+          onClick={() => setActiveTab('info')}
+          className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'info' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+        >
+          Personal Info
+        </button>
+        <button 
+          onClick={() => setActiveTab('security')}
+          className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'security' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+        >
+          Account Security
+        </button>
+      </div>
 
-            <form onSubmit={handleSaveInfo} className="space-y-6">
-              {/* Full Name */}
-              <div className="space-y-2">
-                <label className="text-xs font-black text-slate-500 ml-1 uppercase tracking-widest">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  {editMode ? (
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      autoFocus
-                      className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border-2 border-indigo-300 focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-700 shadow-sm"
-                    />
-                  ) : (
-                    <div className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border-2 border-transparent font-bold text-slate-700">
-                      {name || <span className="text-slate-400">—</span>}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Email */}
-              <div className={`space-y-2 ${!isAdminOrSuper && !editMode ? 'opacity-60' : ''}`}>
-                <label className="text-xs font-black text-slate-500 ml-1 uppercase tracking-widest">Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  {editMode && isAdminOrSuper ? (
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border-2 border-indigo-300 focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-700 shadow-sm"
-                    />
-                  ) : (
-                    <div className={`w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-transparent font-bold ${!isAdminOrSuper ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 text-slate-700'}`}>
-                      {email || <span className="text-slate-400">—</span>}
-                    </div>
-                  )}
-                </div>
+      {/* Tab Content */}
+      <div className="p-4 mt-2">
+        {activeTab === 'info' && (
+           <form onSubmit={handleSaveInfo} className="space-y-5 max-w-md mx-auto">
+             <div className="space-y-1.5">
+               <label className="text-xs font-bold text-slate-500 ml-1">Full Name</label>
+               <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={!editMode}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-slate-400 focus:bg-white outline-none transition-all font-bold text-slate-800 disabled:opacity-70 disabled:bg-slate-100"
+                />
+             </div>
+             <div className="space-y-1.5">
+               <label className="text-xs font-bold text-slate-500 ml-1">Email</label>
+               <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={!editMode || !isAdminOrSuper}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-slate-400 focus:bg-white outline-none transition-all font-bold text-slate-800 disabled:opacity-70 disabled:bg-slate-100"
+                />
                 {editMode && !isAdminOrSuper && (
-                  <p className="text-xs text-slate-400 ml-1">Email can only be changed by administrators.</p>
+                  <p className="text-[10px] font-bold text-slate-400 ml-1 mt-1">Contact an admin to change your email.</p>
                 )}
-              </div>
+             </div>
+             {editMode && (
+               <div className="flex gap-3 pt-4">
+                 <button type="button" onClick={handleCancelEdit} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold transition-colors">Cancel</button>
+                 <button type="submit" disabled={saving} className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold flex justify-center items-center gap-2 transition-colors">
+                   {saving ? <Loader2 size={18} className="animate-spin" /> : 'Save Changes'}
+                 </button>
+               </div>
+             )}
+             {!editMode && (
+               <button 
+                 type="button" 
+                 onClick={() => setEditMode(true)}
+                 className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold mt-4 transition-colors"
+               >
+                 Tap to edit information
+               </button>
+             )}
+           </form>
+        )}
 
-              {/* Save button — only visible in edit mode */}
-              {editMode && (
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-black transition-all shadow-xl shadow-indigo-100 disabled:opacity-50 disabled:shadow-none active:scale-[0.98]"
-                >
-                  {saving ? <Loader2 size={22} className="animate-spin" /> : <><Save size={20} /> Save Changes</>}
-                </button>
-              )}
-            </form>
-          </div>
-
-          {/* Account Security */}
-          <div className={`bg-white p-8 rounded-[2rem] shadow-sm border-2 ${isUsingDefaultPassword ? 'border-amber-400' : 'border-slate-200'}`}>
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl ${isUsingDefaultPassword ? 'bg-amber-100 text-amber-600' : 'bg-indigo-50 text-indigo-600'}`}>
-                  <Lock size={20} />
+        {activeTab === 'security' && (
+          <div className="space-y-6 max-w-md mx-auto">
+            {isUsingDefaultPassword && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex gap-3">
+                <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={20} />
+                <div>
+                  <p className="text-sm font-bold text-amber-900">Update required</p>
+                  <p className="text-xs font-medium text-amber-700 mt-0.5">Please change your default password to secure your account.</p>
                 </div>
-                <h4 className="text-lg font-black text-slate-800">Account Security</h4>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowPasswords(!showPasswords)}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                {showPasswords ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-
-            <form onSubmit={handleChangePassword} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 ml-1 uppercase tracking-widest">New Password</label>
+            )}
+            <form onSubmit={handleChangePassword} className="space-y-5">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 ml-1">New Password</label>
+                <div className="relative">
                   <input
                     type={showPasswords ? 'text' : 'password'}
                     value={passwords.new}
                     onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
                     required
                     placeholder="Min 3 characters"
-                    className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-700 shadow-sm"
+                    className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-slate-400 focus:bg-white outline-none transition-all font-bold text-slate-800 pr-12"
                   />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 ml-1 uppercase tracking-widest">Confirm Password</label>
-                  <input
-                    type={showPasswords ? 'text' : 'password'}
-                    value={passwords.confirm}
-                    onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-                    required
-                    placeholder="Repeat new password"
-                    className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-700 shadow-sm"
-                  />
+                  <button type="button" onClick={() => setShowPasswords(!showPasswords)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                    {showPasswords ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
-
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 ml-1">Confirm Password</label>
+                <input
+                  type={showPasswords ? 'text' : 'password'}
+                  value={passwords.confirm}
+                  onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+                  required
+                  placeholder="Repeat new password"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-slate-400 focus:bg-white outline-none transition-all font-bold text-slate-800"
+                />
+              </div>
               <button
                 type="submit"
                 disabled={changingPassword || !passwords.new || passwords.new !== passwords.confirm}
-                className={`w-full flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-black transition-all shadow-xl active:scale-[0.98] disabled:opacity-40 disabled:shadow-none ${
-                  isUsingDefaultPassword ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200'
+                className={`w-full py-3.5 rounded-xl font-bold flex justify-center items-center gap-2 mt-4 transition-all disabled:opacity-50 disabled:shadow-none ${
+                  isUsingDefaultPassword ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-lg shadow-amber-200' : 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-200'
                 }`}
               >
-                {changingPassword ? <Loader2 size={24} className="animate-spin" /> : (
-                  <><Shield size={20} />{isUsingDefaultPassword ? 'Update Default Password' : 'Change Password'}</>
-                )}
+                {changingPassword ? <Loader2 size={18} className="animate-spin" /> : 'Update Password'}
               </button>
             </form>
           </div>
-
-          {/* Toast */}
-          {status.message && (
-            <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 p-5 rounded-[1.5rem] flex items-center gap-3 shadow-2xl z-50 animate-in slide-in-from-bottom-8 duration-300 min-w-[320px] ${
-              status.type === 'success' ? 'bg-slate-900 text-white' : 'bg-rose-600 text-white'
-            }`}>
-              {status.type === 'success' ? <CheckCircle size={22} className="text-emerald-400" /> : <AlertCircle size={22} />}
-              <p className="font-black text-sm tracking-tight">{status.message}</p>
-              <button onClick={() => setStatus({ type: '', message: '' })} className="ml-auto p-1 hover:bg-white/10 rounded-lg">
-                <Trash2 size={16} />
-              </button>
-            </div>
-          )}
-        </div>
+        )}
       </div>
+
+      {/* Toast */}
+      {status.message && (
+        <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full flex items-center gap-2 shadow-2xl z-50 animate-in slide-in-from-bottom-8 duration-300 ${
+          status.type === 'success' ? 'bg-slate-900 text-white' : 'bg-rose-600 text-white'
+        }`}>
+          {status.type === 'success' ? <CheckCircle size={18} className="text-emerald-400" /> : <AlertCircle size={18} />}
+          <p className="font-bold text-sm whitespace-nowrap">{status.message}</p>
+        </div>
+      )}
 
       {cropImageSrc && (
         <ImageCropperModal
