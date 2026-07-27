@@ -167,7 +167,7 @@ const ProfileSettings = () => {
             {uploadingPhoto ? (
               <Loader2 size={32} className="animate-spin text-indigo-500" />
             ) : photoURL ? (
-              <img src={photoURL} alt="Avatar" className="w-full h-full object-cover" />
+              <img src={photoURL} alt="Avatar" className="w-full h-full object-cover rounded-full" />
             ) : (
               <span className="text-4xl font-black text-indigo-600">{(name[0] || '?').toUpperCase()}</span>
             )}
