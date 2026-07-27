@@ -161,7 +161,7 @@ const ProfileSettings = () => {
         {/* Avatar */}
         <div className="relative mb-3 group">
           <div
-            className="w-28 h-28 rounded-full border-4 border-white shadow-xl bg-indigo-50 flex items-center justify-center overflow-hidden cursor-pointer"
+            className="w-24 h-24 rounded-full border-4 border-white shadow-xl bg-indigo-50 flex items-center justify-center overflow-hidden cursor-pointer"
             onClick={() => fileInputRef.current?.click()}
           >
             {uploadingPhoto ? (
