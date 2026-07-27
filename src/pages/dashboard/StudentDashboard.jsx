@@ -340,7 +340,7 @@ const StudentDashboard = () => {
                     <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-1">
                       <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
                         {currentStudent?.photo ? (
-                          <img src={currentStudent.photo} alt="Profile" className="w-full h-full object-cover" />
+                          <img src={currentStudent.photo} alt="Profile" className="w-full h-full object-cover rounded-full" />
                         ) : (
                           <User size={40} className="text-slate-400" />
                         )}
@@ -745,7 +745,7 @@ const StudentDashboard = () => {
                       <div className="relative shrink-0">
                         <div className="w-32 h-32 rounded-full bg-white/10 border-4 border-white/30 overflow-hidden shadow-xl">
                           {currentStudent?.photo ? (
-                            <img src={currentStudent.photo} alt={currentStudent?.name} className="w-full h-full object-cover" />
+                            <img src={currentStudent.photo} alt={currentStudent?.name} className="w-full h-full object-cover rounded-full" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <span className="text-5xl font-black text-white/60">

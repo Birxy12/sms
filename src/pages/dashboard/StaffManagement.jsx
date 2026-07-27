@@ -292,7 +292,7 @@ const StaffManagement = () => {
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 overflow-hidden border border-slate-200">
                         {person.photo ? (
-                          <img src={person.photo} alt={person.name} className="w-full h-full object-cover" />
+                          <img src={person.photo} alt={person.name} className="w-full h-full object-cover rounded-full" />
                         ) : (
                           person.name[0]
                         )}
@@ -371,7 +371,7 @@ const StaffManagement = () => {
                     {uploadingPhoto ? (
                       <Loader2 className="animate-spin text-indigo-600" />
                     ) : currentStaff.photo ? (
-                      <img src={currentStaff.photo} alt="Passport" className="w-full h-full object-cover" />
+                      <img src={currentStaff.photo} alt="Passport" className="w-full h-full object-cover rounded-full" />
                     ) : (
                       <Camera className="text-slate-400" size={32} />
                     )}
@@ -567,7 +567,7 @@ const StaffManagement = () => {
               <div className="relative w-28 h-28 mx-auto">
                 <div className="w-28 h-28 rounded-full bg-slate-100 flex items-center justify-center font-extrabold text-slate-600 overflow-hidden border-4 border-indigo-50 shadow-md">
                   {activeActionStaff.photo ? (
-                    <img src={activeActionStaff.photo} alt={activeActionStaff.name} className="w-full h-full object-cover" />
+                    <img src={activeActionStaff.photo} alt={activeActionStaff.name} className="w-full h-full object-cover rounded-full" />
                   ) : (
                     <span className="text-3xl">{activeActionStaff.name[0]}</span>
                   )}

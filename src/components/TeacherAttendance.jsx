@@ -323,7 +323,7 @@ const TeacherAttendance = () => {
                       isPresent ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-100 text-slate-500'
                     }`}>
                       {student.photo ? (
-                        <img src={student.photo} alt={student.name} className="w-full h-full object-cover" />
+                        <img src={student.photo} alt={student.name} className="w-full h-full object-cover rounded-full" />
                       ) : (
                         student.name?.[0]
                       )}

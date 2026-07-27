@@ -457,7 +457,7 @@ const AdminDashboard = () => {
                   <div key={student.id} className="flex items-center gap-4 py-4">
                     <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-sm shrink-0 overflow-hidden">
                       {student.photo
-                        ? <img src={student.photo} alt="" className="w-full h-full object-cover" />
+                        ? <img src={student.photo} alt="" className="w-full h-full object-cover rounded-full" />
                         : (student.name || student.NAME || '?')[0]}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -628,7 +628,7 @@ const AdminDashboard = () => {
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-full border-2 border-indigo-100 bg-indigo-50 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
             {currentAdmin?.photo ? (
-              <img src={currentAdmin.photo} alt="Profile" className="w-full h-full object-cover" />
+              <img src={currentAdmin.photo} alt="Profile" className="w-full h-full object-cover rounded-full" />
             ) : (
               <User size={24} className="text-indigo-600" />
             )}

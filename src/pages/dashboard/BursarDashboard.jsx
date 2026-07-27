@@ -1378,7 +1378,7 @@ const BursarDashboard = () => {
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full border-2 border-indigo-100 bg-indigo-50 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
             {currentAdmin?.photo ? (
-              <img src={currentAdmin.photo} alt="Profile" className="w-full h-full object-cover" />
+              <img src={currentAdmin.photo} alt="Profile" className="w-full h-full object-cover rounded-full" />
             ) : (
               <User size={28} className="text-indigo-600" />
             )}

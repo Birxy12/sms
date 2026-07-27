@@ -325,7 +325,7 @@ const StudentManagement = () => {
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-black overflow-hidden">
                         {student.photo ? (
-                          <img src={student.photo} alt={student.name} className="w-full h-full object-cover" />
+                          <img src={student.photo} alt={student.name} className="w-full h-full object-cover rounded-full" />
                         ) : (
                           student.name[0]
                         )}
@@ -539,7 +539,7 @@ const StudentManagement = () => {
                     {uploading ? (
                       <Loader2 className="animate-spin text-indigo-600" />
                     ) : currentStudent.photo ? (
-                      <img src={currentStudent.photo} alt="Passport" className="w-full h-full object-cover" />
+                      <img src={currentStudent.photo} alt="Passport" className="w-full h-full object-cover rounded-full" />
                     ) : (
                       <Camera className="text-slate-400" size={32} />
                     )}
