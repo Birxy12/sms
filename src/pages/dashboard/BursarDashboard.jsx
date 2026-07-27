@@ -6,10 +6,11 @@ import {
   Wallet, DollarSign, TrendingUp, TrendingDown, Users, 
   Search, Download, Plus, ArrowUpRight, 
   CheckCircle, AlertCircle, Loader2, Briefcase, Settings, Printer, MessageSquare, AlertTriangle, FileText, UserPlus, Banknote,
-  FileSpreadsheet
+  FileSpreadsheet, User
 } from 'lucide-react';
 import { addDoc, serverTimestamp } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
+import { useAdminAuth } from '../../context/AdminAuthContext';
 import Papa from 'papaparse';
 
 const OldFeesAnalytics = ({ currentCollected, currentExpected }) => {
@@ -107,6 +108,7 @@ const OldFeesAnalytics = ({ currentCollected, currentExpected }) => {
 };
 
 const BursarDashboard = () => {
+  const { currentAdmin } = useAdminAuth();
   const { primaryColor, schoolName } = useTheme();
   const location = window.location;
   const [activeView, setActiveView] = useState(() => {
@@ -1373,14 +1375,20 @@ const BursarDashboard = () => {
     <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h2 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200">
-              <Wallet size={28} />
-            </div>
-            Treasury Master
-          </h2>
-          <p className="text-slate-500 font-medium mt-2">Centralized financial intelligence and fee management.</p>
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full border-2 border-indigo-100 bg-indigo-50 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+            {currentAdmin?.photo ? (
+              <img src={currentAdmin.photo} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <User size={28} className="text-indigo-600" />
+            )}
+          </div>
+          <div>
+            <h2 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+              Treasury Master
+            </h2>
+            <p className="text-slate-500 font-medium mt-2">Welcome back, {currentAdmin?.name || 'Bursar'}. Centralized financial intelligence and fee management.</p>
+          </div>
         </div>
         <div className="flex gap-3">
           <button 

@@ -5,7 +5,7 @@ import ScoreEntry from '../../components/ScoreEntry';
 import AssignmentManager from '../../components/AssignmentManager';
 import NoteManager from '../../components/NoteManager';
 import TeacherAttendance from '../../components/TeacherAttendance';
-import { Book, CheckCircle, Clock, Edit3, List, Calendar as CalendarIcon, FileText, ClipboardList, Users } from 'lucide-react';
+import { Book, CheckCircle, Clock, Edit3, List, Calendar as CalendarIcon, FileText, ClipboardList, Users, User } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { db } from '../../lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -72,9 +72,18 @@ const StaffDashboard = () => {
   return (
     <div className="teachers-page p-4 md:p-8 animate-in fade-in duration-500">
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-10">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Staff Dashboard</h1>
-          <p className="text-slate-500 font-medium mt-1">Manage your academic workflows and student performance.</p>
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-full border-2 border-indigo-100 bg-indigo-50 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+            {currentAdmin?.photo ? (
+              <img src={currentAdmin.photo} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <User size={24} className="text-indigo-600" />
+            )}
+          </div>
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Staff Dashboard</h1>
+            <p className="text-slate-500 font-medium mt-1">Welcome back, {currentAdmin?.name || 'Staff'}. Manage your academic workflows.</p>
+          </div>
         </div>
         <div className="modern-tabs-container hide-scrollbar overflow-x-auto max-w-full">
           {tabs.map(tab => (

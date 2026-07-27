@@ -7,6 +7,7 @@ import { useStudentAuth } from '../context/StudentAuthContext';
 import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import brandlogo from '../assets/bdslogo.jpg';
+import { motion } from 'framer-motion';
 import './navbar.css';
 
 const Navbar = () => {
@@ -273,13 +274,15 @@ const Navbar = () => {
       </nav>
 
       {/* Floating Hamburger FAB – mobile only */}
-      <button
+      <motion.button
+        drag
+        dragMomentum={false}
         className={`floating-hamburger${isMobileMenuOpen ? ' floating-hamburger--open' : ''}`}
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         aria-label="Toggle navigation menu"
       >
         {isMobileMenuOpen ? <X size={22} strokeWidth={2.5} /> : <Menu size={22} strokeWidth={2.5} />}
-      </button>
+      </motion.button>
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (

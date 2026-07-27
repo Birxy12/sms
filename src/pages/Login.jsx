@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { useStudentAuth } from '../context/StudentAuthContext';
@@ -36,38 +36,53 @@ const DEFAULT_CLASS_OPTIONS = [
    'JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'
 ];
 
-const InputField = ({ label, name, type = 'text', placeholder, icon: Icon, required = true, maxLength, pattern, inputMode, value, onChange, showPassword, onTogglePassword }) => (
-  <div className="input-wrapper">
-    <label className="input-label">
-      <Icon size={14} />
-      {label}
-    </label>
-    <div className="input-container">
-      <input
-        type={type === 'password' && showPassword ? 'text' : type}
-        name={name}
-        value={value || ''}
-        onChange={onChange}
-        placeholder={placeholder}
-        required={required}
-        maxLength={maxLength}
-        pattern={pattern}
-        inputMode={inputMode}
-        autoFocus={name === 'regNo' || name === 'email'}
-        className="modern-input"
-      />
-      {type === 'password' && (
-        <button
-          type="button"
-          className="password-toggle"
-          onClick={onTogglePassword}
-        >
-          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-        </button>
-      )}
+const InputField = ({ label, name, type = 'text', placeholder, icon: Icon, required = true, maxLength, pattern, inputMode, value, onChange, showPassword, onTogglePassword }) => {
+  const inputRef = useRef(null);
+  
+  useEffect(() => {
+    if (name === 'regNo' || name === 'email') {
+      const timer = setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 100); // Delay focus slightly to avoid forced layout warning in Firefox
+      return () => clearTimeout(timer);
+    }
+  }, [name]);
+
+  return (
+    <div className="input-wrapper">
+      <label className="input-label">
+        <Icon size={14} />
+        {label}
+      </label>
+      <div className="input-container">
+        <input
+          ref={inputRef}
+          type={type === 'password' && showPassword ? 'text' : type}
+          name={name}
+          value={value || ''}
+          onChange={onChange}
+          placeholder={placeholder}
+          required={required}
+          maxLength={maxLength}
+          pattern={pattern}
+          inputMode={inputMode}
+          className="modern-input"
+        />
+        {type === 'password' && (
+          <button
+            type="button"
+            className="password-toggle"
+            onClick={onTogglePassword}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const SelectField = ({ label, name, options, icon: Icon, required = true, value, onChange }) => (
   <div className="input-wrapper">

@@ -625,7 +625,19 @@ const AdminDashboard = () => {
     <div className="admin-dashboard max-w-7xl mx-auto w-full">
       {/* Responsive Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <h1 className="text-3xl font-black text-slate-800">Admin Dashboard</h1>
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-full border-2 border-indigo-100 bg-indigo-50 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+            {currentAdmin?.photo ? (
+              <img src={currentAdmin.photo} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <User size={24} className="text-indigo-600" />
+            )}
+          </div>
+          <div>
+            <h1 className="text-3xl font-black text-slate-800">Admin Dashboard</h1>
+            <p className="text-sm font-medium text-slate-500">Welcome back, {currentAdmin?.name || 'Administrator'}</p>
+          </div>
+        </div>
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <div className="bg-slate-100 p-1.5 rounded-xl flex gap-1 w-full md:w-auto">
             <button 

@@ -309,26 +309,26 @@ const Marksheet = ({ className: propClassName }) => {
             }
           }
 
-          setData(studentList);
-          setLoading(false);
-          return;
-
-
-        // 2. Fallback to CSV for JSS1/SS1 if Firestore is empty
-        if (currentClassName === 'JSS1') {
-          Papa.parse(marksheetCsv, {
-            complete: (results) => processCSVData(results.data),
-            header: false
-          });
-        } else if (currentClassName === 'SS1') {
-          Papa.parse(ss1MarksheetCsv, {
-            complete: (results) => processCSVData(results.data),
-            header: false
-          });
-        } else {
-          setData([]);
-          setLoading(false);
-        }
+          if (studentList.length > 0) {
+            setData(studentList);
+            setLoading(false);
+          } else {
+            // 2. Fallback to CSV for JSS1/SS1 if Firestore is empty
+            if (currentClassName === 'JSS1') {
+              Papa.parse(marksheetCsv, {
+                complete: (results) => processCSVData(results.data),
+                header: false
+              });
+            } else if (currentClassName === 'SS1') {
+              Papa.parse(ss1MarksheetCsv, {
+                complete: (results) => processCSVData(results.data),
+                header: false
+              });
+            } else {
+              setData([]);
+              setLoading(false);
+            }
+          }
       } catch (error) {
         console.error('Error fetching data:', error);
         // Fallback for demo/startup

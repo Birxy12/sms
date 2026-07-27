@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
-import { Users, BookOpen, PenTool, DollarSign, ArrowUpRight, GraduationCap, BarChart, TrendingUp, UserCheck, Shield } from 'lucide-react';
+import { Users, BookOpen, PenTool, DollarSign, ArrowUpRight, GraduationCap, BarChart, TrendingUp, UserCheck, Shield, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 
 const PrincipalDashboard = () => {
-  const { authReady } = useAdminAuth();
+  const { authReady, currentAdmin } = useAdminAuth();
   const [stats, setStats] = useState({
     totalStudents: 0,
     maleStudents: 0,
@@ -98,11 +98,20 @@ const PrincipalDashboard = () => {
       
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h2 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            <Shield className="text-indigo-600" size={32} /> Principal's Desk
-          </h2>
-          <p className="text-slate-500 font-medium mt-1">Holistic oversight of {stats.totalStudents} students and {stats.totalTeachers} staff members.</p>
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full border-2 border-indigo-100 bg-indigo-50 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+            {currentAdmin?.photo ? (
+              <img src={currentAdmin.photo} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <User size={28} className="text-indigo-600" />
+            )}
+          </div>
+          <div>
+            <h2 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+              <Shield className="text-indigo-600" size={32} /> Principal's Desk
+            </h2>
+            <p className="text-slate-500 font-medium mt-1">Welcome back, {currentAdmin?.name || 'Principal'}. Holistic oversight of {stats.totalStudents} students and {stats.totalTeachers} staff members.</p>
+          </div>
         </div>
         <div className="flex gap-3">
            <Link 
