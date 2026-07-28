@@ -257,7 +257,7 @@ const StudentProfile = () => {
   );
 
   return (
-    <div className="max-w-3xl mx-auto pb-20 animate-in fade-in duration-500 bg-white min-h-screen">
+    <div className={`max-w-3xl mx-auto ${isEditing ? 'pb-32' : 'pb-20'} animate-in fade-in duration-500 bg-white min-h-screen`}>
       {/* Top Header */}
       <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-slate-100">
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
@@ -316,29 +316,13 @@ const StudentProfile = () => {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3 mb-4 w-full max-w-sm">
-          {!isEditing ? (
+          {!isEditing && (
             <button 
               onClick={() => canEdit ? setIsEditing(true) : setStatus({ type: 'error', message: 'Editing locked by admin' })}
               className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 rounded-lg transition-colors"
             >
               Edit profile
             </button>
-          ) : (
-             <div className="flex w-full gap-2">
-                <button 
-                  onClick={() => hasChanges ? setShowConfirmCancel(true) : handleCancel()}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 rounded-lg transition-colors"
-                >
-                  Discard
-                </button>
-                <button 
-                  onClick={handleSave}
-                  disabled={saving || !isFormValid}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center"
-                >
-                  {saving ? <Loader2 size={18} className="animate-spin" /> : 'Save'}
-                </button>
-             </div>
           )}
         </div>
       </div>
@@ -469,6 +453,34 @@ const StudentProfile = () => {
           </div>
         )}
       </div>
+
+      {/* Floating Action Bar for Editing */}
+      <AnimatePresence>
+        {isEditing && (
+          <motion.div 
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-[100] md:pl-64"
+          >
+            <div className="max-w-3xl mx-auto flex gap-3">
+              <button 
+                onClick={() => hasChanges ? setShowConfirmCancel(true) : handleCancel()}
+                className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl transition-colors"
+              >
+                Discard
+              </button>
+              <button 
+                onClick={handleSave}
+                disabled={saving || !isFormValid}
+                className="flex-[2] py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center"
+              >
+                {saving ? <Loader2 size={18} className="animate-spin" /> : 'Save Changes'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Confirm Cancel Dialog */}
       <AnimatePresence>
