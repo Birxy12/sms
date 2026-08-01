@@ -79,9 +79,18 @@ const AdmissionCBTManagement = () => {
     setLoading(true);
     try {
       await ensureFirebaseAuth();
+    } catch (e) {
+      console.warn('Auth warning:', e);
+    }
+
+    try {
       const snap = await getDocs(collection(db, 'admissionQuestions'));
       setQuestions(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      
+    } catch (err) {
+      console.error('Error fetching questions:', err);
+    }
+
+    try {
       const settingsSnap = await getDoc(doc(db, 'settings', 'student_permissions'));
       if (settingsSnap.exists()) {
         const data = settingsSnap.data();
@@ -91,8 +100,7 @@ const AdmissionCBTManagement = () => {
         if (data.examEndDate) setExamEndDate(data.examEndDate);
       }
     } catch (err) {
-      console.error(err);
-      showStatus('error', 'Failed to load questions or settings.');
+      console.error('Error fetching settings:', err);
     } finally {
       setLoading(false);
     }
