@@ -10,10 +10,11 @@ import resultStamp from '../../assets/stamp.jpeg';
 import { expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../../utils/firestoreSchema';
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import Navbar from '../../components/Navbar';
+import { getAverageDivisor } from '../../utils/averageDivisor';
 
 const StudentResults = ({ isPublic }) => {
 const { currentStudent: loggedInStudent, authError, authReady } = useStudentAuth();
-const { schoolName, schoolLogo, primaryColor, principalSignature, principalStamp, darkMode } = useTheme();
+const { schoolName, schoolLogo, primaryColor, principalSignature, principalStamp, darkMode, averageDivisors } = useTheme();
 const printRef = useRef();
 
 const [publishedTerms, setPublishedTerms] = useState([]);
@@ -321,17 +322,8 @@ try {
         // Only show subjects that have been offered
         const displaySubjects = processedMarks.filter(s => s.isOffered);
 
-        // Calculate average based on strict school policy: 
-        // JSS1-3 (16), SS1 (16), SS2/3 Art/Science (9)
-        const cls = (currentStudent?.className || '').toUpperCase();
-        let divisor = displaySubjects.length > 0 ? displaySubjects.length : 1; // Fallback
-        
-        if (cls.includes('JSS') || cls.includes('SS1') || cls.includes('SS 1')) {
-          divisor = 16;
-        } else if ((cls.includes('SS2') || cls.includes('SS3') || cls.includes('SS 2') || cls.includes('SS 3')) && 
-                   (cls.includes('ART') || cls.includes('SCIENCE'))) {
-          divisor = 9;
-        }
+        // Calculate average based on configured divisors
+        const divisor = Math.max(getAverageDivisor(currentStudent?.className || studentClass, averageDivisors), 1);
 
         setStudentMarks({
           subjects: displaySubjects.sort((a, b) => a.subject.localeCompare(b.subject)),

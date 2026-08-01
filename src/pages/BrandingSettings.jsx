@@ -31,7 +31,8 @@ const BrandingSettings = () => {
     nextTermBeginsDate, setNextTermBeginsDate,
     promotionPassMark, setPromotionPassMark,
     autoCommentsEnabled, setAutoCommentsEnabled,
-    commentTemplates, setCommentTemplates
+    commentTemplates, setCommentTemplates,
+    averageDivisors, setAverageDivisors
   } = useTheme();
 
   // Local state for form buffers
@@ -62,6 +63,16 @@ const BrandingSettings = () => {
 
   const [commentsEnabled, setCommentsEnabled] = useState(autoCommentsEnabled ?? true);
   const [tpls, setTpls] = useState(commentTemplates || DEFAULT_COMMENT_TEMPLATES);
+  const [divisorInputs, setDivisorInputs] = useState(averageDivisors || {
+    JSS1: 16,
+    JSS2: 16,
+    JSS3: 16,
+    SS1: 16,
+    'SS2 SCIENCE': 9,
+    'SS2 ART': 9,
+    'SS3 SCIENCE': 9,
+    'SS3 ART': 9,
+  });
 
   // Academic Configuration State
   const [subjectRegistrationEnabled, setSubjectRegistrationEnabled] = useState(false);
@@ -107,7 +118,17 @@ const BrandingSettings = () => {
     setPassMarkInput(promotionPassMark ?? 45);
     setCommentsEnabled(autoCommentsEnabled ?? true);
     setTpls(commentTemplates || DEFAULT_COMMENT_TEMPLATES);
-  }, [schoolName, primaryColor, secondaryColor, schoolLogo, navbarBg, footerBg, navbarTextColor, footerTextColor, principalSignature, principalStamp, bursarSignature, bursarStamp, cat1Limit, cat2Limit, examLimit, currentTerm, termStartDate, termEndDate, nextTermBeginsDate, promotionPassMark, autoCommentsEnabled, commentTemplates]);
+    setDivisorInputs(averageDivisors || {
+      JSS1: 16,
+      JSS2: 16,
+      JSS3: 16,
+      SS1: 16,
+      'SS2 SCIENCE': 9,
+      'SS2 ART': 9,
+      'SS3 SCIENCE': 9,
+      'SS3 ART': 9,
+    });
+  }, [schoolName, primaryColor, secondaryColor, schoolLogo, navbarBg, footerBg, navbarTextColor, footerTextColor, principalSignature, principalStamp, bursarSignature, bursarStamp, cat1Limit, cat2Limit, examLimit, currentTerm, termStartDate, termEndDate, nextTermBeginsDate, promotionPassMark, autoCommentsEnabled, commentTemplates, averageDivisors]);
 
   React.useEffect(() => {
     setSessionInput(currentSession || '2025/2026');
@@ -136,6 +157,7 @@ const BrandingSettings = () => {
     setPromotionPassMark(Number(passMarkInput));
     setAutoCommentsEnabled(commentsEnabled);
     setCommentTemplates(tpls);
+    setAverageDivisors(divisorInputs);
     alert('Branding and Academic Settings updated successfully!');
   };
 
@@ -646,6 +668,32 @@ const BrandingSettings = () => {
                 Students with Third Term average ≥ <strong>{passMarkInput}%</strong> will automatically qualify for auto-promotion.
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* Average Divisor Configuration Card */}
+        <div className="card-white branding-card" style={{ gridColumn: '1 / -1' }}>
+          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+            <BookOpen color="var(--primary)" />
+            <div>
+              <h3 style={{ margin: 0 }}>Average Divisor Settings</h3>
+              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Set the subject divisor used to calculate class averages. Example: JSS1 uses 16 subjects.</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+            {Object.entries(divisorInputs).map(([className, value]) => (
+              <div key={className} style={{ padding: '12px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>{className}</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={value}
+                  onChange={(e) => setDivisorInputs(prev => ({ ...prev, [className]: Number(e.target.value || 1) }))}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '2px solid #e2e8f0', fontWeight: '800', fontSize: '14px' }}
+                />
+              </div>
+            ))}
           </div>
         </div>
 

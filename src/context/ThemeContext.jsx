@@ -43,6 +43,16 @@ export const ThemeProvider = ({ children }) => {
   const [promotionPassMark, setPromotionPassMark] = useState(45);
   const [autoCommentsEnabled, setAutoCommentsEnabled] = useState(true);
   const [commentTemplates, setCommentTemplates] = useState(null);
+  const [averageDivisors, setAverageDivisors] = useState({
+    JSS1: 16,
+    JSS2: 16,
+    JSS3: 16,
+    SS1: 16,
+    'SS2 SCIENCE': 9,
+    'SS2 ART': 9,
+    'SS3 SCIENCE': 9,
+    'SS3 ART': 9,
+  });
   const [whiteColor] = useState('#ffffff');
   const [loading, setLoading] = useState(true);
 
@@ -120,6 +130,7 @@ export const ThemeProvider = ({ children }) => {
               if (data.promotionPassMark !== undefined) setPromotionPassMark(Number(data.promotionPassMark));
               if (data.autoCommentsEnabled !== undefined) setAutoCommentsEnabled(data.autoCommentsEnabled);
               if (data.commentTemplates) setCommentTemplates(data.commentTemplates);
+              if (data.averageDivisors) setAverageDivisors(data.averageDivisors);
             }
           } catch (e) {
             console.warn('Could not load branding from Firestore. Using local defaults.', e.code || e.message);
@@ -164,7 +175,7 @@ export const ThemeProvider = ({ children }) => {
           principalSignature, principalStamp, bursarSignature, bursarStamp,
           currentSession, cat1Limit, cat2Limit, examLimit,
           currentTerm, termStartDate, termEndDate, nextTermBeginsDate,
-          promotionPassMark, autoCommentsEnabled, commentTemplates,
+          promotionPassMark, autoCommentsEnabled, commentTemplates, averageDivisors,
           lastUpdated: new Date().toISOString()
         });
       } catch (e) {
@@ -225,6 +236,7 @@ export const ThemeProvider = ({ children }) => {
       promotionPassMark, setPromotionPassMark: handleSet(setPromotionPassMark),
       autoCommentsEnabled, setAutoCommentsEnabled: handleSet(setAutoCommentsEnabled),
       commentTemplates, setCommentTemplates: handleSet(setCommentTemplates),
+      averageDivisors, setAverageDivisors: handleSet(setAverageDivisors),
       whiteColor,
       darkMode,
       toggleDarkMode

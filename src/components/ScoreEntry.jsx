@@ -8,10 +8,11 @@ import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { compressMarks, expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../utils/firestoreSchema';
 import { useTheme } from '../context/ThemeContext';
+import { getAverageDivisor } from '../utils/averageDivisor';
 
 const ScoreEntry = () => {
   const { currentAdmin } = useAdminAuth();
-  const { currentSession } = useTheme();
+  const { currentSession, averageDivisors } = useTheme();
   const [selectedClass, setSelectedClass] = useState(() => localStorage.getItem('scoreEntry_class') || '');
   const [selectedSubject, setSelectedSubject] = useState(() => localStorage.getItem('scoreEntry_subject') || '');
   const [selectedSession, setSelectedSession] = useState(() => localStorage.getItem('scoreEntry_session') || currentSession || '2025/2026');
@@ -260,15 +261,8 @@ const ScoreEntry = () => {
           }
         };
 
-        // Recalculate average and overallTotal based on class level policy
-        const clsUpper = selectedClass.toUpperCase();
-        let divisor = 0;
-        if (clsUpper.includes('JSS') || clsUpper.includes('SS1') || clsUpper.includes('SS 1')) {
-          divisor = 16;
-        } else if ((clsUpper.includes('SS2') || clsUpper.includes('SS3') || clsUpper.includes('SS 2') || clsUpper.includes('SS 3')) && 
-                   (clsUpper.includes('ART') || clsUpper.includes('SCIENCE'))) {
-          divisor = 9;
-        }
+        // Recalculate average and overallTotal based on configured divisors
+        const divisor = getAverageDivisor(selectedClass, averageDivisors);
 
         let totalScore = 0;
         let activeSubjectsCount = 0;

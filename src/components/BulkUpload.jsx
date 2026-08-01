@@ -6,6 +6,8 @@ import { collection, doc, writeBatch, query, where, getDocs, setDoc } from 'fire
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Download } from 'lucide-react';
 import { CLASS_LIST, getAllSubjects, getSubjectsForClass } from '../utils/subjectConfig';
 import { compressMarks, compressStudent, expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../utils/firestoreSchema';
+import { useTheme } from '../context/ThemeContext';
+import { getAverageDivisor } from '../utils/averageDivisor';
 
 const getOrdinal = (n) => {
   if (isNaN(n) || n <= 0) return 'N/A';
@@ -15,6 +17,7 @@ const getOrdinal = (n) => {
 };
 
 const BulkUpload = ({ onComplete }) => {
+  const { averageDivisors } = useTheme();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -529,12 +532,8 @@ const BulkUpload = ({ onComplete }) => {
             };
           });
 
-          // Calculate overall average based on policy (JSS: 15, SS1: 16, SS2/3: 9)
-          const clsUpper = selectedClass.toUpperCase();
-          let divisor = 15;
-          if (clsUpper.includes('JSS')) divisor = 16;
-          else if (clsUpper.includes('SS1')) divisor = 16;
-          else if (clsUpper.includes('SS2') || clsUpper.includes('SS3')) divisor = 9;
+          // Calculate overall average based on configured divisors
+          const divisor = getAverageDivisor(selectedClass, averageDivisors);
 
           let totalScore = 0;
           Object.keys(updatedMarksObj).forEach(key => {

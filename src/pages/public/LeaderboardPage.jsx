@@ -8,6 +8,7 @@ import Footer from '../../components/MainFooter';
 import { expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../../utils/firestoreSchema';
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import './LeaderboardPage.css';
+import { getAverageDivisor } from '../../utils/averageDivisor';
 
 // Ordered class list for sorting
 const CLASS_ORDER = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 SCIENCE', 'SS2 ART', 'SS3 SCIENCE', 'SS3 ART'];
@@ -19,7 +20,7 @@ const normalizeClassName = (name = '') => {
 };
 
 const LeaderboardPage = () => {
-  const { schoolName, primaryColor } = useTheme();
+  const { schoolName, primaryColor, averageDivisors } = useTheme();
   const [loading, setLoading] = useState(true);
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [selectedSession, setSelectedSession] = useState('');
@@ -133,14 +134,7 @@ const LeaderboardPage = () => {
                 }
               });
             }
-            let divisor = 15;
-            const cls = className;
-            if (cls.includes('JSS') || cls === 'SS1') {
-              divisor = 16;
-            } else if ((cls.includes('SS2') || cls.includes('SS3')) && 
-                       (cls.includes('ART') || cls.includes('SCIENCE'))) {
-              divisor = 9;
-            }
+            const divisor = Math.max(getAverageDivisor(className, averageDivisors), 1);
             averageScore = parseFloat((totalScore / divisor).toFixed(1));
           }
 
