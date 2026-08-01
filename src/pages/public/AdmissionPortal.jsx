@@ -6,7 +6,7 @@ import {
   ClipboardSignature, Loader2, CheckCircle, AlertTriangle, XCircle,
   GraduationCap, Printer, ChevronRight, ChevronLeft, Timer,
   User, BookOpen, FileText, Search, ArrowRight, Clock, Phone,
-  Sparkles, Shield, Calendar, AlertCircle
+  Sparkles, Shield, Calendar, AlertCircle, Download
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import {
@@ -168,6 +168,8 @@ const AdmissionPortal = () => {
   const [examDone, setExamDone] = useState(false);
   const timerRef = useRef(null);
   const submitRef = useRef(null);
+  const letterRef = useRef(null);
+  const [isLetterPdfGenerating, setIsLetterPdfGenerating] = useState(false);
 
   const [result, setResult] = useState(null);
 
@@ -407,6 +409,44 @@ const AdmissionPortal = () => {
     setStep('apply'); setMode('new'); setResult(null); setAppData(null);
     setFormData(emptyForm); setQuestions([]); setAnswers({});
     setExamDone(false); setReturnAppNo(''); setLookupError('');
+  };
+
+  const handlePrintLetter = () => {
+    if (!letterRef.current) return;
+
+    const printWindow = window.open('', '_blank', 'width=900,height=900');
+    if (!printWindow) {
+      window.alert('Please allow pop-ups to print the admission letter.');
+      return;
+    }
+
+    const letterMarkup = letterRef.current.outerHTML;
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Admission Letter</title><style>body{margin:0;padding:24px;background:#fff;color:#111827;font-family:Arial,sans-serif}*{box-sizing:border-box}img{max-width:100%}</style></head><body>${letterMarkup}</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 300);
+  };
+
+  const handleDownloadLetterPdf = async () => {
+    if (!letterRef.current) return;
+
+    setIsLetterPdfGenerating(true);
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      const opt = {
+        margin: [8, 8, 8, 8],
+        filename: `${(appData?.applicant?.fullName || 'admission-letter').replace(/\s+/g, '-').toLowerCase()}-${appData?.appNo || 'letter'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      };
+      await html2pdf().set(opt).from(letterRef.current).save();
+    } catch (err) {
+      console.error('PDF download failed:', err);
+      window.alert('PDF download failed. Please try again.');
+    } finally {
+      setIsLetterPdfGenerating(false);
+    }
   };
 
   const answeredCount = Object.keys(answers).length;
@@ -811,31 +851,36 @@ const AdmissionPortal = () => {
               {/* Admission Letter */}
               {(result.status === 'granted' || result.status === 'trial') && (
                 <div style={{ marginBottom: 32 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
                     <p style={{ fontWeight: 900, fontSize: 11, letterSpacing: '3px', textTransform: 'uppercase', color: '#64748b', margin: 0 }}>Official Admission Letter</p>
-                    <button onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#0f172a', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }}>
-                      <Printer size={15} /> Print Letter
-                    </button>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <button onClick={handlePrintLetter} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#334155', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.12)' }}>
+                        <Printer size={15} /> Print Letter
+                      </button>
+                      <button onClick={handleDownloadLetterPdf} disabled={isLetterPdfGenerating} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#0f766e', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: isLetterPdfGenerating ? 'wait' : 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.12)', opacity: isLetterPdfGenerating ? 0.8 : 1 }}>
+                        {isLetterPdfGenerating ? <Loader2 size={15} className="admission-spin" /> : <Download size={15} />} {isLetterPdfGenerating ? 'Preparing PDF...' : 'Download PDF'}
+                      </button>
+                    </div>
                   </div>
-                  <div id="admission-letter" style={{ background: '#fff', borderRadius: 22, boxShadow: '0 20px 60px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', fontFamily: 'Georgia, serif', overflow: 'hidden', textAlign: 'left' }}>
-                    <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', padding: '28px 36px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div ref={letterRef} id="admission-letter" className="admission-letter-card" style={{ background: '#fff', borderRadius: 22, boxShadow: '0 20px 60px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', fontFamily: 'Georgia, serif', overflow: 'hidden', textAlign: 'left' }}>
+                    <div className="admission-letter-header" style={{ background: 'linear-gradient(135deg, #475569, #64748b)', padding: '28px 36px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                         <img src={logoUrl} alt="Logo" style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'contain', border: '2px solid rgba(255,255,255,0.2)' }} />
                         <div>
                           <p style={{ color: '#fff', fontWeight: 900, fontSize: 16, textTransform: 'uppercase', margin: 0, fontFamily: 'Arial' }}>{schoolName || 'Birxy School'}</p>
-                          <p style={{ color: '#94a3b8', fontSize: 11, margin: '3px 0 0', fontFamily: 'Arial', letterSpacing: '1.5px', fontWeight: 700 }}>ADMISSION OFFICE</p>
+                          <p style={{ color: '#e2e8f0', fontSize: 11, margin: '3px 0 0', fontFamily: 'Arial', letterSpacing: '1.5px', fontWeight: 700 }}>ADMISSION OFFICE</p>
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <p style={{ color: '#94a3b8', fontSize: 10, fontFamily: 'Arial', fontWeight: 700, margin: 0, letterSpacing: '1.5px' }}>DATE ISSUED</p>
+                        <p style={{ color: '#cbd5e1', fontSize: 10, fontFamily: 'Arial', fontWeight: 700, margin: 0, letterSpacing: '1.5px' }}>DATE ISSUED</p>
                         <p style={{ color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'Arial', margin: '3px 0 0' }}>{today}</p>
                       </div>
                     </div>
-                    <div style={{ background: result.status === 'granted' ? '#059669' : '#d97706', padding: '9px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <p style={{ color: '#fff', fontWeight: 900, fontSize: 11, letterSpacing: '4px', margin: 0, fontFamily: 'Arial' }}>
+                    <div className="admission-letter-status" style={{ background: '#f8fafc', color: '#334155', padding: '9px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0' }}>
+                      <p style={{ color: '#334155', fontWeight: 800, fontSize: 11, letterSpacing: '4px', margin: 0, fontFamily: 'Arial' }}>
                         {result.status === 'granted' ? 'OFFER OF ADMISSION' : 'PROVISIONAL ADMISSION'}
                       </p>
-                      <p style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 700, fontSize: 11, margin: 0, fontFamily: 'monospace' }}>{appData?.appNo}</p>
+                      <p style={{ color: '#475569', fontWeight: 700, fontSize: 11, margin: 0, fontFamily: 'monospace' }}>{appData?.appNo}</p>
                     </div>
                     <div style={{ padding: '36px' }}>
                       <p style={{ fontFamily: 'Arial', marginBottom: 20, color: '#334155', fontSize: 14, lineHeight: 1.8 }}>Dear <strong>{appData?.applicant?.fullName || 'Applicant'}</strong>,</p>
@@ -904,11 +949,39 @@ const AdmissionPortal = () => {
       <style>{`
         .admission-spin { animation: adm-spin 1s linear infinite; display: inline-block; }
         @keyframes adm-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .admission-letter-card {
+          color: #0f172a;
+        }
         @media print {
-          body > *:not(#root) { display: none; }
-          nav, footer, button, .home-hero, .home-features { display: none !important; }
-          #admission-letter { display: block !important; box-shadow: none !important; border: none !important; }
-          body { background: white; }
+          @page { size: A4; margin: 8mm; }
+          body, html { background: white !important; margin: 0; padding: 0; }
+          #root { display: block !important; background: white !important; }
+          nav, footer, button, .home-hero, .home-features, .home-testimony-form, .home-form-submit { display: none !important; }
+          #admission-letter {
+            display: block !important;
+            box-shadow: none !important;
+            border: 1px solid #e5e7eb !important;
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .admission-letter-header {
+            background: linear-gradient(135deg, #e2e8f0, #f8fafc) !important;
+            color: #111827 !important;
+          }
+          .admission-letter-header p,
+          .admission-letter-header span {
+            color: #111827 !important;
+          }
+          .admission-letter-status {
+            background: #f8fafc !important;
+            color: #334155 !important;
+          }
+          .admission-letter-status p {
+            color: #334155 !important;
+          }
         }
       `}</style>
     </div>
