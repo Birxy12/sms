@@ -140,7 +140,7 @@ service cloud.firestore {
 
     match /admissionQuestions/{id} {
       allow read: if true;
-      allow write: if isSuperAdmin();
+      allow write: if true;
     }
 
     match /admissionLetterTemplates/{id} {

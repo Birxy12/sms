@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
+import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import {
   collection, addDoc, getDocs, deleteDoc, doc, updateDoc, serverTimestamp, getDoc, setDoc
 } from 'firebase/firestore';
@@ -77,6 +78,7 @@ const AdmissionCBTManagement = () => {
   const load = async () => {
     setLoading(true);
     try {
+      await ensureFirebaseAuth();
       const snap = await getDocs(collection(db, 'admissionQuestions'));
       setQuestions(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       
@@ -103,6 +105,7 @@ const AdmissionCBTManagement = () => {
     if (!window.confirm(`This will add ${DEFAULT_QUESTIONS.length} default questions. Continue?`)) return;
     setSeeding(true);
     try {
+      await ensureFirebaseAuth();
       for (const q of DEFAULT_QUESTIONS) {
         await addDoc(collection(db, 'admissionQuestions'), { ...q, createdAt: serverTimestamp() });
       }
@@ -118,6 +121,7 @@ const AdmissionCBTManagement = () => {
     if (editQ.options.some((o) => !o.trim())) { showStatus('error', 'All 4 options are required.'); return; }
     setSaving(true);
     try {
+      await ensureFirebaseAuth();
       const payload = {
         prompt: editQ.prompt.trim(),
         options: editQ.options.map((o) => o.trim()),
@@ -134,7 +138,10 @@ const AdmissionCBTManagement = () => {
       setEditQ(null);
       setEditId('');
       load();
-    } catch { showStatus('error', 'Failed to save question.'); }
+    } catch (err) {
+      console.error(err);
+      showStatus('error', 'Failed to save question: ' + (err.message || 'Permission error'));
+    }
     finally { setSaving(false); }
   };
 
@@ -146,6 +153,7 @@ const AdmissionCBTManagement = () => {
     }
     setSavingSettings(true);
     try {
+      await ensureFirebaseAuth();
       await setDoc(doc(db, 'settings', 'student_permissions'), {
         examDurationMinutes: Number(examDuration),
         examScheduleActive: !!examScheduleActive,
@@ -153,7 +161,10 @@ const AdmissionCBTManagement = () => {
         examEndDate: examEndDate || null,
       }, { merge: true });
       showStatus('success', 'Exam duration and schedule settings updated.');
-    } catch { showStatus('error', 'Failed to update settings.'); }
+    } catch (err) {
+      console.error(err);
+      showStatus('error', 'Failed to update settings: ' + (err.message || 'Permission error'));
+    }
     finally { setSavingSettings(false); }
   };
 
@@ -161,6 +172,7 @@ const AdmissionCBTManagement = () => {
   const deleteQuestion = async (id) => {
     if (!window.confirm('Delete this question?')) return;
     try {
+      await ensureFirebaseAuth();
       await deleteDoc(doc(db, 'admissionQuestions', id));
       showStatus('success', 'Question deleted.');
       setQuestions((p) => p.filter((q) => q.id !== id));
