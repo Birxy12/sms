@@ -64,6 +64,26 @@ const generateUniqueClassRegNo = async (className) => {
 const fmt = (s) =>
   `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
+const getStoredAdmissionResult = (data) => {
+  const total = 20;
+  const score = Number(data?.cbtScore ?? 0);
+  const percentage = data?.cbtCompleted ? Math.round((score / total) * 100) : 0;
+  const explicitStatus = ['granted', 'trial', 'rejected'].includes(data?.admissionStatus)
+    ? data.admissionStatus
+    : null;
+  const computedStatus = data?.cbtCompleted
+    ? (percentage >= 50 ? 'granted' : percentage >= 40 ? 'trial' : 'rejected')
+    : 'pending';
+
+  return {
+    score,
+    total,
+    percentage: explicitStatus ? (explicitStatus === 'granted' ? 100 : explicitStatus === 'trial' ? 50 : 0) : percentage,
+    status: explicitStatus || computedStatus,
+    regNo: data?.regNo || null,
+  };
+};
+
 // ─── Barcode ──────────────────────────────────────────────────────────────────
 const AppBarcode = ({ value }) => {
   const bars = (value || 'BDS').split('').map((c, i) => ({
@@ -311,19 +331,23 @@ const AdmissionPortal = () => {
       const data = { id: snap.docs[0].id, ...snap.docs[0].data() };
       setAppData({ appNo: data.appNo, docId: data.id, applicant: data });
 
-      if (data.cbtCompleted) {
-        const score = data.cbtScore ?? 0, total = 20, pct = Math.round((score / total) * 100);
-        const status = pct >= 50 ? 'granted' : pct >= 40 ? 'trial' : 'rejected';
-        
-        let regNo = data.regNo;
-        if (status !== 'rejected') {
-          regNo = await ensureStudentEnrolled(data, status, regNo);
-          if (regNo !== data.regNo) {
-            await updateDoc(doc(db, 'admissions', data.id), { regNo, admissionStatus: status });
+      const storedResult = getStoredAdmissionResult(data);
+      const hasLetter = ['granted', 'trial'].includes(storedResult.status);
+      const shouldShowLetter = hasLetter || data.cbtCompleted;
+
+      if (shouldShowLetter) {
+        let regNo = data.regNo || storedResult.regNo;
+        if (storedResult.status !== 'rejected' && !regNo) {
+          regNo = await ensureStudentEnrolled(data, storedResult.status, regNo);
+          if (regNo && regNo !== data.regNo) {
+            await updateDoc(doc(db, 'admissions', data.id), { regNo, admissionStatus: storedResult.status });
           }
         }
 
-        setResult({ score, total, percentage: pct, status, regNo });
+        setResult({ ...storedResult, regNo });
+        setStep('result');
+      } else if (data.cbtCompleted) {
+        setResult({ ...storedResult, regNo: data.regNo || null });
         setStep('result');
       } else {
         setStep('instructions');
@@ -438,14 +462,26 @@ const AdmissionPortal = () => {
     setIsLetterPdfGenerating(true);
     try {
       const html2pdf = (await import('html2pdf.js')).default;
+      const clone = letterRef.current.cloneNode(true);
+      clone.style.position = 'fixed';
+      clone.style.left = '-9999px';
+      clone.style.top = '0';
+      clone.style.width = '794px';
+      clone.style.maxWidth = '794px';
+      clone.style.background = '#ffffff';
+      clone.style.opacity = '1';
+      clone.style.transform = 'none';
+      document.body.appendChild(clone);
+
       const opt = {
         margin: [8, 8, 8, 8],
         filename: `${(appData?.applicant?.fullName || 'admission-letter').replace(/\s+/g, '-').toLowerCase()}-${appData?.appNo || 'letter'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, allowTaint: true, imageTimeout: 60000 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       };
-      await html2pdf().set(opt).from(letterRef.current).save();
+      await html2pdf().set(opt).from(clone).save();
+      clone.remove();
     } catch (err) {
       console.error('PDF download failed:', err);
       window.alert('PDF download failed. Please try again.');
