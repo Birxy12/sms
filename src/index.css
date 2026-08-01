@@ -409,6 +409,17 @@ body.dark-mode .custom-scrollbar::-webkit-scrollbar-thumb:hover {
 .gap-2 { gap: 0.5rem; }
 .gap-4 { gap: 1rem; }
 .w-full { width: 100%; }
+.h-full { height: 50px; }
+img[class*="w-full"][class*="h-full"][class*="object-cover"] {
+  height: 50px !important;
+  width: 100% !important;
+  object-fit: cover;
+}
+
+img[class*="rounded-full"],
+img[class*="rounded-[4px]"] {
+  border-radius: 9999px;
+}
 .m-0 { margin: 0; }
 .font-black { font-weight: 900; }
 .text-slate-800 { color: #1e293b; }
