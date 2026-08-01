@@ -688,33 +688,6 @@ sub.total >= 40 ? 'Average' : 'Below Average'}
 <span style={{ fontSize: '7px', fontWeight: 'bold' }}>PRINCIPAL (MRS ETUZU ANITA)</span>
 </div>
 </div>
-<div className="print-footer">
-<div className="footer-cols">
-<div className="footer-sign">
-<div className="sign-line">
-{principalSignature && <img src={principalSignature} alt="Principal Signature" style={{ height: '100%', objectFit: 'contain' }} />}
-</div>
-<p>MRS ETUZU ANITA</p>
-<p>PRINCIPAL'S SIGNATURE</p>
-</div>
-<div className="footer-stamp">
-<div className="stamp-box">
-{principalStamp ? (
-<img src={principalStamp} alt="Stamp" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-) : (
-<img src={resultStamp} alt="Stamp" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-)}
-</div>
-</div>
-<div className="footer-dates">
-<p>Term Ends: <strong>{schoolDates.termEnds}</strong></p>
-<p>Next Term Begins: <strong>{schoolDates.nextTermBegins}</strong></p>
-</div>
-</div>
-<div className="print-final-branding" style={{ textAlign: 'center', fontSize: '8px', color: '#94a3b8', marginTop: '10px', borderTop: '1px solid #f1f5f9', paddingTop: '5px' }}>
-  Powered by GlobixTech Ent. Contact @ 09066202949
-</div>
-</div>
 <div className="print-watermark">{schoolName || 'BONUS DOMINUS'}</div>
 </div>
 );
