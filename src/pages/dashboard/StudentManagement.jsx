@@ -323,9 +323,9 @@ const StudentManagement = () => {
                 <tr key={student.id} className="hover:bg-indigo-50/30 transition-colors group">
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-black overflow-hidden">
+                      <div className="w-5 h-5 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-black overflow-hidden text-[10px]">
                         {student.photo ? (
-                          <img src={student.photo} alt={student.name} className="w-full h-full object-cover rounded-full" />
+                          <img src={student.photo} alt={student.name} className="w-full h-full object-cover rounded-[4px]" />
                         ) : (
                           student.name[0]
                         )}

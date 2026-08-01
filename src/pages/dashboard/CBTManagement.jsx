@@ -308,7 +308,8 @@ const CBTManagement = () => {
         </div>
       )}
 
-      <form className="cbt-builder" onSubmit={saveExam}>
+      <div className="attendance-roster-scroll">
+        <form className="cbt-builder" onSubmit={saveExam}>
         <div className="cbt-panel">
           <div className="cbt-panel-title">
             <h2>{editingId ? 'Edit Exam' : 'New Exam'}</h2>
@@ -420,6 +421,7 @@ const CBTManagement = () => {
           </button>
         </div>
       </form>
+      </div>
 
       <section className="cbt-panel">
         <div className="cbt-panel-title">

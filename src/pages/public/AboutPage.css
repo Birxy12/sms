@@ -419,20 +419,25 @@
   text-align: center;
   position: relative;
   z-index: 1;
+  border-radius: 5px;
 }
 
 .about-principal-avatar {
   width: 6rem;
   height: 6rem;
-  background: var(--color-slate-300);
+  background-color: #334155;
+  border: 1px solid #4f46e5;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 1rem;
   font-size: 2rem;
+  font: 16px/1.6 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 900;
-  color: var(--color-slate-500);
+  color: #f8fafc;
 }
 
 .about-principal-image-overlay {

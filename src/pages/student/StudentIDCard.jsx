@@ -164,8 +164,8 @@ const StudentIDCard = () => {
             ref={cardRef}
             className="id-card"
             style={{ 
-              width: '85.6mm', 
-              height: '54mm', 
+              width: '75mm', 
+              height: '47.5mm', 
               fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
             }}
           >
@@ -397,8 +397,8 @@ const StudentIDCard = () => {
         }
 
         .id-header-icon {
-          width: 56px;
-          height: 56px;
+          width: 28px;
+          height: 28px;
           border-radius: 16px;
           display: flex;
           align-items: center;
@@ -611,9 +611,9 @@ const StudentIDCard = () => {
 
         /* ===== CARD CONTAINER ===== */
         .card-container-wrapper {
-          max-width: 1280px;
+          max-width: 1080px;
           margin: 0 auto;
-          padding: 0 24px 48px;
+          padding: 0 24px 32px;
         }
 
         .card-container {
@@ -807,7 +807,13 @@ const StudentIDCard = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #f8fafc;
+          background-color: #334155;
+          color: #f8fafc;
+          font: 16px/1.6 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+          font-family: 'Inter', sans-serif;
+          border: 1px solid #4f46e5;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
+          border-radius: 3px;
         }
 
         .photo-corner {

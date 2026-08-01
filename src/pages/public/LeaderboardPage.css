@@ -343,24 +343,28 @@
 }
 
 .lb-avatar-img {
-  width: 84px;
-  height: 84px;
-  border-radius: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 3px;
   object-fit: cover;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
   transition: transform 0.3s ease;
 }
 
 .lb-avatar-fallback {
-  width: 84px;
-  height: 84px;
-  border-radius: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.25rem;
+  font: 16px/1.6 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 900;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  color: #f8fafc;
+  background-color: #334155 !important;
+  border: 1px solid #4f46e5;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
 }
 
 .lb-rank-1 .lb-avatar-fallback {

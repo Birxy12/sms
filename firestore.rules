@@ -40,7 +40,7 @@ service cloud.firestore {
     // ========== STUDENTS ==========
     match /students/{id} {
       allow read: if true;
-      allow create: if isAuthenticated();
+      allow create: if true;
       allow update: if isAuthenticated();
       allow delete: if isSuperAdmin();
     }
@@ -132,9 +132,15 @@ service cloud.firestore {
 
     // ========== ADMISSIONS ==========
     match /admissions/{id} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow create: if true;
-      allow update, delete: if isSuperAdmin();
+      allow update: if true;
+      allow delete: if isSuperAdmin();
+    }
+
+    match /admissionQuestions/{id} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
     }
 
     match /admissionLetterTemplates/{id} {

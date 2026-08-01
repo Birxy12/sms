@@ -84,6 +84,12 @@ export const ThemeProvider = ({ children }) => {
           await signInAnonymously(auth).catch(() => {});
         }
 
+        if (!auth.currentUser) {
+          console.warn('Firebase auth not available; using local theme defaults.');
+          setLoading(false);
+          return;
+        }
+
         // Subscribe and load once confirmed
         unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
           if (!user) return; // still waiting

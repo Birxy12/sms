@@ -514,7 +514,17 @@ flex-direction: column;
 .print-term-badge { display: inline-block; background: #1e293b; color: white; padding: 2px 12px; border-radius: 20px; font-size: 9px; font-weight: 900; margin-top: 3px; text-transform: uppercase; letter-spacing: 1px; }
 .student-photo-frame { width: 68px; height: 78px; border: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .student-photo-frame img { width: 100%; height: 100%; object-fit: cover; }
-.photo-placeholder { font-size: 8px; font-weight: 900; color: #cbd5e1; }
+.photo-placeholder {
+  font-size: 8px;
+  font-weight: 900;
+  color: #f8fafc;
+  background-color: #334155;
+  font: 16px/1.6 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', sans-serif;
+  border: 1px solid #4f46e5;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
+  border-radius: 3px;
+}
 .print-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 8px; border: 1px solid #0f172a; padding: 5px; background: #f8fafc; }
 .stat-item { font-size: 9px; display: flex; align-items: center; }
 .stat-item label { font-weight: 800; color: #475569; width: 80px; font-size: 8px; }

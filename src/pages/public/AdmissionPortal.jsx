@@ -6,7 +6,7 @@ import {
   ClipboardSignature, Loader2, CheckCircle, AlertTriangle, XCircle,
   GraduationCap, Printer, ChevronRight, ChevronLeft, Timer,
   User, BookOpen, FileText, Search, ArrowRight, Clock, Phone,
-  Sparkles, Shield,
+  Sparkles, Shield, Calendar, AlertCircle
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import {
@@ -23,18 +23,50 @@ const generateAppNo = () => {
   const num = Math.floor(1000 + Math.random() * 9000);
   return `BDS/APN/${year}/${num}`;
 };
-const generateRegNo = () => {
+
+// Class-dependent registration number generator with duplicate prevention
+const generateUniqueClassRegNo = async (className) => {
+  let classCode = 'GEN';
+  if (className) {
+    const upper = className.trim().toUpperCase();
+    if (upper.includes('JSS 1') || upper === 'JSS1') classCode = 'JSS1';
+    else if (upper.includes('JSS 2') || upper === 'JSS2') classCode = 'JSS2';
+    else if (upper.includes('JSS 3') || upper === 'JSS3') classCode = 'JSS3';
+    else if (upper.includes('SS 1') || upper === 'SS1') classCode = 'SS1';
+    else if (upper.includes('SS 2 SCI') || upper.includes('SS2 SCIENCE')) classCode = 'SS2-SCI';
+    else if (upper.includes('SS 2 ART') || upper.includes('SS2 ART')) classCode = 'SS2-ART';
+    else if (upper.includes('SS 3 SCI') || upper.includes('SS3 SCIENCE')) classCode = 'SS3-SCI';
+    else if (upper.includes('SS 3 ART') || upper.includes('SS3 ART')) classCode = 'SS3-ART';
+    else classCode = upper.replace(/[^A-Z0-9]/g, '');
+  }
+
   const year = new Date().getFullYear();
-  const num = Math.floor(10000 + Math.random() * 90000);
-  return `BDS/${year}/${num}`;
+  const prefix = `BDS/${classCode}/${year}/`;
+
+  try {
+    const snap = await getDocs(collection(db, 'students'));
+    const existingRegNos = new Set(snap.docs.map(d => d.data().regNo).filter(Boolean));
+
+    let seq = 1;
+    let candidate = `${prefix}${String(seq).padStart(3, '0')}`;
+    while (existingRegNos.has(candidate)) {
+      seq++;
+      candidate = `${prefix}${String(seq).padStart(3, '0')}`;
+    }
+    return candidate;
+  } catch (err) {
+    console.error('Error checking existing registration numbers:', err);
+    const rand = Math.floor(100 + Math.random() * 900);
+    return `${prefix}${rand}`;
+  }
 };
-const EXAM_DURATION = 30 * 60;
+
 const fmt = (s) =>
   `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
 // ─── Barcode ──────────────────────────────────────────────────────────────────
 const AppBarcode = ({ value }) => {
-  const bars = value.split('').map((c, i) => ({
+  const bars = (value || 'BDS').split('').map((c, i) => ({
     w: ((c.charCodeAt(0) % 3) + 1) * 3,
     h: 38 + (c.charCodeAt(0) % 20),
     x: i * 9,
@@ -127,7 +159,12 @@ const AdmissionPortal = () => {
   const [loadingQ, setLoadingQ] = useState(false);
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(EXAM_DURATION);
+  const [examDuration, setExamDuration] = useState(30 * 60);
+  const [examScheduleActive, setExamScheduleActive] = useState(false);
+  const [examStartDate, setExamStartDate] = useState('');
+  const [examEndDate, setExamEndDate] = useState('');
+
+  const [timeLeft, setTimeLeft] = useState(0);
   const [examDone, setExamDone] = useState(false);
   const timerRef = useRef(null);
   const submitRef = useRef(null);
@@ -144,9 +181,18 @@ const AdmissionPortal = () => {
     const init = async () => {
       try {
         const snap = await getDoc(doc(db, 'settings', 'student_permissions'));
-        const data = snap.exists() ? snap.data() : {};
-        setAdmissionOpen(data.admissionOpen !== false);
+        if (snap.exists()) {
+          const data = snap.data();
+          setAdmissionOpen(data.admissionOpen !== false);
+          if (data.examDurationMinutes) setExamDuration(data.examDurationMinutes * 60);
+          if (data.examScheduleActive !== undefined) setExamScheduleActive(!!data.examScheduleActive);
+          if (data.examStartDate) setExamStartDate(data.examStartDate);
+          if (data.examEndDate) setExamEndDate(data.examEndDate);
+        } else {
+          setAdmissionOpen(true);
+        }
       } catch { setAdmissionOpen(true); }
+
       try {
         const snap = await getDocs(query(collection(db, 'classes'), orderBy('name')));
         setClasses(snap.empty ? defaultClasses() : snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -167,6 +213,71 @@ const AdmissionPortal = () => {
     }, 1000);
     return () => clearInterval(timerRef.current);
   }, [step, examDone]);
+
+  // Helper: Schedule window check
+  const getScheduleStatus = () => {
+    if (!examScheduleActive) return { isAllowed: true };
+    const now = new Date();
+    if (examStartDate && now < new Date(examStartDate)) {
+      const startFmt = new Date(examStartDate).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' });
+      return {
+        isAllowed: false,
+        status: 'FUTURE',
+        message: `Exam Scheduled: The CBT exam for admission is scheduled to start on ${startFmt}. Please check back at the scheduled time.`
+      };
+    }
+    if (examEndDate && now > new Date(examEndDate)) {
+      const endFmt = new Date(examEndDate).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' });
+      return {
+        isAllowed: false,
+        status: 'EXPIRED',
+        message: `Exam Closed: The admission CBT exam period closed on ${endFmt}. Please contact the school office.`
+      };
+    }
+    return { isAllowed: true };
+  };
+
+  // Auto enroll student if passed
+  const ensureStudentEnrolled = async (applicantInfo, status, existingRegNo) => {
+    if (status === 'rejected') return existingRegNo || null;
+    try {
+      // Check if student with this application number already exists in students collection
+      const qStud = query(collection(db, 'students'), where('appNo', '==', applicantInfo.appNo));
+      const studSnap = await getDocs(qStud);
+
+      if (!studSnap.empty) {
+        return studSnap.docs[0].data().regNo || existingRegNo;
+      }
+
+      // Generate unique class-dependent registration number
+      const regNo = existingRegNo || await generateUniqueClassRegNo(applicantInfo.classApplyingFor);
+
+      await addDoc(collection(db, 'students'), {
+        name: applicantInfo.fullName,
+        regNo,
+        className: applicantInfo.classApplyingFor,
+        dateOfBirth: applicantInfo.dateOfBirth || '',
+        gender: applicantInfo.gender || '',
+        stateOfOrigin: applicantInfo.stateOfOrigin || '',
+        localGovernment: applicantInfo.localGovernment || '',
+        phone: applicantInfo.phone || '',
+        guardianPhone: applicantInfo.phone || '',
+        guardianName: applicantInfo.fullName,
+        admissionStatus: status,
+        appNo: applicantInfo.appNo,
+        paidFee: 0,
+        expectedFee: 0,
+        status: 'active',
+        createdAt: serverTimestamp(),
+        createdBy: 'admission_portal_auto',
+      });
+
+      return regNo;
+    } catch (err) {
+      console.error('Error auto-enrolling student:', err);
+      return existingRegNo;
+    }
+  };
 
   const handleApply = async (e) => {
     e.preventDefault();
@@ -191,14 +302,23 @@ const AdmissionPortal = () => {
       const snap = await getDocs(q);
       if (snap.empty) { setLookupError('Application number not found. Please check and try again.'); return; }
       const data = { id: snap.docs[0].id, ...snap.docs[0].data() };
+      setAppData({ appNo: data.appNo, docId: data.id, applicant: data });
+
       if (data.cbtCompleted) {
         const score = data.cbtScore ?? 0, total = 20, pct = Math.round((score / total) * 100);
         const status = pct >= 50 ? 'granted' : pct >= 40 ? 'trial' : 'rejected';
-        setAppData({ appNo: data.appNo, docId: data.id, applicant: data });
-        setResult({ score, total, percentage: pct, status, regNo: data.regNo || null });
+        
+        let regNo = data.regNo;
+        if (status !== 'rejected') {
+          regNo = await ensureStudentEnrolled(data, status, regNo);
+          if (regNo !== data.regNo) {
+            await updateDoc(doc(db, 'admissions', data.id), { regNo, admissionStatus: status });
+          }
+        }
+
+        setResult({ score, total, percentage: pct, status, regNo });
         setStep('result');
       } else {
-        setAppData({ appNo: data.appNo, docId: data.id, applicant: data });
         setStep('instructions');
       }
     } catch { setLookupError('Error looking up application. Please try again.'); }
@@ -206,14 +326,48 @@ const AdmissionPortal = () => {
   };
 
   const startCBT = async () => {
+    const sched = getScheduleStatus();
+    if (!sched.isAllowed) {
+      alert(sched.message);
+      return;
+    }
+
     setLoadingQ(true);
     try {
+      const applicantClass = appData?.applicant?.classApplyingFor || '';
       const snap = await getDocs(collection(db, 'admissionQuestions'));
-      let qs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (!qs.length) { alert('No exam questions available. Contact the school.'); return; }
-      qs = qs.sort(() => Math.random() - 0.5).slice(0, Math.min(20, qs.length));
-      setQuestions(qs); setAnswers({}); setCurrentQ(0);
-      setTimeLeft(EXAM_DURATION); setExamDone(false); setStep('cbt');
+      let allQs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      if (!allQs.length) {
+        alert('No exam questions available. Please contact the school.');
+        return;
+      }
+
+      // Filter questions specifically for candidate's class or general ('All')
+      let classQs = allQs.filter(q => (q.targetClass || 'All') === applicantClass);
+      let generalQs = allQs.filter(q => !q.targetClass || q.targetClass === 'All');
+
+      let combinedPool = [...classQs];
+      for (const q of generalQs) {
+        if (!combinedPool.some(e => e.id === q.id)) {
+          combinedPool.push(q);
+        }
+      }
+      if (combinedPool.length < 20) {
+        for (const q of allQs) {
+          if (!combinedPool.some(e => e.id === q.id)) {
+            combinedPool.push(q);
+          }
+        }
+      }
+
+      let selected = combinedPool.sort(() => Math.random() - 0.5).slice(0, Math.min(20, combinedPool.length));
+      setQuestions(selected);
+      setAnswers({});
+      setCurrentQ(0);
+      setTimeLeft(examDuration);
+      setExamDone(false);
+      setStep('cbt');
     } catch { alert('Failed to load exam questions. Please try again.'); }
     finally { setLoadingQ(false); }
   };
@@ -225,26 +379,24 @@ const AdmissionPortal = () => {
     const total = questions.length;
     const percentage = Math.round((score / total) * 100);
     const status = percentage >= 50 ? 'granted' : percentage >= 40 ? 'trial' : 'rejected';
-    const regNo = status !== 'rejected' ? generateRegNo() : null;
+    
+    let regNo = null;
+    if (status !== 'rejected' && appData?.applicant) {
+      regNo = await ensureStudentEnrolled(appData.applicant, status, null);
+    }
+
     try {
       if (appData?.docId) {
-        await updateDoc(doc(db, 'admissions', appData.docId), { cbtCompleted: true, cbtScore: score, admissionStatus: status, regNo: regNo || null });
-        if (status !== 'rejected' && regNo) {
-          await addDoc(collection(db, 'students'), {
-            name: appData.applicant.fullName, regNo,
-            className: appData.applicant.classApplyingFor,
-            dateOfBirth: appData.applicant.dateOfBirth,
-            gender: appData.applicant.gender,
-            stateOfOrigin: appData.applicant.stateOfOrigin,
-            localGovernment: appData.applicant.localGovernment,
-            phone: appData.applicant.phone,
-            admissionStatus: status, appNo: appData.appNo,
-            paidFee: 0, expectedFee: 0,
-            createdAt: serverTimestamp(), createdBy: 'admission_portal',
-          });
-        }
+        await updateDoc(doc(db, 'admissions', appData.docId), {
+          cbtCompleted: true,
+          cbtScore: score,
+          admissionStatus: status,
+          regNo: regNo || null,
+          studentCreated: status !== 'rejected'
+        });
       }
     } catch (err) { console.error(err); }
+
     setResult({ score, total, percentage, status, regNo });
     setStep('result');
   }, [examDone, questions, answers, appData]);
@@ -258,6 +410,7 @@ const AdmissionPortal = () => {
   };
 
   const answeredCount = Object.keys(answers).length;
+  const scheduleStatus = getScheduleStatus();
 
   // ─── Closed / Loading ─────────────────────────────────────────────────────
   if (admissionOpen === null) return (
@@ -295,171 +448,152 @@ const AdmissionPortal = () => {
 
       {/* ── Hero ── */}
       <section className="home-hero">
-        <div className="home-hero-blob-1" />
-        <div className="home-hero-blob-2" />
-        <div className="home-hero-content" style={{ paddingTop: '3rem', paddingBottom: '0', textAlign: 'center' }}>
-          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <img src={logoUrl} alt="School Logo" style={{ width: 76, height: 76, borderRadius: 20, objectFit: 'contain', border: '3px solid rgba(255,255,255,0.15)', marginBottom: 20, display: 'block', margin: '0 auto 20px' }} />
-            <div className="home-hero-badge" style={{ margin: '0 auto 20px', display: 'inline-flex' }}>
-              <Sparkles size={14} />
-              {schoolName || 'Birxy SMS'} — Admission Portal
-            </div>
-            <h1 className="home-hero-title" style={{ fontSize: 'clamp(2rem,5vw,3.5rem)', marginBottom: 12 }}>
-              Join Our <span className="home-hero-title-accent">Community</span>
-            </h1>
-            <p className="home-hero-desc" style={{ maxWidth: 560, margin: '0 auto' }}>
-              Apply for admission, take the general assessment CBT, and receive your admission letter — instantly and online.
-            </p>
-          </motion.div>
-          <StepIndicator currentStep={step} />
-        </div>
-      </section>
+        <div className="home-hero-content">
 
-      {/* ── Main Content ── */}
-      <section className="home-features" style={{ background: 'var(--color-slate-50)', padding: '3rem 0 5rem', flex: 1 }}>
-        <div className="home-features-inner" style={{ maxWidth: 800 }}>
+          {/* Header pill */}
+          <div className="home-hero-badge">
+            <GraduationCap size={16} />
+            <span>Admission Portal — Academic Session</span>
+          </div>
 
-          {/* ══════════ STEP 1: APPLY ══════════ */}
+          <h1 className="home-hero-title">
+            Online Admission & CBT Assessment Portal
+          </h1>
+          <p className="home-hero-desc">
+            Apply for admission, take the general assessment CBT, and receive your admission letter — instantly and online.
+          </p>
+
+          {/* Mode Switcher */}
           {step === 'apply' && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              {/* Tab switcher */}
-              <div style={{ display: 'flex', background: '#fff', borderRadius: 20, padding: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', marginBottom: 24 }}>
-                {[{ key: 'new', label: 'New Application', Icon: ClipboardSignature },
-                  { key: 'returning', label: 'Return Applicant', Icon: Search }].map(({ key, label, Icon }) => (
-                  <button key={key} onClick={() => { setMode(key); setLookupError(''); }}
-                    style={{
-                      flex: 1, padding: '12px 16px', borderRadius: 14, border: 'none', cursor: 'pointer',
-                      fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                      background: mode === key ? 'var(--color-primary)' : 'transparent',
-                      color: mode === key ? '#fff' : '#94a3b8',
-                      transition: 'all 0.2s',
-                      boxShadow: mode === key ? '0 4px 14px rgba(249,115,22,0.3)' : 'none',
-                    }}
-                  >
-                    <Icon size={15} /> {label}
-                  </button>
-                ))}
-              </div>
+            <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.08)', borderRadius: 100, padding: 4, border: '1px solid rgba(255,255,255,0.15)', marginBottom: 32 }}>
+              <button
+                onClick={() => setMode('new')}
+                style={{
+                  padding: '9px 24px', borderRadius: 100, border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 13,
+                  background: mode === 'new' ? 'var(--color-primary)' : 'transparent',
+                  color: mode === 'new' ? '#fff' : 'rgba(255,255,255,0.6)',
+                  transition: 'all 0.25s',
+                }}
+              >
+                New Application
+              </button>
+              <button
+                onClick={() => setMode('return')}
+                style={{
+                  padding: '9px 24px', borderRadius: 100, border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 13,
+                  background: mode === 'return' ? 'var(--color-primary)' : 'transparent',
+                  color: mode === 'return' ? '#fff' : 'rgba(255,255,255,0.6)',
+                  transition: 'all 0.25s',
+                }}
+              >
+                Check Result / Return Applicant
+              </button>
+            </div>
+          )}
 
-              {/* ── New application form ── */}
-              {mode === 'new' && (
-                <div className="home-testimony-form" style={{ borderRadius: 24 }}>
-                  <div className="home-testimony-form-header">
-                    <div className="home-testimony-form-icon"><ClipboardSignature size={20} /></div>
-                    <h3 className="home-testimony-form-title">Application Form</h3>
-                  </div>
-                  <p className="home-testimony-form-desc">
-                    Fill in your details below. Your unique application number will be generated automatically upon submission.
-                  </p>
-                  <form onSubmit={handleApply}>
-                    {/* Personal Info */}
-                    <div style={{ marginBottom: 28 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                        <User size={14} style={{ color: 'var(--color-primary)' }} />
-                        <span style={{ fontSize: 11, fontWeight: 900, letterSpacing: '3px', color: 'var(--color-primary)', textTransform: 'uppercase' }}>Personal Information</span>
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                        <FInput label="Full Legal Name" name="fullName" placeholder="e.g. Adaeze Okonkwo"
-                          value={formData.fullName} onChange={e => setFormData(p => ({ ...p, fullName: e.target.value }))} colSpan={2} />
-                        <FInput label="Date of Birth" name="dateOfBirth" type="date"
-                          value={formData.dateOfBirth} onChange={e => setFormData(p => ({ ...p, dateOfBirth: e.target.value }))} />
-                        <div>
-                          <label className="home-form-label">Gender</label>
-                          <select value={formData.gender} onChange={e => setFormData(p => ({ ...p, gender: e.target.value }))} required className="home-form-input" style={{ cursor: 'pointer' }}>
-                            <option value="">Select gender</option>
-                            <option>Male</option>
-                            <option>Female</option>
-                          </select>
-                        </div>
-                        <FInput label="State of Origin" name="stateOfOrigin" placeholder="e.g. Anambra"
-                          value={formData.stateOfOrigin} onChange={e => setFormData(p => ({ ...p, stateOfOrigin: e.target.value }))} />
-                        <FInput label="Local Government Area" name="localGovernment" placeholder="e.g. Onitsha North"
-                          value={formData.localGovernment} onChange={e => setFormData(p => ({ ...p, localGovernment: e.target.value }))} />
-                        <FInput label="Parent / Guardian Phone" name="phone" type="tel" placeholder="e.g. 08012345678"
-                          value={formData.phone} onChange={e => setFormData(p => ({ ...p, phone: e.target.value }))} colSpan={2} />
-                      </div>
-                    </div>
+          {/* Step Indicator */}
+          {step !== 'apply' && <StepIndicator currentStep={step} />}
 
-                    {/* Academic Info */}
-                    <div style={{ marginBottom: 32 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                        <BookOpen size={14} style={{ color: 'var(--color-emerald-500)' }} />
-                        <span style={{ fontSize: 11, fontWeight: 900, letterSpacing: '3px', color: 'var(--color-emerald-500)', textTransform: 'uppercase' }}>Academic Details</span>
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                        <div>
-                          <label className="home-form-label">Class Applying For</label>
-                          <select value={formData.classApplyingFor} onChange={e => setFormData(p => ({ ...p, classApplyingFor: e.target.value }))} required disabled={loadingClasses} className="home-form-input" style={{ cursor: 'pointer' }}>
-                            <option value="">{loadingClasses ? 'Loading...' : 'Select class'}</option>
-                            {classes.map(c => <option key={c.id} value={c.name || c.id}>{c.name || c.id}</option>)}
-                          </select>
-                        </div>
-                        <FInput label="Previous School" name="previousSchool" placeholder="e.g. St. Joseph Primary"
-                          value={formData.previousSchool} onChange={e => setFormData(p => ({ ...p, previousSchool: e.target.value }))} />
-                        <FInput label="Last Term Average (%)" name="lastAverage" type="number" placeholder="e.g. 75" min="0" max="100"
-                          value={formData.lastAverage} onChange={e => setFormData(p => ({ ...p, lastAverage: e.target.value }))} />
-                      </div>
-                    </div>
-
-                    <button type="submit" disabled={submittingForm || loadingClasses} className="home-form-submit">
-                      {submittingForm ? <><Loader2 size={18} className="admission-spin" /> Generating Application...</> : <>Submit & Get Application Number <ArrowRight size={18} /></>}
-                    </button>
-                  </form>
+          {/* ══════════ STEP 1: APPLY / LOOKUP ══════════ */}
+          {step === 'apply' && mode === 'new' && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+              <div className="home-testimony-form" style={{ borderRadius: 24 }}>
+                <div className="home-testimony-form-header">
+                  <div className="home-testimony-form-icon"><ClipboardSignature size={20} /></div>
+                  <h3 className="home-testimony-form-title">Student Admission Application</h3>
                 </div>
-              )}
+                <p className="home-testimony-form-desc">Fill out all fields carefully to generate your Application Number and proceed to the assessment exam.</p>
 
-              {/* ── Return applicant lookup ── */}
-              {mode === 'returning' && (
-                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                  <div className="home-testimony-form" style={{ borderRadius: 24, textAlign: 'center' }}>
-                    <div style={{ width: 64, height: 64, background: 'rgba(249,115,22,0.1)', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                      <Search size={28} style={{ color: 'var(--color-primary)' }} />
+                <form onSubmit={handleApply}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, textAlign: 'left', marginBottom: 20 }}>
+                    <FInput label="Full Name *" name="fullName" placeholder="e.g. Chukwuma Obi" value={formData.fullName} onChange={e => setFormData({ ...formData, fullName: e.target.value })} colSpan={2} />
+                    <FInput label="Date of Birth *" name="dateOfBirth" type="date" value={formData.dateOfBirth} onChange={e => setFormData({ ...formData, dateOfBirth: e.target.value })} />
+
+                    <div>
+                      <label className="home-form-label">Gender *</label>
+                      <select name="gender" required value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })} className="home-form-input">
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
                     </div>
-                    <h3 className="home-testimony-form-title">Continue Your Application</h3>
-                    <p className="home-testimony-form-desc" style={{ maxWidth: 380, margin: '0 auto 28px' }}>
-                      Enter your application number to access your CBT exam or view your admission result.
-                    </p>
-                    <form onSubmit={handleLookup} style={{ maxWidth: 420, margin: '0 auto' }}>
-                      <input value={returnAppNo} onChange={e => setReturnAppNo(e.target.value)}
-                        placeholder="BDS/APN/2025/4721" required className="home-form-input"
-                        style={{ textAlign: 'center', fontFamily: 'monospace', letterSpacing: '1px', fontSize: 16, marginBottom: 12 }}
-                        onFocus={e => e.target.style.borderColor = 'var(--color-primary)'}
-                        onBlur={e => e.target.style.borderColor = ''}
-                      />
-                      {lookupError && (
-                        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '10px 16px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, textAlign: 'left' }}>
-                          <XCircle size={15} style={{ color: '#ef4444', flexShrink: 0 }} />
-                          <p style={{ fontSize: 13, color: '#dc2626', margin: 0 }}>{lookupError}</p>
-                        </div>
-                      )}
-                      <button type="submit" disabled={lookingUp} className="home-form-submit">
-                        {lookingUp ? <><Loader2 size={18} className="admission-spin" /> Looking up...</> : <><Search size={18} /> Find My Application</>}
-                      </button>
-                    </form>
+
+                    <div>
+                      <label className="home-form-label">Class Applying For *</label>
+                      <select name="classApplyingFor" required value={formData.classApplyingFor} onChange={e => setFormData({ ...formData, classApplyingFor: e.target.value })} className="home-form-input" disabled={loadingClasses}>
+                        <option value="">{loadingClasses ? 'Loading classes...' : 'Select Target Class'}</option>
+                        {classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                      </select>
+                    </div>
+
+                    <FInput label="State of Origin *" name="stateOfOrigin" placeholder="e.g. Enugu" value={formData.stateOfOrigin} onChange={e => setFormData({ ...formData, stateOfOrigin: e.target.value })} />
+                    <FInput label="Local Government (LGA) *" name="localGovernment" placeholder="e.g. Nsukka" value={formData.localGovernment} onChange={e => setFormData({ ...formData, localGovernment: e.target.value })} />
+                    <FInput label="Parent / Guardian Phone *" name="phone" type="tel" placeholder="e.g. 08012345678" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                    <FInput label="Previous School Attended *" name="previousSchool" placeholder="e.g. St. Jude Academy" value={formData.previousSchool} onChange={e => setFormData({ ...formData, previousSchool: e.target.value })} />
+                    <FInput label="Last Academic Average (%)" name="lastAverage" type="number" min="0" max="100" placeholder="e.g. 75" value={formData.lastAverage} onChange={e => setFormData({ ...formData, lastAverage: e.target.value })} required={false} />
                   </div>
-                </motion.div>
-              )}
+
+                  <button type="submit" disabled={submittingForm} className="home-form-submit">
+                    {submittingForm ? <><Loader2 size={18} className="admission-spin" /> Generating Application...</> : <>Submit & Get Application Number <ArrowRight size={18} /></>}
+                  </button>
+                </form>
+              </div>
             </motion.div>
           )}
 
-          {/* ══════════ STEP 2: INSTRUCTIONS ══════════ */}
-          {step === 'instructions' && appData && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {/* App No display — dark glass card */}
-              <div className="glass-morphism" style={{ borderRadius: 24, padding: '40px 36px', textAlign: 'center', background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <div className="home-hero-badge" style={{ margin: '0 auto 20px', display: 'inline-flex' }}>
-                  <Sparkles size={14} /> Application Received
+          {step === 'apply' && mode === 'return' && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+              <div className="home-testimony-form" style={{ maxWidth: 480, margin: '0 auto', borderRadius: 24 }}>
+                <div className="home-testimony-form-header">
+                  <div className="home-testimony-form-icon"><Search size={20} /></div>
+                  <h3 className="home-testimony-form-title">Find Application / Check Result</h3>
                 </div>
-                <p style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: 14 }}>
-                  Your Application Number
+                <p className="home-testimony-form-desc">
+                  Enter your application number to access your CBT exam or view your admission result.
                 </p>
-                <div style={{ background: 'rgba(249,115,22,0.1)', border: '2px solid rgba(249,115,22,0.3)', borderRadius: 16, padding: '20px 32px', display: 'inline-block', marginBottom: 18 }}>
+
+                <form onSubmit={handleLookup}>
+                  <div style={{ textAlign: 'left', marginBottom: 20 }}>
+                    <label className="home-form-label">Application Number *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. BDS/APN/2026/1234"
+                      required
+                      value={returnAppNo}
+                      onChange={e => setReturnAppNo(e.target.value)}
+                      className="home-form-input"
+                      style={{ fontSize: 16, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}
+                    />
+                  </div>
+
+                  {lookupError && (
+                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 12, padding: '10px 14px', marginBottom: 16, fontSize: 13, fontWeight: 700 }}>
+                      {lookupError}
+                    </div>
+                  )}
+
+                  <button type="submit" disabled={lookingUp} className="home-form-submit">
+                    {lookingUp ? <><Loader2 size={18} className="admission-spin" /> Looking up...</> : <><Search size={18} /> Find My Application</>}
+                  </button>
+                </form>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ══════════ STEP 2: BRIEFING / INSTRUCTIONS ══════════ */}
+          {step === 'instructions' && appData && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+
+              {/* App No Banner */}
+              <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 20, padding: '20px 24px', border: '1px solid rgba(255,255,255,0.12)', marginBottom: 24, display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '3px', textTransform: 'uppercase', color: '#94a3b8' }}>Your Official Application Number</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <p style={{ fontSize: 28, fontWeight: 900, fontFamily: 'monospace', letterSpacing: '3px', margin: 0, color: '#fdba74' }}>
                     {appData.appNo}
                   </p>
                 </div>
                 <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, margin: 0 }}>
-                  ⚠️ Save this number — you'll need it to access your result later.
+                  ⚠️ Save this number — you'll need it to check your status or letter.
                 </p>
               </div>
 
@@ -470,14 +604,15 @@ const AdmissionPortal = () => {
                   <h3 className="home-testimony-form-title">CBT Examination Briefing</h3>
                 </div>
                 <p className="home-testimony-form-desc">
-                  You are about to take the <strong>General Assessment Examination</strong> for admission into <strong>{schoolName || 'the school'}</strong>. Read these instructions carefully:
+                  You are about to take the <strong>Assessment Examination for {appData?.applicant?.classApplyingFor || 'your class'}</strong> for admission into <strong>{schoolName || 'the school'}</strong>. Read these instructions carefully:
                 </p>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 }}>
                   {[
-                    { Icon: FileText, label: '20 Questions', desc: 'English, Maths & General Knowledge', color: 'var(--color-indigo-500)', bg: 'var(--color-indigo-50)' },
-                    { Icon: Clock, label: '30 Minutes', desc: 'Timer auto-submits on timeout', color: 'var(--color-amber-500)', bg: 'var(--color-amber-50)' },
+                    { Icon: FileText, label: '20 Questions', desc: `Tailored for ${appData?.applicant?.classApplyingFor || 'selected class'}`, color: 'var(--color-indigo-500)', bg: 'var(--color-indigo-50)' },
+                    { Icon: Clock, label: `${Math.floor(examDuration / 60)} Minutes`, desc: 'Timer auto-submits on timeout', color: 'var(--color-amber-500)', bg: 'var(--color-amber-50)' },
                     { Icon: CheckCircle, label: 'Pass Mark: 50%', desc: '10 or more correct to be admitted', color: 'var(--color-emerald-500)', bg: 'var(--color-emerald-50)' },
-                    { Icon: GraduationCap, label: 'Instant Letter', desc: 'Admission letter on pass', color: 'var(--color-primary)', bg: 'var(--color-primary-light)' },
+                    { Icon: GraduationCap, label: 'Instant Enrollment', desc: 'Auto moves student to class on pass', color: 'var(--color-primary)', bg: 'var(--color-primary-light)' },
                   ].map(({ Icon, label, desc, color, bg }) => (
                     <div key={label} style={{ background: bg, borderRadius: 14, padding: '16px 18px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                       <div style={{ width: 36, height: 36, background: '#fff', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
@@ -490,13 +625,30 @@ const AdmissionPortal = () => {
                     </div>
                   ))}
                 </div>
-                <div style={{ background: '#fffbeb', border: '1px solid #fef08a', borderRadius: 12, padding: '12px 16px', marginBottom: 24, display: 'flex', gap: 10 }}>
-                  <AlertTriangle size={16} style={{ color: '#d97706', flexShrink: 0, marginTop: 1 }} />
-                  <p style={{ fontSize: 13, color: '#92400e', margin: 0, lineHeight: 1.6 }}>
-                    <strong>Important:</strong> Once started, the timer runs continuously. Do not refresh or close the page.
-                  </p>
-                </div>
-                <button onClick={startCBT} disabled={loadingQ} className="home-form-submit" style={{ background: '#059669' }}>
+
+                {!scheduleStatus.isAllowed ? (
+                  <div style={{ background: '#fffbeb', border: '1px solid #fef08a', borderRadius: 14, padding: '16px 20px', marginBottom: 24, textAlign: 'left', display: 'flex', gap: 12 }}>
+                    <AlertTriangle size={20} style={{ color: '#d97706', flexShrink: 0, marginTop: 2 }} />
+                    <div>
+                      <h4 style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 800, color: '#92400e' }}>Exam Schedule Notice</h4>
+                      <p style={{ fontSize: 13, color: '#b45309', margin: 0, lineHeight: 1.6 }}>{scheduleStatus.message}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ background: '#fffbeb', border: '1px solid #fef08a', borderRadius: 12, padding: '12px 16px', marginBottom: 24, display: 'flex', gap: 10 }}>
+                    <AlertTriangle size={16} style={{ color: '#d97706', flexShrink: 0, marginTop: 1 }} />
+                    <p style={{ fontSize: 13, color: '#92400e', margin: 0, lineHeight: 1.6 }}>
+                      <strong>Important:</strong> Once started, the timer runs continuously. Do not refresh or close the page.
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  onClick={startCBT}
+                  disabled={loadingQ || !scheduleStatus.isAllowed}
+                  className="home-form-submit"
+                  style={{ background: scheduleStatus.isAllowed ? '#059669' : '#94a3b8', cursor: scheduleStatus.isAllowed ? 'pointer' : 'not-allowed' }}
+                >
                   {loadingQ ? <><Loader2 size={18} className="admission-spin" /> Loading Questions...</> : <><BookOpen size={18} /> Start CBT Examination</>}
                 </button>
               </div>
@@ -506,7 +658,7 @@ const AdmissionPortal = () => {
           {/* ══════════ STEP 3: CBT EXAM ══════════ */}
           {step === 'cbt' && questions.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-              {/* Timer bar — dark glass */}
+              {/* Timer bar */}
               <div className="glass-morphism" style={{
                 borderRadius: 20, padding: '16px 28px', marginBottom: 20,
                 background: timeLeft < 300 ? 'rgba(220,38,38,0.9)' : 'rgba(15,23,42,0.9)',
@@ -515,125 +667,113 @@ const AdmissionPortal = () => {
                 transition: 'all 0.5s',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <Timer size={22} style={{ color: timeLeft < 300 ? '#fca5a5' : '#fdba74' }} />
-                  <div>
-                    <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', margin: '0 0 2px' }}>Time Remaining</p>
-                    <p style={{ fontSize: 30, fontWeight: 900, fontFamily: 'monospace', color: '#fff', margin: 0, lineHeight: 1 }}>{fmt(timeLeft)}</p>
+                  <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Timer size={20} color="#fff" />
+                  </div>
+                  <div style={{ textAlign: 'left' }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)' }}>Time Remaining</span>
+                    <p style={{ fontSize: 24, fontWeight: 900, color: '#fff', margin: 0, fontFamily: 'monospace' }}>{fmt(timeLeft)}</p>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', margin: '0 0 2px' }}>Answered</p>
-                  <p style={{ fontSize: 28, fontWeight: 900, color: '#fff', margin: 0 }}>
-                    {answeredCount}<span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 17 }}>/{questions.length}</span>
-                  </p>
+                  <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)' }}>Progress</span>
+                  <p style={{ fontSize: 16, fontWeight: 900, color: '#fdba74', margin: 0 }}>{answeredCount} of {questions.length} Answered</p>
                 </div>
               </div>
 
-              {/* Question card */}
-              <div className="home-testimony-form" style={{ borderRadius: 24, marginBottom: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                  <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--color-primary)', letterSpacing: '2px', textTransform: 'uppercase' }}>
+              {/* Question Card */}
+              <div className="home-testimony-form" style={{ borderRadius: 24, textAlign: 'left' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid #f1f5f9' }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--color-primary)', letterSpacing: '1px', textTransform: 'uppercase' }}>
                     Question {currentQ + 1} of {questions.length}
                   </span>
-                  {answers[currentQ] !== undefined && (
-                    <span style={{ background: '#dcfce7', color: '#15803d', fontSize: 12, fontWeight: 800, padding: '4px 14px', borderRadius: 100 }}>✓ Answered</span>
-                  )}
+                  <span style={{ background: '#f1f5f9', color: '#64748b', fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 100 }}>
+                    Class: {appData?.applicant?.classApplyingFor || 'General'}
+                  </span>
                 </div>
-                <p style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', lineHeight: 1.65, marginBottom: 24 }}>
-                  {questions[currentQ]?.prompt}
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {questions[currentQ]?.options.map((opt, i) => {
-                    const sel = answers[currentQ] === i;
+
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', lineHeight: 1.6, marginBottom: 24 }}>
+                  {questions[currentQ].prompt}
+                </h3>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+                  {questions[currentQ].options.map((option, idx) => {
+                    const selected = answers[currentQ] === idx;
+                    const labels = ['A', 'B', 'C', 'D'];
                     return (
-                      <button key={i} onClick={() => setAnswers(p => ({ ...p, [currentQ]: i }))}
+                      <div
+                        key={idx}
+                        onClick={() => setAnswers(prev => ({ ...prev, [currentQ]: idx }))}
                         style={{
-                          padding: '14px 20px', borderRadius: 14,
-                          border: `2px solid ${sel ? 'var(--color-primary)' : '#e2e8f0'}`,
-                          background: sel ? 'var(--color-primary-light)' : '#f8fafc',
-                          cursor: 'pointer', textAlign: 'left',
-                          display: 'flex', alignItems: 'center', gap: 14,
-                          fontWeight: sel ? 800 : 600, fontSize: 14,
-                          color: sel ? 'var(--color-primary-dark)' : '#374151',
-                          boxShadow: sel ? '0 4px 14px rgba(249,115,22,0.2)' : 'none',
-                          transition: 'all 0.15s',
+                          display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderRadius: 14,
+                          background: selected ? 'var(--color-primary-light)' : '#f8fafc',
+                          border: `2px solid ${selected ? 'var(--color-primary)' : '#e2e8f0'}`,
+                          cursor: 'pointer', transition: 'all 0.2s',
                         }}
                       >
-                        <span style={{
-                          width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                          background: sel ? 'var(--color-primary)' : '#e2e8f0',
+                        <div style={{
+                          width: 32, height: 32, borderRadius: '50%',
+                          background: selected ? 'var(--color-primary)' : '#e2e8f0',
+                          color: selected ? '#fff' : '#64748b',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 12, fontWeight: 900,
-                          color: sel ? '#fff' : '#64748b',
+                          fontWeight: 900, fontSize: 13, flexShrink: 0,
                         }}>
-                          {String.fromCharCode(65 + i)}
+                          {labels[idx]}
+                        </div>
+                        <span style={{ fontSize: 14, fontWeight: selected ? 800 : 600, color: selected ? 'var(--color-primary-dark)' : '#334155' }}>
+                          {option}
                         </span>
-                        {opt}
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
-              </div>
 
-              {/* Question dots */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
-                {questions.map((_, i) => (
-                  <button key={i} onClick={() => setCurrentQ(i)}
+                {/* Nav buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 16, borderTop: '1px solid #f1f5f9' }}>
+                  <button
+                    onClick={() => setCurrentQ(prev => Math.max(0, prev - 1))}
+                    disabled={currentQ === 0}
                     style={{
-                      width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: 'pointer',
-                      fontWeight: 800, fontSize: 12,
-                      background: i === currentQ ? 'var(--color-primary)' : answers[i] !== undefined ? '#10b981' : '#e2e8f0',
-                      color: i === currentQ || answers[i] !== undefined ? '#fff' : '#64748b',
-                      boxShadow: i === currentQ ? 'var(--shadow-orange)' : 'none',
-                      transform: i === currentQ ? 'scale(1.15)' : 'scale(1)',
-                      transition: 'all 0.15s',
+                      display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 12,
+                      border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 700, fontSize: 13,
+                      cursor: currentQ === 0 ? 'not-allowed' : 'pointer', opacity: currentQ === 0 ? 0.4 : 1,
                     }}
                   >
-                    {i + 1}
+                    <ChevronLeft size={16} /> Previous
                   </button>
-                ))}
-              </div>
 
-              {/* Prev / Next / Submit */}
-              <div style={{ display: 'flex', gap: 12 }}>
-                <button onClick={() => setCurrentQ(p => Math.max(0, p - 1))} disabled={currentQ === 0}
-                  style={{ flex: 1, padding: '14px', borderRadius: 14, border: '2px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 800, fontSize: 14, cursor: currentQ === 0 ? 'not-allowed' : 'pointer', opacity: currentQ === 0 ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  <ChevronLeft size={18} /> Previous
-                </button>
-                {currentQ < questions.length - 1 ? (
-                  <button onClick={() => setCurrentQ(p => Math.min(questions.length - 1, p + 1))}
-                    style={{ flex: 2, padding: '14px', borderRadius: 14, border: 'none', background: 'var(--color-primary)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: 'var(--shadow-orange)' }}>
-                    Next <ChevronRight size={18} />
-                  </button>
-                ) : (
-                  <button onClick={() => {
-                    const u = questions.length - answeredCount;
-                    if (u > 0 && !window.confirm(`${u} question(s) unanswered. Submit anyway?`)) return;
-                    handleSubmitExam();
-                  }}
-                    style={{ flex: 2, padding: '14px', borderRadius: 14, border: 'none', background: '#059669', color: '#fff', fontWeight: 900, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 14px rgba(5,150,105,0.4)' }}>
-                    <CheckCircle size={18} /> Submit Exam
-                  </button>
-                )}
+                  {currentQ < questions.length - 1 ? (
+                    <button
+                      onClick={() => setCurrentQ(prev => prev + 1)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '10px 22px', borderRadius: 12,
+                        border: 'none', background: 'var(--color-primary)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                      }}
+                    >
+                      Next Question <ChevronRight size={16} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleSubmitExam}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', borderRadius: 12,
+                        border: 'none', background: '#059669', color: '#fff', fontWeight: 900, fontSize: 14, cursor: 'pointer',
+                      }}
+                    >
+                      <CheckCircle size={16} /> Submit Exam Now
+                    </button>
+                  )}
+                </div>
               </div>
             </motion.div>
           )}
 
-          {/* ══════════ STEP 4: RESULT ══════════ */}
+          {/* ══════════ STEP 4: RESULT & LETTER ══════════ */}
           {step === 'result' && result && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {/* Score summary */}
-              <div className="home-testimony-form" style={{ borderRadius: 24, textAlign: 'center' }}>
-                <div style={{
-                  width: 80, height: 80, borderRadius: '50%', margin: '0 auto 16px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: result.status === 'granted' ? '#f0fdf4' : result.status === 'trial' ? '#fffbeb' : '#fef2f2',
-                }}>
-                  {result.status === 'granted' && <CheckCircle size={44} style={{ color: '#10b981' }} />}
-                  {result.status === 'trial' && <AlertTriangle size={44} style={{ color: '#f59e0b' }} />}
-                  {result.status === 'rejected' && <XCircle size={44} style={{ color: '#ef4444' }} />}
-                </div>
-                <div style={{ display: 'inline-block', marginBottom: 16 }}>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+              {/* Score Header */}
+              <div className="home-testimony-form" style={{ borderRadius: 24, marginBottom: 28 }}>
+                <div style={{ marginBottom: 12 }}>
                   <span style={{
                     display: 'inline-block', padding: '5px 18px', borderRadius: 100, fontWeight: 900, fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase',
                     background: result.status === 'granted' ? '#dcfce7' : result.status === 'trial' ? '#fef9c3' : '#fee2e2',
@@ -645,20 +785,24 @@ const AdmissionPortal = () => {
                 <h2 className="home-testimony-form-title" style={{ fontSize: 24, marginBottom: 8 }}>
                   {result.status === 'granted' ? 'Congratulations! 🎉' : result.status === 'trial' ? 'Provisional Admission' : 'Application Unsuccessful'}
                 </h2>
-                <p className="home-testimony-form-desc" style={{ maxWidth: 440, margin: '0 auto 28px' }}>
-                  {result.status === 'granted' ? 'You passed the admission assessment. Your letter is ready below.'
-                    : result.status === 'trial' ? 'Your score qualifies you for a provisional admission period.'
-                    : 'Your score did not meet the minimum threshold. You may re-apply when admissions re-open.'}
+                <p className="home-testimony-form-desc" style={{ maxWidth: 480, margin: '0 auto 28px' }}>
+                  {result.status === 'granted'
+                    ? `You passed the assessment exam! Student record created for ${appData?.applicant?.classApplyingFor || 'selected class'}.`
+                    : result.status === 'trial'
+                    ? `You qualified for provisional admission into ${appData?.applicant?.classApplyingFor || 'selected class'}.`
+                    : 'Your score did not meet the minimum threshold for admission. You may re-apply when admissions re-open.'}
                 </p>
+
                 <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 0 }}>
                   {[
                     { label: 'Score', value: `${result.score}/${result.total}`, mono: true },
                     { label: 'Percentage', value: `${result.percentage}%`, color: result.status === 'granted' ? '#10b981' : result.status === 'trial' ? '#f59e0b' : '#ef4444' },
+                    ...(result.regNo ? [{ label: 'Reg Number', value: result.regNo, mono: true, small: true, color: '#0284c7' }] : []),
                     ...(appData?.appNo ? [{ label: 'App No', value: appData.appNo, mono: true, small: true }] : []),
                   ].map(({ label, value, mono, color, small }) => (
-                    <div key={label} style={{ background: 'var(--color-slate-50)', borderRadius: 16, padding: '16px 24px', border: '1px solid #e2e8f0', minWidth: 100 }}>
+                    <div key={label} style={{ background: 'var(--color-slate-50)', borderRadius: 16, padding: '16px 20px', border: '1px solid #e2e8f0', minWidth: 110 }}>
                       <p style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 6px' }}>{label}</p>
-                      <p style={{ fontSize: small ? 14 : 28, fontWeight: 900, color: color || '#0f172a', margin: 0, fontFamily: mono ? 'monospace' : 'inherit' }}>{value}</p>
+                      <p style={{ fontSize: small ? 14 : 26, fontWeight: 900, color: color || '#0f172a', margin: 0, fontFamily: mono ? 'monospace' : 'inherit' }}>{value}</p>
                     </div>
                   ))}
                 </div>
@@ -666,14 +810,14 @@ const AdmissionPortal = () => {
 
               {/* Admission Letter */}
               {(result.status === 'granted' || result.status === 'trial') && (
-                <div>
+                <div style={{ marginBottom: 32 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                     <p style={{ fontWeight: 900, fontSize: 11, letterSpacing: '3px', textTransform: 'uppercase', color: '#64748b', margin: 0 }}>Official Admission Letter</p>
                     <button onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#0f172a', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }}>
                       <Printer size={15} /> Print Letter
                     </button>
                   </div>
-                  <div id="admission-letter" style={{ background: '#fff', borderRadius: 22, boxShadow: '0 20px 60px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', fontFamily: 'Georgia, serif', overflow: 'hidden' }}>
+                  <div id="admission-letter" style={{ background: '#fff', borderRadius: 22, boxShadow: '0 20px 60px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', fontFamily: 'Georgia, serif', overflow: 'hidden', textAlign: 'left' }}>
                     <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', padding: '28px 36px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                         <img src={logoUrl} alt="Logo" style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'contain', border: '2px solid rgba(255,255,255,0.2)' }} />
@@ -698,13 +842,13 @@ const AdmissionPortal = () => {
                       {result.status === 'granted' ? (
                         <>
                           <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>We are delighted to inform you that following your <strong>General Assessment Examination</strong>, you have been <strong>OFFERED ADMISSION</strong> into <strong>{schoolName || 'our school'}</strong> for <strong>{appData?.applicant?.classApplyingFor}</strong> for the upcoming academic session.</p>
-                          <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>Your CBT score of <strong>{result.score}/{result.total} ({result.percentage}%)</strong> demonstrates a strong academic foundation. You are expected to report to the school office within <strong>14 working days</strong> to complete your registration.</p>
+                          <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>Your CBT score of <strong>{result.score}/{result.total} ({result.percentage}%)</strong> demonstrates a strong academic foundation. Your student account has been automatically provisioned under <strong>{appData?.applicant?.classApplyingFor}</strong> with Registration Number: <strong>{result.regNo}</strong>.</p>
                           <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial' }}>Please bring this letter along with your <strong>Birth Certificate</strong>, <strong>Previous School Report Card</strong>, and <strong>2 Passport Photographs</strong> to the Bursary office to finalise enrollment.</p>
                         </>
                       ) : (
                         <>
                           <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>Following your <strong>General Assessment Examination</strong>, you have been offered a <strong>PROVISIONAL (TRIAL) ADMISSION</strong> into <strong>{schoolName || 'our school'}</strong> for <strong>{appData?.applicant?.classApplyingFor}</strong>.</p>
-                          <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial' }}>Your score of <strong>{result.score}/{result.total} ({result.percentage}%)</strong> places you on a monitored trial period. Performance will be reviewed at end of first term.</p>
+                          <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial' }}>Your score of <strong>{result.score}/{result.total} ({result.percentage}%)</strong> places you on a monitored trial period. Your student account has been created with Registration Number: <strong>{result.regNo}</strong>.</p>
                         </>
                       )}
                       <div style={{ marginTop: 24, background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', padding: '20px 24px' }}>
@@ -741,7 +885,7 @@ const AdmissionPortal = () => {
               )}
 
               {result.status === 'rejected' && (
-                <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #fecaca', padding: '24px 28px' }}>
+                <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #fecaca', padding: '24px 28px', marginBottom: 24 }}>
                   <p style={{ fontWeight: 800, color: '#dc2626', marginBottom: 8 }}>Your application was not successful this time.</p>
                   <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.8, margin: 0 }}>A minimum score of 50% (10/20) is required for admission. You may re-apply when admissions re-open.</p>
                 </div>

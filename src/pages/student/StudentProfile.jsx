@@ -272,11 +272,11 @@ const StudentProfile = () => {
         {/* Avatar */}
         <div className="relative mb-3 group/avatar">
           <div
-            className="w-14 h-14 rounded-full border-4 border-white shadow-xl bg-indigo-50 flex items-center justify-center overflow-hidden cursor-pointer"
+            className="w-12 h-12 rounded-full border-4 border-white shadow-xl bg-indigo-50 flex items-center justify-center overflow-hidden cursor-pointer"
             onClick={() => fileInputRef.current?.click()}
           >
             {uploadingAvatar ? (
-              <Loader2 size={32} className="animate-spin text-indigo-500" />
+              <Loader2 size={24} className="animate-spin text-indigo-500" />
             ) : avatarPreview || currentStudent?.photo ? (
               <img src={avatarPreview || currentStudent.photo} alt="Avatar" className="w-full h-full object-cover rounded-full" />
             ) : (

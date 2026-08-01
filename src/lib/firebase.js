@@ -16,14 +16,42 @@ const firebaseConfig = {
 
 // Initialize Firebase (safely for HMR)
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
+
+let analytics = null;
+if (typeof window !== 'undefined') {
+  try {
+    if (window.navigator?.onLine) {
+      analytics = getAnalytics(app);
+    } else {
+      console.warn('Firebase analytics disabled: offline mode detected.');
+    }
+  } catch (error) {
+    console.warn('Firebase analytics initialization failed:', error?.message || error);
+  }
+}
 
 // Initialize Firestore with settings to support multi-tab persistence and offline access
-const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager()
-  })
-});
+// If persistence initialization fails (stale lease, unsupported IndexedDB environment, private mode),
+// fall back to a plain Firestore instance so the app continues working without repeated console errors.
+const initFirestore = () => {
+  if (typeof window !== 'undefined' && typeof indexedDB !== 'undefined') {
+    try {
+      return initializeFirestore(app, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager()
+        })
+      });
+    } catch (error) {
+      console.warn('Firestore local cache initialization failed; falling back to network-only Firestore.', error?.message || error);
+    }
+  } else {
+    console.warn('Firestore local cache disabled: not running in a browser environment.');
+  }
+
+  return getFirestore(app);
+};
+
+const db = initFirestore();
 const auth = getAuth(app);
 const storage = getStorage(app);
 
