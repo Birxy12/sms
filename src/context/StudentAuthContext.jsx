@@ -139,6 +139,11 @@ export const StudentAuthProvider = ({ children }) => {
       if (!querySnapshot.empty) {
         const rawData = querySnapshot.docs[0].data();
         const studentData = { id: querySnapshot.docs[0].id, ...expandStudent(rawData) };
+
+        const isPendingActivation = studentData.status === 'pending_activation' || studentData.requiresAdminConfirmation || studentData.admissionConfirmed === false || studentData.paymentConfirmed === false;
+        if (isPendingActivation && studentData.status !== 'active') {
+          return { success: false, message: 'Your admission is pending confirmation from the admin or bursar after your new intake fee payment.' };
+        }
         
         // Check if student has a PIN set
         if (studentData.pin) {

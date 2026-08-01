@@ -269,7 +269,12 @@ const AdmissionPortal = () => {
         appNo: applicantInfo.appNo,
         paidFee: 0,
         expectedFee: 0,
-        status: 'active',
+        admissionConfirmed: false,
+        paymentConfirmed: false,
+        requiresAdminConfirmation: true,
+        classActivated: false,
+        status: 'pending_activation',
+        pendingAdmissionMessage: 'Pending admin/bursar confirmation after new intake fee payment.',
         createdAt: serverTimestamp(),
         createdBy: 'admission_portal_auto',
       });

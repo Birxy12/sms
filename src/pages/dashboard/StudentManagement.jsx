@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, storage } from '../../lib/firebase';
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
-import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, where, setDoc } from 'firebase/firestore';
+import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, where, setDoc, serverTimestamp } from 'firebase/firestore';
 import { uploadAvatar } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList, Printer } from 'lucide-react';
@@ -204,6 +204,27 @@ const StudentManagement = () => {
     }
   };
 
+  const handleConfirmAdmission = async (student) => {
+    if (!student?.id) return;
+    try {
+      await updateDoc(doc(db, 'students', student.id), {
+        admissionConfirmed: true,
+        paymentConfirmed: true,
+        requiresAdminConfirmation: false,
+        classActivated: true,
+        status: 'active',
+        activatedAt: serverTimestamp(),
+        activationConfirmedBy: 'Admin',
+        activationConfirmedRole: 'admin',
+      });
+      setStatus({ type: 'success', message: `${student.name} has been activated for class access.` });
+      fetchStudents();
+    } catch (error) {
+      console.error('Admission confirmation failed:', error);
+      setStatus({ type: 'error', message: 'Failed to confirm admission.' });
+    }
+  };
+
   const handlePromote = async () => {
     if (!newClass || newClass === promoteModal.student.className) {
       setStatus({ type: 'error', message: 'Please select a different class.' });
@@ -337,7 +358,14 @@ const StudentManagement = () => {
                     <span className="text-xs font-mono font-bold text-slate-600">{student.regNo}</span>
                   </td>
                   <td className="px-6 py-5">
-                    <span className="text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1 rounded-full uppercase">{student.className}</span>
+                    <div className="flex flex-col items-start gap-1">
+                      <span className="text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1 rounded-full uppercase">{student.className}</span>
+                      {student.status === 'pending_activation' || student.requiresAdminConfirmation || student.admissionConfirmed === false ? (
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600">Pending Activation</span>
+                      ) : (
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Active</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-5">
                     <span className={`text-[10px] font-black uppercase tracking-widest ${student.gender === 'Male' ? 'text-blue-500' : 'text-pink-500'}`}>{student.gender}</span>
@@ -361,6 +389,9 @@ const StudentManagement = () => {
                       >
                         <Printer size={16} />
                       </button>
+                      {student.status === 'pending_activation' || student.requiresAdminConfirmation || student.admissionConfirmed === false ? (
+                        <button onClick={() => handleConfirmAdmission(student)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-white rounded-lg" title="Confirm Admission"><CheckCircle size={16} /></button>
+                      ) : null}
                       <button onClick={() => { setPromoteModal({ student }); setNewClass(student.className); }} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-white rounded-lg" title="Promote / Demote"><ArrowUpDown size={16} /></button>
                       {(student.className?.startsWith('SS2') || student.className?.startsWith('SS3')) && (
                         <button onClick={() => openSubjectRegModal(student)} className="p-2 text-slate-400 hover:text-pink-600 hover:bg-white rounded-lg" title="Subject Registration"><ClipboardList size={16} /></button>

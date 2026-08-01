@@ -706,11 +706,22 @@ const BursarDashboard = () => {
         const txnId = 'TXN-' + Math.floor(10000000 + Math.random() * 90000000);
         const serialNo = 'SN-' + Math.floor(100000 + Math.random() * 900000);
         const ref = doc(db, 'students', selectedStudent.id);
+        const isPendingAdmission = selectedStudent.status === 'pending_activation' || selectedStudent.requiresAdminConfirmation || selectedStudent.admissionConfirmed === false || selectedStudent.paymentConfirmed === false;
         await updateDoc(ref, {
           paidFee: newPaid, paidAmount: newPaid,
           lastPaymentDate: new Date().toLocaleDateString('en-NG'),
           lastTransactionId: txnId, lastSerialNo: serialNo,
           lastPaymentTerm: paymentTerm, lastPaymentSession: paymentSession,
+          ...(isPendingAdmission ? {
+            paymentConfirmed: true,
+            admissionConfirmed: true,
+            requiresAdminConfirmation: false,
+            classActivated: true,
+            status: 'active',
+            activatedAt: serverTimestamp(),
+            activationConfirmedBy: currentAdmin?.name || 'Bursar',
+            activationConfirmedRole: 'bursar',
+          } : {}),
         });
         await addDoc(collection(db, 'payment_messages'), {
           studentName: selectedStudent.name || selectedStudent['STUDENT NAME'],
