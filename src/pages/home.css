@@ -144,17 +144,24 @@
 
 @media (max-width: 768px) {
   .home-hero-content {
-    padding: 4rem 1rem;
+    padding: 3.25rem 1rem;
     text-align: center;
   }
   .home-hero-title {
-    font-size: 2.5rem;
+    font-size: 2.25rem;
   }
   .home-hero-desc {
     font-size: 1rem;
     margin: 0 auto 2rem;
   }
   .home-hero-actions {
+    justify-content: center;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .home-btn-primary,
+  .home-btn-secondary {
+    width: 100%;
     justify-content: center;
   }
   .home-hero-slider {

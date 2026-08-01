@@ -853,7 +853,7 @@ const AdmissionPortal = () => {
                 <div style={{ marginBottom: 32 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
                     <p style={{ fontWeight: 900, fontSize: 11, letterSpacing: '3px', textTransform: 'uppercase', color: '#64748b', margin: 0 }}>Official Admission Letter</p>
-                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <div className="admission-letter-actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                       <button onClick={handlePrintLetter} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#334155', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.12)' }}>
                         <Printer size={15} /> Print Letter
                       </button>
@@ -898,7 +898,7 @@ const AdmissionPortal = () => {
                       )}
                       <div style={{ marginTop: 24, background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', padding: '20px 24px' }}>
                         <p style={{ fontSize: 10, fontWeight: 900, letterSpacing: '3px', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 12, fontFamily: 'Arial' }}>Applicant Details</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 28px' }}>
+                        <div className="admission-details-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 28px' }}>
                           {[
                             ['Full Name', appData?.applicant?.fullName],
                             ['Date of Birth', appData?.applicant?.dateOfBirth],
@@ -951,6 +951,40 @@ const AdmissionPortal = () => {
         @keyframes adm-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .admission-letter-card {
           color: #0f172a;
+        }
+        @media (max-width: 640px) {
+          .admission-letter-actions {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+          }
+          .admission-letter-actions button {
+            width: 100%;
+            justify-content: center;
+          }
+          .admission-letter-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+            padding: 22px 20px !important;
+          }
+          .admission-letter-status {
+            flex-direction: column;
+            align-items: flex-start !important;
+            padding: 10px 20px !important;
+            gap: 6px;
+          }
+          .admission-details-grid {
+            grid-template-columns: 1fr !important;
+            gap: 4px 0 !important;
+          }
+          .admission-details-grid > div {
+            padding: 6px 0 !important;
+          }
+          .admission-details-grid span:first-child {
+            min-width: 0 !important;
+            display: block;
+            margin-bottom: 2px;
+          }
         }
         @media print {
           @page { size: A4; margin: 8mm; }
