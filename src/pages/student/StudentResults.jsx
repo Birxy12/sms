@@ -395,51 +395,95 @@ useEffect(() => {
   }
 }, [urlPrint, studentMarks, loading]);
 
+const createPrintableClone = () => {
+  if (!printRef.current) return null;
+
+  const clone = printRef.current.cloneNode(true);
+  clone.style.width = '794px';
+  clone.style.maxWidth = '794px';
+  clone.style.minHeight = 'auto';
+  clone.style.margin = '0 auto';
+  clone.style.background = '#ffffff';
+  clone.style.padding = '0';
+  clone.style.boxSizing = 'border-box';
+  clone.style.overflow = 'visible';
+  clone.style.transform = 'none';
+
+  const wrapper = document.createElement('div');
+  wrapper.style.position = 'fixed';
+  wrapper.style.left = '-9999px';
+  wrapper.style.top = '0';
+  wrapper.style.width = '794px';
+  wrapper.style.background = '#ffffff';
+  wrapper.style.zIndex = '-1';
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
+  return wrapper;
+};
+
 const handlePrint = () => {
-setIsPrinting(true);
-setTimeout(() => {
-window.print();
-// Use onafterprint if supported or a longer delay to ensure the dialog is closed before resetting
-setIsPrinting(false);
-}, 1000);
+  setIsPrinting(true);
+
+  const wrapper = createPrintableClone();
+  if (!wrapper) {
+    setIsPrinting(false);
+    return;
+  }
+
+  const printWindow = window.open('', '_blank', 'width=900,height=900,noopener,noreferrer');
+  if (!printWindow) {
+    wrapper.remove();
+    setIsPrinting(false);
+    window.alert('Please allow pop-ups to print the result card.');
+    return;
+  }
+
+  printWindow.document.write(`<!DOCTYPE html><html><head><title>Student Result</title><style>html,body{margin:0;padding:0;background:#fff}body{font-family:Arial,sans-serif}*{box-sizing:border-box}</style></head><body>${wrapper.innerHTML}</body></html>`);
+  printWindow.document.close();
+  printWindow.focus();
+
+  setTimeout(() => {
+    printWindow.print();
+    wrapper.remove();
+    setIsPrinting(false);
+  }, 400);
 };
 
 const handleDownloadPDF = async () => {
-setIsPrinting(true);
-// Give time for the print view to render
-setTimeout(async () => {
-try {
-const element = printRef.current;
-if (!element) {
-setIsPrinting(false);
-return;
-}
+  setIsPrinting(true);
 
-// Dynamic import to handle potential install lag
-const html2pdf = (await import('html2pdf.js')).default;
+  const wrapper = createPrintableClone();
+  if (!wrapper) {
+    setIsPrinting(false);
+    return;
+  }
 
-        const opt = {
-          margin: [10, 10],
-          filename: `${currentStudent?.name || 'Student'}-Report-Card.pdf`,
-          image: { type: 'jpeg', quality: 1.0 },
-          html2canvas: { 
-            scale: 4, 
-            useCORS: true, 
-            logging: false, 
-            letterRendering: true,
-            allowTaint: true 
-          },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
+  try {
+    const html2pdf = (await import('html2pdf.js')).default;
 
-await html2pdf().set(opt).from(element).save();
-} catch (err) {
-console.error("PDF Download failed, falling back to print:", err);
-window.print();
-} finally {
-setIsPrinting(false);
-}
-}, 1000);
+    const opt = {
+      margin: [8, 8, 8, 8],
+      filename: `${currentStudent?.name || 'Student'}-Report-Card.pdf`,
+      image: { type: 'jpeg', quality: 1.0 },
+      html2canvas: {
+        scale: 3,
+        useCORS: true,
+        logging: false,
+        letterRendering: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    await html2pdf().set(opt).from(wrapper).save();
+  } catch (err) {
+    console.error('PDF Download failed:', err);
+    window.alert('PDF download failed. Please try again.');
+  } finally {
+    wrapper.remove();
+    setIsPrinting(false);
+  }
 };
 
 if (loading && publishedTerms.length === 0) {
@@ -454,9 +498,10 @@ const renderPrintView = () => (
 <div className="report-card-print" ref={printRef}>
 <style>{`
 .report-card-print {
-width: 210mm;
-min-height: 297mm;
-padding: 6mm 10mm;
+width: 794px;
+max-width: 100%;
+min-height: auto;
+padding: 8mm 10mm;
 margin: 0 auto;
 background: white;
 color: #0f172a;
@@ -467,94 +512,91 @@ overflow: hidden;
 display: flex;
 flex-direction: column;
 }
+@page { size: A4 portrait; margin: 0; }
 @media print {
-  @page { size: A4; margin: 0; }
-  body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  body > * { visibility: hidden !important; }
+  html, body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; padding: 0; }
   .report-card-print, .report-card-print * { visibility: visible !important; }
   .report-card-print {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 210mm;
-    min-height: 297mm;
-    padding: 8mm 12mm;
+    width: 100%;
+    min-height: auto;
+    padding: 8mm 10mm;
     background: white !important;
-    transform: scale(1);
-    transform-origin: top left;
     box-shadow: none !important;
     border: none !important;
+    overflow: visible;
+    transform: none;
   }
 }
 @media (max-width: 1024px) {
   .report-card-print {
     width: 100%;
     min-height: auto;
-    padding: 8mm;
+    padding: 6mm;
     transform: none;
     zoom: normal;
-    overflow-x: auto;
+    overflow-x: hidden;
   }
 }
-.print-branding-top { font-size: 7px; text-transform: uppercase; font-weight: 800; color: #94a3b8; margin-bottom: 3px; display: flex; justify-content: space-between; }
-.print-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px double #0f172a; padding-bottom: 5px; margin-bottom: 8px; }
-.print-logo { width: 65px; height: 65px; object-fit: contain; }
+.print-branding-top { font-size: 6.5px; text-transform: uppercase; font-weight: 800; color: #94a3b8; margin-bottom: 3px; display: flex; justify-content: space-between; }
+.print-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 4px; margin-bottom: 6px; }
+.print-logo { width: 48px; height: 48px; object-fit: contain; }
 .print-school-info { text-align: center; flex: 1; }
-.print-school-info h1 { font-size: 16px; font-weight: 900; margin: 0; line-height: 1.1; color: #1e293b; }
-.print-school-info h2 { font-size: 12px; font-weight: 700; margin: 0; color: #475569; }
-.print-school-info p { font-size: 8px; margin: 2px 0; font-weight: 600; color: #64748b; }
-.print-term-badge { display: inline-block; background: #1e293b; color: white; padding: 2px 12px; border-radius: 20px; font-size: 9px; font-weight: 900; margin-top: 3px; text-transform: uppercase; letter-spacing: 1px; }
-.student-photo-frame { width: 68px; height: 78px; border: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.print-school-info h1 { font-size: 13px; font-weight: 900; margin: 0; line-height: 1.1; color: #1e293b; }
+.print-school-info h2 { font-size: 10px; font-weight: 700; margin: 0; color: #475569; }
+.print-school-info p { font-size: 7px; margin: 2px 0; font-weight: 600; color: #64748b; }
+.print-term-badge { display: inline-block; background: #1e293b; color: white; padding: 1px 8px; border-radius: 12px; font-size: 8px; font-weight: 900; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+.student-photo-frame { width: 54px; height: 62px; border: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .student-photo-frame img { width: 100%; height: 100%; object-fit: cover; }
 .photo-placeholder {
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 900;
   color: #f8fafc;
   background-color: #334155;
-  font: 16px/1.6 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  font: 13px/1.4 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
   font-family: 'Inter', sans-serif;
   border: 1px solid #4f46e5;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 20px -10px rgba(0, 0, 0, 0.1);
   border-radius: 3px;
 }
-.print-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 8px; border: 1px solid #0f172a; padding: 5px; background: #f8fafc; }
-.stat-item { font-size: 9px; display: flex; align-items: center; }
-.stat-item label { font-weight: 800; color: #475569; width: 80px; font-size: 8px; }
+.print-stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-bottom: 6px; border: 1px solid #0f172a; padding: 4px; background: #f8fafc; }
+.stat-item { font-size: 7px; display: flex; align-items: center; }
+.stat-item label { font-weight: 800; color: #475569; width: 42px; font-size: 6.5px; }
 .stat-item span { font-weight: 700; color: #0f172a; flex: 1; border-bottom: 1px dashed #cbd5e1; padding-bottom: 1px; }
 .stat-item .highlight { color: #2563eb; font-weight: 900; }
-.academic-performance-title { background: #f1f5f9; color: #0f172a; text-align: center; font-weight: 900; padding: 3px; font-size: 10px; letter-spacing: 3px; margin-bottom: 5px; border: 1px solid #0f172a; text-transform: uppercase; }
-.print-main-content { display: flex; gap: 10px; margin-bottom: 8px; }
-.print-table-wrapper { flex: 2.8; }
-.print-table { width: 100%; border-collapse: collapse; font-size: 8.5px; }
-.print-table th { background: #1e293b; color: white; padding: 4px; border: 1px solid #0f172a; font-weight: 900; text-transform: uppercase; font-size: 7.5px; }
-.print-table td { padding: 3px; border: 1px solid #0f172a; text-align: center; font-weight: 700; }
-.print-table td.subject-name { text-align: left; font-weight: 900; padding-left: 6px; background: #f8fafc; }
-.print-side-panels { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-.mini-table { width: 100%; border-collapse: collapse; font-size: 7.5px; }
-.mini-table th { background: #e2e8f0; border: 1px solid #0f172a; padding: 2px; font-weight: 900; }
-.mini-table td { border: 1px solid #0f172a; padding: 2px; text-align: center; font-weight: 700; }
-.mini-table td:first-child { text-align: left; font-weight: 800; background: #f8fafc; font-size: 7px; }
-.section-title { font-size: 8px; font-weight: 900; margin-bottom: 2px; padding: 2px 4px; background: #0f172a; color: white; text-transform: uppercase; }
-.summary-box { border: 1px solid #0f172a; padding: 3px; text-align: center; background: #f8fafc; margin-bottom: 3px; }
-.summary-box label { font-size: 6.5px; font-weight: 900; color: #475569; display: block; text-transform: uppercase; }
-.summary-box .value { font-size: 11px; font-weight: 900; }
+.academic-performance-title { background: #f1f5f9; color: #0f172a; text-align: center; font-weight: 900; padding: 2px; font-size: 8px; letter-spacing: 1px; margin-bottom: 4px; border: 1px solid #0f172a; text-transform: uppercase; }
+.print-main-content { display: grid; grid-template-columns: 1.6fr 0.9fr; gap: 8px; margin-bottom: 6px; align-items: start; }
+.print-table-wrapper { min-width: 0; }
+.print-table { width: 100%; border-collapse: collapse; font-size: 6.8px; }
+.print-table th { background: #1e293b; color: white; padding: 2px; border: 1px solid #0f172a; font-weight: 900; text-transform: uppercase; font-size: 6.4px; }
+.print-table td { padding: 2px; border: 1px solid #0f172a; text-align: center; font-weight: 700; }
+.print-table td.subject-name { text-align: left; font-weight: 900; padding-left: 4px; background: #f8fafc; }
+.print-side-panels { display: flex; flex-direction: column; gap: 4px; }
+.mini-table { width: 100%; border-collapse: collapse; font-size: 6.3px; }
+.mini-table th { background: #e2e8f0; border: 1px solid #0f172a; padding: 1px; font-weight: 900; }
+.mini-table td { border: 1px solid #0f172a; padding: 1px; text-align: center; font-weight: 700; }
+.mini-table td:first-child { text-align: left; font-weight: 800; background: #f8fafc; font-size: 6px; }
+.section-title { font-size: 7px; font-weight: 900; margin-bottom: 2px; padding: 1px 3px; background: #0f172a; color: white; text-transform: uppercase; }
+.summary-box { border: 1px solid #0f172a; padding: 2px; text-align: center; background: #f8fafc; margin-bottom: 2px; }
+.summary-box label { font-size: 6px; font-weight: 900; color: #475569; display: block; text-transform: uppercase; }
+.summary-box .value { font-size: 9px; font-weight: 900; }
 .status-pass { color: #059669; }
-.commentary-section { border: 1px solid #0f172a; padding: 5px; margin-bottom: 8px; background: #fdfdfd; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.comment-box { margin-bottom: 4px; }
+.commentary-section { border: 1px solid #0f172a; padding: 4px; margin-bottom: 6px; background: #fdfdfd; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.comment-box { margin-bottom: 2px; }
 .comment-box:last-child { margin-bottom: 0; }
-.comment-box label { font-size: 8px; font-weight: 900; text-decoration: underline; color: #1e293b; }
-.comment-box p { font-size: 8px; margin: 1px 0; font-style: italic; color: #334155; line-height: 1.25; min-height: 30px; }
-.print-footer { margin-top: auto; border-top: 1px solid #0f172a; padding-top: 6px; }
-.footer-cols { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.footer-sign { text-align: center; width: 160px; }
-.sign-line { border-bottom: 1px dashed #0f172a; margin-bottom: 2px; height: 22px; }
-.footer-sign p { font-size: 7.5px; font-weight: 900; margin: 0; text-transform: uppercase; }
-.stamp-box { width: 120px; height: 60px; border: 2px dashed #cbd5e1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 7px; font-weight: 900; color: #cbd5e1; text-transform: uppercase; transform: rotate(-10deg); }
+.comment-box label { font-size: 7px; font-weight: 900; text-decoration: underline; color: #1e293b; }
+.comment-box p { font-size: 7px; margin: 1px 0; font-style: italic; color: #334155; line-height: 1.18; min-height: 20px; }
+.print-footer { margin-top: auto; border-top: 1px solid #0f172a; padding-top: 4px; }
+.footer-cols { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.footer-sign { text-align: center; width: 140px; }
+.sign-line { border-bottom: 1px dashed #0f172a; margin-bottom: 2px; height: 18px; }
+.footer-sign p { font-size: 6.8px; font-weight: 900; margin: 0; text-transform: uppercase; }
+.stamp-box { width: 90px; height: 40px; border: 2px dashed #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 6px; font-weight: 900; color: #cbd5e1; text-transform: uppercase; transform: rotate(-8deg); }
 .footer-dates { text-align: right; }
-.footer-dates p { font-size: 7.5px; margin: 2px 0; font-weight: 600; color: #475569; }
+.footer-dates p { font-size: 6.8px; margin: 1px 0; font-weight: 600; color: #475569; }
 .footer-dates strong { color: #0f172a; font-weight: 800; }
-.print-final-branding { text-align: center; font-size: 8px; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; border-top: 1px solid #e2e8f0; padding-top: 4px; }
-.print-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 100px; font-weight: 900; color: rgba(15, 23, 42, 0.03); white-space: nowrap; pointer-events: none; z-index: -1; }
+.print-final-branding { text-align: center; font-size: 6.8px; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; border-top: 1px solid #e2e8f0; padding-top: 3px; }
+.print-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 72px; font-weight: 900; color: rgba(15, 23, 42, 0.035); white-space: nowrap; pointer-events: none; z-index: -1; }
 `}</style>
 <div className="print-branding-top">Academic Session: {selectedPub?.session}</div>
 <div className="print-header">
@@ -688,7 +730,6 @@ sub.total >= 40 ? 'Average' : 'Below Average'}
 <span style={{ fontSize: '7px', fontWeight: 'bold' }}>PRINCIPAL (MRS ETUZU ANITA)</span>
 </div>
 </div>
-<div className="print-watermark">{schoolName || 'BONUS DOMINUS'}</div>
 </div>
 );
 
