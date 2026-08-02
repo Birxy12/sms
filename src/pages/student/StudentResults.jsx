@@ -384,16 +384,33 @@ fetchFormTeacher();
 // Auto-trigger print when opened from admin with print=1 param
 useEffect(() => {
   if (urlPrint && studentMarks && !loading) {
-    const timer = setTimeout(() => {
+    const timer = window.setTimeout(() => {
       setIsPrinting(true);
-      setTimeout(() => {
-        window.print();
-        setIsPrinting(false);
-      }, 1000);
     }, 800);
-    return () => clearTimeout(timer);
+    return () => window.clearTimeout(timer);
   }
 }, [urlPrint, studentMarks, loading]);
+
+useEffect(() => {
+  if (!isPrinting) return;
+
+  const timer = window.setTimeout(() => {
+    window.print();
+  }, 300);
+
+  const handleAfterPrint = () => setIsPrinting(false);
+  window.addEventListener('afterprint', handleAfterPrint);
+
+  const fallbackTimer = window.setTimeout(() => {
+    setIsPrinting(false);
+  }, 1800);
+
+  return () => {
+    window.clearTimeout(timer);
+    window.clearTimeout(fallbackTimer);
+    window.removeEventListener('afterprint', handleAfterPrint);
+  };
+}, [isPrinting]);
 
 const createPrintableClone = () => {
   if (!printRef.current) return null;
@@ -423,38 +440,12 @@ const createPrintableClone = () => {
 
 const handlePrint = () => {
   setIsPrinting(true);
-
-  const wrapper = createPrintableClone();
-  if (!wrapper) {
-    setIsPrinting(false);
-    return;
-  }
-
-  const printWindow = window.open('', '_blank', 'width=900,height=900,noopener,noreferrer');
-  if (!printWindow) {
-    wrapper.remove();
-    setIsPrinting(false);
-    window.alert('Please allow pop-ups to print the result card.');
-    return;
-  }
-
-  printWindow.document.write(`<!DOCTYPE html><html><head><title>Student Result</title><style>html,body{margin:0;padding:0;background:#fff}body{font-family:Arial,sans-serif}*{box-sizing:border-box}</style></head><body>${wrapper.innerHTML}</body></html>`);
-  printWindow.document.close();
-  printWindow.focus();
-
-  setTimeout(() => {
-    printWindow.print();
-    wrapper.remove();
-    setIsPrinting(false);
-  }, 400);
 };
 
 const handleDownloadPDF = async () => {
-  setIsPrinting(true);
-
   const wrapper = createPrintableClone();
   if (!wrapper) {
-    setIsPrinting(false);
+    window.alert('The report card is not ready yet. Please try again.');
     return;
   }
 
@@ -482,7 +473,6 @@ const handleDownloadPDF = async () => {
     window.alert('PDF download failed. Please try again.');
   } finally {
     wrapper.remove();
-    setIsPrinting(false);
   }
 };
 
@@ -536,6 +526,38 @@ flex-direction: column;
     transform: none;
     zoom: normal;
     overflow-x: hidden;
+  }
+}
+@media (max-width: 768px) {
+  .report-card-print {
+    padding: 4mm;
+  }
+  .print-header {
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+  .print-school-info h1 {
+    font-size: 11px;
+  }
+  .print-school-info h2 {
+    font-size: 8px;
+  }
+  .print-school-info p {
+    font-size: 6.2px;
+  }
+  .print-stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .print-main-content {
+    grid-template-columns: 1fr;
+  }
+  .commentary-section {
+    grid-template-columns: 1fr;
+  }
+  .print-logo {
+    width: 40px;
+    height: 40px;
   }
 }
 .print-branding-top { font-size: 6.5px; text-transform: uppercase; font-weight: 800; color: #94a3b8; margin-bottom: 3px; display: flex; justify-content: space-between; }
@@ -806,7 +828,7 @@ return (
               </div>
             </div>
           </div>
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[750px]">
               <thead>
                 <tr className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
@@ -855,6 +877,40 @@ return (
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="md:hidden p-4 space-y-3">
+            {studentMarks.subjects.map((sub, idx) => {
+              const remark = sub.total >= 75 ? 'Excellent' : sub.total >= 60 ? 'Very Good' : sub.total >= 50 ? 'Good' : sub.total >= 40 ? 'Average' : 'Below Average';
+              return (
+                <div key={idx} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-black text-slate-800 dark:text-slate-100">{sub.subject}</span>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black ${sub.total < 40 ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                      {sub.total}/100
+                    </span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+                    <div className="rounded-xl bg-slate-50 dark:bg-slate-700/70 p-2 text-center">
+                      <div className="text-[9px] uppercase tracking-widest text-slate-400">CAT 1</div>
+                      <div className="font-black">{sub.cat1}</div>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 dark:bg-slate-700/70 p-2 text-center">
+                      <div className="text-[9px] uppercase tracking-widest text-slate-400">CAT 2</div>
+                      <div className="font-black">{sub.cat2}</div>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 dark:bg-slate-700/70 p-2 text-center">
+                      <div className="text-[9px] uppercase tracking-widest text-slate-400">Exam</div>
+                      <div className="font-black">{sub.exam}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-[11px]">
+                    <span className="font-black text-slate-700 dark:text-slate-200">Grade {sub.grade}</span>
+                    <span className={`font-bold ${sub.total >= 50 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{remark}</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
