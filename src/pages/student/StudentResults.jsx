@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { db } from '../../lib/firebase';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
-import { AlertCircle, Printer, Download, User, ArrowLeft } from 'lucide-react';
+import { Award, AlertCircle, Printer, Download, ChevronLeft, User, ArrowLeft } from 'lucide-react';
 import bdsLogo from '../../assets/bdslogo.jpg';
+import resultStamp from '../../assets/stamp.jpeg';
 import { expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../../utils/firestoreSchema';
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import Navbar from '../../components/Navbar';
@@ -20,6 +21,7 @@ const [publishedTerms, setPublishedTerms] = useState([]);
 const [selectedTermId, setSelectedTermId] = useState('');
 const [studentMarks, setStudentMarks] = useState(null);
 const [loading, setLoading] = useState(true);
+const [isPrinting, setIsPrinting] = useState(false);
 const [classStats, setClassStats] = useState({ position: 'N/A', population: 0 });
 const [schoolDates, setSchoolDates] = useState({
 termEnds: '12/12/2025',
@@ -45,6 +47,7 @@ const fetchAdminStudent = async () => {
   let q = query(collection(db, 'students'), where(STUDENT_KEYS.regNo, '==', adminRegNo));
   let snap = await getDocs(q);
   if (snap.empty) {
+    // fallback to legacy
     q = query(collection(db, 'students'), where('regNo', '==', adminRegNo));
     snap = await getDocs(q);
   }
@@ -52,6 +55,7 @@ const fetchAdminStudent = async () => {
     const sDataRaw = snap.docs[0].data();
     const sDataExpanded = expandStudent(sDataRaw);
     
+    // If it's a public access, we MUST verify the PIN here too for security
     if (isPublic) {
       const isAdminBypass = publicPin === '@@@@@@' || publicPin === '001100' || publicPin === '260796';
       const storedPin = sDataExpanded.pin || sDataRaw.pin || '';
@@ -68,6 +72,7 @@ const fetchAdminStudent = async () => {
 };
 fetchAdminStudent();
 } else if (isPublic && !loggedInStudent) {
+  // If public but no regNo or logged in student, it's invalid
   setResultsError('Please use the Result Checker to access this page.');
   setLoading(false);
 }
@@ -75,6 +80,7 @@ fetchAdminStudent();
 
 const regNum = currentStudent?.regNo || currentStudent?.['REG NO'] || currentStudent?.REGNO || '';
 const studentClass = currentStudent?.className || currentStudent?.classId || '';
+const studentName = currentStudent?.name || currentStudent?.['STUDENT NAME'] || 'Student';
 
 useEffect(() => {
 const fetchPublications = async () => {
@@ -100,6 +106,7 @@ terms.sort((a, b) => b.session.localeCompare(a.session));
 
 setPublishedTerms(terms);
 if (terms.length > 0) {
+// If a specific pubId was passed in the URL (from CheckResult page), use it
 const preSelected = urlPubId ? terms.find(t => t.id === urlPubId) : null;
 setSelectedTermId(preSelected ? preSelected.id : terms[0].id);
 } else {
@@ -116,10 +123,11 @@ fetchPublications();
 } else {
 setLoading(false);
 }
-}, [regNum, studentClass, urlPubId]);
+}, [regNum]);
 
 useEffect(() => {
 const fetchResults = async () => {
+// Allow admin bypass (adminRegNo set) OR logged-in student flow
 if (!selectedTermId || !regNum) return;
 if (!adminRegNo && authError) {
   setResultsError(authError);
@@ -135,6 +143,7 @@ try {
   const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
   if (!selectedPub) return;
 
+        // ── 1. Fetch ALL marks for this student by regNo from Firestore (compressed and legacy uncompressed)
         const [snapR, snapRegNo, snapReg_No] = await Promise.all([
           getDocs(query(collection(db, 'marks'), where(MARKS_KEYS.regNo, '==', regNum))),
           getDocs(query(collection(db, 'marks'), where('regNo', '==', regNum))),
@@ -147,6 +156,7 @@ try {
         });
         const marksData = Array.from(docMap.values()).map(data => expandMarks(data));
 
+        // Normalise term string for comparison (e.g. 'Second Term' === 'secondterm')
         const normTerm = (t = '') => t.toLowerCase().replace(/\s+/g, '');
 
         let foundMarksDoc = null;
@@ -160,6 +170,7 @@ try {
           }
         });
 
+        // ── 2. Compute class standing: fetch all marks for class/session from Firestore
         const [snapC, snapClassName, snapClass_Name] = await Promise.all([
           getDocs(query(collection(db, 'marks'), where(MARKS_KEYS.className, '==', studentClass))),
           getDocs(query(collection(db, 'marks'), where('className', '==', studentClass))),
@@ -195,9 +206,11 @@ try {
           }
         });
 
+        // Tie-aware standard competition (skip) ranking
         const sortedStudents = Object.entries(studentTotals)
           .sort((a, b) => b[1] - a[1]);
 
+        // Position: use stored value if present, else calculate dynamically
         let posStr = foundMarksDoc?.marks?._meta?.position || '';
         if (!posStr || posStr === '0' || posStr === 'N/A') {
           const getOrdinal = (n) => {
@@ -219,8 +232,10 @@ try {
           }
         }
 
+        // ── 3. Class population
         let classPopQuery = query(collection(db, 'students'), where(STUDENT_KEYS.className, '==', studentClass));
         let classPopSnap = await getDocs(classPopQuery);
+        // Fallback to legacy key
         if (classPopSnap.empty) {
           classPopQuery = query(collection(db, 'students'), where('className', '==', studentClass));
           classPopSnap = await getDocs(classPopQuery);
@@ -235,6 +250,7 @@ try {
           population: classPopSnap.size
         });
 
+        // ── 4. Build subject list for this class
         const subjectsQuery = query(collection(db, 'subjects'), where('class', '==', studentClass));
         const subjectsSnap = await getDocs(subjectsQuery);
         const classSubjects = subjectsSnap.docs.map(d => d.data().name);
@@ -242,6 +258,7 @@ try {
         const rawMarks = foundMarksDoc?.marks || {};
         let subjectList = classSubjects.length > 0 ? classSubjects : Object.keys(rawMarks).filter(k => k !== '_meta');
 
+        // Deduplicate subject list (case-insensitive)
         const seen = new Set();
         subjectList = subjectList.filter(subj => {
           const upper = subj.toUpperCase().trim();
@@ -251,13 +268,17 @@ try {
         });
 
         if (!foundMarksDoc && subjectList.length === 0) {
+          // No marks found at all – show empty state rather than all-zero rows
           setStudentMarks(null);
           setLoading(false);
           return;
         }
 
         let totalScore = 0;
+        let subjectCount = 0;
+
         const processedMarks = subjectList.map(subjectName => {
+          // Case-insensitive lookup
           const dbKey = Object.keys(rawMarks).find(
             k => k.toUpperCase() === subjectName.toUpperCase()
           ) || subjectName;
@@ -271,6 +292,7 @@ try {
 
           if (isOffered) {
             totalScore += total;
+            subjectCount++;
           }
 
           let grade = sm.grade;
@@ -297,7 +319,10 @@ try {
           };
         });
 
+        // Only show subjects that have been offered
         const displaySubjects = processedMarks.filter(s => s.isOffered);
+
+        // Calculate average based on configured divisors
         const divisor = Math.max(getAverageDivisor(currentStudent?.className || studentClass, averageDivisors), 1);
 
         setStudentMarks({
@@ -309,7 +334,7 @@ try {
 
       } catch (error) {
 if (error?.code === 'permission-denied') {
-setResultsError('Results are currently blocked by Firebase permissions.');
+setResultsError('Results are currently blocked by Firebase permissions. Please ask the administrator to enable Anonymous sign-in or update Firestore rules for student result access.');
 } else {
 console.error('Error fetching marks:', error);
 setResultsError('Unable to load your results right now.');
@@ -320,7 +345,7 @@ setLoading(false);
 };
 
 fetchResults();
-}, [selectedTermId, publishedTerms, regNum, currentStudent, studentClass, adminRegNo, authError, authReady, averageDivisors]);
+}, [selectedTermId, publishedTerms, regNum, currentStudent, authError, authReady]);
 
 useEffect(() => {
 const fetchSchoolDates = async () => {
@@ -356,16 +381,50 @@ console.error("Error fetching form teacher", e);
 fetchFormTeacher();
 }, [studentClass]);
 
-const buildPrintableElement = useCallback(() => {
+// Auto-trigger print when opened from admin with print=1 param
+useEffect(() => {
+  if (urlPrint && studentMarks && !loading) {
+    const timer = window.setTimeout(() => {
+      setIsPrinting(true);
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }
+}, [urlPrint, studentMarks, loading]);
+
+useEffect(() => {
+  if (!isPrinting) return;
+
+  const timer = window.setTimeout(() => {
+    window.print();
+  }, 300);
+
+  const handleAfterPrint = () => setIsPrinting(false);
+  window.addEventListener('afterprint', handleAfterPrint);
+
+  const fallbackTimer = window.setTimeout(() => {
+    setIsPrinting(false);
+  }, 1800);
+
+  return () => {
+    window.clearTimeout(timer);
+    window.clearTimeout(fallbackTimer);
+    window.removeEventListener('afterprint', handleAfterPrint);
+  };
+}, [isPrinting]);
+
+const createPrintableClone = () => {
   if (!printRef.current) return null;
 
   const clone = printRef.current.cloneNode(true);
   clone.style.width = '794px';
   clone.style.maxWidth = '794px';
+  clone.style.minHeight = 'auto';
   clone.style.margin = '0 auto';
   clone.style.background = '#ffffff';
   clone.style.padding = '0';
-  clone.style.color = '#0f172a';
+  clone.style.boxSizing = 'border-box';
+  clone.style.overflow = 'visible';
+  clone.style.transform = 'none';
 
   const wrapper = document.createElement('div');
   wrapper.style.position = 'fixed';
@@ -373,61 +432,49 @@ const buildPrintableElement = useCallback(() => {
   wrapper.style.top = '0';
   wrapper.style.width = '794px';
   wrapper.style.background = '#ffffff';
+  wrapper.style.zIndex = '-1';
   wrapper.appendChild(clone);
   document.body.appendChild(wrapper);
-  return { wrapper, clone };
-}, []);
+  return wrapper;
+};
 
-const handlePrint = useCallback(() => {
-  const printable = buildPrintableElement();
-  if (!printable) return;
+const handlePrint = () => {
+  setIsPrinting(true);
+};
 
-  const printWindow = window.open('', '_blank', 'width=900,height=900');
-  if (!printWindow) {
-    printable.wrapper.remove();
-    return;
-  }
-
-  printWindow.document.write(`<html><head><title>Student Result</title><style>@page{size:A4 portrait;margin:0;}body{margin:0;font-family:sans-serif}</style></head><body>${printable.clone.outerHTML}</body></html>`);
-  printWindow.document.close();
-  setTimeout(() => {
-    printWindow.print();
-    printable.wrapper.remove();
-  }, 300);
-}, [buildPrintableElement]);
-
-const handleDownloadPDF = useCallback(async () => {
-  const printable = buildPrintableElement();
-  if (!printable) {
+const handleDownloadPDF = async () => {
+  const wrapper = createPrintableClone();
+  if (!wrapper) {
     window.alert('The report card is not ready yet. Please try again.');
     return;
   }
+
   try {
     const html2pdf = (await import('html2pdf.js')).default;
+
     const opt = {
       margin: [8, 8, 8, 8],
       filename: `${currentStudent?.name || 'Student'}-Report-Card.pdf`,
       image: { type: 'jpeg', quality: 1.0 },
-      html2canvas: { scale: 3, useCORS: true, logging: false, backgroundColor: '#ffffff' },
+      html2canvas: {
+        scale: 3,
+        useCORS: true,
+        logging: false,
+        letterRendering: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
-    await html2pdf().set(opt).from(printable.clone).save();
+
+    await html2pdf().set(opt).from(wrapper).save();
   } catch (err) {
     console.error('PDF Download failed:', err);
     window.alert('PDF download failed. Please try again.');
   } finally {
-    printable.wrapper.remove();
+    wrapper.remove();
   }
-}, [buildPrintableElement, currentStudent?.name]);
-
-useEffect(() => {
-  if (urlPrint && studentMarks && !loading) {
-    const timer = window.setTimeout(() => {
-      handlePrint();
-    }, 800);
-    return () => window.clearTimeout(timer);
-  }
-}, [urlPrint, studentMarks, loading, handlePrint]);
+};
 
 if (loading && publishedTerms.length === 0) {
 return (
@@ -438,106 +485,157 @@ return (
 }
 
 const renderPrintView = () => (
-<div style={{ width: '100%', overflowX: 'auto', overflowY: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
 <div className="report-card-print" ref={printRef}>
 <style>{`
-/* ── A4 portrait = 794px × 1123px at 96dpi ── */
 .report-card-print {
-  width: 794px;
-  min-height: 1123px;
-  max-height: 1123px;
-  padding: 8mm 10mm;
-  margin: 0;
-  background: white;
-  color: #0f172a;
-  font-family: 'Outfit', 'Inter', sans-serif;
-  position: relative;
-  box-sizing: border-box;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+width: 794px;
+max-width: 100%;
+min-height: auto;
+padding: 8mm 10mm;
+margin: 0 auto;
+background: white;
+color: #0f172a;
+font-family: 'Outfit', 'Inter', sans-serif;
+position: relative;
+box-sizing: border-box;
+overflow: hidden;
+display: flex;
+flex-direction: column;
 }
 @page { size: A4 portrait; margin: 0; }
 @media print {
   html, body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; padding: 0; }
+  .report-card-print, .report-card-print * { visibility: visible !important; }
   .report-card-print {
-    width: 794px !important;
-    min-height: 1123px !important;
-    max-height: none !important;
-    padding: 8mm 10mm !important;
+    width: 100%;
+    min-height: auto;
+    padding: 8mm 10mm;
     background: white !important;
     box-shadow: none !important;
     border: none !important;
-    overflow: visible !important;
-    transform: none !important;
-    page-break-after: avoid;
+    overflow: visible;
+    transform: none;
+  }
+}
+@media (max-width: 1024px) {
+  .report-card-print {
+    width: 100%;
+    min-height: auto;
+    padding: 6mm;
+    transform: none;
+    zoom: normal;
+    overflow-x: hidden;
+  }
+}
+@media (max-width: 768px) {
+  .report-card-print {
+    padding: 4mm;
+  }
+  .print-header {
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+  .print-school-info h1 {
+    font-size: 11px;
+  }
+  .print-school-info h2 {
+    font-size: 8px;
+  }
+  .print-school-info p {
+    font-size: 6.2px;
+  }
+  .print-stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .print-main-content {
+    grid-template-columns: 1fr;
+  }
+  .commentary-section {
+    grid-template-columns: 1fr;
+  }
+  .print-logo {
+    width: 40px;
+    height: 40px;
   }
 }
 .print-branding-top { font-size: 6.5px; text-transform: uppercase; font-weight: 800; color: #94a3b8; margin-bottom: 3px; display: flex; justify-content: space-between; }
-.print-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 4px; margin-bottom: 6px; gap: 8px; }
-.print-logo { width: 54px; height: 54px; object-fit: contain; flex-shrink: 0; }
+.print-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 4px; margin-bottom: 6px; }
+.print-logo { width: 48px; height: 48px; object-fit: contain; }
 .print-school-info { text-align: center; flex: 1; }
 .print-school-info h1 { font-size: 13px; font-weight: 900; margin: 0; line-height: 1.1; color: #1e293b; }
 .print-school-info h2 { font-size: 10px; font-weight: 700; margin: 0; color: #475569; }
 .print-school-info p { font-size: 7px; margin: 2px 0; font-weight: 600; color: #64748b; }
 .print-term-badge { display: inline-block; background: #1e293b; color: white; padding: 1px 8px; border-radius: 12px; font-size: 8px; font-weight: 900; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
-.student-photo-frame { width: 54px; height: 66px; border: 1.5px solid #334155; background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+.student-photo-frame { width: 54px; height: 62px; border: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .student-photo-frame img { width: 100%; height: 100%; object-fit: cover; }
-.photo-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #334155; color: #f8fafc; font-size: 7px; font-weight: 900; letter-spacing: 1px; }
-.print-stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-bottom: 8px; border: 2px solid #e2e8f0; border-radius: 4px; padding: 6px; background: #f8fafc; }
-.stat-item { font-size: 7.5px; display: flex; align-items: center; }
-.stat-item label { font-weight: 800; color: #64748b; width: 46px; font-size: 7px; }
-.stat-item span { font-weight: 800; color: #0f172a; flex: 1; border-bottom: 1px dashed #cbd5e1; padding-bottom: 1px; }
+.photo-placeholder {
+  font-size: 7px;
+  font-weight: 900;
+  color: #f8fafc;
+  background-color: #334155;
+  font: 13px/1.4 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', sans-serif;
+  border: 1px solid #4f46e5;
+  box-shadow: 0 10px 20px -10px rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+.print-stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-bottom: 6px; border: 1px solid #0f172a; padding: 4px; background: #f8fafc; }
+.stat-item { font-size: 7px; display: flex; align-items: center; }
+.stat-item label { font-weight: 800; color: #475569; width: 42px; font-size: 6.5px; }
+.stat-item span { font-weight: 700; color: #0f172a; flex: 1; border-bottom: 1px dashed #cbd5e1; padding-bottom: 1px; }
 .stat-item .highlight { color: #2563eb; font-weight: 900; }
-.academic-performance-title { background: #0f172a; color: white; text-align: center; font-weight: 900; padding: 3px; font-size: 8.5px; letter-spacing: 1px; margin-bottom: 6px; border-radius: 3px; text-transform: uppercase; }
-.print-main-content { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; flex: 1; }
-.print-table-wrapper { width: 100%; flex: 1; display: flex; flex-direction: column; }
-.print-table { width: 100%; height: 100%; border-collapse: collapse; font-size: 7.5px; }
-.print-table th { background: #0f172a; color: white; padding: 4px; border: 1px solid #1e293b; font-weight: 900; text-transform: uppercase; font-size: 7px; height: 16px; }
-.print-table td { padding: 4px; border: 1px solid #cbd5e1; text-align: center; font-weight: 700; color: #1e293b; }
-.print-table tr:nth-child(even) { background: #f8fafc; }
-.print-table td.subject-name { text-align: left; font-weight: 900; padding-left: 6px; }
-.print-side-panels { display: grid; grid-template-columns: 1fr 1fr 0.8fr; gap: 10px; align-items: start; }
-.mini-table { width: 100%; border-collapse: collapse; font-size: 6.5px; }
-.mini-table th { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 2px; font-weight: 900; color: #475569; }
-.mini-table td { border: 1px solid #cbd5e1; padding: 2px; text-align: center; font-weight: 700; color: #1e293b; }
-.mini-table td:first-child { text-align: left; font-weight: 800; background: #fafafa; font-size: 6.5px; padding-left: 4px; }
-.section-title { font-size: 7.5px; font-weight: 900; margin-bottom: 4px; padding: 2px 4px; background: #0f172a; color: white; text-transform: uppercase; border-radius: 2px; text-align: center; }
-.summary-section { display: flex; flex-direction: column; gap: 6px; justify-content: center; height: 100%; }
-.summary-box { border: 2px solid #e2e8f0; padding: 6px; text-align: center; background: white; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-.summary-box label { font-size: 7px; font-weight: 900; color: #64748b; display: block; text-transform: uppercase; margin-bottom: 2px; }
-.summary-box .value { font-size: 11px; font-weight: 900; color: #0f172a; }
-.status-pass { color: #059669 !important; }
-.commentary-section { border: 2px solid #e2e8f0; border-radius: 4px; padding: 8px; margin-bottom: 4px; background: #f8fafc; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.comment-box label { font-size: 7.5px; font-weight: 900; text-decoration: underline; color: #0f172a; margin-bottom: 4px; display: block; }
-.comment-box p { font-size: 7.5px; margin: 2px 0; font-style: italic; color: #334155; line-height: 1.4; min-height: 24px; }
-.print-footer { border-top: 1px solid #0f172a; padding-top: 4px; margin-top: auto; }
-.footer-cols { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px; gap: 8px; }
+.academic-performance-title { background: #f1f5f9; color: #0f172a; text-align: center; font-weight: 900; padding: 2px; font-size: 8px; letter-spacing: 1px; margin-bottom: 4px; border: 1px solid #0f172a; text-transform: uppercase; }
+.print-main-content { display: grid; grid-template-columns: 1.6fr 0.9fr; gap: 8px; margin-bottom: 6px; align-items: start; }
+.print-table-wrapper { min-width: 0; }
+.print-table { width: 100%; border-collapse: collapse; font-size: 6.8px; }
+.print-table th { background: #1e293b; color: white; padding: 2px; border: 1px solid #0f172a; font-weight: 900; text-transform: uppercase; font-size: 6.4px; }
+.print-table td { padding: 2px; border: 1px solid #0f172a; text-align: center; font-weight: 700; }
+.print-table td.subject-name { text-align: left; font-weight: 900; padding-left: 4px; background: #f8fafc; }
+.print-side-panels { display: flex; flex-direction: column; gap: 4px; }
+.mini-table { width: 100%; border-collapse: collapse; font-size: 6.3px; }
+.mini-table th { background: #e2e8f0; border: 1px solid #0f172a; padding: 1px; font-weight: 900; }
+.mini-table td { border: 1px solid #0f172a; padding: 1px; text-align: center; font-weight: 700; }
+.mini-table td:first-child { text-align: left; font-weight: 800; background: #f8fafc; font-size: 6px; }
+.section-title { font-size: 7px; font-weight: 900; margin-bottom: 2px; padding: 1px 3px; background: #0f172a; color: white; text-transform: uppercase; }
+.summary-box { border: 1px solid #0f172a; padding: 2px; text-align: center; background: #f8fafc; margin-bottom: 2px; }
+.summary-box label { font-size: 6px; font-weight: 900; color: #475569; display: block; text-transform: uppercase; }
+.summary-box .value { font-size: 9px; font-weight: 900; }
+.status-pass { color: #059669; }
+.commentary-section { border: 1px solid #0f172a; padding: 4px; margin-bottom: 6px; background: #fdfdfd; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.comment-box { margin-bottom: 2px; }
+.comment-box:last-child { margin-bottom: 0; }
+.comment-box label { font-size: 7px; font-weight: 900; text-decoration: underline; color: #1e293b; }
+.comment-box p { font-size: 7px; margin: 1px 0; font-style: italic; color: #334155; line-height: 1.18; min-height: 20px; }
+.print-footer { margin-top: auto; border-top: 1px solid #0f172a; padding-top: 4px; }
+.footer-cols { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 .footer-sign { text-align: center; width: 140px; }
-.sign-line { border-bottom: 1px dashed #0f172a; margin-bottom: 2px; height: 22px; display: flex; align-items: flex-end; justify-content: center; }
+.sign-line { border-bottom: 1px dashed #0f172a; margin-bottom: 2px; height: 18px; }
 .footer-sign p { font-size: 6.8px; font-weight: 900; margin: 0; text-transform: uppercase; }
-.stamp-box { width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; transform: rotate(-8deg); flex-shrink: 0; }
-.stamp-box-empty { width: 80px; height: 80px; border: 2px dashed #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 6px; font-weight: 900; color: #cbd5e1; text-transform: uppercase; text-align: center; transform: rotate(-8deg); }
+.stamp-box { width: 90px; height: 40px; border: 2px dashed #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 6px; font-weight: 900; color: #cbd5e1; text-transform: uppercase; transform: rotate(-8deg); }
 .footer-dates { text-align: right; }
 .footer-dates p { font-size: 6.8px; margin: 1px 0; font-weight: 600; color: #475569; }
 .footer-dates strong { color: #0f172a; font-weight: 800; }
 .print-final-branding { text-align: center; font-size: 6.8px; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; border-top: 1px solid #e2e8f0; padding-top: 3px; }
 .print-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 72px; font-weight: 900; color: rgba(15, 23, 42, 0.035); white-space: nowrap; pointer-events: none; z-index: -1; }
 `}</style>
-<div className="print-branding-top"><span>Academic Session: {selectedPub?.session}</span><span>{schoolName}</span></div>
+<div className="print-branding-top">Academic Session: {selectedPub?.session}</div>
 <div className="print-header">
-  <img src={schoolLogo || bdsLogo} alt="Logo" className="print-logo" />
-  <div className="print-school-info">
-    <h1>{schoolName || 'BONUS DOMINUS NURSERY, PRIMARY'}</h1>
-    <h2>&amp; SECONDARY SCHOOL</h2>
-    <p>5A - 5C UZOANYA CRESCENT, AMUZUKWU, UMUAHIA, ABIA STATE</p>
-    <div className="print-term-badge">{selectedPub?.term} Report Card for {selectedPub?.session}</div>
-  </div>
-  <div className="student-photo-frame">
-    {currentStudent?.photo
-      ? <img src={currentStudent.photo} alt="Passport" />
-      : <div className="photo-placeholder">PHOTO</div>}
-  </div>
+<div className="print-logo-box">
+<img src={schoolLogo || bdsLogo} alt="Logo" className="print-logo" />
+</div>
+<div className="print-school-info">
+<h1>{schoolName || 'BONUS DOMINUS NURSERY, PRIMARY'}</h1>
+<h2>& SECONDARY SCHOOL</h2>
+<p>5A - 5C UZOANYA CRESCENT, AMUZUKWU, UMUAHIA, ABIA STATE</p>
+<div className="print-term-badge">{selectedPub?.term} Report Card for {selectedPub?.session}</div>
+</div>
+<div className="print-photo-box">
+<div className="student-photo-frame">
+{currentStudent?.photo ? <img src={currentStudent.photo} alt="Student" /> : <div className="photo-placeholder">PHOTO</div>}
+</div>
+</div>
 </div>
 <div className="print-stats-grid">
 <div className="stat-item"><label>NAME:</label> <span>{currentStudent?.name}</span></div>
@@ -654,25 +752,6 @@ sub.total >= 40 ? 'Average' : 'Below Average'}
 <span style={{ fontSize: '7px', fontWeight: 'bold' }}>PRINCIPAL (MRS ETUZU ANITA)</span>
 </div>
 </div>
-<div className="print-footer">
-  <div className="footer-cols">
-    <div className="footer-sign">
-      <div className="sign-line">
-        {principalSignature && <img src={principalSignature} alt="Principal Signature" style={{ maxHeight: '16px', maxWidth: '120px', objectFit: 'contain' }} />}
-      </div>
-      <p>PRINCIPAL'S SIGNATURE</p>
-    </div>
-    {principalStamp
-      ? <div className="stamp-box"><img src={principalStamp} alt="School Stamp" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /></div>
-      : <div className="stamp-box-empty">SCHOOL<br />STAMP</div>}
-    <div className="footer-dates">
-      <p>Term Ends: <strong>{schoolDates.termEnds}</strong></p>
-      <p>Next Term Begins: <strong>{schoolDates.nextTermBegins}</strong></p>
-    </div>
-  </div>
-  <div className="print-final-branding">{schoolName || 'BONUS DOMINUS NURSERY, PRIMARY & SECONDARY SCHOOL'} — OFFICIAL REPORT CARD</div>
-</div>
-</div>
 </div>
 );
 
@@ -749,7 +828,7 @@ return (
               </div>
             </div>
           </div>
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[750px]">
               <thead>
                 <tr className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
@@ -799,6 +878,40 @@ return (
               </tbody>
             </table>
           </div>
+
+          <div className="md:hidden p-4 space-y-3">
+            {studentMarks.subjects.map((sub, idx) => {
+              const remark = sub.total >= 75 ? 'Excellent' : sub.total >= 60 ? 'Very Good' : sub.total >= 50 ? 'Good' : sub.total >= 40 ? 'Average' : 'Below Average';
+              return (
+                <div key={idx} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-black text-slate-800 dark:text-slate-100">{sub.subject}</span>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black ${sub.total < 40 ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                      {sub.total}/100
+                    </span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+                    <div className="rounded-xl bg-slate-50 dark:bg-slate-700/70 p-2 text-center">
+                      <div className="text-[9px] uppercase tracking-widest text-slate-400">CAT 1</div>
+                      <div className="font-black">{sub.cat1}</div>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 dark:bg-slate-700/70 p-2 text-center">
+                      <div className="text-[9px] uppercase tracking-widest text-slate-400">CAT 2</div>
+                      <div className="font-black">{sub.cat2}</div>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 dark:bg-slate-700/70 p-2 text-center">
+                      <div className="text-[9px] uppercase tracking-widest text-slate-400">Exam</div>
+                      <div className="font-black">{sub.exam}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-[11px]">
+                    <span className="font-black text-slate-700 dark:text-slate-200">Grade {sub.grade}</span>
+                    <span className={`font-bold ${sub.total >= 50 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{remark}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
@@ -812,7 +925,10 @@ return (
     {isPublic && <Navbar />}
 
     <div className={isPublic ? "flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full" : ""}>
-      <>
+      {isPrinting ? (
+        renderPrintView()
+      ) : (
+        <>
           {isPublic && (
             <div className="mb-8 flex items-center justify-between no-print">
               <button 
@@ -859,11 +975,8 @@ return (
             </div>
           </div>
           {renderScreenView()}
-          {/* Hidden print template – always in DOM so printRef is attached */}
-          <div style={{ position: 'absolute', left: '-9999px', top: 0, pointerEvents: 'none', visibility: 'hidden' }}>
-            {renderPrintView()}
-          </div>
         </>
+      )}
     </div>
   </div>
 );
