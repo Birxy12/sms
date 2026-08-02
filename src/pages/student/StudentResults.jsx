@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { db } from '../../lib/firebase';
-import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
-import { Award, AlertCircle, Printer, Download, ChevronLeft, User, ArrowLeft } from 'lucide-react';
+import { AlertCircle, Printer, Download, User, ArrowLeft } from 'lucide-react';
 import bdsLogo from '../../assets/bdslogo.jpg';
-import resultStamp from '../../assets/stamp.jpeg';
 import { expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../../utils/firestoreSchema';
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import Navbar from '../../components/Navbar';
@@ -14,14 +13,13 @@ import { getAverageDivisor } from '../../utils/averageDivisor';
 
 const StudentResults = ({ isPublic }) => {
 const { currentStudent: loggedInStudent, authError, authReady } = useStudentAuth();
-const { schoolName, schoolLogo, primaryColor, principalSignature, principalStamp, darkMode, averageDivisors } = useTheme();
+const { schoolName, schoolLogo, primaryColor, principalSignature, darkMode, averageDivisors } = useTheme();
 const printRef = useRef();
 
 const [publishedTerms, setPublishedTerms] = useState([]);
 const [selectedTermId, setSelectedTermId] = useState('');
 const [studentMarks, setStudentMarks] = useState(null);
 const [loading, setLoading] = useState(true);
-const [isPrinting, setIsPrinting] = useState(false);
 const [classStats, setClassStats] = useState({ position: 'N/A', population: 0 });
 const [schoolDates, setSchoolDates] = useState({
 termEnds: '12/12/2025',
@@ -47,7 +45,6 @@ const fetchAdminStudent = async () => {
   let q = query(collection(db, 'students'), where(STUDENT_KEYS.regNo, '==', adminRegNo));
   let snap = await getDocs(q);
   if (snap.empty) {
-    // fallback to legacy
     q = query(collection(db, 'students'), where('regNo', '==', adminRegNo));
     snap = await getDocs(q);
   }
@@ -55,7 +52,6 @@ const fetchAdminStudent = async () => {
     const sDataRaw = snap.docs[0].data();
     const sDataExpanded = expandStudent(sDataRaw);
     
-    // If it's a public access, we MUST verify the PIN here too for security
     if (isPublic) {
       const isAdminBypass = publicPin === '@@@@@@' || publicPin === '001100' || publicPin === '260796';
       const storedPin = sDataExpanded.pin || sDataRaw.pin || '';
@@ -72,7 +68,6 @@ const fetchAdminStudent = async () => {
 };
 fetchAdminStudent();
 } else if (isPublic && !loggedInStudent) {
-  // If public but no regNo or logged in student, it's invalid
   setResultsError('Please use the Result Checker to access this page.');
   setLoading(false);
 }
@@ -80,7 +75,6 @@ fetchAdminStudent();
 
 const regNum = currentStudent?.regNo || currentStudent?.['REG NO'] || currentStudent?.REGNO || '';
 const studentClass = currentStudent?.className || currentStudent?.classId || '';
-const studentName = currentStudent?.name || currentStudent?.['STUDENT NAME'] || 'Student';
 
 useEffect(() => {
 const fetchPublications = async () => {
@@ -106,7 +100,6 @@ terms.sort((a, b) => b.session.localeCompare(a.session));
 
 setPublishedTerms(terms);
 if (terms.length > 0) {
-// If a specific pubId was passed in the URL (from CheckResult page), use it
 const preSelected = urlPubId ? terms.find(t => t.id === urlPubId) : null;
 setSelectedTermId(preSelected ? preSelected.id : terms[0].id);
 } else {
@@ -123,11 +116,10 @@ fetchPublications();
 } else {
 setLoading(false);
 }
-}, [regNum]);
+}, [regNum, studentClass, urlPubId]);
 
 useEffect(() => {
 const fetchResults = async () => {
-// Allow admin bypass (adminRegNo set) OR logged-in student flow
 if (!selectedTermId || !regNum) return;
 if (!adminRegNo && authError) {
   setResultsError(authError);
@@ -143,7 +135,6 @@ try {
   const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
   if (!selectedPub) return;
 
-        // ── 1. Fetch ALL marks for this student by regNo from Firestore (compressed and legacy uncompressed)
         const [snapR, snapRegNo, snapReg_No] = await Promise.all([
           getDocs(query(collection(db, 'marks'), where(MARKS_KEYS.regNo, '==', regNum))),
           getDocs(query(collection(db, 'marks'), where('regNo', '==', regNum))),
@@ -156,7 +147,6 @@ try {
         });
         const marksData = Array.from(docMap.values()).map(data => expandMarks(data));
 
-        // Normalise term string for comparison (e.g. 'Second Term' === 'secondterm')
         const normTerm = (t = '') => t.toLowerCase().replace(/\s+/g, '');
 
         let foundMarksDoc = null;
@@ -170,7 +160,6 @@ try {
           }
         });
 
-        // ── 2. Compute class standing: fetch all marks for class/session from Firestore
         const [snapC, snapClassName, snapClass_Name] = await Promise.all([
           getDocs(query(collection(db, 'marks'), where(MARKS_KEYS.className, '==', studentClass))),
           getDocs(query(collection(db, 'marks'), where('className', '==', studentClass))),
@@ -206,11 +195,9 @@ try {
           }
         });
 
-        // Tie-aware standard competition (skip) ranking
         const sortedStudents = Object.entries(studentTotals)
           .sort((a, b) => b[1] - a[1]);
 
-        // Position: use stored value if present, else calculate dynamically
         let posStr = foundMarksDoc?.marks?._meta?.position || '';
         if (!posStr || posStr === '0' || posStr === 'N/A') {
           const getOrdinal = (n) => {
@@ -232,10 +219,8 @@ try {
           }
         }
 
-        // ── 3. Class population
         let classPopQuery = query(collection(db, 'students'), where(STUDENT_KEYS.className, '==', studentClass));
         let classPopSnap = await getDocs(classPopQuery);
-        // Fallback to legacy key
         if (classPopSnap.empty) {
           classPopQuery = query(collection(db, 'students'), where('className', '==', studentClass));
           classPopSnap = await getDocs(classPopQuery);
@@ -250,7 +235,6 @@ try {
           population: classPopSnap.size
         });
 
-        // ── 4. Build subject list for this class
         const subjectsQuery = query(collection(db, 'subjects'), where('class', '==', studentClass));
         const subjectsSnap = await getDocs(subjectsQuery);
         const classSubjects = subjectsSnap.docs.map(d => d.data().name);
@@ -258,7 +242,6 @@ try {
         const rawMarks = foundMarksDoc?.marks || {};
         let subjectList = classSubjects.length > 0 ? classSubjects : Object.keys(rawMarks).filter(k => k !== '_meta');
 
-        // Deduplicate subject list (case-insensitive)
         const seen = new Set();
         subjectList = subjectList.filter(subj => {
           const upper = subj.toUpperCase().trim();
@@ -268,17 +251,13 @@ try {
         });
 
         if (!foundMarksDoc && subjectList.length === 0) {
-          // No marks found at all – show empty state rather than all-zero rows
           setStudentMarks(null);
           setLoading(false);
           return;
         }
 
         let totalScore = 0;
-        let subjectCount = 0;
-
         const processedMarks = subjectList.map(subjectName => {
-          // Case-insensitive lookup
           const dbKey = Object.keys(rawMarks).find(
             k => k.toUpperCase() === subjectName.toUpperCase()
           ) || subjectName;
@@ -292,7 +271,6 @@ try {
 
           if (isOffered) {
             totalScore += total;
-            subjectCount++;
           }
 
           let grade = sm.grade;
@@ -319,10 +297,7 @@ try {
           };
         });
 
-        // Only show subjects that have been offered
         const displaySubjects = processedMarks.filter(s => s.isOffered);
-
-        // Calculate average based on configured divisors
         const divisor = Math.max(getAverageDivisor(currentStudent?.className || studentClass, averageDivisors), 1);
 
         setStudentMarks({
@@ -334,7 +309,7 @@ try {
 
       } catch (error) {
 if (error?.code === 'permission-denied') {
-setResultsError('Results are currently blocked by Firebase permissions. Please ask the administrator to enable Anonymous sign-in or update Firestore rules for student result access.');
+setResultsError('Results are currently blocked by Firebase permissions.');
 } else {
 console.error('Error fetching marks:', error);
 setResultsError('Unable to load your results right now.');
@@ -345,7 +320,7 @@ setLoading(false);
 };
 
 fetchResults();
-}, [selectedTermId, publishedTerms, regNum, currentStudent, authError, authReady]);
+}, [selectedTermId, publishedTerms, regNum, currentStudent, studentClass, adminRegNo, authError, authReady, averageDivisors]);
 
 useEffect(() => {
 const fetchSchoolDates = async () => {
@@ -381,50 +356,16 @@ console.error("Error fetching form teacher", e);
 fetchFormTeacher();
 }, [studentClass]);
 
-// Auto-trigger print when opened from admin with print=1 param
-useEffect(() => {
-  if (urlPrint && studentMarks && !loading) {
-    const timer = window.setTimeout(() => {
-      setIsPrinting(true);
-    }, 800);
-    return () => window.clearTimeout(timer);
-  }
-}, [urlPrint, studentMarks, loading]);
-
-useEffect(() => {
-  if (!isPrinting) return;
-
-  const timer = window.setTimeout(() => {
-    window.print();
-  }, 300);
-
-  const handleAfterPrint = () => setIsPrinting(false);
-  window.addEventListener('afterprint', handleAfterPrint);
-
-  const fallbackTimer = window.setTimeout(() => {
-    setIsPrinting(false);
-  }, 1800);
-
-  return () => {
-    window.clearTimeout(timer);
-    window.clearTimeout(fallbackTimer);
-    window.removeEventListener('afterprint', handleAfterPrint);
-  };
-}, [isPrinting]);
-
-const createPrintableClone = () => {
+const buildPrintableElement = useCallback(() => {
   if (!printRef.current) return null;
 
   const clone = printRef.current.cloneNode(true);
   clone.style.width = '794px';
   clone.style.maxWidth = '794px';
-  clone.style.minHeight = 'auto';
   clone.style.margin = '0 auto';
   clone.style.background = '#ffffff';
   clone.style.padding = '0';
-  clone.style.boxSizing = 'border-box';
-  clone.style.overflow = 'visible';
-  clone.style.transform = 'none';
+  clone.style.color = '#0f172a';
 
   const wrapper = document.createElement('div');
   wrapper.style.position = 'fixed';
@@ -432,49 +373,61 @@ const createPrintableClone = () => {
   wrapper.style.top = '0';
   wrapper.style.width = '794px';
   wrapper.style.background = '#ffffff';
-  wrapper.style.zIndex = '-1';
   wrapper.appendChild(clone);
   document.body.appendChild(wrapper);
-  return wrapper;
-};
+  return { wrapper, clone };
+}, []);
 
-const handlePrint = () => {
-  setIsPrinting(true);
-};
+const handlePrint = useCallback(() => {
+  const printable = buildPrintableElement();
+  if (!printable) return;
 
-const handleDownloadPDF = async () => {
-  const wrapper = createPrintableClone();
-  if (!wrapper) {
-    window.alert('The report card is not ready yet. Please try again.');
+  const printWindow = window.open('', '_blank', 'width=900,height=900');
+  if (!printWindow) {
+    printable.wrapper.remove();
     return;
   }
 
+  printWindow.document.write(`<html><head><title>Student Result</title><style>@page{size:A4 portrait;margin:0;}body{margin:0;font-family:sans-serif}</style></head><body>${printable.clone.outerHTML}</body></html>`);
+  printWindow.document.close();
+  setTimeout(() => {
+    printWindow.print();
+    printable.wrapper.remove();
+  }, 300);
+}, [buildPrintableElement]);
+
+const handleDownloadPDF = useCallback(async () => {
+  const printable = buildPrintableElement();
+  if (!printable) {
+    window.alert('The report card is not ready yet. Please try again.');
+    return;
+  }
   try {
     const html2pdf = (await import('html2pdf.js')).default;
-
     const opt = {
       margin: [8, 8, 8, 8],
       filename: `${currentStudent?.name || 'Student'}-Report-Card.pdf`,
       image: { type: 'jpeg', quality: 1.0 },
-      html2canvas: {
-        scale: 3,
-        useCORS: true,
-        logging: false,
-        letterRendering: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff'
-      },
+      html2canvas: { scale: 3, useCORS: true, logging: false, backgroundColor: '#ffffff' },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
-
-    await html2pdf().set(opt).from(wrapper).save();
+    await html2pdf().set(opt).from(printable.clone).save();
   } catch (err) {
     console.error('PDF Download failed:', err);
     window.alert('PDF download failed. Please try again.');
   } finally {
-    wrapper.remove();
+    printable.wrapper.remove();
   }
-};
+}, [buildPrintableElement, currentStudent?.name]);
+
+useEffect(() => {
+  if (urlPrint && studentMarks && !loading) {
+    const timer = window.setTimeout(() => {
+      handlePrint();
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }
+}, [urlPrint, studentMarks, loading, handlePrint]);
 
 if (loading && publishedTerms.length === 0) {
 return (
@@ -752,6 +705,24 @@ sub.total >= 40 ? 'Average' : 'Below Average'}
 <span style={{ fontSize: '7px', fontWeight: 'bold' }}>PRINCIPAL (MRS ETUZU ANITA)</span>
 </div>
 </div>
+<div className="print-footer">
+  <div className="footer-cols">
+    <div className="footer-sign">
+      <div className="sign-line">
+        {principalSignature && <img src={principalSignature} alt="Principal Signature" style={{ maxHeight: '16px', maxWidth: '120px', objectFit: 'contain' }} />}
+      </div>
+      <p>PRINCIPAL'S SIGNATURE</p>
+    </div>
+    <div className="stamp-box">
+      SCHOOL<br />STAMP
+    </div>
+    <div className="footer-dates">
+      <p>Term Ends: <strong>{schoolDates.termEnds}</strong></p>
+      <p>Next Term Begins: <strong>{schoolDates.nextTermBegins}</strong></p>
+    </div>
+  </div>
+  <div className="print-final-branding">{schoolName || 'BONUS DOMINUS NURSERY, PRIMARY & SECONDARY SCHOOL'} — OFFICIAL REPORT CARD</div>
+</div>
 </div>
 );
 
@@ -828,7 +799,7 @@ return (
               </div>
             </div>
           </div>
-          <div className="hidden md:block overflow-x-auto">
+          <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[750px]">
               <thead>
                 <tr className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
@@ -878,40 +849,6 @@ return (
               </tbody>
             </table>
           </div>
-
-          <div className="md:hidden p-4 space-y-3">
-            {studentMarks.subjects.map((sub, idx) => {
-              const remark = sub.total >= 75 ? 'Excellent' : sub.total >= 60 ? 'Very Good' : sub.total >= 50 ? 'Good' : sub.total >= 40 ? 'Average' : 'Below Average';
-              return (
-                <div key={idx} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-black text-slate-800 dark:text-slate-100">{sub.subject}</span>
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black ${sub.total < 40 ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'}`}>
-                      {sub.total}/100
-                    </span>
-                  </div>
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] text-slate-600 dark:text-slate-300">
-                    <div className="rounded-xl bg-slate-50 dark:bg-slate-700/70 p-2 text-center">
-                      <div className="text-[9px] uppercase tracking-widest text-slate-400">CAT 1</div>
-                      <div className="font-black">{sub.cat1}</div>
-                    </div>
-                    <div className="rounded-xl bg-slate-50 dark:bg-slate-700/70 p-2 text-center">
-                      <div className="text-[9px] uppercase tracking-widest text-slate-400">CAT 2</div>
-                      <div className="font-black">{sub.cat2}</div>
-                    </div>
-                    <div className="rounded-xl bg-slate-50 dark:bg-slate-700/70 p-2 text-center">
-                      <div className="text-[9px] uppercase tracking-widest text-slate-400">Exam</div>
-                      <div className="font-black">{sub.exam}</div>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between text-[11px]">
-                    <span className="font-black text-slate-700 dark:text-slate-200">Grade {sub.grade}</span>
-                    <span className={`font-bold ${sub.total >= 50 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{remark}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </div>
       )}
     </div>
@@ -925,10 +862,7 @@ return (
     {isPublic && <Navbar />}
 
     <div className={isPublic ? "flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full" : ""}>
-      {isPrinting ? (
-        renderPrintView()
-      ) : (
-        <>
+      <>
           {isPublic && (
             <div className="mb-8 flex items-center justify-between no-print">
               <button 
@@ -975,8 +909,11 @@ return (
             </div>
           </div>
           {renderScreenView()}
+          {/* Hidden print template – always in DOM so printRef is attached */}
+          <div style={{ position: 'absolute', left: '-9999px', top: 0, pointerEvents: 'none', visibility: 'hidden' }}>
+            {renderPrintView()}
+          </div>
         </>
-      )}
     </div>
   </div>
 );
