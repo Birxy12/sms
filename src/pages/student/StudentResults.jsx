@@ -490,10 +490,10 @@ const renderPrintView = () => (
 .stat-item span { font-weight: 700; color: #0f172a; flex: 1; border-bottom: 1px dashed #cbd5e1; padding-bottom: 1px; }
 .stat-item .highlight { color: #2563eb; font-weight: 900; }
 .academic-performance-title { background: #f1f5f9; color: #0f172a; text-align: center; font-weight: 900; padding: 2px; font-size: 8px; letter-spacing: 1px; margin-bottom: 4px; border: 1px solid #0f172a; text-transform: uppercase; }
-.print-main-content { display: grid; grid-template-columns: 1.6fr 0.9fr; gap: 8px; margin-bottom: 6px; align-items: stretch; flex: 1; }
-.print-table-wrapper { min-width: 0; display: flex; flex-direction: column; height: 100%; }
-.print-table { width: 100%; height: 100%; border-collapse: collapse; font-size: 6.8px; flex: 1; }
-.print-table th { background: #1e293b; color: white; padding: 2px; border: 1px solid #0f172a; font-weight: 900; text-transform: uppercase; font-size: 6.4px; height: 14px; }
+.print-main-content { display: grid; grid-template-columns: 1.6fr 0.9fr; gap: 8px; margin-bottom: 6px; align-items: start; flex: 1; }
+.print-table-wrapper { min-width: 0; }
+.print-table { width: 100%; border-collapse: collapse; font-size: 6.8px; }
+.print-table th { background: #1e293b; color: white; padding: 2px; border: 1px solid #0f172a; font-weight: 900; text-transform: uppercase; font-size: 6.4px; }
 .print-table td { padding: 2px; border: 1px solid #0f172a; text-align: center; font-weight: 700; }
 .print-table td.subject-name { text-align: left; font-weight: 900; padding-left: 4px; background: #f8fafc; }
 .print-side-panels { display: flex; flex-direction: column; gap: 4px; }
