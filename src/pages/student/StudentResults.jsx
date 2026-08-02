@@ -439,40 +439,38 @@ const createPrintableClone = () => {
 };
 
 const handlePrint = () => {
-  setIsPrinting(true);
+  window.print();
 };
 
 const handleDownloadPDF = async () => {
-  const wrapper = createPrintableClone();
-  if (!wrapper) {
-    window.alert('The report card is not ready yet. Please try again.');
+  if (!printRef.current) {
+    window.alert('The report card is not ready yet. Please wait and try again.');
     return;
   }
 
   try {
     const html2pdf = (await import('html2pdf.js')).default;
 
+    const clone = printRef.current.cloneNode(true);
+    clone.style.cssText = 'width:794px;padding:8mm 10mm;margin:0;background:#fff;box-sizing:border-box;overflow:visible;';
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1;';
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+
     const opt = {
-      margin: [8, 8, 8, 8],
+      margin: 0,
       filename: `${currentStudent?.name || 'Student'}-Report-Card.pdf`,
       image: { type: 'jpeg', quality: 1.0 },
-      html2canvas: {
-        scale: 3,
-        useCORS: true,
-        logging: false,
-        letterRendering: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff'
-      },
+      html2canvas: { scale: 3, useCORS: true, logging: false, allowTaint: true, backgroundColor: '#ffffff' },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     await html2pdf().set(opt).from(wrapper).save();
+    wrapper.remove();
   } catch (err) {
     console.error('PDF Download failed:', err);
     window.alert('PDF download failed. Please try again.');
-  } finally {
-    wrapper.remove();
   }
 };
 
@@ -504,18 +502,26 @@ flex-direction: column;
 }
 @page { size: A4 portrait; margin: 0; }
 @media print {
-  html, body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  body { margin: 0; padding: 0; }
-  .report-card-print, .report-card-print * { visibility: visible !important; }
+  html, body {
+    background: white !important;
+    margin: 0; padding: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Hide everything on the page except the report card */
+  body > *:not(.print-portal-host) { display: none !important; }
+  .no-print { display: none !important; }
+  .print-portal-host { display: block !important; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; }
   .report-card-print {
-    width: 100%;
-    min-height: auto;
-    padding: 8mm 10mm;
+    width: 794px !important;
+    padding: 8mm 10mm !important;
+    margin: 0 !important;
     background: white !important;
     box-shadow: none !important;
     border: none !important;
-    overflow: visible;
-    transform: none;
+    overflow: visible !important;
+    transform: none !important;
+    position: static !important;
   }
 }
 @media (max-width: 1024px) {
@@ -561,26 +567,18 @@ flex-direction: column;
   }
 }
 .print-branding-top { font-size: 6.5px; text-transform: uppercase; font-weight: 800; color: #94a3b8; margin-bottom: 3px; display: flex; justify-content: space-between; }
-.print-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 4px; margin-bottom: 6px; }
-.print-logo { width: 48px; height: 48px; object-fit: contain; }
+.print-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 4px; margin-bottom: 6px; gap: 8px; }
+.print-logo-box { flex-shrink: 0; }
+.print-logo { width: 54px; height: 54px; object-fit: contain; display: block; }
 .print-school-info { text-align: center; flex: 1; }
 .print-school-info h1 { font-size: 13px; font-weight: 900; margin: 0; line-height: 1.1; color: #1e293b; }
 .print-school-info h2 { font-size: 10px; font-weight: 700; margin: 0; color: #475569; }
 .print-school-info p { font-size: 7px; margin: 2px 0; font-weight: 600; color: #64748b; }
 .print-term-badge { display: inline-block; background: #1e293b; color: white; padding: 1px 8px; border-radius: 12px; font-size: 8px; font-weight: 900; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
-.student-photo-frame { width: 54px; height: 62px; border: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.print-photo-box { flex-shrink: 0; }
+.student-photo-frame { width: 56px; height: 68px; border: 1.5px solid #334155; background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .student-photo-frame img { width: 100%; height: 100%; object-fit: cover; }
-.photo-placeholder {
-  font-size: 7px;
-  font-weight: 900;
-  color: #f8fafc;
-  background-color: #334155;
-  font: 13px/1.4 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
-  font-family: 'Inter', sans-serif;
-  border: 1px solid #4f46e5;
-  box-shadow: 0 10px 20px -10px rgba(0, 0, 0, 0.1);
-  border-radius: 3px;
-}
+.photo-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #334155; color: #f8fafc; font-size: 7px; font-weight: 900; letter-spacing: 1px; }
 .print-stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-bottom: 6px; border: 1px solid #0f172a; padding: 4px; background: #f8fafc; }
 .stat-item { font-size: 7px; display: flex; align-items: center; }
 .stat-item label { font-weight: 800; color: #475569; width: 42px; font-size: 6.5px; }
@@ -924,59 +922,60 @@ return (
   <div className={isPublic ? `min-h-screen flex flex-col ${darkMode ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-800'} transition-colors duration-300` : "dashboard-wrapper"}>
     {isPublic && <Navbar />}
 
+    {/* Hidden print portal – always mounted so printRef is never null */}
+    <div className="print-portal-host" style={{ position: 'fixed', left: '-9999px', top: 0, width: '794px', pointerEvents: 'none', zIndex: -1 }}>
+      {studentMarks && renderPrintView()}
+    </div>
+
     <div className={isPublic ? "flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full" : ""}>
-      {isPrinting ? (
-        renderPrintView()
-      ) : (
-        <>
-          {isPublic && (
-            <div className="mb-8 flex items-center justify-between no-print">
-              <button 
-                onClick={() => window.history.back()}
-                className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-black text-xs uppercase tracking-widest transition-colors animate-in fade-in"
+      <>
+        {isPublic && (
+          <div className="mb-8 flex items-center justify-between no-print">
+            <button
+              onClick={() => window.history.back()}
+              className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-black text-xs uppercase tracking-widest transition-colors animate-in fade-in"
+            >
+              <ArrowLeft size={16} /> Back to Search
+            </button>
+          </div>
+        )}
+
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-6 no-print">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white mb-2">Report Card</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Official termly academic performance summary.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-4 md:gap-8">
+            <div className="flex flex-col items-end">
+              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white dark:border-slate-800 shadow-xl bg-slate-50 dark:bg-slate-800 mb-1">
+                {currentStudent?.photo || currentStudent?.photoURL ? (
+                  <img src={currentStudent.photo || currentStudent.photoURL} alt="Student" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-600">
+                    <User size={24} />
+                  </div>
+                )}
+              </div>
+              <p className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{currentStudent?.name}</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handlePrint}
+                className="flex items-center gap-2 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 px-5 py-3 rounded-2xl font-black text-slate-700 dark:text-slate-200 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
               >
-                <ArrowLeft size={16} /> Back to Search
+                <Printer size={18} /> Print Report Card
+              </button>
+              <button
+                onClick={handleDownloadPDF}
+                className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95"
+              >
+                <Download size={18} /> Download PDF
               </button>
             </div>
-          )}
-
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-6 no-print">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white mb-2">Report Card</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Official termly academic performance summary.</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-4 md:gap-8">
-              <div className="flex flex-col items-end">
-                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white dark:border-slate-800 shadow-xl bg-slate-50 dark:bg-slate-800 mb-1">
-                  {currentStudent?.photo || currentStudent?.photoURL ? (
-                    <img src={currentStudent.photo || currentStudent.photoURL} alt="Student" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-600">
-                      <User size={24} />
-                    </div>
-                  )}
-                </div>
-                <p className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{currentStudent?.name}</p>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={handlePrint}
-                  className="flex items-center gap-2 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 px-5 py-3 rounded-2xl font-black text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition-all shadow-sm active:scale-95"
-                >
-                  <Printer size={18} /> Print Report Card
-                </button>
-                <button
-                  onClick={handleDownloadPDF}
-                  className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95"
-                >
-                  <Download size={18} /> Download PDF
-                </button>
-              </div>
-            </div>
           </div>
-          {renderScreenView()}
-        </>
-      )}
+        </div>
+        {renderScreenView()}
+      </>
     </div>
   </div>
 );
