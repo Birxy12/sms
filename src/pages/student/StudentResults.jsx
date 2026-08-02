@@ -779,8 +779,8 @@ return (
 }
 
   return (
-    <div className="space-y-6 no-print">
-      <div className="card-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-6">
+      <div className="card-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
         <div>
           <h3 className="text-lg font-bold text-slate-800 dark:text-white m-0">Term Reports</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Select a published session to view your report card.</p>
@@ -797,7 +797,7 @@ return (
       </div>
 
       {!studentMarks ? (
-        <div className="card-white" style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="card-white no-print" style={{ padding: '40px', textAlign: 'center' }}>
           <div className="w-16 h-16 mx-auto mb-4 bg-amber-50 dark:bg-amber-950/20 text-amber-400 rounded-full flex items-center justify-center">
             <AlertCircle size={32} />
           </div>
@@ -818,11 +818,6 @@ const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
 return (
   <div className={isPublic ? `min-h-screen flex flex-col ${darkMode ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-800'} transition-colors duration-300` : "dashboard-wrapper"}>
     {isPublic && <Navbar />}
-
-    {/* Hidden print portal – always mounted so printRef is never null */}
-    <div className="print-portal-host" style={{ position: 'fixed', left: '-9999px', top: 0, width: '794px', pointerEvents: 'none', zIndex: -1 }}>
-      {studentMarks && renderPrintView()}
-    </div>
 
     <div className={isPublic ? "flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full" : ""}>
       <>
