@@ -13,7 +13,7 @@ import { getAverageDivisor } from '../../utils/averageDivisor';
 
 const StudentResults = ({ isPublic }) => {
 const { currentStudent: loggedInStudent, authError, authReady } = useStudentAuth();
-const { schoolName, schoolLogo, primaryColor, principalSignature, darkMode, averageDivisors } = useTheme();
+const { schoolName, schoolLogo, primaryColor, principalSignature, principalStamp, darkMode, averageDivisors } = useTheme();
 const printRef = useRef();
 
 const [publishedTerms, setPublishedTerms] = useState([]);
@@ -438,109 +438,59 @@ return (
 }
 
 const renderPrintView = () => (
+<div style={{ width: '100%', overflowX: 'auto', overflowY: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
 <div className="report-card-print" ref={printRef}>
 <style>{`
+/* ── A4 portrait = 794px × 1123px at 96dpi ── */
 .report-card-print {
-width: 794px;
-max-width: 100%;
-min-height: auto;
-padding: 8mm 10mm;
-margin: 0 auto;
-background: white;
-color: #0f172a;
-font-family: 'Outfit', 'Inter', sans-serif;
-position: relative;
-box-sizing: border-box;
-overflow: hidden;
-display: flex;
-flex-direction: column;
+  width: 794px;
+  min-height: 1123px;
+  max-height: 1123px;
+  padding: 8mm 10mm;
+  margin: 0;
+  background: white;
+  color: #0f172a;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 @page { size: A4 portrait; margin: 0; }
 @media print {
   html, body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  body { margin: 0; padding: 0; }
-  .report-card-print, .report-card-print * { visibility: visible !important; }
   .report-card-print {
-    width: 100%;
-    min-height: auto;
-    padding: 8mm 10mm;
+    width: 794px !important;
+    min-height: 1123px !important;
+    max-height: none !important;
+    padding: 8mm 10mm !important;
     background: white !important;
     box-shadow: none !important;
     border: none !important;
-    overflow: visible;
-    transform: none;
-  }
-}
-@media (max-width: 1024px) {
-  .report-card-print {
-    width: 100%;
-    min-height: auto;
-    padding: 6mm;
-    transform: none;
-    zoom: normal;
-    overflow-x: hidden;
-  }
-}
-@media (max-width: 768px) {
-  .report-card-print {
-    padding: 4mm;
-  }
-  .print-header {
-    flex-direction: column;
-    gap: 4px;
-    align-items: center;
-  }
-  .print-school-info h1 {
-    font-size: 11px;
-  }
-  .print-school-info h2 {
-    font-size: 8px;
-  }
-  .print-school-info p {
-    font-size: 6.2px;
-  }
-  .print-stats-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  .print-main-content {
-    grid-template-columns: 1fr;
-  }
-  .commentary-section {
-    grid-template-columns: 1fr;
-  }
-  .print-logo {
-    width: 40px;
-    height: 40px;
+    overflow: visible !important;
+    transform: none !important;
+    page-break-after: avoid;
   }
 }
 .print-branding-top { font-size: 6.5px; text-transform: uppercase; font-weight: 800; color: #94a3b8; margin-bottom: 3px; display: flex; justify-content: space-between; }
-.print-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 4px; margin-bottom: 6px; }
-.print-logo { width: 48px; height: 48px; object-fit: contain; }
+.print-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 4px; margin-bottom: 6px; gap: 8px; }
+.print-logo { width: 54px; height: 54px; object-fit: contain; flex-shrink: 0; }
 .print-school-info { text-align: center; flex: 1; }
 .print-school-info h1 { font-size: 13px; font-weight: 900; margin: 0; line-height: 1.1; color: #1e293b; }
 .print-school-info h2 { font-size: 10px; font-weight: 700; margin: 0; color: #475569; }
 .print-school-info p { font-size: 7px; margin: 2px 0; font-weight: 600; color: #64748b; }
 .print-term-badge { display: inline-block; background: #1e293b; color: white; padding: 1px 8px; border-radius: 12px; font-size: 8px; font-weight: 900; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
-.student-photo-frame { width: 54px; height: 62px; border: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.student-photo-frame { width: 54px; height: 66px; border: 1.5px solid #334155; background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
 .student-photo-frame img { width: 100%; height: 100%; object-fit: cover; }
-.photo-placeholder {
-  font-size: 7px;
-  font-weight: 900;
-  color: #f8fafc;
-  background-color: #334155;
-  font: 13px/1.4 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
-  font-family: 'Inter', sans-serif;
-  border: 1px solid #4f46e5;
-  box-shadow: 0 10px 20px -10px rgba(0, 0, 0, 0.1);
-  border-radius: 3px;
-}
+.photo-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #334155; color: #f8fafc; font-size: 7px; font-weight: 900; letter-spacing: 1px; }
 .print-stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-bottom: 6px; border: 1px solid #0f172a; padding: 4px; background: #f8fafc; }
 .stat-item { font-size: 7px; display: flex; align-items: center; }
 .stat-item label { font-weight: 800; color: #475569; width: 42px; font-size: 6.5px; }
 .stat-item span { font-weight: 700; color: #0f172a; flex: 1; border-bottom: 1px dashed #cbd5e1; padding-bottom: 1px; }
 .stat-item .highlight { color: #2563eb; font-weight: 900; }
 .academic-performance-title { background: #f1f5f9; color: #0f172a; text-align: center; font-weight: 900; padding: 2px; font-size: 8px; letter-spacing: 1px; margin-bottom: 4px; border: 1px solid #0f172a; text-transform: uppercase; }
-.print-main-content { display: grid; grid-template-columns: 1.6fr 0.9fr; gap: 8px; margin-bottom: 6px; align-items: start; }
+.print-main-content { display: grid; grid-template-columns: 1.6fr 0.9fr; gap: 8px; margin-bottom: 6px; align-items: start; flex: 1; }
 .print-table-wrapper { min-width: 0; }
 .print-table { width: 100%; border-collapse: collapse; font-size: 6.8px; }
 .print-table th { background: #1e293b; color: white; padding: 2px; border: 1px solid #0f172a; font-weight: 900; text-transform: uppercase; font-size: 6.4px; }
@@ -556,39 +506,36 @@ flex-direction: column;
 .summary-box label { font-size: 6px; font-weight: 900; color: #475569; display: block; text-transform: uppercase; }
 .summary-box .value { font-size: 9px; font-weight: 900; }
 .status-pass { color: #059669; }
-.commentary-section { border: 1px solid #0f172a; padding: 4px; margin-bottom: 6px; background: #fdfdfd; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.comment-box { margin-bottom: 2px; }
-.comment-box:last-child { margin-bottom: 0; }
+.commentary-section { border: 1px solid #0f172a; padding: 4px; margin-bottom: 4px; background: #fdfdfd; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .comment-box label { font-size: 7px; font-weight: 900; text-decoration: underline; color: #1e293b; }
 .comment-box p { font-size: 7px; margin: 1px 0; font-style: italic; color: #334155; line-height: 1.18; min-height: 20px; }
-.print-footer { margin-top: auto; border-top: 1px solid #0f172a; padding-top: 4px; }
-.footer-cols { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.print-footer { border-top: 1px solid #0f172a; padding-top: 4px; margin-top: auto; }
+.footer-cols { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px; gap: 8px; }
 .footer-sign { text-align: center; width: 140px; }
-.sign-line { border-bottom: 1px dashed #0f172a; margin-bottom: 2px; height: 18px; }
+.sign-line { border-bottom: 1px dashed #0f172a; margin-bottom: 2px; height: 22px; display: flex; align-items: flex-end; justify-content: center; }
 .footer-sign p { font-size: 6.8px; font-weight: 900; margin: 0; text-transform: uppercase; }
-.stamp-box { width: 90px; height: 40px; border: 2px dashed #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 6px; font-weight: 900; color: #cbd5e1; text-transform: uppercase; transform: rotate(-8deg); }
+.stamp-box { width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; transform: rotate(-8deg); flex-shrink: 0; }
+.stamp-box-empty { width: 80px; height: 80px; border: 2px dashed #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 6px; font-weight: 900; color: #cbd5e1; text-transform: uppercase; text-align: center; transform: rotate(-8deg); }
 .footer-dates { text-align: right; }
 .footer-dates p { font-size: 6.8px; margin: 1px 0; font-weight: 600; color: #475569; }
 .footer-dates strong { color: #0f172a; font-weight: 800; }
 .print-final-branding { text-align: center; font-size: 6.8px; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; border-top: 1px solid #e2e8f0; padding-top: 3px; }
 .print-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 72px; font-weight: 900; color: rgba(15, 23, 42, 0.035); white-space: nowrap; pointer-events: none; z-index: -1; }
 `}</style>
-<div className="print-branding-top">Academic Session: {selectedPub?.session}</div>
+<div className="print-branding-top"><span>Academic Session: {selectedPub?.session}</span><span>{schoolName}</span></div>
 <div className="print-header">
-<div className="print-logo-box">
-<img src={schoolLogo || bdsLogo} alt="Logo" className="print-logo" />
-</div>
-<div className="print-school-info">
-<h1>{schoolName || 'BONUS DOMINUS NURSERY, PRIMARY'}</h1>
-<h2>& SECONDARY SCHOOL</h2>
-<p>5A - 5C UZOANYA CRESCENT, AMUZUKWU, UMUAHIA, ABIA STATE</p>
-<div className="print-term-badge">{selectedPub?.term} Report Card for {selectedPub?.session}</div>
-</div>
-<div className="print-photo-box">
-<div className="student-photo-frame">
-{currentStudent?.photo ? <img src={currentStudent.photo} alt="Student" /> : <div className="photo-placeholder">PHOTO</div>}
-</div>
-</div>
+  <img src={schoolLogo || bdsLogo} alt="Logo" className="print-logo" />
+  <div className="print-school-info">
+    <h1>{schoolName || 'BONUS DOMINUS NURSERY, PRIMARY'}</h1>
+    <h2>&amp; SECONDARY SCHOOL</h2>
+    <p>5A - 5C UZOANYA CRESCENT, AMUZUKWU, UMUAHIA, ABIA STATE</p>
+    <div className="print-term-badge">{selectedPub?.term} Report Card for {selectedPub?.session}</div>
+  </div>
+  <div className="student-photo-frame">
+    {currentStudent?.photo
+      ? <img src={currentStudent.photo} alt="Passport" />
+      : <div className="photo-placeholder">PHOTO</div>}
+  </div>
 </div>
 <div className="print-stats-grid">
 <div className="stat-item"><label>NAME:</label> <span>{currentStudent?.name}</span></div>
@@ -713,15 +660,16 @@ sub.total >= 40 ? 'Average' : 'Below Average'}
       </div>
       <p>PRINCIPAL'S SIGNATURE</p>
     </div>
-    <div className="stamp-box">
-      SCHOOL<br />STAMP
-    </div>
+    {principalStamp
+      ? <div className="stamp-box"><img src={principalStamp} alt="School Stamp" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /></div>
+      : <div className="stamp-box-empty">SCHOOL<br />STAMP</div>}
     <div className="footer-dates">
       <p>Term Ends: <strong>{schoolDates.termEnds}</strong></p>
       <p>Next Term Begins: <strong>{schoolDates.nextTermBegins}</strong></p>
     </div>
   </div>
   <div className="print-final-branding">{schoolName || 'BONUS DOMINUS NURSERY, PRIMARY & SECONDARY SCHOOL'} — OFFICIAL REPORT CARD</div>
+</div>
 </div>
 </div>
 );

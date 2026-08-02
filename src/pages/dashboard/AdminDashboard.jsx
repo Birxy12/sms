@@ -11,7 +11,7 @@ import ScoreEntry from '../../components/ScoreEntry';
 import StaffDashboard from './StaffDashboard';
 import StudentDashboard from './StudentDashboard';
 import { expandStudent } from '../../utils/firestoreSchema';
-import { Users, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw } from 'lucide-react';
+import { Users, User, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 // Isolated clock component — ticks every second without re-rendering AdminDashboard
 const LiveClock = memo(() => {
