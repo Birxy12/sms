@@ -386,36 +386,6 @@ useEffect(() => {
   if (urlPrint && studentMarks && !loading) {
     const timer = window.setTimeout(() => {
       setIsPrinting(true);
-    }, 800);
-    return () => window.clearTimeout(timer);
-  }
-}, [urlPrint, studentMarks, loading]);
-
-useEffect(() => {
-  if (!isPrinting) return;
-
-  const timer = window.setTimeout(() => {
-    window.print();
-  }, 300);
-
-  const handleAfterPrint = () => setIsPrinting(false);
-  window.addEventListener('afterprint', handleAfterPrint);
-
-  const fallbackTimer = window.setTimeout(() => {
-    setIsPrinting(false);
-  }, 1800);
-
-  return () => {
-    window.clearTimeout(timer);
-    window.clearTimeout(fallbackTimer);
-    window.removeEventListener('afterprint', handleAfterPrint);
-  };
-}, [isPrinting]);
-
-const createPrintableClone = () => {
-  if (!printRef.current) return null;
-
-  const clone = printRef.current.cloneNode(true);
   clone.style.width = '794px';
   clone.style.maxWidth = '794px';
   clone.style.minHeight = 'auto';
@@ -439,40 +409,43 @@ const createPrintableClone = () => {
 };
 
 const handlePrint = () => {
-  window.print();
-};
+    setIsPrinting(true);
+    setTimeout(() => {
+      window.print();
+    }, 300);
+  };
 
-const handleDownloadPDF = async () => {
-  if (!printRef.current) {
-    window.alert('The report card is not ready yet. Please wait and try again.');
-    return;
-  }
+  const handleDownloadPDF = async () => {
+    if (!printRef.current) {
+      window.alert('The report card is not ready yet. Please wait and try again.');
+      return;
+    }
 
-  try {
-    const html2pdf = (await import('html2pdf.js')).default;
+    try {
+      setIsPrinting(true);
+      const html2pdf = (await import('html2pdf.js')).default;
+      
+      const opt = {
+        margin: 0,
+        filename: `${currentStudent?.name || 'Student'}-Report-Card.pdf`,
+        image: { type: 'jpeg', quality: 1.0 },
+        html2canvas: { scale: 3, useCORS: true, logging: false, allowTaint: true, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
 
-    const clone = printRef.current.cloneNode(true);
-    clone.style.cssText = 'width:794px;padding:8mm 10mm;margin:0;background:#fff;box-sizing:border-box;overflow:visible;';
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1;';
-    wrapper.appendChild(clone);
-    document.body.appendChild(wrapper);
-
-    const opt = {
-      margin: 0,
-      filename: `${currentStudent?.name || 'Student'}-Report-Card.pdf`,
-      image: { type: 'jpeg', quality: 1.0 },
-      html2canvas: { scale: 3, useCORS: true, logging: false, allowTaint: true, backgroundColor: '#ffffff' },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    await html2pdf().set(opt).from(wrapper).save();
-    wrapper.remove();
-  } catch (err) {
-    console.error('PDF Download failed:', err);
-    window.alert('PDF download failed. Please try again.');
-  }
-};
+      setTimeout(async () => {
+        try {
+          await html2pdf().set(opt).from(printRef.current).save();
+        } finally {
+          setIsPrinting(false);
+        }
+      }, 500);
+    } catch (err) {
+      console.error('PDF Download failed:', err);
+      window.alert('PDF download failed. Please try again.');
+      setIsPrinting(false);
+    }
+  };
 
 if (loading && publishedTerms.length === 0) {
 return (
@@ -814,6 +787,14 @@ return (
 };
 
 const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
+
+if (isPrinting) {
+  return (
+    <div className="w-full bg-white print-container">
+      {renderPrintView()}
+    </div>
+  );
+}
 
 return (
   <div className={isPublic ? `min-h-screen flex flex-col ${darkMode ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-800'} transition-colors duration-300` : "dashboard-wrapper"}>
