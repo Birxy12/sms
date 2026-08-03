@@ -386,27 +386,14 @@ useEffect(() => {
   if (urlPrint && studentMarks && !loading) {
     const timer = window.setTimeout(() => {
       setIsPrinting(true);
-  clone.style.width = '794px';
-  clone.style.maxWidth = '794px';
-  clone.style.minHeight = 'auto';
-  clone.style.margin = '0 auto';
-  clone.style.background = '#ffffff';
-  clone.style.padding = '0';
-  clone.style.boxSizing = 'border-box';
-  clone.style.overflow = 'visible';
-  clone.style.transform = 'none';
-
-  const wrapper = document.createElement('div');
-  wrapper.style.position = 'fixed';
-  wrapper.style.left = '-9999px';
-  wrapper.style.top = '0';
-  wrapper.style.width = '794px';
-  wrapper.style.background = '#ffffff';
-  wrapper.style.zIndex = '-1';
-  wrapper.appendChild(clone);
-  document.body.appendChild(wrapper);
-  return wrapper;
-};
+      setTimeout(() => {
+        window.print();
+        setIsPrinting(false);
+      }, 300);
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }
+}, [urlPrint, studentMarks, loading]);
 
 const handlePrint = () => {
     setIsPrinting(true);
