@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { db } from '../../lib/firebase';
@@ -399,6 +400,7 @@ const handlePrint = () => {
     setIsPrinting(true);
     setTimeout(() => {
       window.print();
+      setIsPrinting(false);
     }, 300);
   };
 
@@ -409,7 +411,6 @@ const handlePrint = () => {
     }
 
     try {
-      setIsPrinting(true);
       const html2pdf = (await import('html2pdf.js')).default;
       
       const opt = {
@@ -420,13 +421,7 @@ const handlePrint = () => {
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      setTimeout(async () => {
-        try {
-          await html2pdf().set(opt).from(printRef.current).save();
-        } finally {
-          setIsPrinting(false);
-        }
-      }, 500);
+      await html2pdf().set(opt).from(printRef.current).save();
     } catch (err) {
       console.error('PDF Download failed:', err);
       window.alert('PDF download failed. Please try again.');
@@ -776,10 +771,11 @@ return (
 const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
 
 if (isPrinting) {
-  return (
-    <div className="w-full bg-white print-container">
+  return createPortal(
+    <div className="print-portal-host">
       {renderPrintView()}
-    </div>
+    </div>,
+    document.body
   );
 }
 
