@@ -443,7 +443,7 @@ const renderPrintView = () => (
 .report-card-print {
 width: 794px;
 max-width: 100%;
-min-height: auto;
+min-height: 1122px;
 padding: 8mm 10mm;
 margin: 0 auto;
 background: white;
@@ -691,7 +691,7 @@ sub.total >= 40 ? 'Average' : 'Below Average'}
 </div>
 </div>
 </div>
-<div className="commentary-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+<div className="commentary-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: 'auto' }}>
 <div className="comment-box">
 <label>TEACHER'S COMMENT:</label>
 <p style={{ minHeight: '40px' }}>{studentMarks?.raw?.teacherComment || 'An impressive performance. Keep up the good work.'}</p>
