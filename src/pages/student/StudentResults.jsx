@@ -695,18 +695,56 @@ sub.total >= 40 ? 'Average' : 'Below Average'}
 <div className="comment-box">
 <label>TEACHER'S COMMENT:</label>
 <p style={{ minHeight: '40px' }}>{studentMarks?.raw?.teacherComment || 'An impressive performance. Keep up the good work.'}</p>
-<div style={{ marginTop: '10px', borderBottom: '1px solid #000', width: '100px' }}></div>
-<span style={{ fontSize: '7px', fontWeight: 'bold' }}>{formTeacher}</span>
+<div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', marginTop: '8px' }}>
+  <div style={{ flex: 1 }}>
+    <div style={{ borderBottom: '1px solid #000', marginBottom: '2px', height: '22px' }}>
+      {principalSignature && <img src={principalSignature} alt="" style={{ height: '20px', objectFit: 'contain' }} />}
+    </div>
+    <span style={{ fontSize: '6.5px', fontWeight: 'bold', textTransform: 'uppercase' }}>{formTeacher} — Form Teacher</span>
+  </div>
+</div>
 </div>
 <div className="comment-box">
 <label>PRINCIPAL'S COMMENT:</label>
 <p style={{ minHeight: '40px' }}>{studentMarks?.raw?.principalComment || 'You came out with flying colours. Congratulations!'}</p>
-<div style={{ marginTop: '10px', borderBottom: '1px solid #000', width: '100px' }}></div>
-<span style={{ fontSize: '7px', fontWeight: 'bold' }}>PRINCIPAL (MRS ETUZU ANITA)</span>
+<div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', marginTop: '8px' }}>
+  <div style={{ flex: 1 }}>
+    <div style={{ borderBottom: '1px solid #000', marginBottom: '2px', height: '22px', position: 'relative' }}>
+      {principalSignature && <img src={principalSignature} alt="Principal Signature" style={{ height: '20px', objectFit: 'contain' }} />}
+      {principalStamp && (
+        <img src={principalStamp} alt="Stamp" style={{ position: 'absolute', right: '0', top: '-10px', width: '48px', height: '48px', objectFit: 'contain', opacity: 0.85, transform: 'rotate(-8deg)' }} />
+      )}
+    </div>
+    <span style={{ fontSize: '6.5px', fontWeight: 'bold', textTransform: 'uppercase' }}>PRINCIPAL</span>
+  </div>
+</div>
+</div>
+</div>
+<div className="print-footer">
+<div className="footer-cols">
+  <div className="footer-sign">
+    <div className="sign-line"></div>
+    <p>CLASS TEACHER'S SIGN</p>
+  </div>
+  <div style={{ textAlign: 'center' }}>
+    {principalStamp ? (
+      <img src={principalStamp} alt="School Stamp" style={{ width: '60px', height: '60px', objectFit: 'contain', opacity: 0.85, transform: 'rotate(-8deg)' }} />
+    ) : (
+      <div className="stamp-box">SCHOOL STAMP</div>
+    )}
+  </div>
+  <div className="footer-dates">
+    <p>TERM ENDS: <strong>{schoolDates.termEnds}</strong></p>
+    <p>NEXT TERM BEGINS: <strong>{schoolDates.nextTermBegins}</strong></p>
+  </div>
+</div>
+<div className="print-final-branding">
+  {schoolName || 'BONUS DOMINUS NURSERY, PRIMARY & SECONDARY SCHOOL'} — Official Academic Report Card
 </div>
 </div>
 </div>
 );
+
 
 const renderScreenView = () => {
 if (resultsError) {

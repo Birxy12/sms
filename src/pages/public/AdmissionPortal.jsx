@@ -216,8 +216,17 @@ const AdmissionPortal = () => {
       } catch { setAdmissionOpen(true); }
 
       try {
-        const snap = await getDocs(query(collection(db, 'classes'), orderBy('name')));
-        setClasses(snap.empty ? defaultClasses() : snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const snap = await getDocs(query(collection(db, 'classes')));
+        if (!snap.empty) {
+          // ClassManagement stores classes as document IDs
+          const firestoreClasses = snap.docs
+            .filter(d => !d.data().deleted)
+            .map(d => ({ id: d.id, name: d.data().name || d.id }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+          setClasses(firestoreClasses);
+        } else {
+          setClasses(defaultClasses());
+        }
       } catch { setClasses(defaultClasses()); }
       finally { setLoadingClasses(false); }
     };
