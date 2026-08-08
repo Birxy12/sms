@@ -642,13 +642,13 @@ const StudentResults = ({ isPublic }) => {
         .rc-table {
           width: 100%;
           height: 100%;
-          border-collapse: separate;
+          border-collapse: collapse;
           border-spacing: 0;
           font-size: 8px;
           border-radius: 4px;
           overflow: hidden;
           box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-          border: 1px solid #e2e8f0;
+          border: 1px solid #cbd5e1;
         }
         .rc-table thead th {
           background: #1e3a5f;
@@ -658,13 +658,13 @@ const StudentResults = ({ isPublic }) => {
           font-size: 7px;
           text-transform: uppercase;
           letter-spacing: 0.3px;
-          border: none;
+          border: 1px solid #cbd5e1;
         }
         .rc-table thead th:first-child { border-radius: 4px 0 0 0; }
         .rc-table thead th:last-child { border-radius: 0 4px 0 0; }
         .rc-table tbody td {
           padding: 8px 4px;
-          border-bottom: 1px solid #f1f5f9;
+          border: 1px solid #cbd5e1;
           text-align: center;
           font-weight: 600;
           color: #334155;
@@ -715,14 +715,14 @@ const StudentResults = ({ isPublic }) => {
           font-weight: 800;
           color: #475569;
           font-size: 6.5px;
-          border-bottom: 1px solid #e2e8f0;
+          border: 1px solid #cbd5e1;
         }
         .rc-mini-table td {
           padding: 5px 3px;
           text-align: center;
           font-weight: 700;
           color: #334155;
-          border-bottom: 1px solid #f8fafc;
+          border: 1px solid #cbd5e1;
           height: 22px;
         }
         .rc-mini-table td:first-child {
