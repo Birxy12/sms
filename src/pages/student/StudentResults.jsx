@@ -12,10 +12,11 @@ import { expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../../util
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import Navbar from '../../components/Navbar';
 import { getAverageDivisor } from '../../utils/averageDivisor';
+import { generateAutoComments } from '../../utils/commentGenerator';
 
 const StudentResults = ({ isPublic }) => {
   const { currentStudent: loggedInStudent, authError, authReady } = useStudentAuth();
-  const { schoolName, schoolLogo, primaryColor, principalSignature, principalStamp, darkMode, averageDivisors } = useTheme();
+  const { schoolName, schoolLogo, primaryColor, principalSignature, principalStamp, darkMode, averageDivisors, termEndDate, nextTermBeginsDate, autoCommentsEnabled, commentTemplates } = useTheme();
   const printRef = useRef();
 
   const [publishedTerms, setPublishedTerms] = useState([]);
@@ -415,6 +416,10 @@ const StudentResults = ({ isPublic }) => {
 
   const selectedPub = publishedTerms.find(p => p.id === selectedTermId);
 
+  const autoC = generateAutoComments(studentMarks?.average, commentTemplates);
+  const teacherCommentText = studentMarks?.raw?.teacherComment || (autoCommentsEnabled ? autoC.teacherComment : 'An impressive performance. Keep up the good work.');
+  const principalCommentText = studentMarks?.raw?.principalComment || (autoCommentsEnabled ? autoC.principalComment : 'You came out with flying colours. Congratulations!');
+
   const renderPrintView = () => (
     <div className="report-card-print" ref={printRef}>
       <style>{`
@@ -648,7 +653,7 @@ const StudentResults = ({ isPublic }) => {
           border-radius: 4px;
           overflow: hidden;
           box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-          border: 1px solid #cbd5e1;
+          border: 1px solid rgba(0, 0, 0, 0.7);
         }
         .rc-table thead th {
           background: #1e3a5f;
@@ -658,13 +663,13 @@ const StudentResults = ({ isPublic }) => {
           font-size: 7px;
           text-transform: uppercase;
           letter-spacing: 0.3px;
-          border: 1px solid #cbd5e1;
+          border: 1px solid rgba(0, 0, 0, 0.7);
         }
         .rc-table thead th:first-child { border-radius: 4px 0 0 0; }
         .rc-table thead th:last-child { border-radius: 0 4px 0 0; }
         .rc-table tbody td {
           padding: 8px 4px;
-          border: 1px solid #cbd5e1;
+          border: 1px solid rgba(0, 0, 0, 0.7);
           text-align: center;
           font-weight: 600;
           color: #334155;
@@ -715,14 +720,14 @@ const StudentResults = ({ isPublic }) => {
           font-weight: 800;
           color: #475569;
           font-size: 6.5px;
-          border: 1px solid #cbd5e1;
+          border: 1px solid rgba(0, 0, 0, 0.7);
         }
         .rc-mini-table td {
           padding: 5px 3px;
           text-align: center;
           font-weight: 700;
           color: #334155;
-          border: 1px solid #cbd5e1;
+          border: 1px solid rgba(0, 0, 0, 0.7);
           height: 22px;
         }
         .rc-mini-table td:first-child {
@@ -845,7 +850,7 @@ const StudentResults = ({ isPublic }) => {
         }
         .rc-footer-line {
           width: 90px;
-          border-bottom: 1px solid #1e3a5f;
+          border-bottom: 1px solid rgba(240, 245, 250, 1);
           height: 14px;
           margin: 0 auto;
         }
@@ -1091,7 +1096,7 @@ const StudentResults = ({ isPublic }) => {
         <div className="rc-comments">
           <div className="rc-comment-card">
             <label>Teacher's Comment</label>
-            <p>{studentMarks?.raw?.teacherComment || 'An impressive performance. Keep up the good work.'}</p>
+            <p>{teacherCommentText}</p>
             <div className="rc-sig-row">
               <div style={{ flex: 1 }}>
                 <div className="rc-sig-line">
@@ -1103,7 +1108,7 @@ const StudentResults = ({ isPublic }) => {
           </div>
           <div className="rc-comment-card">
             <label>Principal's Comment</label>
-            <p>{studentMarks?.raw?.principalComment || 'You came out with flying colours. Congratulations!'}</p>
+            <p>{principalCommentText}</p>
             <div className="rc-sig-row">
               <div style={{ flex: 1 }}>
                 <div className="rc-sig-line">
@@ -1132,8 +1137,8 @@ const StudentResults = ({ isPublic }) => {
             )}
           </div>
           <div className="rc-footer-right">
-            <p>Term Ends: <strong>{schoolDates.termEnds}</strong></p>
-            <p>Next Term Begins: <strong>{schoolDates.nextTermBegins}</strong></p>
+            <p>Term Ends: <strong>{termEndDate || schoolDates.termEnds}</strong></p>
+            <p>Next Term Begins: <strong>{nextTermBeginsDate || schoolDates.nextTermBegins}</strong></p>
           </div>
         </div>
         <div className="rc-branding-bar">
