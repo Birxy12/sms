@@ -88,11 +88,12 @@ const Home = () => {
     const total = (landingContent.heroImages && landingContent.heroImages.length > 0)
       ? Math.min(landingContent.heroImages.length, 5)
       : 2;
+    const duration = (landingContent.homeSlideDuration || 4) * 1000;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % total);
-    }, 4000);
+    }, duration);
     return () => clearInterval(timer);
-  }, [landingContent.heroImages]);
+  }, [landingContent.heroImages, landingContent.homeSlideDuration]);
 
   const stats = landingContent.stats;
 

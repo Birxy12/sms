@@ -42,6 +42,7 @@ const BrandingSettings = () => {
   const [secondary, setSecondary] = useState(secondaryColor);
   const [logoPreview, setLogoPreview] = useState(schoolLogo);
   const [heroImages, setHeroImages] = useState([]);
+  const [slideDuration, setSlideDuration] = useState(4);
   const [heroImagesUploading, setHeroImagesUploading] = useState(false);
   const [homeAdImage, setHomeAdImage] = useState(null);
   const [homeAdLink, setHomeAdLink] = useState('');
@@ -148,6 +149,7 @@ const BrandingSettings = () => {
         if (snap.exists() && snap.data().landingPage) {
           const lp = snap.data().landingPage;
           if (lp.heroImages) setHeroImages(lp.heroImages);
+          if (lp.homeSlideDuration !== undefined) setSlideDuration(lp.homeSlideDuration);
           if (lp.homeAdImage) setHomeAdImage(lp.homeAdImage);
           if (lp.homeAdLink) setHomeAdLink(lp.homeAdLink);
           if (lp.homeAdEnabled !== undefined) setHomeAdEnabled(lp.homeAdEnabled);
@@ -188,6 +190,7 @@ const BrandingSettings = () => {
       await setDoc(doc(db, 'settings', 'public_content'), {
         landingPage: {
           heroImages: heroImages,
+          homeSlideDuration: Number(slideDuration),
           homeAdImage: homeAdImage,
           homeAdLink: homeAdLink,
           homeAdEnabled: homeAdEnabled
@@ -705,6 +708,18 @@ const BrandingSettings = () => {
                 )}
               </div>
             )}
+          </div>
+
+          <div style={{ marginTop: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+            <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>Slideshow Interval (Seconds)</label>
+            <input
+              type="number"
+              min="1"
+              max="20"
+              value={slideDuration}
+              onChange={(e) => setSlideDuration(e.target.value)}
+              style={{ width: '100%', maxWidth: '200px', padding: '10px', borderRadius: '10px', border: '2px solid #e2e8f0', fontSize: '14px' }}
+            />
           </div>
         </div>
 
