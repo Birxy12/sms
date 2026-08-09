@@ -63,6 +63,7 @@ const Home = () => {
               { color: "bg-orange-50 text-orange-600", accent: "bg-orange-600" },
               { color: "bg-emerald-50 text-emerald-600", accent: "bg-emerald-600" },
               { color: "bg-indigo-50 text-indigo-600", accent: "bg-indigo-600" }
+            ];
             setLandingContent(prev => {
               const safeStats = Array.isArray(data.stats) ? data.stats : (prev.stats || []);
               return {
