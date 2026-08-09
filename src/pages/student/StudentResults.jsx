@@ -427,7 +427,7 @@ const StudentResults = ({ isPublic }) => {
         
         .report-card-print {
           width: 794px;
-          max-width: 100%;
+          min-width: 794px;
           min-height: 1122px;
           padding: 10mm 8mm 6mm 8mm;
           margin: 0 auto;
