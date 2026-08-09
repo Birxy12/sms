@@ -294,7 +294,7 @@ const Home = () => {
                         ? landingContent.heroImages[currentSlide % landingContent.heroImages.length]
                         : [h1, h3][currentSlide % 2]}
                       alt={`Campus life ${currentSlide + 1}`}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-fill"
                     />
                   </motion.div>
                 </AnimatePresence>
