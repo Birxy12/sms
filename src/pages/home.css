@@ -266,6 +266,7 @@
   position: absolute;
   inset: 0;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.5), transparent, transparent);
+  pointer-events: none;
 }
 
 .home-hero-slider-badge {
