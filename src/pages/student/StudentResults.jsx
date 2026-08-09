@@ -426,8 +426,8 @@ const StudentResults = ({ isPublic }) => {
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700;800;900&display=swap');
         
         .report-card-print {
-          width: 794px;
-          min-width: 794px;
+          width: 100%;
+          max-width: 794px;
           min-height: 1122px;
           padding: 10mm 8mm 6mm 8mm;
           margin: 0 auto;
