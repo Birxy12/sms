@@ -25,10 +25,6 @@ const StudentResults = ({ isPublic }) => {
   const [loading, setLoading] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
   const [classStats, setClassStats] = useState({ position: 'N/A', population: 0 });
-  const [schoolDates, setSchoolDates] = useState({
-    termEnds: '12/12/2025',
-    nextTermBegins: '12/01/2026'
-  });
   const [formTeacher, setFormTeacher] = useState('CLASS TEACHER');
   const [resultsError, setResultsError] = useState('');
 
@@ -329,23 +325,6 @@ const StudentResults = ({ isPublic }) => {
     fetchResults();
   }, [selectedTermId, publishedTerms, regNum, currentStudent, authError, authReady]);
 
-  useEffect(() => {
-    const fetchSchoolDates = async () => {
-      try {
-        const docSnap = await getDoc(doc(db, 'settings', 'school_dates'));
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setSchoolDates({
-            termEnds: data.termEnds || '12/12/2025',
-            nextTermBegins: data.nextTermBegins || '12/01/2026'
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching school dates:", error);
-      }
-    };
-    fetchSchoolDates();
-  }, []);
 
   useEffect(() => {
     const fetchFormTeacher = async () => {
@@ -1006,10 +985,10 @@ const StudentResults = ({ isPublic }) => {
                     <td style={{ fontWeight: 800 }}>{sub.total}</td>
                     <td className="rc-grade">{sub.grade}</td>
                     <td style={{ fontSize: '6px', fontWeight: 700, textTransform: 'uppercase' }}>
-                      {sub.total >= 75 ? 'Excellent' :
-                        sub.total >= 60 ? 'Very Good' :
-                          sub.total >= 50 ? 'Good' :
-                            sub.total >= 40 ? 'Average' : 'Below Average'}
+                      {sub.total >= 75 ? 'Distinction' :
+                        sub.total >= 60 ? 'Excellent' :
+                          sub.total >= 50 ? 'Very Good' :
+                            sub.total >= 40 ? 'Average' : 'Fail'}
                     </td>
                   </tr>
                 ))}
