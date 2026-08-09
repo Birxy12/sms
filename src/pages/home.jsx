@@ -88,7 +88,9 @@ const Home = () => {
     const total = (landingContent.heroImages && landingContent.heroImages.length > 0)
       ? Math.min(landingContent.heroImages.length, 5)
       : 2;
-    const duration = (landingContent.homeSlideDuration || 4) * 1000;
+    if (total <= 1) return; // Do not start interval if only 1 image
+    
+    const duration = (Number(landingContent.homeSlideDuration) || 4) * 1000;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % total);
     }, duration);
@@ -281,7 +283,7 @@ const Home = () => {
               className="relative"
             >
               <div className="home-hero-slider">
-                <AnimatePresence mode="popLayout">
+                <AnimatePresence mode="wait">
                   <motion.div
                     key={currentSlide}
                     initial={{ opacity: 0, scale: 1.1 }}
