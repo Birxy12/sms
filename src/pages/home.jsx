@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Star, LogIn, Users, Trophy, GraduationCap, Shield, BookOpen, Award, MapPin, Phone, Mail, ChevronRight, Quote, Sparkles, Search, CheckCircle } from 'lucide-react';
+import { ArrowRight, Star, LogIn, Users, Trophy, GraduationCap, Shield, BookOpen, Award, MapPin, Phone, Mail, ChevronRight, Quote, Sparkles, Search, CheckCircle, X } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { db } from '../lib/firebase';
 import { doc, getDoc, collection, addDoc, query, where, getDocs, orderBy } from 'firebase/firestore';
@@ -40,6 +40,7 @@ const Home = () => {
   const navigate = useNavigate();
   const { schoolName } = useTheme();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [showAdModal, setShowAdModal] = useState(false);
   const [landingContent, setLandingContent] = useState({
     heroHeadline: 'Sowing the Seed of Greatness',
     heroSubtext: 'We nurture excellence, discipline, and innovation—raising a generation of leaders prepared for the future.',
@@ -65,8 +66,11 @@ const Home = () => {
             ];
             setLandingContent({
               ...data,
-              stats: data.stats.map((s, i) => ({ ...s, icon: icons[i % icons.length], ...colors[i % colors.length] }))
+              stats: (data.stats || landingContent.stats).map((s, i) => ({ ...s, icon: icons[i % icons.length], ...colors[i % colors.length] }))
             });
+            if (data.homeAdEnabled && (data.homeAdImage || data.homeAdLink) && !sessionStorage.getItem('homeAdDismissed')) {
+              setShowAdModal(true);
+            }
           }
         }
       } catch (e) {
@@ -160,6 +164,54 @@ const Home = () => {
   return (
     <div className="home-page">
       <Navbar />
+
+      <AnimatePresence>
+        {showAdModal && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-w-2xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl"
+            >
+              <button 
+                onClick={() => {
+                  setShowAdModal(false);
+                  sessionStorage.setItem('homeAdDismissed', 'true');
+                }}
+                className="absolute top-4 right-4 z-10 w-10 h-10 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center backdrop-blur-md transition-colors"
+              >
+                <X size={20} />
+              </button>
+              {landingContent.homeAdLink ? (
+                <a href={landingContent.homeAdLink} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                  {landingContent.homeAdImage ? (
+                    <img src={landingContent.homeAdImage} alt="Announcement" className="w-full h-auto object-contain max-h-[80vh]" />
+                  ) : (
+                    <div className="p-12 text-center">
+                      <h3 className="text-2xl font-bold text-slate-800 mb-2">Important Announcement</h3>
+                      <p className="text-indigo-600 font-medium hover:underline">Click here to learn more</p>
+                    </div>
+                  )}
+                </a>
+              ) : (
+                landingContent.homeAdImage ? (
+                  <img src={landingContent.homeAdImage} alt="Announcement" className="w-full h-auto object-contain max-h-[80vh]" />
+                ) : (
+                   <div className="p-12 text-center">
+                      <h3 className="text-2xl font-bold text-slate-800 mb-2">Important Announcement</h3>
+                    </div>
+                )
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ============================================
           HERO SECTION - Uses home-hero classes

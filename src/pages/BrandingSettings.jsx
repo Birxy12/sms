@@ -43,6 +43,10 @@ const BrandingSettings = () => {
   const [logoPreview, setLogoPreview] = useState(schoolLogo);
   const [heroImages, setHeroImages] = useState([]);
   const [heroImagesUploading, setHeroImagesUploading] = useState(false);
+  const [homeAdImage, setHomeAdImage] = useState(null);
+  const [homeAdLink, setHomeAdLink] = useState('');
+  const [homeAdEnabled, setHomeAdEnabled] = useState(false);
+  const [homeAdUploading, setHomeAdUploading] = useState(false);
   const [navBg, setNavBg] = useState(navbarBg);
   const [footBg, setFootBg] = useState(footerBg);
   const [navText, setNavText] = useState(navbarTextColor);
@@ -141,11 +145,15 @@ const BrandingSettings = () => {
     const fetchPublicContent = async () => {
       try {
         const snap = await getDoc(doc(db, 'settings', 'public_content'));
-        if (snap.exists() && snap.data().landingPage?.heroImages) {
-          setHeroImages(snap.data().landingPage.heroImages);
+        if (snap.exists() && snap.data().landingPage) {
+          const lp = snap.data().landingPage;
+          if (lp.heroImages) setHeroImages(lp.heroImages);
+          if (lp.homeAdImage) setHomeAdImage(lp.homeAdImage);
+          if (lp.homeAdLink) setHomeAdLink(lp.homeAdLink);
+          if (lp.homeAdEnabled !== undefined) setHomeAdEnabled(lp.homeAdEnabled);
         }
       } catch (e) {
-        console.error('Failed to load hero images', e);
+        console.error('Failed to load public content', e);
       }
     };
     fetchPublicContent();
@@ -179,7 +187,10 @@ const BrandingSettings = () => {
     try {
       await setDoc(doc(db, 'settings', 'public_content'), {
         landingPage: {
-          heroImages: heroImages
+          heroImages: heroImages,
+          homeAdImage: homeAdImage,
+          homeAdLink: homeAdLink,
+          homeAdEnabled: homeAdEnabled
         }
       }, { merge: true });
     } catch (e) {
@@ -328,6 +339,25 @@ const BrandingSettings = () => {
 
   const removeHeroImage = (index) => {
     setHeroImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAdUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("File is too large. Please upload an image under 2MB.");
+        return;
+      }
+      setHomeAdUploading(true);
+      try {
+        const url = await uploadFileToSupabase(file, 'images', 'ads');
+        setHomeAdImage(url);
+      } catch (err) {
+        alert("Failed to upload ad image. Please try again.");
+      } finally {
+        setHomeAdUploading(false);
+      }
+    }
   };
 
   const handleReset = () => {
@@ -675,6 +705,72 @@ const BrandingSettings = () => {
                 )}
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Home Page Ad Section */}
+        <div className="card-white branding-card">
+          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+            <AlertTriangle color="var(--primary)" />
+            <div>
+              <h3 style={{ margin: 0 }}>Public Announcement / Ad Banner</h3>
+              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Display a dismissible pop-up banner on the home page.</p>
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#475569' }}>Enable Ad:</label>
+              <button 
+                onClick={() => setHomeAdEnabled(!homeAdEnabled)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none shadow-sm ${homeAdEnabled ? 'bg-blue-600' : 'bg-slate-300'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${homeAdEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>Ad Target Link (Optional)</label>
+              <input
+                type="url"
+                placeholder="https://example.com"
+                value={homeAdLink}
+                onChange={(e) => setHomeAdLink(e.target.value)}
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e2e8f0', fontSize: '14px' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>Ad Banner Image (Optional, max 2MB)</label>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                {homeAdImage && (
+                  <div style={{ position: 'relative', width: '200px', height: '100px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                    <img src={homeAdImage} alt="Ad Banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button 
+                      onClick={() => setHomeAdImage(null)}
+                      style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+                {!homeAdImage && (
+                  <div style={{ width: '200px', height: '100px', borderRadius: '10px', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: 'pointer', background: '#f8fafc' }}>
+                    {homeAdUploading ? (
+                      <Loader2 size={24} className="animate-spin text-slate-400" />
+                    ) : (
+                      <>
+                        <input type="file" accept="image/*" onChange={handleAdUpload} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 10 }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#64748b' }}>
+                          <Upload size={20} style={{ marginBottom: '4px' }} />
+                          <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Upload Banner</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
