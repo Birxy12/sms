@@ -912,7 +912,7 @@ const StudentResults = ({ isPublic }) => {
           background: transparent;
           color: #94a3b8;
           text-align: center;
-          width: 100%;
+          width: 100P;
           padding: 3px;
           font-size: 5.5px;
           font-weight: 700;
@@ -947,8 +947,8 @@ const StudentResults = ({ isPublic }) => {
             <img src={schoolLogo || bdsLogo} alt="School Logo" />
           </div>
           <div className="rc-school-info">
-            <h1>{schoolName || 'BONUS DOMINUS SECONDARY SCHOOL'}</h1>
-            <h2>& Secondary School</h2>
+            <h1>{schoolName || 'BONUS  DOMINUS  SCHOOL'}</h1>
+            <h2>Primary & Secondary School</h2>
             <p>5A — 5C Uzoanya Crescent, Amuzukwu, Umuahia, Abia State</p>
             <div className="rc-badge">{selectedPub?.term} Report Card &mdash; {selectedPub?.session}</div>
           </div>
