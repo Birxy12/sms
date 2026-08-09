@@ -405,8 +405,8 @@ const StudentResults = ({ isPublic }) => {
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700;800;900&display=swap');
         
         .report-card-print {
-          width: 100%;
-          max-width: 100%;
+          width: 794px;
+          min-width: 794px;
           min-height: 1122px;
           padding: 10mm 8mm 6mm 8mm;
           margin: 0 auto;
@@ -1180,8 +1180,10 @@ const StudentResults = ({ isPublic }) => {
             <p className="text-slate-500 dark:text-slate-400 text-sm">Your subject scores have not been entered for this term yet. Please check back later or contact your class teacher.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto bg-slate-200 dark:bg-slate-900 p-4 rounded-xl flex justify-center shadow-inner">
-            {renderPrintView()}
+          <div className="overflow-x-auto bg-slate-200 dark:bg-slate-900 p-2 sm:p-4 rounded-xl shadow-inner" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ width: 'max-content', margin: '0 auto' }}>
+              {renderPrintView()}
+            </div>
           </div>
         )}
       </div>

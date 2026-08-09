@@ -86,7 +86,7 @@ const Home = () => {
 
   useEffect(() => {
     const total = (landingContent.heroImages && landingContent.heroImages.length > 0)
-      ? landingContent.heroImages.length
+      ? Math.min(landingContent.heroImages.length, 5)
       : 2;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % total);
@@ -291,7 +291,7 @@ const Home = () => {
                   >
                     <img
                       src={(landingContent.heroImages && landingContent.heroImages.length > 0)
-                        ? landingContent.heroImages[currentSlide % landingContent.heroImages.length]
+                        ? landingContent.heroImages.slice(0, 5)[currentSlide % Math.min(landingContent.heroImages.length, 5)]
                         : [h1, h3][currentSlide % 2]}
                       alt={`Campus life ${currentSlide + 1}`}
                       className="w-full h-full object-fill"
@@ -310,7 +310,7 @@ const Home = () => {
                 </div>
               </div>
               <div className="home-slider-indicators">
-                {[0, 1].map((i) => (
+                {Array.from({ length: (landingContent.heroImages && landingContent.heroImages.length > 0) ? Math.min(landingContent.heroImages.length, 5) : 2 }).map((_, i) => (
                   <button key={i} onClick={() => setCurrentSlide(i)} className={`home-slider-dot ${currentSlide === i ? 'active' : ''}`} />
                 ))}
               </div>
