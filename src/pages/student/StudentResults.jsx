@@ -912,6 +912,7 @@ const StudentResults = ({ isPublic }) => {
           background: transparent;
           color: #94a3b8;
           text-align: center;
+          width: 100%;
           padding: 3px;
           font-size: 5.5px;
           font-weight: 700;
@@ -1221,7 +1222,7 @@ const StudentResults = ({ isPublic }) => {
     <div className={isPublic ? `min-h-screen flex flex-col ${darkMode ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-800'} transition-colors duration-300` : "dashboard-wrapper"}>
       {isPublic && <Navbar />}
 
-      <div className={isPublic ? "flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full" : ""}>
+      <div className={isPublic ? "flex-1 p-4 md:p-10 max-w-full mx-auto w-full" : ""}>
         <>
           {isPublic && (
             <div className="mb-8 flex items-center justify-between no-print">
