@@ -13,6 +13,7 @@ import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import Navbar from '../../components/Navbar';
 import { getAverageDivisor } from '../../utils/averageDivisor';
 import { generateAutoComments } from '../../utils/commentGenerator';
+import html2pdf from 'html2pdf.js';
 
 const StudentResults = ({ isPublic }) => {
   const { currentStudent: loggedInStudent, authError, authReady } = useStudentAuth();
@@ -369,7 +370,6 @@ const StudentResults = ({ isPublic }) => {
       return;
     }
     try {
-      const html2pdf = (await import('html2pdf.js')).default;
       const opt = {
         margin: 0,
         filename: `${currentStudent?.name || 'Student'}-Report-Card.pdf`,
