@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { Save, RefreshCcw, Palette, School, BookOpen, CheckCircle, Loader2, Calendar, GraduationCap, Users, ChevronDown, AlertTriangle, ArrowRight, X, CheckSquare } from 'lucide-react';
+import { Save, RefreshCcw, Palette, School, BookOpen, CheckCircle, Loader2, Calendar, GraduationCap, Users, ChevronDown, AlertTriangle, ArrowRight, X, CheckSquare, Image as ImageIcon, Upload } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { uploadFileToSupabase } from '../lib/supabase';
 import { runAutoPromotion, fetchStudentsForClass, promoteOneSS1Student } from '../utils/promotion';
 import { SS1_SUBJECTS } from '../utils/subjectConfig';
 import { DEFAULT_COMMENT_TEMPLATES } from '../utils/commentGenerator';
@@ -40,6 +41,8 @@ const BrandingSettings = () => {
   const [primary, setPrimary] = useState(primaryColor);
   const [secondary, setSecondary] = useState(secondaryColor);
   const [logoPreview, setLogoPreview] = useState(schoolLogo);
+  const [heroImages, setHeroImages] = useState([]);
+  const [heroImagesUploading, setHeroImagesUploading] = useState(false);
   const [navBg, setNavBg] = useState(navbarBg);
   const [footBg, setFootBg] = useState(footerBg);
   const [navText, setNavText] = useState(navbarTextColor);
@@ -134,7 +137,21 @@ const BrandingSettings = () => {
     setSessionInput(currentSession || '2025/2026');
   }, [currentSession]);
 
-  const handleSave = () => {
+  React.useEffect(() => {
+    const fetchPublicContent = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'public_content'));
+        if (snap.exists() && snap.data().landingPage?.heroImages) {
+          setHeroImages(snap.data().landingPage.heroImages);
+        }
+      } catch (e) {
+        console.error('Failed to load hero images', e);
+      }
+    };
+    fetchPublicContent();
+  }, []);
+
+  const handleSave = async () => {
     setSchoolName(name);
     setPrimaryColor(primary);
     setSecondaryColor(secondary);
@@ -158,6 +175,17 @@ const BrandingSettings = () => {
     setAutoCommentsEnabled(commentsEnabled);
     setCommentTemplates(tpls);
     setAverageDivisors(divisorInputs);
+
+    try {
+      await setDoc(doc(db, 'settings', 'public_content'), {
+        landingPage: {
+          heroImages: heroImages
+        }
+      }, { merge: true });
+    } catch (e) {
+      console.error('Failed to save public content', e);
+    }
+
     alert('Branding and Academic Settings updated successfully!');
   };
 
@@ -277,6 +305,29 @@ const BrandingSettings = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleHeroUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("File is too large. Please upload an image under 2MB.");
+        return;
+      }
+      setHeroImagesUploading(true);
+      try {
+        const url = await uploadFileToSupabase(file, 'images', 'hero');
+        setHeroImages(prev => [...prev, url]);
+      } catch (err) {
+        alert("Failed to upload image. Please try again.");
+      } finally {
+        setHeroImagesUploading(false);
+      }
+    }
+  };
+
+  const removeHeroImage = (index) => {
+    setHeroImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleReset = () => {
@@ -583,6 +634,46 @@ const BrandingSettings = () => {
             </span>
             {Number(cat1Val) + Number(cat2Val) + Number(examVal) !== 100 && (
               <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: '700' }}>Warning: Sum should equal 100</span>
+            )}
+          </div>
+        </div>
+
+        {/* Hero Section Images Card */}
+        <div className="card-white branding-card">
+          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+            <ImageIcon color="var(--primary)" />
+            <div>
+              <h3 style={{ margin: 0 }}>Home Page Hero Images</h3>
+              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Set the slideshow pictures for the public landing page.</p>
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+            {heroImages.map((imgUrl, idx) => (
+              <div key={idx} style={{ position: 'relative', width: '150px', height: '100px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                <img src={imgUrl} alt="Hero" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <button 
+                  onClick={() => removeHeroImage(idx)}
+                  style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+            {heroImages.length < 5 && (
+              <div style={{ width: '150px', height: '100px', borderRadius: '10px', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: 'pointer', background: '#f8fafc' }}>
+                {heroImagesUploading ? (
+                  <Loader2 size={24} className="animate-spin text-slate-400" />
+                ) : (
+                  <>
+                    <input type="file" accept="image/*" onChange={handleHeroUpload} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 10 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#64748b' }}>
+                      <Upload size={20} style={{ marginBottom: '4px' }} />
+                      <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Add Image</span>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>

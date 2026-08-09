@@ -1153,14 +1153,11 @@ body.dark-mode .chart-grid-line {
 }
 
 .chart-line {
-  stroke-dasharray: 1000;
-  stroke-dashoffset: 1000;
-  animation: drawLine 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  /* removed animation to stop blinking every 5 seconds on re-render */
 }
 
 .chart-area {
-  opacity: 0;
-  animation: fadeInArea 1s ease-out 1.2s forwards;
+  opacity: 1;
 }
 
 .chart-node {
