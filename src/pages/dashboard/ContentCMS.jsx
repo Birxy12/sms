@@ -606,30 +606,45 @@ const ContentCMS = () => {
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {(landingData.heroImages || []).map((img, idx) => (
-                    <div key={idx} className="relative">
+                    <div key={idx} className="relative flex flex-col gap-2 p-2 border border-slate-100 rounded-xl bg-slate-50/50">
                       {renderFileUploader({
                         label: `Slide ${idx + 1}`,
-                        currentUrl: img,
+                        currentUrl: typeof img === 'string' ? img : img.url,
                         folder: "landing",
                         onUpload: (url) => {
                           const newImgs = [...landingData.heroImages];
-                          newImgs[idx] = url;
+                          newImgs[idx] = { url, caption: typeof img === 'string' ? '' : (img.caption || '') };
                           setLandingData({...landingData, heroImages: newImgs});
                         }
                       })}
+                      <input
+                        type="text"
+                        placeholder="Image Caption..."
+                        value={typeof img === 'string' ? '' : (img.caption || '')}
+                        onChange={(e) => {
+                          const newImgs = [...landingData.heroImages];
+                          if (typeof newImgs[idx] === 'string') {
+                            newImgs[idx] = { url: newImgs[idx], caption: e.target.value };
+                          } else {
+                            newImgs[idx].caption = e.target.value;
+                          }
+                          setLandingData({...landingData, heroImages: newImgs});
+                        }}
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500"
+                      />
                       <button 
                         onClick={() => {
                           const newImgs = landingData.heroImages.filter((_, i) => i !== idx);
                           setLandingData({...landingData, heroImages: newImgs});
                         }}
-                        className="absolute top-0 right-0 p-2 text-rose-500 hover:bg-rose-50 rounded-lg"
+                        className="absolute top-2 right-2 p-2 text-rose-500 hover:bg-rose-50 rounded-lg"
                       >
                         <Trash2 size={14} />
                       </button>
                     </div>
                   ))}
                   <button 
-                    onClick={() => setLandingData({...landingData, heroImages: [...(landingData.heroImages || []), '']})}
+                    onClick={() => setLandingData({...landingData, heroImages: [...(landingData.heroImages || []), { url: '', caption: '' }]})}
                     className="flex flex-col items-center justify-center gap-2 h-[120px] border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold hover:border-indigo-400 hover:text-indigo-600 transition-all"
                   >
                     <Plus size={24} /> 

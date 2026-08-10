@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { Save, RefreshCcw, Palette, School, BookOpen, CheckCircle, Loader2, Calendar, GraduationCap, Users, ChevronDown, AlertTriangle, ArrowRight, X, CheckSquare, Image as ImageIcon, Upload } from 'lucide-react';
 import { db } from '../lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import { uploadFileToSupabase } from '../lib/supabase';
 import { runAutoPromotion, fetchStudentsForClass, promoteOneSS1Student } from '../utils/promotion';
 import { SS1_SUBJECTS } from '../utils/subjectConfig';
@@ -44,6 +44,8 @@ const BrandingSettings = () => {
   const [heroImages, setHeroImages] = useState([]);
   const [slideDuration, setSlideDuration] = useState(4);
   const [heroImagesUploading, setHeroImagesUploading] = useState(false);
+  const [campusLifeImages, setCampusLifeImages] = useState([]);
+  const [campusLifeUploading, setCampusLifeUploading] = useState(false);
   const [homeAdImage, setHomeAdImage] = useState(null);
   const [homeAdLink, setHomeAdLink] = useState('');
   const [homeAdEnabled, setHomeAdEnabled] = useState(false);
@@ -97,6 +99,9 @@ const BrandingSettings = () => {
   // Move Students Modal
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [promotionStep, setPromotionStep] = useState('idle'); // idle | loading | auto_done | ss1_placement | done
+  const [promotionMode, setPromotionMode] = useState('auto'); // 'auto' | 'manual'
+  const [manualFromClass, setManualFromClass] = useState('JSS1');
+  const [manualToClass, setManualToClass] = useState('JSS2');
   const [promotionResult, setPromotionResult] = useState(null);
   const [ss1Students, setSs1Students] = useState([]);
   const [ss1Assignments, setSs1Assignments] = useState({}); // { [studentId]: 'SS2 ART' | 'SS2 SCIENCE' }
@@ -148,7 +153,12 @@ const BrandingSettings = () => {
         const snap = await getDoc(doc(db, 'settings', 'public_content'));
         if (snap.exists() && snap.data().landingPage) {
           const lp = snap.data().landingPage;
-          if (lp.heroImages) setHeroImages(lp.heroImages);
+          if (lp.heroImages) {
+            setHeroImages(lp.heroImages.map(img => typeof img === 'string' ? { url: img, caption: '' } : img));
+          }
+          if (lp.campusLifeImages) {
+            setCampusLifeImages(lp.campusLifeImages.map(img => typeof img === 'string' ? { url: img, caption: '' } : img));
+          }
           if (lp.homeSlideDuration !== undefined) setSlideDuration(lp.homeSlideDuration);
           if (lp.homeAdImage) setHomeAdImage(lp.homeAdImage);
           if (lp.homeAdLink) setHomeAdLink(lp.homeAdLink);
@@ -190,6 +200,7 @@ const BrandingSettings = () => {
       await setDoc(doc(db, 'settings', 'public_content'), {
         landingPage: {
           heroImages: heroImages,
+          campusLifeImages: campusLifeImages,
           homeSlideDuration: Number(slideDuration),
           homeAdImage: homeAdImage,
           homeAdLink: homeAdLink,
@@ -265,28 +276,49 @@ const BrandingSettings = () => {
     } catch (err) {
       console.error('Error saving session:', err);
     } finally {
-      setSessionSaving(false);
-    }
-  };
-
   const handleRunPromotion = async () => {
-    setPromotionStep('loading');
-    try {
-      const result = await runAutoPromotion(sessionInput || currentSession, Number(promotionPassMark) || 45);
-      setPromotionResult(result);
+    if (promotionMode === 'manual') {
+      handleManualMove();
+      return;
+    }
 
-      // Load SS1 students for manual placement
+    setPromotionStep('loading');
+    setPromotionResult(null);
+    try {
+      const res = await runAutoPromotion(sessionInput || currentSession, Number(promotionPassMark) || 45);
+      setPromotionResult(res);
       const ss1 = await fetchStudentsForClass('SS1');
       setSs1Students(ss1);
-      const defaultAssignments = {};
-      ss1.forEach(s => { defaultAssignments[s.id] = 'SS2 SCIENCE'; });
-      setSs1Assignments(defaultAssignments);
-
+      const initAssign = {};
+      ss1.forEach(s => initAssign[s.id] = 'SS2 SCIENCE');
+      setSs1Assignments(initAssign);
       setPromotionStep(ss1.length > 0 ? 'ss1_placement' : 'done');
     } catch (err) {
       console.error('Promotion error:', err);
+      alert('An error occurred running promotion. Check console.');
       setPromotionStep('idle');
-      alert('An error occurred during promotion. Check the console.');
+    }
+  };
+
+  const handleManualMove = async () => {
+    setPromotionStep('loading');
+    try {
+      const studentsRef = collection(db, 'students');
+      const q = query(studentsRef, where('class', '==', manualFromClass));
+      const snap = await getDocs(q);
+      
+      const batch = writeBatch(db);
+      snap.docs.forEach(docSnap => {
+        batch.update(docSnap.ref, { class: manualToClass });
+      });
+      await batch.commit();
+      
+      setPromotionResult({ promoted: snap.docs, failed: [], skipped: [] });
+      setPromotionStep('done');
+    } catch (err) {
+      console.error('Manual move error:', err);
+      alert('An error occurred during manual move.');
+      setPromotionStep('idle');
     }
   };
 
@@ -331,7 +363,7 @@ const BrandingSettings = () => {
       setHeroImagesUploading(true);
       try {
         const url = await uploadFileToSupabase(file, 'images', 'hero');
-        setHeroImages(prev => [...prev, url]);
+        setHeroImages(prev => [...prev, { url, caption: '' }]);
       } catch (err) {
         alert("Failed to upload image. Please try again.");
       } finally {
@@ -342,6 +374,49 @@ const BrandingSettings = () => {
 
   const removeHeroImage = (index) => {
     setHeroImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleHeroCaptionChange = (index, newCaption) => {
+    const newImgs = [...heroImages];
+    if (typeof newImgs[index] === 'string') {
+      newImgs[index] = { url: newImgs[index], caption: newCaption };
+    } else {
+      newImgs[index].caption = newCaption;
+    }
+    setHeroImages(newImgs);
+  };
+
+  const handleCampusLifeUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("File is too large. Please upload an image under 2MB.");
+        return;
+      }
+      setCampusLifeUploading(true);
+      try {
+        const url = await uploadFileToSupabase(file, 'images', 'campus');
+        setCampusLifeImages(prev => [...prev, { url, caption: '' }]);
+      } catch (err) {
+        alert("Failed to upload image.");
+      } finally {
+        setCampusLifeUploading(false);
+      }
+    }
+  };
+
+  const removeCampusLifeImage = (index) => {
+    setCampusLifeImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCampusLifeCaptionChange = (index, newCaption) => {
+    const newImgs = [...campusLifeImages];
+    if (typeof newImgs[index] === 'string') {
+      newImgs[index] = { url: newImgs[index], caption: newCaption };
+    } else {
+      newImgs[index].caption = newCaption;
+    }
+    setCampusLifeImages(newImgs);
   };
 
   const handleAdUpload = async (e) => {
@@ -682,15 +757,24 @@ const BrandingSettings = () => {
           </div>
           
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
-            {heroImages.map((imgUrl, idx) => (
-              <div key={idx} style={{ position: 'relative', width: '150px', height: '100px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-                <img src={imgUrl} alt="Hero" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <button 
-                  onClick={() => removeHeroImage(idx)}
-                  style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <X size={14} />
-                </button>
+            {heroImages.map((img, idx) => (
+              <div key={idx} style={{ position: 'relative', width: '150px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ position: 'relative', width: '100%', height: '100px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                  <img src={typeof img === 'string' ? img : img.url} alt="Hero" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button 
+                    onClick={() => removeHeroImage(idx)}
+                    style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                <input 
+                  type="text" 
+                  placeholder="Caption..." 
+                  value={typeof img === 'string' ? '' : img.caption || ''}
+                  onChange={(e) => handleHeroCaptionChange(idx, e.target.value)}
+                  style={{ width: '100%', fontSize: '11px', padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                />
               </div>
             ))}
             {heroImages.length < 5 && (
@@ -720,6 +804,55 @@ const BrandingSettings = () => {
               onChange={(e) => setSlideDuration(e.target.value)}
               style={{ width: '100%', maxWidth: '200px', padding: '10px', borderRadius: '10px', border: '2px solid #e2e8f0', fontSize: '14px' }}
             />
+          </div>
+        </div>
+
+        {/* Campus Life Images Card */}
+        <div className="card-white branding-card">
+          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+            <ImageIcon color="var(--primary)" />
+            <div>
+              <h3 style={{ margin: 0 }}>Campus Life Images</h3>
+              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Experience Our World - max 3 images.</p>
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+            {campusLifeImages.map((img, idx) => (
+              <div key={idx} style={{ position: 'relative', width: '150px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ position: 'relative', width: '100%', height: '100px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                  <img src={typeof img === 'string' ? img : img.url} alt="Campus" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button 
+                    onClick={() => removeCampusLifeImage(idx)}
+                    style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                <input 
+                  type="text" 
+                  placeholder="Label..." 
+                  value={typeof img === 'string' ? '' : img.caption || ''}
+                  onChange={(e) => handleCampusLifeCaptionChange(idx, e.target.value)}
+                  style={{ width: '100%', fontSize: '11px', padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                />
+              </div>
+            ))}
+            {campusLifeImages.length < 3 && (
+              <div style={{ width: '150px', height: '100px', borderRadius: '10px', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: 'pointer', background: '#f8fafc' }}>
+                {campusLifeUploading ? (
+                  <Loader2 size={24} className="animate-spin text-slate-400" />
+                ) : (
+                  <>
+                    <input type="file" accept="image/*" onChange={handleCampusLifeUpload} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 10 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#64748b' }}>
+                      <Upload size={20} style={{ marginBottom: '4px' }} />
+                      <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Add Image</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1104,26 +1237,75 @@ const BrandingSettings = () => {
               {/* STEP: idle */}
               {promotionStep === 'idle' && (
                 <div>
-                  <div style={{ background: '#f8fafc', borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
-                    <p style={{ fontWeight: '700', color: '#1e293b', marginBottom: '12px', fontSize: '15px' }}>What will happen:</p>
-                    {[
-                      { from: 'JSS1', to: 'JSS2', type: 'auto' },
-                      { from: 'JSS2', to: 'JSS3', type: 'auto' },
-                      { from: 'JSS3', to: 'SS1', type: 'auto' },
-                      { from: 'SS2 ART', to: 'SS3 ART', type: 'auto' },
-                      { from: 'SS2 SCIENCE', to: 'SS3 SCIENCE', type: 'auto' },
-                      { from: 'SS1', to: 'SS2 ART / SS2 SCIENCE', type: 'manual' },
-                    ].map((row, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                        <span style={{ background: row.type === 'auto' ? '#dbeafe' : '#fef3c7', color: row.type === 'auto' ? '#1d4ed8' : '#92400e', fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '6px', minWidth: '48px', textAlign: 'center', textTransform: 'uppercase' }}>{row.type}</span>
-                        <span style={{ fontWeight: '700', color: '#475569', fontSize: '14px' }}>{row.from}</span>
-                        <ArrowRight size={14} color="#94a3b8" />
-                        <span style={{ fontWeight: '700', color: '#1e293b', fontSize: '14px' }}>{row.to}</span>
-                        {row.type === 'auto' && <span style={{ fontSize: '11px', color: '#94a3b8' }}>(avg ≥ 45%)</span>}
-                        {row.type === 'manual' && <span style={{ fontSize: '11px', color: '#d97706' }}>(you choose stream)</span>}
-                      </div>
-                    ))}
+                  <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+                    <button 
+                      onClick={() => setPromotionMode('auto')}
+                      style={{ flex: 1, padding: '12px', borderRadius: '12px', border: promotionMode === 'auto' ? '2px solid #3b82f6' : '2px solid #e2e8f0', background: promotionMode === 'auto' ? '#eff6ff' : '#fff', fontWeight: '700', color: promotionMode === 'auto' ? '#1d4ed8' : '#64748b' }}
+                    >
+                      End of Year Auto-Promotion
+                    </button>
+                    <button 
+                      onClick={() => setPromotionMode('manual')}
+                      style={{ flex: 1, padding: '12px', borderRadius: '12px', border: promotionMode === 'manual' ? '2px solid #3b82f6' : '2px solid #e2e8f0', background: promotionMode === 'manual' ? '#eff6ff' : '#fff', fontWeight: '700', color: promotionMode === 'manual' ? '#1d4ed8' : '#64748b' }}
+                    >
+                      Manual Class Move
+                    </button>
                   </div>
+
+                  {promotionMode === 'auto' && (
+                    <div style={{ background: '#f8fafc', borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
+                      <p style={{ fontWeight: '700', color: '#1e293b', marginBottom: '12px', fontSize: '15px' }}>What will happen:</p>
+                      {[
+                        { from: 'JSS1', to: 'JSS2', type: 'auto' },
+                        { from: 'JSS2', to: 'JSS3', type: 'auto' },
+                        { from: 'JSS3', to: 'SS1', type: 'auto' },
+                        { from: 'SS2 ART', to: 'SS3 ART', type: 'auto' },
+                        { from: 'SS2 SCIENCE', to: 'SS3 SCIENCE', type: 'auto' },
+                        { from: 'SS1', to: 'SS2 ART / SS2 SCIENCE', type: 'manual' },
+                      ].map((row, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                          <span style={{ background: row.type === 'auto' ? '#dbeafe' : '#fef3c7', color: row.type === 'auto' ? '#1d4ed8' : '#92400e', fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '6px', minWidth: '48px', textAlign: 'center', textTransform: 'uppercase' }}>{row.type}</span>
+                          <span style={{ fontWeight: '700', color: '#475569', fontSize: '14px' }}>{row.from}</span>
+                          <ArrowRight size={14} color="#94a3b8" />
+                          <span style={{ fontWeight: '700', color: '#1e293b', fontSize: '14px' }}>{row.to}</span>
+                          {row.type === 'auto' && <span style={{ fontSize: '11px', color: '#94a3b8' }}>(avg ≥ 45%)</span>}
+                          {row.type === 'manual' && <span style={{ fontSize: '11px', color: '#d97706' }}>(you choose stream)</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {promotionMode === 'manual' && (
+                    <div style={{ background: '#f8fafc', borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
+                      <p style={{ fontWeight: '700', color: '#1e293b', marginBottom: '12px', fontSize: '15px' }}>Manual Move Configuration:</p>
+                      <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '6px' }}>Move From Class</label>
+                          <select 
+                            value={manualFromClass} 
+                            onChange={(e) => setManualFromClass(e.target.value)}
+                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                          >
+                            {['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 SCIENCE', 'SS2 ART', 'SS3 SCIENCE', 'SS3 ART'].map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                        <ArrowRight size={24} color="#94a3b8" style={{ marginBottom: '10px' }} />
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '6px' }}>Move To Class</label>
+                          <select 
+                            value={manualToClass} 
+                            onChange={(e) => setManualToClass(e.target.value)}
+                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                          >
+                            {['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 SCIENCE', 'SS2 ART', 'SS3 SCIENCE', 'SS3 ART', 'GRADUATED'].map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '12px', fontWeight: 'bold' }}>
+                        Warning: This will forcibly update ALL students in the 'From' class to the 'To' class, ignoring grades.
+                      </p>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                     <button onClick={() => setShowMoveModal(false)} style={{ padding: '11px 22px', borderRadius: '10px', border: '2px solid #e2e8f0', background: '#fff', fontWeight: '700', cursor: 'pointer', color: '#475569' }}>
                       Cancel

@@ -292,13 +292,36 @@ const Home = () => {
                     transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
                     className="absolute inset-0"
                   >
-                    <img
-                      src={(landingContent.heroImages && landingContent.heroImages.length > 0)
+                    {(() => {
+                      const currentHero = (landingContent.heroImages && landingContent.heroImages.length > 0)
                         ? landingContent.heroImages.slice(0, 5)[currentSlide % Math.min(landingContent.heroImages.length, 5)]
-                        : [h1, h3][currentSlide % 2]}
-                      alt={`Campus life ${currentSlide + 1}`}
-                      className="w-full h-full object-fill"
-                    />
+                        : null;
+                      
+                      const currentHeroUrl = currentHero 
+                        ? (typeof currentHero === 'string' ? currentHero : currentHero.url)
+                        : [h1, h3][currentSlide % 2];
+                        
+                      const currentHeroCaption = currentHero
+                        ? (typeof currentHero === 'string' ? '' : currentHero.caption)
+                        : '';
+
+                      return (
+                        <>
+                          <img
+                            src={currentHeroUrl}
+                            alt={`Hero slide ${currentSlide + 1}`}
+                            className="w-full h-full object-fill"
+                          />
+                          {currentHeroCaption && (
+                            <div className="absolute bottom-16 left-0 right-0 text-center z-20">
+                              <span className="bg-black/60 text-white px-6 py-2 rounded-full text-lg font-bold backdrop-blur-sm">
+                                {currentHeroCaption}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </motion.div>
                 </AnimatePresence>
                 <div className="home-hero-slider-overlay"></div>
@@ -424,11 +447,14 @@ const Home = () => {
           </div>
         </div>
         <div className="home-showcase-grid">
-          {[
-            { src: h1, label: 'Modern Classrooms' },
-            { src: h2, label: 'Student Life' },
-            { src: h3, label: 'Sports & Arts' }
-          ].map((img, idx) => (
+          {((landingContent.campusLifeImages && landingContent.campusLifeImages.length > 0)
+            ? landingContent.campusLifeImages.slice(0, 3).map(img => typeof img === 'string' ? { src: img, label: 'Campus Life' } : { src: img.url, label: img.caption || 'Campus Life' })
+            : [
+                { src: h1, label: 'Modern Classrooms' },
+                { src: h2, label: 'Student Life' },
+                { src: h3, label: 'Sports & Arts' }
+              ]
+          ).map((img, idx) => (
             <motion.div
               key={idx}
               initial={{ opacity: 0, y: 40 }}
