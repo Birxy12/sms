@@ -276,6 +276,10 @@ const BrandingSettings = () => {
     } catch (err) {
       console.error('Error saving session:', err);
     } finally {
+      setSessionSaving(false);
+    }
+  };
+
   const handleRunPromotion = async () => {
     if (promotionMode === 'manual') {
       handleManualMove();
