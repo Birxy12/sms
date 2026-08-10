@@ -308,12 +308,18 @@ const BrandingSettings = () => {
     setPromotionStep('loading');
     try {
       const studentsRef = collection(db, 'students');
-      const q = query(studentsRef, where('class', '==', manualFromClass));
-      const snap = await getDocs(q);
+      
+      let snap = await getDocs(query(studentsRef, where('c', '==', manualFromClass)));
+      if (snap.empty) {
+        snap = await getDocs(query(studentsRef, where('className', '==', manualFromClass)));
+      }
       
       const batch = writeBatch(db);
       snap.docs.forEach(docSnap => {
-        batch.update(docSnap.ref, { class: manualToClass });
+        batch.update(docSnap.ref, { 
+          c: manualToClass, 
+          className: manualToClass 
+        });
       });
       await batch.commit();
       
