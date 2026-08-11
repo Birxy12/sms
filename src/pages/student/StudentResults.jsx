@@ -1219,7 +1219,7 @@ const StudentResults = ({ isPublic }) => {
 
   return (
     <div className={isPublic ? `min-h-screen flex flex-col ${darkMode ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-800'} transition-colors duration-300` : "dashboard-wrapper"}>
-      {isPublic && <Navbar />}
+      {isPublic && <Navbar hideHamburger={true} />}
 
       <div className={isPublic ? "flex-1 p-4 md:p-10 max-w-full mx-auto w-full" : ""}>
         <>

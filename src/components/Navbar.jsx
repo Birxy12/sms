@@ -10,7 +10,7 @@ import brandlogo from '../assets/bdslogo.jpg';
 import { motion } from 'framer-motion';
 import './navbar.css';
 
-const Navbar = () => {
+const Navbar = ({ hideHamburger = false }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   
@@ -262,27 +262,31 @@ const Navbar = () => {
                   {userPhoto ? <img src={userPhoto} alt="" /> : userInitial}
                 </button>
               )}
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className={`mobile-toggle ${isMobileMenuOpen ? 'mobile-toggle--active' : ''}`}
-              >
-                {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-              </button>
+              {!hideHamburger && (
+                <button
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  className={`mobile-toggle ${isMobileMenuOpen ? 'mobile-toggle--active' : ''}`}
+                >
+                  {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                </button>
+              )}
             </div>
           </div>
         </div>
       </nav>
 
       {/* Floating Hamburger FAB – mobile only */}
-      <motion.button
-        drag
-        dragMomentum={false}
-        className={`floating-hamburger${isMobileMenuOpen ? ' floating-hamburger--open' : ''}`}
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        aria-label="Toggle navigation menu"
-      >
-        {isMobileMenuOpen ? <X size={22} strokeWidth={2.5} /> : <Menu size={22} strokeWidth={2.5} />}
-      </motion.button>
+      {!hideHamburger && (
+        <motion.button
+          drag
+          dragMomentum={false}
+          className={`floating-hamburger${isMobileMenuOpen ? ' floating-hamburger--open' : ''}`}
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label="Toggle navigation menu"
+        >
+          {isMobileMenuOpen ? <X size={22} strokeWidth={2.5} /> : <Menu size={22} strokeWidth={2.5} />}
+        </motion.button>
+      )}
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
