@@ -431,6 +431,12 @@ const StudentResults = ({ isPublic }) => {
           display: flex;
           flex-direction: column;
         }
+
+        @media screen and (max-width: 850px) { .report-card-print { zoom: 0.8; } }
+        @media screen and (max-width: 650px) { .report-card-print { zoom: 0.65; } }
+        @media screen and (max-width: 500px) { .report-card-print { zoom: 0.5; } }
+        @media screen and (max-width: 420px) { .report-card-print { zoom: 0.45; } }
+        @media screen and (max-width: 380px) { .report-card-print { zoom: 0.4; } }
         
         @page { size: A4 portrait; margin: 0; }
         
@@ -1192,8 +1198,8 @@ const StudentResults = ({ isPublic }) => {
             <p className="text-slate-500 dark:text-slate-400 text-sm">Your subject scores have not been entered for this term yet. Please check back later or contact your class teacher.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto bg-slate-200 dark:bg-slate-900 p-2 sm:p-4 rounded-xl shadow-inner" style={{ WebkitOverflowScrolling: 'touch' }}>
-            <div style={{ width: 'max-content', margin: '0 auto' }}>
+          <div className="overflow-x-auto bg-slate-200 dark:bg-slate-900 p-2 sm:p-4 rounded-xl shadow-inner" style={{ WebkitOverflowScrolling: 'touch', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
               {renderPrintView()}
             </div>
           </div>
