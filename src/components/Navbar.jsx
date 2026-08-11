@@ -262,14 +262,12 @@ const Navbar = ({ hideHamburger = false }) => {
                   {userPhoto ? <img src={userPhoto} alt="" /> : userInitial}
                 </button>
               )}
-              {!hideHamburger && (
-                <button
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className={`mobile-toggle ${isMobileMenuOpen ? 'mobile-toggle--active' : ''}`}
-                >
-                  {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-                </button>
-              )}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className={`mobile-toggle ${isMobileMenuOpen ? 'mobile-toggle--active' : ''}`}
+              >
+                {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
             </div>
           </div>
         </div>
