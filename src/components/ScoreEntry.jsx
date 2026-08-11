@@ -125,9 +125,22 @@ const ScoreEntry = () => {
       const newScores = {};
       const newDbMarks = {};
       
+      const existingRegs = new Set(studentList.map(s => s.regNo));
+
       marksDocs.forEach(doc => {
         const data = expandMarks(doc.data());
         newDbMarks[data.regNo] = data.marks || {};
+        
+        // Include past students who have marks for this term but are moved to another class
+        if (!existingRegs.has(data.regNo) && data.regNo) {
+          studentList.push({
+            id: doc.id + '_past',
+            regNo: data.regNo,
+            name: data.studentName || 'Unknown Student',
+            className: selectedClass
+          });
+          existingRegs.add(data.regNo);
+        }
         
         // Case-insensitive subject key matching
         const upperSubj = selectedSubject.toUpperCase().trim();
@@ -142,6 +155,10 @@ const ScoreEntry = () => {
           };
         }
       });
+
+      // Sort again to ensure past students are sorted properly with current students
+      studentList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      setStudents(studentList);
       
       // Merge with localized draft cache if it exists
       const cacheKey = `unsaved_${selectedClass}_${selectedSubject}_${selectedSession}_${selectedTerm}`;

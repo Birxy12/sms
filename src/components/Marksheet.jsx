@@ -280,6 +280,33 @@ const Marksheet = ({ className: propClassName }) => {
             };
           });
 
+          // Include past students who have marks for this term but are moved to another class
+          const currentRegNos = new Set(studentList.map(s => s.rollNo));
+          
+          (marksData || []).forEach(docData => {
+            if (!currentRegNos.has(docData.regNo) && docData.regNo) {
+              const marks = docData.marks || {};
+              let total = 0;
+              classSubjects.forEach(subjName => {
+                 const upperSubj = subjName.toUpperCase().trim();
+                 const mKey = Object.keys(marks).find(k => k.toUpperCase().trim() === upperSubj);
+                 if (mKey && marks[mKey]) {
+                   total += parseFloat(marks[mKey].total || 0);
+                 }
+              });
+
+              studentList.push({
+                rollNo: docData.regNo,
+                name: docData.studentName || 'Unknown Student',
+                sex: '-',
+                marks: marks,
+                totalMarks: total,
+                rank: ''
+              });
+              currentRegNos.add(docData.regNo);
+            }
+          });
+
           // Calculate rank based on totalMarks
           studentList.sort((a, b) => b.totalMarks - a.totalMarks);
           
