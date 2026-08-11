@@ -46,6 +46,79 @@
   padding: 0;
 }
 
+/* ===== Mobile App Touch & Button Fixes ===== */
+
+/* Prevent pinch-to-zoom globally */
+html {
+  touch-action: manipulation;
+  -ms-touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
+/* Remove 300ms tap delay and fix touch highlighting */
+body {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  overscroll-behavior-y: none;
+}
+
+/* Fix ALL buttons and interactive elements for mobile */
+button,
+a,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+[role="button"],
+.btn,
+select {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Ensure minimum 44px tap targets on mobile */
+@media (max-width: 768px) {
+  button,
+  a,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  [role="button"],
+  .btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Fix input fields on mobile */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevents iOS auto-zoom on focus */
+  }
+
+  /* Prevent text selection on UI elements */
+  label,
+  nav,
+  header,
+  footer {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* Prevent double-tap zoom on interactive elements */
+button:active,
+a:active,
+[role="button"]:active {
+  opacity: 0.85;
+  transform: scale(0.98);
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+
 html {
   scroll-behavior: smooth;
 }

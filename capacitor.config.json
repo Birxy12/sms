@@ -2,10 +2,21 @@
   "appId": "com.bdsportal.sms",
   "appName": "BDSPORTAL",
   "webDir": "dist",
-  "zoomEnabled": true,
+  "zoomEnabled": false,
+  "android": {
+    "allowMixedContent": true,
+    "overScrollMode": "never",
+    "backgroundColor": "#ffffff"
+  },
   "server": {
     "androidScheme": "https",
     "url": "https://bds-portal.vercel.app",
     "cleartext": false
+  },
+  "plugins": {
+    "Keyboard": {
+      "resize": "body",
+      "resizeOnFullScreen": true
+    }
   }
 }
