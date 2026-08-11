@@ -25,7 +25,7 @@ const StudentResults = ({ isPublic }) => {
   const [studentMarks, setStudentMarks] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
-  const [classStats, setClassStats] = useState({ position: 'N/A', population: 0 });
+  const [classStats, setClassStats] = useState({ position: 'N/A', population: 0, historicalClass: '' });
   const [formTeacher, setFormTeacher] = useState('CLASS TEACHER');
   const [resultsError, setResultsError] = useState('');
 
@@ -162,10 +162,12 @@ const StudentResults = ({ isPublic }) => {
           }
         });
 
+        const historicalClass = foundMarksDoc?.className || foundMarksDoc?.class_name || studentClass;
+
         const [snapC, snapClassName, snapClass_Name] = await Promise.all([
-          getDocs(query(collection(db, 'marks'), where(MARKS_KEYS.className, '==', studentClass))),
-          getDocs(query(collection(db, 'marks'), where('className', '==', studentClass))),
-          getDocs(query(collection(db, 'marks'), where('class_name', '==', studentClass)))
+          getDocs(query(collection(db, 'marks'), where(MARKS_KEYS.className, '==', historicalClass))),
+          getDocs(query(collection(db, 'marks'), where('className', '==', historicalClass))),
+          getDocs(query(collection(db, 'marks'), where('class_name', '==', historicalClass)))
         ]);
 
         const allDocMap = new Map();
@@ -220,23 +222,26 @@ const StudentResults = ({ isPublic }) => {
           }
         }
 
-        let classPopQuery = query(collection(db, 'students'), where(STUDENT_KEYS.className, '==', studentClass));
+        let classPopQuery = query(collection(db, 'students'), where(STUDENT_KEYS.className, '==', historicalClass));
         let classPopSnap = await getDocs(classPopQuery);
         if (classPopSnap.empty) {
-          classPopQuery = query(collection(db, 'students'), where('className', '==', studentClass));
+          classPopQuery = query(collection(db, 'students'), where('className', '==', historicalClass));
           classPopSnap = await getDocs(classPopQuery);
           if (classPopSnap.empty) {
-            classPopQuery = query(collection(db, 'students'), where('CLASS', '==', studentClass));
+            classPopQuery = query(collection(db, 'students'), where('CLASS', '==', historicalClass));
             classPopSnap = await getDocs(classPopQuery);
           }
         }
 
+        const populationFromMarks = sortedStudents.length;
+
         setClassStats({
           position: posStr,
-          population: classPopSnap.size
+          population: populationFromMarks > 0 ? populationFromMarks : classPopSnap.size,
+          historicalClass: historicalClass
         });
 
-        const subjectsQuery = query(collection(db, 'subjects'), where('class', '==', studentClass));
+        const subjectsQuery = query(collection(db, 'subjects'), where('class', '==', historicalClass));
         const subjectsSnap = await getDocs(subjectsQuery);
         const classSubjects = subjectsSnap.docs.map(d => d.data().name);
 
@@ -302,7 +307,7 @@ const StudentResults = ({ isPublic }) => {
         });
 
         const displaySubjects = processedMarks.filter(s => s.isOffered);
-        const divisor = Math.max(getAverageDivisor(currentStudent?.className || studentClass, averageDivisors), 1);
+        const divisor = Math.max(getAverageDivisor(historicalClass, averageDivisors), 1);
 
         setStudentMarks({
           subjects: displaySubjects.sort((a, b) => a.subject.localeCompare(b.subject)),
@@ -398,6 +403,13 @@ const StudentResults = ({ isPublic }) => {
   const autoC = generateAutoComments(studentMarks?.average, commentTemplates);
   const teacherCommentText = studentMarks?.raw?.teacherComment || (autoCommentsEnabled ? autoC.teacherComment : 'An impressive performance. Keep up the good work.');
   const principalCommentText = studentMarks?.raw?.principalComment || (autoCommentsEnabled ? autoC.principalComment : 'You came out with flying colours. Congratulations!');
+
+  const formatDOB = (dobStr) => {
+    if (!dobStr) return 'N/A';
+    const d = new Date(dobStr);
+    if (isNaN(d.getTime())) return dobStr;
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
 
   const renderPrintView = () => (
     <div className="report-card-print" ref={printRef}>
@@ -949,9 +961,9 @@ const StudentResults = ({ isPublic }) => {
           <div className="rc-stat"><span className="rc-stat-label">Sex:</span> <span className="rc-stat-value">{currentStudent?.gender || 'N/A'}</span></div>
           <div className="rc-stat"><span className="rc-stat-label">Average:</span> <span className="rc-stat-value accent">{studentMarks?.average}%</span></div>
           <div className="rc-stat"><span className="rc-stat-label">Position:</span> <span className="rc-stat-value accent">{classStats.position}</span></div>
-          <div className="rc-stat"><span className="rc-stat-label">Class:</span> <span className="rc-stat-value">{currentStudent?.className}</span></div>
+          <div className="rc-stat"><span className="rc-stat-label">Class:</span> <span className="rc-stat-value">{classStats.historicalClass || currentStudent?.className}</span></div>
           <div className="rc-stat"><span className="rc-stat-label">Population:</span> <span className="rc-stat-value">{classStats.population}</span></div>
-          <div className="rc-stat"><span className="rc-stat-label">DOB:</span> <span className="rc-stat-value">{currentStudent?.dob || 'N/A'}</span></div>
+          <div className="rc-stat"><span className="rc-stat-label">DOB:</span> <span className="rc-stat-value">{formatDOB(currentStudent?.dob)}</span></div>
           <div className="rc-stat"><span className="rc-stat-label">House:</span> <span className="rc-stat-value">{currentStudent?.house || 'ALAMANDA'}</span></div>
         </div>
       </div>
