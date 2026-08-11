@@ -8,11 +8,6 @@
     "overScrollMode": "never",
     "backgroundColor": "#ffffff"
   },
-  "server": {
-    "androidScheme": "https",
-    "url": "https://bds-portal.vercel.app",
-    "cleartext": false
-  },
   "plugins": {
     "Keyboard": {
       "resize": "body",
