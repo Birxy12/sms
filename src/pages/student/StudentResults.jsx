@@ -25,6 +25,7 @@ const StudentResults = ({ isPublic }) => {
   const [studentMarks, setStudentMarks] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [classStats, setClassStats] = useState({ position: 'N/A', population: 0, historicalClass: '' });
   const [formTeacher, setFormTeacher] = useState('CLASS TEACHER');
   const [resultsError, setResultsError] = useState('');
@@ -374,6 +375,9 @@ const StudentResults = ({ isPublic }) => {
       window.alert('The report card is not ready yet. Please wait and try again.');
       return;
     }
+    setIsGeneratingPDF(true);
+    // Give React a moment to remove the zoom wrapper before capturing
+    await new Promise(resolve => setTimeout(resolve, 50));
     try {
       const opt = {
         margin: 0,
@@ -386,6 +390,8 @@ const StudentResults = ({ isPublic }) => {
     } catch (err) {
       console.error('PDF Download failed:', err);
       window.alert('PDF download failed. Please try again.');
+    } finally {
+      setIsGeneratingPDF(false);
       setIsPrinting(false);
     }
   };
@@ -430,6 +436,12 @@ const StudentResults = ({ isPublic }) => {
           overflow: hidden;
           display: block;
         }
+
+        @media screen and (max-width: 850px) { .report-card-wrapper { zoom: 0.8; } }
+        @media screen and (max-width: 650px) { .report-card-wrapper { zoom: 0.65; } }
+        @media screen and (max-width: 500px) { .report-card-wrapper { zoom: 0.5; } }
+        @media screen and (max-width: 420px) { .report-card-wrapper { zoom: 0.45; } }
+        @media screen and (max-width: 380px) { .report-card-wrapper { zoom: 0.4; } }
         
         @page { size: A4 portrait; margin: 0; }
         
@@ -1191,8 +1203,8 @@ const StudentResults = ({ isPublic }) => {
             <p className="text-slate-500 dark:text-slate-400 text-sm">Your subject scores have not been entered for this term yet. Please check back later or contact your class teacher.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto bg-slate-200 dark:bg-slate-900 p-2 sm:p-4 rounded-xl shadow-inner" style={{ WebkitOverflowScrolling: 'touch' }}>
-            <div style={{ width: 'max-content', margin: '0 auto' }}>
+          <div className="overflow-x-auto bg-slate-200 dark:bg-slate-900 p-2 sm:p-4 rounded-xl shadow-inner" style={{ WebkitOverflowScrolling: 'touch', display: 'flex', justifyContent: 'center' }}>
+            <div className={!isGeneratingPDF ? "report-card-wrapper" : ""} style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
               {renderPrintView()}
             </div>
           </div>
