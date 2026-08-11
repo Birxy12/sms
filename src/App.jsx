@@ -43,6 +43,8 @@ import AdmissionCBTManagement from './pages/dashboard/AdmissionCBTManagement';
 import { useStudentAuth } from './context/StudentAuthContext';
 import { useAdminAuth } from './context/AdminAuthContext';
 import BonusAI from './components/BonusAI';
+import UpdateModal from './components/UpdateModal';
+import { useAppUpdate } from './hooks/useAppUpdate';
 import './App.css';
 
 // Protected Route Component for Students
@@ -80,6 +82,7 @@ const ProtectedAdminRoute = ({ children, requiredRole }) => {
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { updateAvailable, latestVersion } = useAppUpdate();
 
   useEffect(() => {
     const handleBackButton = async () => {
@@ -274,6 +277,7 @@ function App() {
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <BonusAI />
+      {updateAvailable && <UpdateModal latestVersion={latestVersion} />}
     </>
   );
 }

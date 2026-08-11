@@ -24,6 +24,8 @@
     "@capacitor/cli": "^8.4.1",
     "@capacitor/core": "^8.4.1",
     "@capacitor/ios": "^8.4.1",
+    "@capacitor/push-notifications": "^8.1.2",
+    "@capawesome/capacitor-badge": "^8.0.2",
     "@google/genai": "^1.52.0",
     "@supabase/supabase-js": "^2.43.0",
     "@vitejs/plugin-react": "^4.2.1",
