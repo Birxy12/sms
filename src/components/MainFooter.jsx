@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Globe, Mail, Phone, MessageSquare } from 'lucide-react';
+import { Heart, Globe, Mail, Phone, MessageSquare, Smartphone } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -21,6 +21,9 @@ const MainFooter = () => {
   const displayName = schoolName || 'Birxy SMS';
   const displayLogo = schoolLogo || bdsLogo;
 
+  // APK download link — points to the latest APK committed on the main branch
+  const apkDownloadUrl = 'https://github.com/Birxy12/sms/raw/main/app-debug.apk';
+
   const quickLinks = [
     { to: '/check-result', label: 'Check Result' },
     { to: '/about', label: 'About Us' },
@@ -30,6 +33,7 @@ const MainFooter = () => {
     { to: '/contact', label: 'Support Hub' },
     { to: '/privacy', label: 'Privacy Policy' },
     { to: '/terms', label: 'Terms of Service' },
+    { href: apkDownloadUrl, label: '📱 Download App', external: true },
   ];
 
   const getDashboardPath = () => {
@@ -241,39 +245,75 @@ const MainFooter = () => {
           <nav aria-label="Footer navigation">
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {quickLinks.map((link) => (
-                <li key={link.to} style={{ marginBottom: '10px' }}>
-                  <Link 
-                    to={link.to}
-                    style={{
-                      color: footerTextColor,
-                      opacity: 0.7,
-                      textDecoration: 'none',
-                      fontSize: '14px',
-                      transition: 'all 0.2s ease',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.opacity = '1';
-                      e.currentTarget.style.paddingLeft = '4px';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.opacity = '0.7';
-                      e.currentTarget.style.paddingLeft = '0';
-                    }}
-                  >
-                    <span style={{ 
-                      width: '0', 
-                      height: '0', 
-                      borderTop: '4px solid transparent',
-                      borderBottom: '4px solid transparent',
-                      borderLeft: `4px solid ${footerTextColor}`,
-                      opacity: 0.4,
-                      transition: 'opacity 0.2s'
-                    }} />
-                    {link.label}
-                  </Link>
+                <li key={link.to || link.href} style={{ marginBottom: '10px' }}>
+                  {link.external ? (
+                    <a
+                      href={link.href}
+                      download
+                      style={{
+                        color: footerTextColor,
+                        opacity: 0.7,
+                        textDecoration: 'none',
+                        fontSize: '14px',
+                        transition: 'all 0.2s ease',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                        e.currentTarget.style.paddingLeft = '4px';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = '0.7';
+                        e.currentTarget.style.paddingLeft = '0';
+                      }}
+                    >
+                      <span style={{ 
+                        width: '0', 
+                        height: '0', 
+                        borderTop: '4px solid transparent',
+                        borderBottom: '4px solid transparent',
+                        borderLeft: `4px solid ${footerTextColor}`,
+                        opacity: 0.4,
+                        transition: 'opacity 0.2s'
+                      }} />
+                      {link.label}
+                    </a>
+                  ) : (
+                    <Link 
+                      to={link.to}
+                      style={{
+                        color: footerTextColor,
+                        opacity: 0.7,
+                        textDecoration: 'none',
+                        fontSize: '14px',
+                        transition: 'all 0.2s ease',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                        e.currentTarget.style.paddingLeft = '4px';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = '0.7';
+                        e.currentTarget.style.paddingLeft = '0';
+                      }}
+                    >
+                      <span style={{ 
+                        width: '0', 
+                        height: '0', 
+                        borderTop: '4px solid transparent',
+                        borderBottom: '4px solid transparent',
+                        borderLeft: `4px solid ${footerTextColor}`,
+                        opacity: 0.4,
+                        transition: 'opacity 0.2s'
+                      }} />
+                      {link.label}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
@@ -478,6 +518,36 @@ const MainFooter = () => {
         <span style={{ fontSize: '13px', opacity: 0.6 }}>
           &copy; {currentYear} {displayName}. All rights reserved.
         </span>
+        <a
+          href={apkDownloadUrl}
+          download
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 14px',
+            borderRadius: '8px',
+            backgroundColor: 'var(--accent-color, #6366f1)',
+            color: '#fff',
+            fontSize: '12px',
+            fontWeight: 600,
+            textDecoration: 'none',
+            transition: 'all 0.2s ease',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.filter = 'brightness(1.2)';
+            e.currentTarget.style.transform = 'scale(1.03)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.filter = 'brightness(1)';
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
+        >
+          <Smartphone size={14} />
+          Download Mobile App
+        </a>
         <span style={{ fontSize: '12px', opacity: 0.4 }}>
           Designed with care for our community
         </span>
