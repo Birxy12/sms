@@ -140,17 +140,11 @@ const BursarDashboard = () => {
       const students = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setAllStudents(students);
 
-      // Sync classes from Firestore 'classes' collection (Manage Classes) + student records
+      // Sync classes strictly from Firestore 'classes' collection (Manage Classes) 
       try {
         const dynamicClasses = await fetchGlobalClasses();
-        const studentClasses = [];
-        students.forEach(s => {
-          const c = s.className || s.class_name || s.CLASS;
-          if (c && !studentClasses.includes(c)) studentClasses.push(c);
-        });
-
-        const mergedClasses = Array.from(new Set([...dynamicClasses, ...studentClasses])).filter(Boolean);
-        setClasses(mergedClasses);
+        // Do not merge stray misspelled student classes (like 'JSS 1') as new distinct classes
+        setClasses(dynamicClasses);
       } catch (cErr) {
         console.warn("Class sync error:", cErr);
       }
@@ -1137,7 +1131,10 @@ const BursarDashboard = () => {
 
   const AnalysisView = () => {
     const classBreakdown = classes.map(cls => {
-      const students = allStudents.filter(s => (s.className || s.class_name || s.CLASS) === cls);
+      const students = allStudents.filter(s => {
+        const c = s.className || s.class_name || s.CLASS || '';
+        return c.replace(/\s+/g, '').toUpperCase() === cls.replace(/\s+/g, '').toUpperCase();
+      });
       const expected = students.reduce((sum, s) => sum + (parseFloat(s.expectedFee) || 0), 0);
       const collected = students.reduce((sum, s) => sum + (parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0), 0);
       return { cls, students: students.length, expected, collected, balance: Math.max(0, expected - collected) };
@@ -1434,12 +1431,12 @@ const BursarDashboard = () => {
       </div>
 
       {/* Premium Navigation Tabs — Horizontally Scrollable Pills with Glassmorphism */}
-      <div className="flex overflow-x-auto hide-scrollbar gap-1.5 md:gap-3 p-1.5 md:p-2 bg-slate-100/70 backdrop-blur-md rounded-xl md:rounded-2xl w-full border border-white/60 shadow-inner">
+      <div className="flex overflow-x-auto hide-scrollbar gap-2 md:gap-3 p-2 bg-slate-100/70 backdrop-blur-md rounded-xl md:rounded-2xl w-full border border-white/60 shadow-inner">
         {sidebarTabs.map((tab, index) => (
           <button
             key={tab.id}
             onClick={() => setActiveView(tab.id)}
-            className={`flex items-center gap-2 md:gap-2.5 px-3 py-2 md:px-5 md:py-3 min-w-max rounded-xl transition-all duration-300 font-bold text-[13px] md:text-sm tracking-wide ${
+            className={`flex items-center gap-2 md:gap-2.5 px-3.5 py-2.5 md:px-5 md:py-3 min-w-max rounded-xl transition-all duration-300 font-bold text-[13px] md:text-sm tracking-wide ${
               activeView === tab.id 
                 ? 'bg-white text-green-700 shadow-sm ring-1 ring-slate-200/60 transform scale-[1.02]' 
                 : index < 4 
@@ -1523,7 +1520,10 @@ const BursarDashboard = () => {
 
           {activeView === 'overview' && (() => {
             const classBreakdown = classes.map(cls => {
-              const students = allStudents.filter(s => (s.className || s.class_name || s.CLASS) === cls);
+              const students = allStudents.filter(s => {
+                const c = s.className || s.class_name || s.CLASS || '';
+                return c.replace(/\s+/g, '').toUpperCase() === cls.replace(/\s+/g, '').toUpperCase();
+              });
               const expected = students.reduce((sum, s) => sum + (parseFloat(s.expectedFee) || 0), 0);
               const collected = students.reduce((sum, s) => sum + (parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0), 0);
               return { cls, students: students.length, expected, collected };
