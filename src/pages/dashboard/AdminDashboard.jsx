@@ -1011,7 +1011,7 @@ const AdminDashboard = () => {
                     {/* Chart Tooltip */}
                     {hoveredEnrollmentNode && (
                       <div 
-                        className="glass-tooltip absolute"
+                        className="glass-tooltip absolute pointer-events-none z-50"
                         style={{ 
                           left: `${(hoveredEnrollmentNode.x / chartWidth) * 100}%`, 
                           bottom: `${((chartHeight - hoveredEnrollmentNode.y) / chartHeight) * 100 + 10}%`,
