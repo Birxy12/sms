@@ -68,8 +68,8 @@ html, body, #root, .layout, .main-content {
 }
 
 html {
-  max-width: 100vw;
-  overflow-x: hidden;
+  width: 100%;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 /* Enable smooth momentum touch scrolling and rolling */
@@ -77,8 +77,8 @@ body {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: default;
   overscroll-behavior-y: auto;
-  max-width: 100vw;
-  overflow-x: hidden;
+  width: 100%;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 /* Fix ALL buttons and interactive elements for mobile */
