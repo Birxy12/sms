@@ -58,12 +58,16 @@
 
 /* ===== Mobile App Touch & Button Fixes ===== */
 
-/* Enable pinch-to-zoom, smooth rolling, and touch gestures globally */
-html {
+/* Enable pinch-to-zoom, smooth rolling, keyboard, mouse wheel & touch gestures globally */
+html, body, #root, .layout, .main-content {
+  scroll-behavior: smooth;
   touch-action: pan-x pan-y pinch-zoom;
   -ms-touch-action: pan-x pan-y pinch-zoom;
   overscroll-behavior: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+html {
   max-width: 100vw;
   overflow-x: hidden;
 }
@@ -73,7 +77,6 @@ body {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: default;
   overscroll-behavior-y: auto;
-  -webkit-overflow-scrolling: touch;
   max-width: 100vw;
   overflow-x: hidden;
 }

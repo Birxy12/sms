@@ -27,7 +27,7 @@ class _PinchZoomWrapperState extends State<PinchZoomWrapper> {
       final position = _doubleTapDetails!.localPosition;
       final x = -position.dx * 1.5;
       final y = -position.dy * 1.5;
-      _controller.value = Matrix4.translationValues(x, y, 0.0)..scaleByDouble(2.5, 2.5, 1.0);
+      _controller.value = Matrix4.translationValues(x, y, 0.0)..scale(2.5, 2.5);
     }
   }
 

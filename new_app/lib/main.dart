@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
@@ -9,6 +10,17 @@ import 'screens/admin_dashboard.dart';
 import 'screens/results_screen.dart';
 import 'screens/idcard_screen.dart';
 import 'screens/cbt_exam_screen.dart';
+
+class AppScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.unknown,
+      };
+}
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +65,7 @@ class _BDSAppState extends State<BDSApp> {
             title: 'BDSPORTAL',
             debugShowCheckedModeBanner: false,
             navigatorKey: _navigatorKey,
+            scrollBehavior: AppScrollBehavior(),
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: ThemeMode.system,

@@ -3,7 +3,7 @@ import Sidebar from './Sidebar';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useStudentAuth } from '../context/StudentAuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Menu, LayoutDashboard, Award, CreditCard, 
   Inbox as InboxIcon, FileText, UserCircle, GraduationCap,
@@ -16,6 +16,36 @@ const Layout = ({ children }) => {
   const { primaryColor, schoolLogo, schoolName } = useTheme();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || document.activeElement?.isContentEditable) {
+        return;
+      }
+
+      const scrollAmount = 140;
+      const pageAmount = window.innerHeight * 0.85;
+      const scrollable = document.querySelector('.main-content') || document.documentElement || document.body;
+
+      if (e.key === 'ArrowDown') {
+        scrollable.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+      } else if (e.key === 'ArrowUp') {
+        scrollable.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
+      } else if (e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey)) {
+        scrollable.scrollBy({ top: pageAmount, behavior: 'smooth' });
+      } else if (e.key === 'PageUp' || (e.key === ' ' && e.shiftKey)) {
+        scrollable.scrollBy({ top: -pageAmount, behavior: 'smooth' });
+      } else if (e.key === 'Home') {
+        scrollable.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (e.key === 'End') {
+        scrollable.scrollTo({ top: scrollable.scrollHeight, behavior: 'smooth' });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const isStudentZone = location.pathname.startsWith('/students');
   const role = isStudentZone ? 'student' : (currentAdmin?.role || 'student');
