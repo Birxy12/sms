@@ -8,6 +8,17 @@
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
         <string>BDSPORTAL</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.bdsportal.sms</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>bdsportal</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

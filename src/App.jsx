@@ -85,7 +85,7 @@ function App() {
   const { updateAvailable, latestVersion } = useAppUpdate();
 
   useEffect(() => {
-    const handleBackButton = async () => {
+    const setupAppListeners = async () => {
       const backButtonListener = await CapApp.addListener('backButton', ({ canGoBack }) => {
         const currentPath = location.pathname;
         const homePaths = ['/', '/login', '/students', '/admin', '/principal', '/finance', '/teachers'];
@@ -99,13 +99,35 @@ function App() {
           navigate(-1);
         }
       });
-      return backButtonListener;
+
+      const urlOpenListener = await CapApp.addListener('appUrlOpen', (data) => {
+        if (data?.url) {
+          try {
+            const urlObj = new URL(data.url);
+            const targetPath = urlObj.pathname + urlObj.search + urlObj.hash;
+            if (targetPath) {
+              navigate(targetPath);
+            }
+          } catch (e) {
+            const pathMatch = data.url.match(/^[a-zA-Z0-9_-]+:\/\/(.*)$/);
+            if (pathMatch && pathMatch[1]) {
+              const route = '/' + pathMatch[1].replace(/^\//, '');
+              navigate(route);
+            }
+          }
+        }
+      });
+
+      return { backButtonListener, urlOpenListener };
     };
 
-    let listenerPromise = handleBackButton();
+    let listenersPromise = setupAppListeners();
 
     return () => {
-      listenerPromise.then(listener => listener.remove());
+      listenersPromise.then(listeners => {
+        listeners.backButtonListener?.remove();
+        listeners.urlOpenListener?.remove();
+      });
     };
   }, [location, navigate]);
 

@@ -2,10 +2,10 @@
   "appId": "com.bdsportal.sms",
   "appName": "BDSPORTAL",
   "webDir": "dist",
-  "zoomEnabled": false,
+  "zoomEnabled": true,
   "android": {
     "allowMixedContent": true,
-    "overScrollMode": "never",
+    "overScrollMode": "always",
     "backgroundColor": "#ffffff"
   },
   "plugins": {

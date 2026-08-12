@@ -1,0 +1,17 @@
+{
+  "short_name": "BDSPORTAL",
+  "name": "BDSPORTAL - School Management System",
+  "icons": [
+    {
+      "src": "/bdslogo.jpg",
+      "type": "image/jpeg",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#1e293b",
+  "display": "standalone",
+  "orientation": "any",
+  "scope": "/"
+}
