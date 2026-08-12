@@ -1435,17 +1435,25 @@ const BursarDashboard = () => {
 
       {/* Premium Navigation Tabs — Horizontally Scrollable Pills with Glassmorphism */}
       <div className="flex overflow-x-auto hide-scrollbar gap-3 p-2 bg-slate-100/70 backdrop-blur-md rounded-2xl w-full border border-white/60 shadow-inner">
-        {sidebarTabs.map((tab) => (
+        {sidebarTabs.map((tab, index) => (
           <button
             key={tab.id}
             onClick={() => setActiveView(tab.id)}
             className={`flex items-center gap-2.5 px-5 py-3 min-w-max rounded-xl transition-all duration-300 font-bold text-sm tracking-wide ${
               activeView === tab.id 
                 ? 'bg-white text-green-700 shadow-sm ring-1 ring-slate-200/60 transform scale-[1.02]' 
-                : 'text-slate-500 hover:bg-white/60 hover:text-slate-800 hover:shadow-sm'
+                : index < 4 
+                    ? 'text-green-600 hover:bg-white/60 hover:text-green-800 hover:shadow-sm' 
+                    : 'text-orange-500 hover:bg-white/60 hover:text-orange-700 hover:shadow-sm'
             }`}
           >
-            <div className={`transition-colors duration-300 ${activeView === tab.id ? 'text-green-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
+            <div className={`transition-colors duration-300 ${
+              activeView === tab.id 
+                ? 'text-green-600' 
+                : index < 4 
+                    ? 'text-green-500 group-hover:text-green-600' 
+                    : 'text-orange-400 group-hover:text-orange-500'
+            }`}>
               <tab.icon size={18} strokeWidth={activeView === tab.id ? 2.5 : 2} />
             </div>
             <span>{tab.label}</span>
