@@ -1434,12 +1434,12 @@ const BursarDashboard = () => {
       </div>
 
       {/* Premium Navigation Tabs — Horizontally Scrollable Pills with Glassmorphism */}
-      <div className="flex overflow-x-auto hide-scrollbar gap-3 p-2 bg-slate-100/70 backdrop-blur-md rounded-2xl w-full border border-white/60 shadow-inner">
+      <div className="flex overflow-x-auto hide-scrollbar gap-1.5 md:gap-3 p-1.5 md:p-2 bg-slate-100/70 backdrop-blur-md rounded-xl md:rounded-2xl w-full border border-white/60 shadow-inner">
         {sidebarTabs.map((tab, index) => (
           <button
             key={tab.id}
             onClick={() => setActiveView(tab.id)}
-            className={`flex items-center gap-2.5 px-5 py-3 min-w-max rounded-xl transition-all duration-300 font-bold text-sm tracking-wide ${
+            className={`flex items-center gap-2 md:gap-2.5 px-3 py-2 md:px-5 md:py-3 min-w-max rounded-lg md:rounded-xl transition-all duration-300 font-bold text-[13px] md:text-sm tracking-wide ${
               activeView === tab.id 
                 ? 'bg-white text-green-700 shadow-sm ring-1 ring-slate-200/60 transform scale-[1.02]' 
                 : index < 4 
@@ -1454,9 +1454,9 @@ const BursarDashboard = () => {
                     ? 'text-green-500 group-hover:text-green-600' 
                     : 'text-orange-400 group-hover:text-orange-500'
             }`}>
-              <tab.icon size={18} strokeWidth={activeView === tab.id ? 2.5 : 2} />
+              <tab.icon className="w-[18px] h-[18px] md:w-5 md:h-5" strokeWidth={activeView === tab.id ? 2.5 : 2} />
             </div>
-            <span>{tab.label}</span>
+            <span className="whitespace-nowrap">{tab.label}</span>
           </button>
         ))}
       </div>
