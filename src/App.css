@@ -783,19 +783,17 @@ h1, h2, h3, h4, h5, h6 {
 .modern-tab-item.active.tab-rose { color: #e11d48; box-shadow: 0 4px 12px rgba(244, 63, 94, 0.1); }
 .modern-tab-item.active.tab-amber { color: #d97706; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.1); }
 
-/* Animation for Tab Content */
+/* Animation for Tab Content — Smooth Fade without Shaking */
 .tab-content-animate {
-  animation: tabFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: tabFadeIn 0.2s ease-in-out;
 }
 
 @keyframes tabFadeIn {
   from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.98);
+    opacity: 0.3;
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 

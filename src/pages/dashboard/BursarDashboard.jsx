@@ -1412,19 +1412,19 @@ const BursarDashboard = () => {
         </div>
       </div>
 
-      {/* Modern Navigation Tabs — Even 5 Tabs Per Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-2 bg-slate-100/50 rounded-2xl w-full">
+      {/* Modern Navigation Tabs — 7 Columns First Row, Remaining Under */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 p-2 bg-slate-100/50 rounded-2xl w-full">
         {sidebarTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveView(tab.id)}
-            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-black transition-all uppercase tracking-wider text-center ${
+            className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-xs font-black transition-colors uppercase tracking-wider text-center ${
               activeView === tab.id 
-                ? `bg-white text-${tab.color}-600 shadow-sm ring-1 ring-slate-200` 
-                : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'
+                ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' 
+                : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
             }`}
           >
-            <tab.icon size={16} className="shrink-0" />
+            <tab.icon size={15} className="shrink-0 text-slate-500" />
             <span className="truncate">{tab.label}</span>
           </button>
         ))}
