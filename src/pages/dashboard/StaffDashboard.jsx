@@ -8,6 +8,7 @@ import TeacherAttendance from '../../components/TeacherAttendance';
 import { Book, CheckCircle, Clock, Edit3, List, Calendar as CalendarIcon, FileText, ClipboardList, Users, User } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { db } from '../../lib/firebase';
+import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const StaffDashboard = () => {
@@ -19,6 +20,7 @@ const StaffDashboard = () => {
     const fetchStats = async () => {
       if (!currentAdmin) return;
       try {
+        await ensureFirebaseAuth();
         let subjectsSnap, classesSnap;
         
         if (currentAdmin.role === 'admin' || currentAdmin.isSuperAdmin) {

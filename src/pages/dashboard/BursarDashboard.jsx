@@ -1212,8 +1212,13 @@ const BursarDashboard = () => {
         const snap = await getDocs(collection(db, 'staff'));
         setStaffList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-        const paySnap = await getDocs(collection(db, 'staff_payments'));
-        setPayments(paySnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds));
+        try {
+          const paySnap = await getDocs(collection(db, 'staff_payments'));
+          setPayments(paySnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds));
+        } catch (payErr) {
+          console.warn("Could not fetch staff payments:", payErr);
+          setPayments([]);
+        }
       } catch (err) {
         console.error(err);
         setStatus({
