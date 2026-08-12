@@ -661,16 +661,18 @@ const AdminDashboard = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="modern-tabs-container hide-scrollbar overflow-x-auto max-w-full">
-        {adminTabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`modern-tab-item ${activeTab === tab.id ? 'active' : ''}`}
-          >
-            <tab.icon size={18} />
-            {tab.label}
-          </button>
+      <div className="modern-tabs-container hide-scrollbar overflow-x-auto max-w-full flex flex-wrap gap-2">
+        {adminTabs.map((tab, idx) => (
+          <React.Fragment key={tab.id}>
+            <button
+              onClick={() => setActiveTab(tab.id)}
+              className={`modern-tab-item ${activeTab === tab.id ? 'active' : ''}`}
+            >
+              <tab.icon size={18} />
+              {tab.label}
+            </button>
+            {idx === 7 && <div className="w-full h-0 basis-full" />}
+          </React.Fragment>
         ))}
       </div>
 

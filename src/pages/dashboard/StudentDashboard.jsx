@@ -453,7 +453,7 @@ const StudentDashboard = () => {
                         <h3 className="text-xl font-black mb-2">Student Excellence</h3>
                         <p className="text-indigo-100 text-sm leading-relaxed">Keep maintaining high scores to unlock advanced school honors and awards.</p>
                       </div>
-                      <button onClick={() => navigate('/students/results')} className="mt-8 w-full py-4 bg-white text-indigo-600 rounded-2xl font-black text-sm shadow-xl">
+                      <button onClick={() => navigate('/students/results')} className="mt-8 w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-sm shadow-xl">
                         View Honors
                       </button>
                     </div>

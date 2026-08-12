@@ -1414,19 +1414,21 @@ const BursarDashboard = () => {
 
       {/* Modern Navigation Tabs */}
       <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100/50 rounded-2xl w-fit">
-        {sidebarTabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveView(tab.id)}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black transition-all uppercase tracking-wider ${
-              activeView === tab.id 
-                ? `bg-white text-${tab.color}-600 shadow-sm ring-1 ring-slate-200` 
-                : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            <tab.icon size={16} />
-            {tab.label}
-          </button>
+        {sidebarTabs.map((tab, idx) => (
+          <React.Fragment key={tab.id}>
+            <button
+              onClick={() => setActiveView(tab.id)}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black transition-all uppercase tracking-wider ${
+                activeView === tab.id 
+                  ? `bg-white text-${tab.color}-600 shadow-sm ring-1 ring-slate-200` 
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <tab.icon size={16} />
+              {tab.label}
+            </button>
+            {idx === 7 && <div className="w-full h-0 basis-full" />}
+          </React.Fragment>
         ))}
       </div>
 
