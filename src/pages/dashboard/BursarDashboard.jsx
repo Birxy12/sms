@@ -55,7 +55,7 @@ const OldFeesAnalytics = ({ currentCollected, currentExpected }) => {
       <div className="flex justify-between items-center border-b pb-3">
         <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest">Historical Performance Chart</h4>
         {oldFees.length > 0 && (
-          <button onClick={handleClear} className="text-xs text-rose-600 hover:text-rose-800 font-bold">Clear History</button>
+          <button onClick={handleClear} className="text-xs px-3 py-1.5 rounded-lg bg-orange-500 text-blue-900 hover:bg-orange-600 font-bold transition-colors">Clear History</button>
         )}
       </div>
       <div className="flex flex-col md:flex-row gap-8 items-end justify-between p-6 bg-slate-50 rounded-2xl overflow-x-auto">
@@ -106,6 +106,30 @@ const OldFeesAnalytics = ({ currentCollected, currentExpected }) => {
       </form>
     </div>
   );
+};
+const AnimatedCounter = ({ end }) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (end === 0) {
+      setCount(0);
+      return;
+    }
+    let start = 0;
+    const duration = 1500;
+    const stepTime = Math.max(10, Math.floor(duration / end));
+    const timer = setInterval(() => {
+      start += 1;
+      setCount(start);
+      if (start >= end) {
+        setCount(end);
+        clearInterval(timer);
+      }
+    }, stepTime);
+    return () => clearInterval(timer);
+  }, [end]);
+
+  return <>{count}</>;
 };
 
 const BursarDashboard = () => {
@@ -1138,7 +1162,7 @@ const BursarDashboard = () => {
       const expected = students.reduce((sum, s) => sum + (parseFloat(s.expectedFee) || 0), 0);
       const collected = students.reduce((sum, s) => sum + (parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0), 0);
       return { cls, students: students.length, expected, collected, balance: Math.max(0, expected - collected) };
-    }).filter(c => c.students > 0);
+    });
 
     const collectedPct = stats.totalExpected > 0 ? Math.round((stats.totalCollected / stats.totalExpected) * 100) : 0;
     const r = 60, cx = 75, cy = 75;
@@ -1160,7 +1184,7 @@ const BursarDashboard = () => {
               )}
               {collectedPct >= 100 && <circle cx={cx} cy={cy} r={r} fill="#10b981" />}
               <circle cx={cx} cy={cy} r={40} fill="white" />
-              <text x={cx} y={cy + 6} textAnchor="middle" fontSize="16" fontWeight="900" fill="#0f172a">{collectedPct}%</text>
+              <text x={cx} y={cy + 6} textAnchor="middle" fontSize="16" fontWeight="900" fill="#0f172a"><AnimatedCounter end={collectedPct} />%</text>
             </svg>
             <div className="flex gap-4 mt-2 text-xs font-bold">
               <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"/> Collected</span>
@@ -1527,7 +1551,7 @@ const BursarDashboard = () => {
               const expected = students.reduce((sum, s) => sum + (parseFloat(s.expectedFee) || 0), 0);
               const collected = students.reduce((sum, s) => sum + (parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0), 0);
               return { cls, students: students.length, expected, collected };
-            }).filter(c => c.students > 0);
+            });
             const collectedPct = stats.totalExpected > 0 ? Math.round((stats.totalCollected / stats.totalExpected) * 100) : 0;
             const r = 60, cx = 75, cy = 75;
             const angle = (collectedPct / 100) * 2 * Math.PI;
@@ -1546,7 +1570,7 @@ const BursarDashboard = () => {
                       )}
                       {collectedPct >= 100 && <circle cx={cx} cy={cy} r={r} fill="#10b981" />}
                       <circle cx={cx} cy={cy} r={40} fill="white" />
-                      <text x={cx} y={cy + 6} textAnchor="middle" fontSize="16" fontWeight="900" fill="#0f172a">{collectedPct}%</text>
+                      <text x={cx} y={cy + 6} textAnchor="middle" fontSize="16" fontWeight="900" fill="#0f172a"><AnimatedCounter end={collectedPct} />%</text>
                     </svg>
                     <div className="flex gap-4 mt-2 text-xs font-bold">
                       <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"/> Collected</span>
