@@ -953,7 +953,7 @@ const AdminDashboard = () => {
                   </div>
 
                   {/* SVG Area Chart */}
-                  <div className="relative h-48 w-full mt-4 flex items-center justify-center p-2 border border-slate-100 rounded-2xl bg-slate-50/50">
+                  <div className="relative h-48 w-full mt-4 flex items-center justify-center p-2 border border-slate-100 rounded-2xl bg-slate-50/50 overflow-hidden">
                     <svg className="w-full h-full" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none">
                       <defs>
                         <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
@@ -1011,9 +1011,9 @@ const AdminDashboard = () => {
                     {/* Chart Tooltip */}
                     {hoveredEnrollmentNode && (
                       <div 
-                        className="glass-tooltip absolute pointer-events-none z-50"
+                        className="glass-tooltip absolute pointer-events-none z-50 animate-in fade-in zoom-in duration-200"
                         style={{ 
-                          left: `${(hoveredEnrollmentNode.x / chartWidth) * 100}%`, 
+                          left: `${Math.max(5, Math.min(95, (hoveredEnrollmentNode.x / chartWidth) * 100))}%`, 
                           bottom: `${((chartHeight - hoveredEnrollmentNode.y) / chartHeight) * 100 + 10}%`,
                           transform: 'translateX(-50%)',
                         }}
