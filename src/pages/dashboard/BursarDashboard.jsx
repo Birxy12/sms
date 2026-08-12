@@ -1441,18 +1441,16 @@ const BursarDashboard = () => {
             onClick={() => setActiveView(tab.id)}
             className={`flex items-center gap-2.5 px-5 py-3 min-w-max rounded-xl transition-all duration-300 font-bold text-sm tracking-wide ${
               activeView === tab.id 
-                ? 'bg-white text-green-700 shadow-sm ring-1 ring-slate-200/60 transform scale-[1.02]' 
+                ? 'bg-white text-green-700 shadow-md ring-2 ring-green-500/50 transform scale-[1.02]' 
                 : index < 4 
-                    ? 'text-green-600 hover:bg-white/60 hover:text-green-800 hover:shadow-sm' 
-                    : 'text-orange-500 hover:bg-white/60 hover:text-orange-700 hover:shadow-sm'
+                    ? 'bg-green-500 text-white hover:bg-green-600 hover:shadow-md' 
+                    : 'bg-orange-500 text-white hover:bg-orange-600 hover:shadow-md'
             }`}
           >
             <div className={`transition-colors duration-300 ${
               activeView === tab.id 
                 ? 'text-green-600' 
-                : index < 4 
-                    ? 'text-green-500 group-hover:text-green-600' 
-                    : 'text-orange-400 group-hover:text-orange-500'
+                : 'text-white/90'
             }`}>
               <tab.icon size={18} strokeWidth={activeView === tab.id ? 2.5 : 2} />
             </div>
