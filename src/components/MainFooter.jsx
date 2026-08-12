@@ -21,7 +21,6 @@ const MainFooter = () => {
   const displayName = schoolName || 'Birxy SMS';
   const displayLogo = schoolLogo || bdsLogo;
 
-  // APK download link — points to the latest APK committed on the main branch
   const apkDownloadUrl = 'https://github.com/Birxy12/sms/raw/main/app-debug.apk';
 
   const quickLinks = [
@@ -33,7 +32,7 @@ const MainFooter = () => {
     { to: '/contact', label: 'Support Hub' },
     { to: '/privacy', label: 'Privacy Policy' },
     { to: '/terms', label: 'Terms of Service' },
-    { href: apkDownloadUrl, label: '📱 Download App', external: true },
+    { href: apkDownloadUrl, label: '⚡ Download Flutter App (APK)', external: true },
   ];
 
   const getDashboardPath = () => {
@@ -544,7 +543,7 @@ const MainFooter = () => {
           }}
         >
           <Smartphone size={14} />
-          Download Mobile App
+          Download Flutter App (APK)
         </a>
         <span style={{ fontSize: '12px', opacity: 0.4 }}>
           Designed with care for our community
