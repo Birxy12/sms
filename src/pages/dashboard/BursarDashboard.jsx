@@ -1433,22 +1433,22 @@ const BursarDashboard = () => {
         </div>
       </div>
 
-      {/* Modern Navigation Tabs — 7 Columns x 2 Rows Layout (8px spacing) */}
-      <div className="grid grid-cols-7 gap-[8px] p-[8px] bg-slate-100/60 rounded-3xl w-full">
+      {/* Premium Navigation Tabs — Horizontally Scrollable Pills with Glassmorphism */}
+      <div className="flex overflow-x-auto hide-scrollbar gap-3 p-2 bg-slate-100/70 backdrop-blur-md rounded-2xl w-full border border-white/60 shadow-inner">
         {sidebarTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveView(tab.id)}
-            className={`flex flex-col items-center justify-center gap-[8px] p-[8px] min-h-[90px] rounded-2xl border-2 transition-all font-black uppercase text-center w-full ${
+            className={`flex items-center gap-2.5 px-5 py-3 min-w-max rounded-xl transition-all duration-300 font-bold text-sm tracking-wide ${
               activeView === tab.id 
-                ? 'bg-white text-indigo-600 border-indigo-600 shadow-md ring-4 ring-indigo-500/10 scale-[1.02]' 
-                : 'bg-white/90 text-slate-600 border-slate-200/80 hover:border-indigo-300 hover:text-slate-900 hover:bg-white shadow-sm'
+                ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/60 transform scale-[1.02]' 
+                : 'text-slate-500 hover:bg-white/60 hover:text-slate-800 hover:shadow-sm'
             }`}
           >
-            <div className={`p-2 rounded-xl transition-colors ${activeView === tab.id ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
-              <tab.icon size={20} />
+            <div className={`transition-colors duration-300 ${activeView === tab.id ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
+              <tab.icon size={18} strokeWidth={activeView === tab.id ? 2.5 : 2} />
             </div>
-            <span className="text-[11px] font-black tracking-tight leading-tight line-clamp-2">{tab.label}</span>
+            <span>{tab.label}</span>
           </button>
         ))}
       </div>
