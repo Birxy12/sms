@@ -14,7 +14,7 @@ import { expandStudent } from '../../utils/firestoreSchema';
 import { Users, User, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useGlobalClasses } from '../../utils/classUtils';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 // Isolated clock component — ticks every second without re-rendering AdminDashboard
 const LiveClock = memo(() => {
   const [time, setTime] = useState(new Date().toLocaleTimeString());
@@ -937,16 +937,10 @@ const AdminDashboard = () => {
                     <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">Monthly</span>
                   </div>
 
-                  {/* Recharts Area Chart */}
+                  {/* Recharts Bar Chart */}
                   <div className="relative h-56 w-full mt-4 flex items-center justify-center p-2 rounded-2xl bg-slate-50/50">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={enrollmentData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
+                      <BarChart data={enrollmentData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <XAxis dataKey="m" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 900 }} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 900 }} />
                         <Tooltip 
@@ -963,9 +957,10 @@ const AdminDashboard = () => {
                             }
                             return null;
                           }}
+                          cursor={{ fill: 'rgba(79, 70, 229, 0.05)' }}
                         />
-                        <Area type="monotone" dataKey="count" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#chartGrad)" activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff', fill: '#4f46e5' }} />
-                      </AreaChart>
+                        <Bar dataKey="count" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                      </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
