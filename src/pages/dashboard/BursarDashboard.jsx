@@ -1441,11 +1441,11 @@ const BursarDashboard = () => {
             onClick={() => setActiveView(tab.id)}
             className={`flex items-center gap-2.5 px-5 py-3 min-w-max rounded-xl transition-all duration-300 font-bold text-sm tracking-wide ${
               activeView === tab.id 
-                ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/60 transform scale-[1.02]' 
+                ? 'bg-white text-green-700 shadow-sm ring-1 ring-slate-200/60 transform scale-[1.02]' 
                 : 'text-slate-500 hover:bg-white/60 hover:text-slate-800 hover:shadow-sm'
             }`}
           >
-            <div className={`transition-colors duration-300 ${activeView === tab.id ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
+            <div className={`transition-colors duration-300 ${activeView === tab.id ? 'text-green-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
               <tab.icon size={18} strokeWidth={activeView === tab.id ? 2.5 : 2} />
             </div>
             <span>{tab.label}</span>
