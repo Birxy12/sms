@@ -257,8 +257,8 @@ const Home = () => {
                     <span>Check Result</span>
                     <Search size={22} className="group-hover:rotate-12 transition-transform" />
                   </button>
-                  <button onClick={() => navigate('/login')} className="bg-white/80 backdrop-blur-md text-slate-900 border-2 border-slate-200/50 px-10 py-5 rounded-2xl font-black flex items-center gap-3 hover:bg-white hover:border-primary/30 transition-all shadow-sm active:scale-95">
-                    <LogIn size={22} className="text-primary" />
+                  <button onClick={() => navigate('/login')} className="bg-emerald-600 hover:bg-emerald-700 text-white border-2 border-emerald-500 px-10 py-5 rounded-2xl font-black flex items-center gap-3 transition-all shadow-lg hover:shadow-emerald-500/30 active:scale-95" style={{ backgroundColor: '#10b981', color: '#ffffff', borderColor: '#059669' }}>
+                    <LogIn size={22} className="text-white" />
                     Portal Access
                   </button>
                 </div>
