@@ -8,19 +8,47 @@
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: #f8fafc;
-  font-family: 'Inter', system-ui, sans-serif;
+  background: linear-gradient(135deg, #070c1a 0%, #0d1a3a 40%, #0f1f4a 70%, #0a0e28 100%);
+  font-family: 'Inter', 'Outfit', system-ui, sans-serif;
   box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+.auth-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 0%, rgba(99,102,241,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 100%, rgba(139,92,246,0.12) 0%, transparent 60%);
+  pointer-events: none;
+}
+.auth-page::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -20%;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99,102,241,0.07) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .auth-card {
   width: 100%;
   max-width: 420px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 1.5rem;
+  background: rgba(255,255,255,0.97);
+  border: 1px solid rgba(255,255,255,0.8);
+  border-radius: 1.75rem;
   padding: 2rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 12px 32px -8px rgba(0,0,0,0.06);
+  box-shadow:
+    0 0 0 1px rgba(99,102,241,0.08),
+    0 8px 40px rgba(0,0,0,0.3),
+    0 2px 8px rgba(0,0,0,0.15),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+  position: relative;
+  z-index: 1;
 }
 
 /* ─── Header ─── */
@@ -167,13 +195,13 @@
 .modern-input {
   width: 100%;
   padding: 0.875rem 2.75rem 0.875rem 1rem;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
+  background: #f1f5ff;
+  border: 1.5px solid #dde3f0;
   border-radius: 0.875rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #1e293b;
-  transition: all 0.2s ease;
+  color: #0d1526;
+  transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
   outline: none;
   box-sizing: border-box;
   font-family: inherit;
@@ -183,8 +211,9 @@
 
 .modern-input:focus {
   background: white;
-  border-color: #cbd5e1;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.06);
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99,102,241,0.12), 0 2px 8px rgba(99,102,241,0.08);
+  transform: translateY(-1px);
 }
 
 .modern-input::placeholder {
@@ -345,10 +374,10 @@
 /* ─── Submit Button ─── */
 .submit-btn {
   width: 100%;
-  padding: 0.875rem;
+  padding: 1rem;
   border-radius: 0.875rem;
-  font-size: 0.875rem;
-  font-weight: 700;
+  font-size: 0.9375rem;
+  font-weight: 800;
   color: white;
   display: flex;
   align-items: center;
@@ -356,19 +385,35 @@
   gap: 0.5rem;
   border: none;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
   font-family: inherit;
   margin-top: 0.25rem;
+  letter-spacing: 0.02em;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #818cf8 100%);
+  box-shadow: 0 8px 24px rgba(79,70,229,0.35), 0 2px 8px rgba(79,70,229,0.2);
+  position: relative;
+  overflow: hidden;
+}
+.submit-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+  pointer-events: none;
 }
 
 .submit-btn:hover:not(:disabled) {
-  filter: brightness(1.1);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px rgba(79,70,229,0.5), 0 4px 12px rgba(79,70,229,0.3);
+}
+.submit-btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .submit-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* ─── Google Button ─── */

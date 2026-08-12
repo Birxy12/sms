@@ -129,12 +129,14 @@
   display: none;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+  height: var(--top-strip-h, 60px);
+  padding: 0 16px;
+  background: rgba(255,255,255,0.95);
+  border-bottom: 1px solid rgba(79,70,229,0.08);
   position: sticky;
   top: 0;
-  z-index: 40;
+  z-index: 50;
+  box-shadow: 0 2px 16px rgba(10,15,40,0.06);
 }
 .mobile-top-strip-name {
   font-size: 15px;
@@ -180,16 +182,13 @@
 .sidebar {
   width: 260px;
   height: 100%;
-  background-color: var(--sidebar-bg); /* Fallback */
-  background: linear-gradient(180deg, var(--sidebar-bg) 0%, rgba(17, 17, 17, 0.95) 100%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: linear-gradient(180deg, #070c1a 0%, #0a0f22 60%, #070c1a 100%);
   color: var(--sidebar-text);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  transition: all 0.3s ease;
-  border-right: 1px solid rgba(255,255,255,0.05);
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  border-right: 1px solid rgba(255,255,255,0.04);
   overflow-y: auto;
 }
 
