@@ -14,6 +14,7 @@ import { expandStudent } from '../../utils/firestoreSchema';
 import { Users, User, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useGlobalClasses } from '../../utils/classUtils';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 // Isolated clock component — ticks every second without re-rendering AdminDashboard
 const LiveClock = memo(() => {
   const [time, setTime] = useState(new Date().toLocaleTimeString());
@@ -684,29 +685,13 @@ const AdminDashboard = () => {
         {activeTab === 'Overview' && (() => {
           // Dynamic coordinates for Enrollment Growth
           const enrollmentData = [
-            { m: 'Jan', v: 40, count: 40, growth: 'Baseline' },
-            { m: 'Feb', v: 65, count: 65, growth: '+62.5%' },
-            { m: 'Mar', v: 45, count: 45, growth: '-30.7%' },
-            { m: 'Apr', v: 85, count: 85, growth: '+88.8%' },
-            { m: 'May', v: 95, count: 95, growth: '+11.7%' },
-            { m: 'Jun', v: 75, count: 75, growth: '-21.0%' }
+            { m: 'Jan', count: 40, growth: 'Baseline' },
+            { m: 'Feb', count: 65, growth: '+62.5%' },
+            { m: 'Mar', count: 45, growth: '-30.7%' },
+            { m: 'Apr', count: 85, growth: '+88.8%' },
+            { m: 'May', count: 95, growth: '+11.7%' },
+            { m: 'Jun', count: 75, growth: '-21.0%' }
           ];
-
-          const chartMaxVal = 100;
-          const chartWidth = 500;
-          const chartHeight = 180;
-          const chartPad = 30;
-
-          const points = enrollmentData.map((d, i) => {
-            const x = chartPad + (i * (chartWidth - 2 * chartPad)) / (enrollmentData.length - 1);
-            const y = chartHeight - chartPad - (d.v / chartMaxVal) * (chartHeight - 2 * chartPad);
-            return { x, y, ...d };
-          });
-
-          const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-          const areaD = points.length > 0 
-            ? `${pathD} L ${points[points.length - 1].x} ${chartHeight - chartPad} L ${points[0].x} ${chartHeight - chartPad} Z` 
-            : '';
 
           const sparklineD = latencyHistory.map((val, i) => {
             const x = (i * 120) / (latencyHistory.length - 1);
@@ -952,82 +937,36 @@ const AdminDashboard = () => {
                     <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">Monthly</span>
                   </div>
 
-                  {/* SVG Area Chart */}
-                  <div className="relative h-48 w-full mt-4 flex items-center justify-center p-2 border border-slate-100 rounded-2xl bg-slate-50/50 overflow-hidden">
-                    <svg className="w-full h-full" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.3" />
-                          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.0" />
-                        </linearGradient>
-                      </defs>
-
-                      {/* Grid Lines */}
-                      {[0, 25, 50, 75, 100].map((gridVal, gridIdx) => {
-                        const y = chartHeight - chartPad - (gridVal / chartMaxVal) * (chartHeight - 2 * chartPad);
-                        return (
-                          <line 
-                            key={gridIdx} 
-                            x1={chartPad} 
-                            y1={y} 
-                            x2={chartWidth - chartPad} 
-                            y2={y} 
-                            className="chart-grid-line"
-                          />
-                        );
-                      })}
-
-                      {/* Area Fill */}
-                      <path d={areaD} fill="url(#chartGrad)" className="chart-area" />
-
-                      {/* Curve Line */}
-                      <path 
-                        d={pathD} 
-                        fill="none" 
-                        stroke="var(--primary)" 
-                        strokeWidth="3" 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round"
-                        className="chart-line"
-                      />
-
-                      {/* Chart Nodes */}
-                      {points.map((p, i) => (
-                        <circle 
-                          key={i} 
-                          cx={p.x} 
-                          cy={p.y} 
-                          r={hoveredEnrollmentNode?.m === p.m ? 7 : 5}
-                          fill="var(--primary)" 
-                          stroke="#ffffff" 
-                          strokeWidth={hoveredEnrollmentNode?.m === p.m ? 3 : 2} 
-                          className="chart-node"
-                          onMouseEnter={() => setHoveredEnrollmentNode(p)}
-                          onMouseLeave={() => setHoveredEnrollmentNode(null)}
+                  {/* Recharts Area Chart */}
+                  <div className="relative h-56 w-full mt-4 flex items-center justify-center p-2 rounded-2xl bg-slate-50/50">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={enrollmentData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="m" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 900 }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 900 }} />
+                        <Tooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              return (
+                                <div className="glass-tooltip flex flex-col items-center justify-center p-2 rounded-xl shadow-lg border border-indigo-100 bg-white/90 backdrop-blur-md">
+                                  <p className="font-black text-indigo-500 uppercase tracking-widest text-[9px]">{data.m}</p>
+                                  <p className="text-xs font-black mt-0.5 text-slate-800">{data.count} Students</p>
+                                  <p className="text-[10px] text-emerald-500 font-bold">Growth: {data.growth}</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
                         />
-                      ))}
-                    </svg>
-
-                    {/* Chart Tooltip */}
-                    {hoveredEnrollmentNode && (
-                      <div 
-                        className="glass-tooltip absolute pointer-events-none z-50 animate-in fade-in zoom-in duration-200"
-                        style={{ 
-                          left: `${Math.max(5, Math.min(95, (hoveredEnrollmentNode.x / chartWidth) * 100))}%`, 
-                          bottom: `${((chartHeight - hoveredEnrollmentNode.y) / chartHeight) * 100 + 10}%`,
-                          transform: 'translateX(-50%)',
-                        }}
-                      >
-                        <p className="font-black text-indigo-300 uppercase tracking-widest text-[9px]">{hoveredEnrollmentNode.m}</p>
-                        <p className="text-xs font-black mt-0.5 text-white">{hoveredEnrollmentNode.count} Students</p>
-                        <p className="text-[10px] text-emerald-400 font-bold">Growth: {hoveredEnrollmentNode.growth}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* X Axis Labels */}
-                  <div className="flex justify-between px-7 mt-2 text-[9px] font-black text-slate-400 uppercase tracking-wider">
-                    {enrollmentData.map((d, i) => <span key={i}>{d.m}</span>)}
+                        <Area type="monotone" dataKey="count" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#chartGrad)" activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff', fill: '#4f46e5' }} />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
 
