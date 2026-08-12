@@ -1439,7 +1439,7 @@ const BursarDashboard = () => {
           <button
             key={tab.id}
             onClick={() => setActiveView(tab.id)}
-            className={`flex items-center gap-2 md:gap-2.5 px-3 py-2 md:px-5 md:py-3 min-w-max rounded-lg md:rounded-xl transition-all duration-300 font-bold text-[13px] md:text-sm tracking-wide ${
+            className={`flex items-center gap-2 md:gap-2.5 px-3 py-2 md:px-5 md:py-3 min-w-max rounded-xl transition-all duration-300 font-bold text-[13px] md:text-sm tracking-wide ${
               activeView === tab.id 
                 ? 'bg-white text-green-700 shadow-sm ring-1 ring-slate-200/60 transform scale-[1.02]' 
                 : index < 4 
@@ -1454,7 +1454,7 @@ const BursarDashboard = () => {
                     ? 'text-green-500 group-hover:text-green-600' 
                     : 'text-orange-400 group-hover:text-orange-500'
             }`}>
-              <tab.icon className="w-[18px] h-[18px] md:w-5 md:h-5" strokeWidth={activeView === tab.id ? 2.5 : 2} />
+              <tab.icon className="w-4 h-4 md:w-[18px] md:h-[18px]" strokeWidth={activeView === tab.id ? 2.5 : 2} />
             </div>
             <span className="whitespace-nowrap">{tab.label}</span>
           </button>
