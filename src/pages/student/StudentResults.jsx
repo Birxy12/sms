@@ -1260,7 +1260,7 @@ const StudentResults = ({ isPublic }) => {
               <div className="flex gap-3">
                 <button
                   onClick={handlePrint}
-                  className="flex items-center gap-2 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 px-5 py-3 rounded-2xl font-black text-slate-700 dark:text-slate-200 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
+                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white border-2 border-emerald-500 px-5 py-3 rounded-2xl font-black transition-all shadow-sm active:scale-95"
                 >
                   <Printer size={18} /> Print Report Card
                 </button>

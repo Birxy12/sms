@@ -109,7 +109,7 @@ const StudentAssignments = () => {
                <h3 className="text-xl font-black mb-1">Submission Policy</h3>
                <p className="text-slate-400 text-sm max-w-md">All assignments must be submitted before 4:00 PM on the due date. Late submissions may attract a grade penalty.</p>
             </div>
-            <button className="bg-white text-slate-900 px-8 py-3 rounded-2xl font-black hover:bg-slate-100 transition-all shadow-xl active:scale-95">
+            <button className="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-black hover:bg-emerald-700 transition-all shadow-xl active:scale-95">
                View Grading Rubric
             </button>
          </div>

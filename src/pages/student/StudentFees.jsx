@@ -403,7 +403,7 @@ const StudentFees = () => {
         </div>
         <button 
           onClick={() => window.print()}
-          className="flex items-center gap-2 bg-white dark:bg-slate-800 dark:text-white border-2 border-slate-200 dark:border-slate-700 px-5 py-2.5 rounded-2xl font-black text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95 no-print"
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white border-2 border-emerald-500 px-5 py-2.5 rounded-2xl font-black transition-all active:scale-95 no-print"
         >
           <Printer size={18} /> Print Statement
         </button>

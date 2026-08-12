@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Required permissions -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:label="new_app"
         android:name="${applicationName}"
@@ -42,9 +46,7 @@
                 <data android:scheme="http" android:host="bdsportal.com" />
             </intent-filter>
         </activity>
-        
-    <!-- Required permissions -->
-    <uses-permission android:name="android.permission.INTERNET" />
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

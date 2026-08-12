@@ -87,6 +87,8 @@ class _IDCardScreenState extends State<IDCardScreen> with SingleTickerProviderSt
                   icon: const Icon(Icons.flip_rounded),
                   label: const Text('Flip ID Card'),
                   style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
