@@ -9,11 +9,13 @@ import {
   Hash
 } from 'lucide-react';
 import { formatDateForInput } from '../utils/dateFormatter';
+import { useGlobalClasses } from '../utils/classUtils';
 import './Auth.css';
 import bdsLogo from '../assets/bdslogo.jpg';
 
 
 const Register = () => {
+  const classes = useGlobalClasses();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -166,7 +168,7 @@ const Register = () => {
                     className="input-premium pl-12 appearance-none"
                   >
                     <option value="">Select Class</option>
-                    {['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'].map(c => (
+                    {classes.map(c => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>

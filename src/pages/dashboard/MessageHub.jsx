@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { Send, Mail, Users, Inbox, Clock, CheckCircle, AlertCircle, Trash2, Loader2 } from 'lucide-react';
+import { useGlobalClasses } from '../../utils/classUtils';
 
 const MessageHub = () => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [status, setStatus] = useState({ type: '', text: '' });
+  const classes = useGlobalClasses();
   
   const [compose, setCompose] = useState({
     title: '',
@@ -15,8 +17,6 @@ const MessageHub = () => {
     targetType: 'global', // 'global', 'class', 'student'
     targetValue: '' // e.g. 'JSS1' or 'BDS/25/001', empty for global
   });
-
-  const classes = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'];
 
   useEffect(() => {
     fetchMessages();

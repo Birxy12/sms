@@ -11,6 +11,7 @@ import {
 import { addDoc, serverTimestamp } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { fetchGlobalClasses, DEFAULT_CLASSES } from '../../utils/classUtils';
 import Papa from 'papaparse';
 
 const OldFeesAnalytics = ({ currentCollected, currentExpected }) => {
@@ -129,7 +130,7 @@ const BursarDashboard = () => {
     totalStudents: 0
   });
 
-  const classes = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'];
+  const [classes, setClasses] = useState(DEFAULT_CLASSES);
 
   const fetchFinancialData = async () => {
     setLoading(true);
@@ -138,6 +139,21 @@ const BursarDashboard = () => {
       const snap = await getDocs(collection(db, 'students'));
       const students = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setAllStudents(students);
+
+      // Sync classes from Firestore 'classes' collection (Manage Classes) + student records
+      try {
+        const dynamicClasses = await fetchGlobalClasses();
+        const studentClasses = [];
+        students.forEach(s => {
+          const c = s.className || s.class_name || s.CLASS;
+          if (c && !studentClasses.includes(c)) studentClasses.push(c);
+        });
+
+        const mergedClasses = Array.from(new Set([...dynamicClasses, ...studentClasses])).filter(Boolean);
+        setClasses(mergedClasses);
+      } catch (cErr) {
+        console.warn("Class sync error:", cErr);
+      }
 
       let expected = 0;
       let collected = 0;
@@ -155,7 +171,7 @@ const BursarDashboard = () => {
         totalStudents: students.length
       });
       
-      // Fetch payment messages (mock structure for now, assuming students send to 'payment_messages')
+      // Fetch payment messages
       try {
         const msgSnap = await getDocs(query(collection(db, 'payment_messages'), orderBy('createdAt', 'desc')));
         setPaymentMessages(msgSnap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -1403,7 +1419,7 @@ const BursarDashboard = () => {
             <h2 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
               Treasury Master
             </h2>
-            <p className="text-slate-500 font-medium mt-2">Welcome back, {currentAdmin?.name || 'Bursar'}. Centralized financial intelligence and fee management.</p>
+            <p className="text-slate-500 font-medium mt-2">Welcome back, {currentAdmin?.name || 'GTI'}. Centralized financial intelligence and fee management.</p>
           </div>
         </div>
         <div className="flex gap-3">
@@ -1417,22 +1433,24 @@ const BursarDashboard = () => {
         </div>
       </div>
 
-      {/* Modern Navigation Tabs — 7 Columns First Row, Remaining Under */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 p-2 bg-slate-100/50 rounded-2xl w-full">
-        {sidebarTabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveView(tab.id)}
-            className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-xs font-black transition-colors uppercase tracking-wider text-center ${
-              activeView === tab.id 
-                ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' 
-                : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
-            }`}
-          >
-            <tab.icon size={15} className="shrink-0 text-slate-500" />
-            <span className="truncate">{tab.label}</span>
-          </button>
-        ))}
+      {/* Modern Navigation Tabs — Exactly 7 Columns per Row */}
+      <div className="overflow-x-auto pb-1">
+        <div className="grid grid-cols-7 gap-2 p-2 bg-slate-100/50 rounded-2xl w-full min-w-[850px]">
+          {sidebarTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveView(tab.id)}
+              className={`flex items-center justify-center gap-2 px-3 py-3.5 rounded-xl text-xs font-black transition-all uppercase tracking-wider text-center ${
+                activeView === tab.id 
+                  ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' 
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
+              }`}
+            >
+              <tab.icon size={15} className="shrink-0 text-slate-500" />
+              <span className="truncate">{tab.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Dynamic Content Area */}

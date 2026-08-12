@@ -8,10 +8,12 @@ import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircl
 import { getSubjectsForClass } from '../../utils/subjectConfig';
 import ImageCropperModal from '../../components/ImageCropperModal';
 import { formatDateForInput } from '../../utils/dateFormatter';
+import { useGlobalClasses } from '../../utils/classUtils';
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const classes = useGlobalClasses();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('All');
@@ -69,8 +71,6 @@ const StudentManagement = () => {
       setSavingSubjects(false);
     }
   };
-
-  const classes = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'];
 
   const fetchStudents = async () => {
     setLoading(true);

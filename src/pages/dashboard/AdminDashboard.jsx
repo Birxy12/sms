@@ -13,6 +13,7 @@ import StudentDashboard from './StudentDashboard';
 import { expandStudent } from '../../utils/firestoreSchema';
 import { Users, User, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { useGlobalClasses } from '../../utils/classUtils';
 // Isolated clock component — ticks every second without re-rendering AdminDashboard
 const LiveClock = memo(() => {
   const [time, setTime] = useState(new Date().toLocaleTimeString());
@@ -109,7 +110,7 @@ const AdminDashboard = () => {
     }
   };
   
-  const classes = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'];
+  const classes = useGlobalClasses();
   const adminTabs = [
     { id: 'Overview', label: 'Overview', icon: TrendingUp },
     { id: 'Academics', label: 'Academics', icon: BookOpen },
