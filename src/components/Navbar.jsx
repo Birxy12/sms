@@ -273,18 +273,6 @@ const Navbar = ({ hideHamburger = false }) => {
         </div>
       </nav>
 
-      {/* Floating Hamburger FAB – mobile only */}
-      {!hideHamburger && (
-        <motion.button
-          drag
-          dragMomentum={false}
-          className={`floating-hamburger${isMobileMenuOpen ? ' floating-hamburger--open' : ''}`}
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          aria-label="Toggle navigation menu"
-        >
-          {isMobileMenuOpen ? <X size={22} strokeWidth={2.5} /> : <Menu size={22} strokeWidth={2.5} />}
-        </motion.button>
-      )}
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
