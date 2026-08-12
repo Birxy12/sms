@@ -1412,23 +1412,21 @@ const BursarDashboard = () => {
         </div>
       </div>
 
-      {/* Modern Navigation Tabs */}
-      <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100/50 rounded-2xl w-fit">
-        {sidebarTabs.map((tab, idx) => (
-          <React.Fragment key={tab.id}>
-            <button
-              onClick={() => setActiveView(tab.id)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black transition-all uppercase tracking-wider ${
-                activeView === tab.id 
-                  ? `bg-white text-${tab.color}-600 shadow-sm ring-1 ring-slate-200` 
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <tab.icon size={16} />
-              {tab.label}
-            </button>
-            {idx === 7 && <div className="w-full h-0 basis-full" />}
-          </React.Fragment>
+      {/* Modern Navigation Tabs — Even 5 Tabs Per Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-2 bg-slate-100/50 rounded-2xl w-full">
+        {sidebarTabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveView(tab.id)}
+            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-black transition-all uppercase tracking-wider text-center ${
+              activeView === tab.id 
+                ? `bg-white text-${tab.color}-600 shadow-sm ring-1 ring-slate-200` 
+                : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'
+            }`}
+          >
+            <tab.icon size={16} className="shrink-0" />
+            <span className="truncate">{tab.label}</span>
+          </button>
         ))}
       </div>
 
