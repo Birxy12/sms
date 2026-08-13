@@ -103,6 +103,18 @@ service cloud.firestore {
     match /posts/{id} {
       allow read: if true;
       allow write: if isAuthenticated();
+      
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if true;
+        allow update, delete: if isAuthenticated();
+      }
+      
+      match /reactions/{reactionId} {
+        allow read: if true;
+        allow create, update: if true;
+        allow delete: if isAuthenticated();
+      }
     }
 
     match /publications/{id} {

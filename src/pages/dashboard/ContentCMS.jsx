@@ -1005,12 +1005,12 @@ const ContentCMS = () => {
                       </select>
                     </div>
                     <div>
-                      <FileUploader 
-                        label="Article Cover Image"
-                        currentUrl={newPost.imageUrl}
-                        folder="blog"
-                        onUpload={(url) => setNewPost({...newPost, imageUrl: url})}
-                      />
+                      {renderFileUploader({
+                        label: "Article Cover Image",
+                        currentUrl: newPost.imageUrl,
+                        folder: "blog",
+                        onUpload: (url) => setNewPost({...newPost, imageUrl: url})
+                      })}
                     </div>
                   </div>
                   <div>
