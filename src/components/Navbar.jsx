@@ -149,7 +149,7 @@ const Navbar = ({ hideHamburger = false }) => {
                         className={`nav-item ${active ? 'nav-item--active' : ''}`}
                         style={{ color: active ? accentColor : textColor }}
                       >
-                        <Icon size={15} strokeWidth={2.5} className="desktop-icon-hide" />
+                        <Icon size={16} strokeWidth={2.5} />
                         <span>{link.name}</span>
                         {active && <span className="nav-dot" />}
                       </Link>
@@ -177,7 +177,7 @@ const Navbar = ({ hideHamburger = false }) => {
                     className={`nav-item ${active ? 'nav-item--active' : ''}`}
                     style={{ color: active ? accentColor : textColor }}
                   >
-                    <Icon size={15} strokeWidth={2.5} className="desktop-icon-hide" />
+                    <Icon size={16} strokeWidth={2.5} />
                     <span>{link.name}</span>
                     {active && <span className="nav-dot" />}
                   </Link>

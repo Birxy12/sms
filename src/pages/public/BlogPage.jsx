@@ -68,94 +68,51 @@ const BlogPage = () => {
               </div>
             </div>
           ) : posts.length > 0 ? (
-            <div className="space-y-16">
-              
-              {/* Featured Post (Spans full width of content column) */}
-              {featuredPost && (
-                <motion.article 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-12">
+              {posts.map((post, i) => (
+                <motion.article
+                  key={post.id}
                   initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6 }}
-                  onClick={() => navigate(`/blog/${featuredPost.id}`)}
-                  className="group cursor-pointer block"
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-100px" }}
+                  transition={{ duration: 0.5, delay: i * 0.1 }}
+                  onClick={() => navigate(`/blog/${post.id}`)}
+                  className="group cursor-pointer flex flex-col bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100"
                 >
-                  <div className="relative h-[24rem] sm:h-[32rem] w-full overflow-hidden mb-8 bg-slate-100">
-                    {featuredPost.imageUrl && (
+                  <div className="relative h-56 w-full overflow-hidden bg-slate-100">
+                    {post.imageUrl ? (
                       <img 
-                        src={featuredPost.imageUrl} 
-                        alt={featuredPost.title}
+                        src={post.imageUrl} 
+                        alt={post.title}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                       />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-300">
+                        <FileText size={48} />
+                      </div>
                     )}
-                    <div className="absolute inset-0 bg-slate-900/10 group-hover:bg-transparent transition-colors duration-500"></div>
                   </div>
                   
-                  <div className="flex items-center gap-4 text-xs font-black uppercase tracking-widest text-slate-400 mb-4">
-                    {featuredPost.category && <span className="text-indigo-600">{featuredPost.category}</span>}
-                    <span>{new Date(featuredPost.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  
-                  <h2 className="text-4xl sm:text-5xl font-black text-slate-900 leading-[1.1] tracking-tight group-hover:text-indigo-600 transition-colors mb-6">
-                    {featuredPost.title}
-                  </h2>
-                  
-                  <p className="text-lg text-slate-600 font-medium leading-relaxed max-w-3xl line-clamp-3 mb-6">
-                    {featuredPost.excerpt || featuredPost.content?.replace(/<[^>]*>?/gm, '').substring(0, 200) + '...'}
-                  </p>
-                  
-                  <div className="flex items-center gap-2 text-sm font-black text-slate-900 uppercase tracking-widest group-hover:text-indigo-600 transition-colors">
-                    Read Story <ChevronRight size={16} className="transform group-hover:translate-x-1 transition-transform" />
+                  <div className="p-6 flex flex-col flex-grow">
+                    <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">
+                      {post.category && <span className="text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">{post.category}</span>}
+                      <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    
+                    <h3 className="text-xl font-black text-slate-900 leading-[1.2] tracking-tight group-hover:text-indigo-600 transition-colors mb-4 line-clamp-2">
+                      {post.title}
+                    </h3>
+                    
+                    <p className="text-slate-500 font-medium text-sm leading-relaxed line-clamp-3 mb-6 flex-grow">
+                      {post.excerpt || post.content?.replace(/<[^>]*>?/gm, '').substring(0, 120) + '...'}
+                    </p>
+
+                    <div className="flex items-center gap-1 text-[11px] font-black text-indigo-600 uppercase tracking-widest mt-auto opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300">
+                      Read Article <ChevronRight size={14} />
+                    </div>
                   </div>
                 </motion.article>
-              )}
-
-              {/* Grid for remaining posts */}
-              {regularPosts.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-16">
-                  {regularPosts.map((post, i) => (
-                    <motion.article
-                      key={post.id}
-                      initial={{ opacity: 0, y: 30 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, margin: "-100px" }}
-                      transition={{ duration: 0.5, delay: i * 0.1 }}
-                      onClick={() => navigate(`/blog/${post.id}`)}
-                      className="group cursor-pointer flex flex-col"
-                    >
-                      <div className="relative h-64 w-full overflow-hidden mb-6 bg-slate-100">
-                        {post.imageUrl ? (
-                          <img 
-                            src={post.imageUrl} 
-                            alt={post.title}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-300">
-                            <FileText size={48} />
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">
-                        {post.category && <span className="text-indigo-600">{post.category}</span>}
-                        <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                      </div>
-                      
-                      <h3 className="text-2xl font-black text-slate-900 leading-[1.2] tracking-tight group-hover:text-indigo-600 transition-colors mb-4 line-clamp-3">
-                        {post.title}
-                      </h3>
-                      
-                      <p className="text-slate-500 font-medium text-sm leading-relaxed line-clamp-3 mb-4 flex-grow">
-                        {post.excerpt || post.content?.replace(/<[^>]*>?/gm, '').substring(0, 120) + '...'}
-                      </p>
-
-                      <div className="flex items-center gap-1 text-[11px] font-black text-slate-900 uppercase tracking-widest mt-auto group-hover:text-indigo-600 transition-colors">
-                        Read <ChevronRight size={14} className="transform group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </motion.article>
-                  ))}
-                </div>
-              )}
+              ))}
             </div>
           ) : (
             <div className="py-24 text-center border-t-2 border-slate-900 mt-8">

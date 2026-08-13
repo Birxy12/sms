@@ -132,17 +132,16 @@
 @media (min-width: 1024px) {
   .desktop-links {
     display: flex;
-  }
-  .desktop-icon-hide {
-    display: none !important;
+    gap: 0.5rem;
   }
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 0.15rem;
-  padding: 0.25rem 0.4rem;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem;
   border-radius: 0.375rem;
   font-size: 0.8125rem;
   font-weight: 600;
