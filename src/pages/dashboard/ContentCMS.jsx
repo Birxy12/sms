@@ -416,7 +416,6 @@ const ContentCMS = () => {
     </div>
   );
 
-  // ── Image Editor Modal ──────────────────────────────────────────
   const renderImageEditorModal = () => {
     if (!editorOpen || !editorSrc) return null;
     const aspectOptions = [
@@ -427,17 +426,40 @@ const ContentCMS = () => {
       { label: 'Free', value: undefined },
     ];
     const filterStyle = `brightness(${filters.brightness}%) contrast(${filters.contrast}%) saturate(${filters.saturation}%) grayscale(${filters.grayscale}%)`;
+    
     return (
-      <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style={{ maxHeight: '95vh' }}>
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 99999, 
+        background: 'rgba(2, 6, 23, 0.75)', 
+        backdropFilter: 'blur(16px)', 
+        WebkitBackdropFilter: 'blur(16px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
+      }}>
+        <div style={{
+          background: 'linear-gradient(to bottom right, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.95))',
+          borderRadius: 24, width: '100%', maxWidth: 640, overflow: 'hidden',
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.1)', 
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          display: 'flex', flexDirection: 'column',
+          maxHeight: '90vh'
+        }}>
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <CropIcon size={20} className="text-indigo-600" /> Photo Editor
+          <div style={{
+            padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex',
+            justifyContent: 'space-between', alignItems: 'center'
+          }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#f8fafc', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <CropIcon size={20} className="text-indigo-400" /> Photo Editor
             </h3>
             <div className="flex items-center gap-3">
-              <label className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 px-3 py-1.5 rounded-lg cursor-pointer transition-all">
-                <Upload size={12} /> Replace Image
+              <label style={{
+                display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700,
+                color: '#818cf8', background: 'rgba(129, 140, 248, 0.1)', border: '1px solid rgba(129, 140, 248, 0.2)',
+                padding: '6px 12px', borderRadius: 8, cursor: 'pointer', transition: 'all 0.2s ease'
+              }}
+              onMouseOver={e => e.currentTarget.style.background = 'rgba(129, 140, 248, 0.15)'}
+              onMouseOut={e => e.currentTarget.style.background = 'rgba(129, 140, 248, 0.1)'}>
+                <Upload size={14} /> Replace
                 <input
                   type="file"
                   accept="image/*"
@@ -452,91 +474,156 @@ const ContentCMS = () => {
                   }}
                 />
               </label>
-              <button
-                onClick={handleEditorConfirm}
-                disabled={uploading}
-                className="flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-all"
-              >
-                {uploading ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Save
-              </button>
-              <button onClick={() => setEditorOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
-                <X size={20} />
+              <button onClick={() => setEditorOpen(false)} style={{
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999, padding: 8,
+                cursor: 'pointer', color: '#94a3b8', display: 'flex', transition: 'all 0.2s ease'
+              }}
+              onMouseOver={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
+              onMouseOut={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}>
+                <X size={18} strokeWidth={2.5} />
               </button>
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 px-6 pt-4">
+          <div style={{ display: 'flex', gap: 4, padding: '16px 24px 0 24px' }}>
             {[{ id: 'crop', label: 'Crop & Rotate', icon: <CropIcon size={14}/> }, { id: 'filter', label: 'Filters', icon: <SlidersHorizontal size={14}/> }].map(t => (
               <button key={t.id} onClick={() => setActiveEditorTab(t.id)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                  activeEditorTab === t.id ? 'bg-indigo-600 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}>{t.icon}{t.label}</button>
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 12,
+                  fontSize: 13, fontWeight: 700, transition: 'all 0.2s ease', cursor: 'pointer',
+                  border: 'none',
+                  background: activeEditorTab === t.id ? 'linear-gradient(to bottom, #6366f1, #4f46e5)' : 'transparent',
+                  color: activeEditorTab === t.id ? '#fff' : '#94a3b8',
+                  boxShadow: activeEditorTab === t.id ? '0 4px 12px rgba(79,70,229,0.3)' : 'none'
+                }}
+                onMouseOver={e => { if(activeEditorTab !== t.id) e.currentTarget.style.color = '#fff' }}
+                onMouseOut={e => { if(activeEditorTab !== t.id) e.currentTarget.style.color = '#94a3b8' }}
+              >
+                {t.icon}{t.label}
+              </button>
             ))}
           </div>
 
-          {/* Crop Panel */}
-          {activeEditorTab === 'crop' && (
-            <div className="flex flex-col gap-4 px-6 py-4 overflow-y-auto flex-1">
-              {/* Aspect Ratio */}
-              <div>
-                <p className="text-[10px] font-black uppercase text-slate-400 mb-2">Aspect Ratio</p>
-                <div className="flex gap-2 flex-wrap">
-                  {aspectOptions.map(opt => (
-                    <button key={opt.label} onClick={() => setAspectRatio(opt.value)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all ${
-                        aspectRatio === opt.value ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:border-indigo-300'
-                      }`}>{opt.label}</button>
+          {/* Content Area */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+            {/* Crop Panel */}
+            {activeEditorTab === 'crop' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {/* Aspect Ratio */}
+                <div>
+                  <p style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#64748b', marginBottom: 8, letterSpacing: '0.05em' }}>Aspect Ratio</p>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {aspectOptions.map(opt => (
+                      <button key={opt.label} onClick={() => setAspectRatio(opt.value)}
+                        style={{
+                          padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease',
+                          border: aspectRatio === opt.value ? '1px solid #818cf8' : '1px solid rgba(255,255,255,0.1)',
+                          background: aspectRatio === opt.value ? 'rgba(129,140,248,0.1)' : 'rgba(255,255,255,0.02)',
+                          color: aspectRatio === opt.value ? '#818cf8' : '#94a3b8'
+                        }}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div style={{ borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', background: '#020617' }}>
+                  <ImageCropperContainer
+                    key={editorSrc}
+                    image={editorSrc}
+                    aspectRatio={aspectRatio}
+                    filterStyle={filterStyle}
+                    cropperStateRef={cropperStateRef}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Filter Panel */}
+            {activeEditorTab === 'filter' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                {/* Live Preview */}
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <div style={{ 
+                    width: 120, height: 120, borderRadius: 20, overflow: 'hidden', 
+                    border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+                    filter: filterStyle 
+                  }}>
+                    <img src={editorSrc} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+                  {[
+                    { key: 'brightness', label: 'Brightness', min: 50, max: 200 },
+                    { key: 'contrast', label: 'Contrast', min: 50, max: 200 },
+                    { key: 'saturation', label: 'Saturation', min: 0, max: 200 },
+                    { key: 'grayscale', label: 'Grayscale', min: 0, max: 100 },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>{f.label}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#f8fafc' }}>{filters[f.key]}{f.key === 'grayscale' ? '%' : '%'}</span>
+                      </div>
+                      <input type="range" min={f.min} max={f.max} value={filters[f.key]}
+                        onChange={e => setFilters(prev => ({ ...prev, [f.key]: +e.target.value }))}
+                        style={{ width: '100%', accentColor: '#818cf8', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, outline: 'none', appearance: 'none' }} 
+                      />
+                    </div>
                   ))}
                 </div>
-              </div>
-              <ImageCropperContainer
-                key={editorSrc}
-                image={editorSrc}
-                aspectRatio={aspectRatio}
-                filterStyle={filterStyle}
-                cropperStateRef={cropperStateRef}
-              />
-            </div>
-          )}
 
-          {/* Filter Panel */}
-          {activeEditorTab === 'filter' && (
-            <div className="flex flex-col gap-4 px-6 py-4 overflow-y-auto flex-1">
-              {/* Live Preview */}
-              <div className="flex justify-center">
-                <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-slate-200 shadow-md" style={{ filter: filterStyle }}>
-                  <img src={editorSrc} alt="preview" className="w-full h-full object-cover" />
-                </div>
+                <button onClick={resetFilters} style={{ 
+                  display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, 
+                  color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', alignSelf: 'flex-start',
+                  padding: '8px 0' 
+                }}
+                onMouseOver={e => e.currentTarget.style.color = '#818cf8'}
+                onMouseOut={e => e.currentTarget.style.color = '#94a3b8'}>
+                  <RotateCcw size={14} /> Reset Filters
+                </button>
               </div>
-              {[
-                { key: 'brightness', label: 'Brightness', min: 50, max: 200 },
-                { key: 'contrast', label: 'Contrast', min: 50, max: 200 },
-                { key: 'saturation', label: 'Saturation', min: 0, max: 200 },
-                { key: 'grayscale', label: 'Grayscale', min: 0, max: 100 },
-              ].map(f => (
-                <div key={f.key}>
-                  <p className="text-[10px] font-black uppercase text-slate-400 mb-1">{f.label} — {filters[f.key]}{f.key === 'grayscale' ? '%' : '%'}</p>
-                  <input type="range" min={f.min} max={f.max} value={filters[f.key]}
-                    onChange={e => setFilters(prev => ({ ...prev, [f.key]: +e.target.value }))}
-                    className="w-full accent-indigo-600" />
-                </div>
-              ))}
-              <button onClick={resetFilters} className="flex items-center gap-2 text-slate-500 text-sm font-bold hover:text-indigo-600 transition-colors self-start">
-                <RotateCcw size={14} /> Reset Filters
-              </button>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Footer actions */}
-          <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50">
-            <button onClick={() => setEditorOpen(false)} className="px-5 py-2.5 rounded-xl border-2 border-slate-200 font-bold text-slate-600 hover:bg-slate-100 transition-colors">Cancel</button>
-            <button onClick={handleEditorConfirm} disabled={uploading}
-              className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold flex items-center gap-2 hover:bg-indigo-700 transition-colors disabled:opacity-50">
-              {uploading ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Apply & Save
+          <div style={{
+            display: 'flex', justifyContent: 'flex-end', gap: 12, padding: '16px 24px', 
+            borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)'
+          }}>
+            <button onClick={() => setEditorOpen(false)} style={{
+              padding: '10px 20px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)',
+              background: 'rgba(255,255,255,0.02)', color: '#cbd5e1', fontWeight: 600, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s ease'
+            }}
+            onMouseOver={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#fff' }}
+            onMouseOut={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; e.currentTarget.style.color = '#cbd5e1' }}>
+              Cancel
+            </button>
+            <button onClick={handleEditorConfirm} disabled={uploading} style={{
+              padding: '10px 24px', borderRadius: 12, border: '1px solid rgba(129, 140, 248, 0.4)',
+              background: 'linear-gradient(to bottom, #6366f1, #4f46e5)', color: '#fff', fontWeight: 700, fontSize: 13,
+              cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.7 : 1,
+              display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 16px rgba(79,70,229,0.4)', transition: 'all 0.2s ease'
+            }}
+            onMouseOver={e => { if(!uploading) e.currentTarget.style.boxShadow = '0 8px 24px rgba(79,70,229,0.6)' }}
+            onMouseOut={e => { if(!uploading) e.currentTarget.style.boxShadow = '0 4px 16px rgba(79,70,229,0.4)' }}>
+              {uploading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} 
+              {uploading ? 'Processing...' : 'Apply & Save'}
             </button>
           </div>
         </div>
+        <style dangerouslySetInnerHTML={{__html: `
+          input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #818cf8;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(129, 140, 248, 0.5);
+          }
+        `}} />
       </div>
     );
   };
