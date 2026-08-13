@@ -28,6 +28,7 @@ import BrandingSettings from './pages/BrandingSettings';
 import AboutPage from './pages/public/AboutPage';
 import ContactPage from './pages/public/ContactPage';
 import BlogPage from './pages/public/BlogPage';
+import BlogPost from './pages/public/BlogPost';
 import ContentCMS from './pages/dashboard/ContentCMS';
 import LeaderboardPage from './pages/public/LeaderboardPage';
 import FamePage from './pages/public/FamePage';
@@ -141,6 +142,7 @@ function App() {
       <Route path="/about" element={<AboutPage />} />
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/blog" element={<BlogPage />} />
+      <Route path="/blog/:id" element={<BlogPost />} />
       <Route path="/leaderboard" element={<LeaderboardPage />} />
       <Route path="/fame" element={<FamePage />} />
 
