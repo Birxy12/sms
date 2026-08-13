@@ -412,69 +412,117 @@ const StudentManagement = () => {
 
       {/* Promote / Demote Modal */}
       {promoteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-emerald-600 to-teal-700 text-white flex justify-between items-center">
-              <div>
-                <h3 className="text-xl font-black">Promote / Demote Student</h3>
-                <p className="text-emerald-100 text-xs mt-1">Registration number will be preserved</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
+
+            {/* Header */}
+            <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 text-white px-8 py-6 shrink-0">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 mb-1">Student Transfer</p>
+                  <h3 className="text-xl font-black text-white">Promote / Demote</h3>
+                </div>
+                <button onClick={() => setPromoteModal(null)} className="p-2 rounded-xl hover:bg-white/10 transition-colors text-slate-300">
+                  <X size={20} />
+                </button>
               </div>
-              <button onClick={() => setPromoteModal(null)} className="hover:opacity-50 transition-opacity"><X size={24} /></button>
             </div>
-            <div className="p-8 space-y-6">
-              {/* Student Info */}
-              <div className="flex items-center gap-4 bg-slate-50 rounded-2xl p-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-lg overflow-hidden">
-                  {promoteModal.student.photo ? <img src={promoteModal.student.photo} alt="" className="w-full h-full object-cover" /> : promoteModal.student.name[0]}
-                </div>
-                <div className="text-left">
-                  <p className="font-black text-slate-900">{promoteModal.student.name}</p>
-                  <p className="text-xs font-mono text-slate-500">{promoteModal.student.regNo}</p>
-                </div>
-              </div>
 
-              {/* Class change */}
-              <div className="grid grid-cols-2 gap-4 items-center">
-                <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-center">
-                  <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">Current Class</p>
-                  <p className="text-lg font-black text-rose-700">{promoteModal.student.className}</p>
-                </div>
-                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-center">
-                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">New Class</p>
-                  <select
-                    value={newClass}
-                    onChange={(e) => setNewClass(e.target.value)}
-                    className="w-full text-center font-black text-emerald-700 bg-transparent outline-none text-sm border-b-2 border-emerald-300 focus:border-emerald-600 transition-colors"
-                  >
-                    {classes.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              </div>
+            {/* Scrollable body */}
+            <div className="overflow-y-auto flex-1 custom-scrollbar">
+              <div className="p-6 space-y-5">
 
-              {/* History */}
-              {promoteModal.student.classHistory?.length > 0 && (
-                <div className="text-left">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1"><History size={12} /> Transfer History</p>
-                  <div className="space-y-1 max-h-28 overflow-y-auto">
-                    {[...promoteModal.student.classHistory].reverse().map((h, i) => (
-                      <div key={i} className="flex items-center justify-between text-xs px-3 py-1.5 bg-slate-50 rounded-lg">
-                        <span className="font-bold text-slate-600">{h.from} → {h.to}</span>
-                        <span className="text-slate-400">{new Date(h.date).toLocaleDateString()}</span>
-                      </div>
-                    ))}
+                {/* Student Identity Card */}
+                <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center font-black text-xl text-slate-600 overflow-hidden shrink-0 shadow-inner">
+                    {promoteModal.student.photo
+                      ? <img src={promoteModal.student.photo} alt="" className="w-full h-full object-cover" />
+                      : promoteModal.student.name[0]}
+                  </div>
+                  <div>
+                    <p className="font-black text-slate-900 text-base leading-tight">{promoteModal.student.name}</p>
+                    <p className="text-xs font-mono text-slate-400 mt-0.5">{promoteModal.student.regNo}</p>
+                    <span className={`inline-block mt-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${promoteModal.student.gender === 'Male' ? 'bg-blue-50 text-blue-500' : 'bg-pink-50 text-pink-500'}`}>
+                      {promoteModal.student.gender}
+                    </span>
                   </div>
                 </div>
-              )}
 
+                {/* Class Transfer Visualizer */}
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Class Transfer</p>
+                  <div className="flex items-center gap-3">
+                    {/* Current Class */}
+                    <div className="flex-1 bg-rose-50 border-2 border-rose-100 rounded-2xl p-4 text-center">
+                      <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest mb-1">From</p>
+                      <p className="text-lg font-black text-rose-700">{promoteModal.student.className}</p>
+                    </div>
+                    {/* Arrow */}
+                    <div className="flex flex-col items-center gap-0.5 shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                        <ArrowUpDown size={16} className="text-slate-500" />
+                      </div>
+                    </div>
+                    {/* New Class */}
+                    <div className="flex-1 bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-4 text-center">
+                      <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">To</p>
+                      <select
+                        value={newClass}
+                        onChange={(e) => setNewClass(e.target.value)}
+                        className="w-full text-center font-black text-emerald-700 bg-transparent outline-none text-sm border-b-2 border-emerald-300 focus:border-emerald-600 transition-colors cursor-pointer"
+                      >
+                        {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  {newClass === promoteModal.student.className && (
+                    <p className="text-[10px] font-bold text-amber-600 mt-2 text-center">⚠ Please select a different class to proceed</p>
+                  )}
+                </div>
+
+                {/* Class History Timeline */}
+                {promoteModal.student.classHistory?.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                      <History size={11} /> Transfer History ({promoteModal.student.classHistory.length})
+                    </p>
+                    <div className="space-y-2 max-h-36 overflow-y-auto custom-scrollbar pr-1">
+                      {[...promoteModal.student.classHistory].reverse().map((h, i) => (
+                        <div key={i} className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md">{h.from}</span>
+                            <span className="text-slate-300 text-xs">→</span>
+                            <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">{h.to}</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-slate-400">{new Date(h.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </div>
+
+            {/* Pinned Footer */}
+            <div className="p-5 border-t border-slate-100 bg-slate-50 flex gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setPromoteModal(null)}
+                className="flex-1 py-3.5 bg-slate-200 text-slate-700 rounded-2xl font-black hover:bg-slate-300 transition-all active:scale-95 text-sm"
+              >
+                Cancel
+              </button>
               <button
                 onClick={handlePromote}
                 disabled={promoting || newClass === promoteModal.student.className}
-                className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 transition-all active:scale-95 disabled:opacity-50"
+                className="flex-2 px-8 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 transition-all active:scale-95 disabled:opacity-50 text-sm"
               >
-                {promoting ? <Loader2 size={18} className="animate-spin" /> : <ArrowUpDown size={18} />}
-                {promoting ? 'Moving Student...' : 'Confirm Transfer'}
+                {promoting ? <Loader2 size={16} className="animate-spin" /> : <ArrowUpDown size={16} />}
+                {promoting ? 'Moving…' : 'Confirm Transfer'}
               </button>
             </div>
+
           </div>
         </div>
       )}
