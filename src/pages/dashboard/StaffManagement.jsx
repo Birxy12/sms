@@ -365,7 +365,8 @@ const StaffManagement = () => {
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={24} /></button>
             </div>
             
-            <form onSubmit={handleSave} className="p-8 space-y-6 text-left overflow-y-auto flex-1 custom-scrollbar">
+            <div className="overflow-y-auto flex-1 custom-scrollbar">
+              <form id="staff-form" onSubmit={handleSave} className="p-8 space-y-6 text-left">
               <GlobalPhotoUploader
                 photoUrl={currentStaff.photo}
                 uploading={uploadingPhoto}
@@ -444,24 +445,26 @@ const StaffManagement = () => {
                   />
                 </div>
               </div>
+              </form>
+            </div>
 
-              <div className="flex items-center gap-4 pt-4">
-                <button 
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold hover:bg-slate-200 transition-all active:scale-95"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={saving}
-                  className="flex-1 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-50"
-                >
-                  {saving ? <Loader2 className="animate-spin w-5 h-5 mx-auto" /> : isEditing ? 'Update Record' : 'Create Account'}
-                </button>
-              </div>
-            </form>
+            <div className="p-6 border-t border-slate-100 bg-slate-50 flex items-center gap-4 shrink-0">
+              <button 
+                type="button"
+                onClick={() => setShowModal(false)} 
+                className="flex-1 bg-slate-200 text-slate-700 px-6 py-4 rounded-xl font-bold hover:bg-slate-300 transition-all active:scale-95"
+              >
+                Cancel
+              </button>
+              <button 
+                form="staff-form"
+                type="submit" 
+                disabled={saving} 
+                className="flex-1 bg-indigo-600 text-white px-6 py-4 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="animate-spin w-5 h-5 mx-auto" /> : isEditing ? 'Save Changes' : 'Add Staff'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@ const GlobalPhotoUploader = ({
   photoUrl, 
   uploading, 
   onPhotoSelect, 
+  onEdit,
   label = 'Portrait',
   recommendedText = 'Recommended: Square image < 2MB'
 }) => {
@@ -30,19 +31,34 @@ const GlobalPhotoUploader = ({
           <Camera size={36} style={{ color: '#cbd5e1' }} />
         )}
       </div>
-      <label style={{
-        display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px',
-        background: '#4f46e5', color: '#fff', borderRadius: 12,
-        fontWeight: 800, fontSize: 12, cursor: uploading ? 'not-allowed' : 'pointer',
-        boxShadow: '0 4px 12px rgba(79,70,229,0.3)', opacity: uploading ? 0.6 : 1,
-        transition: 'transform 0.15s'
-      }}
-      onMouseEnter={e => !uploading && (e.currentTarget.style.transform = 'scale(1.02)')}
-      onMouseLeave={e => !uploading && (e.currentTarget.style.transform = 'scale(1)')}>
-        <Upload size={14} />
-        {photoUrl ? `Change ${label}` : `Upload ${label}`}
-        <input type="file" accept="image/*" onChange={onPhotoSelect} style={{ display: 'none' }} disabled={uploading} />
-      </label>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <label style={{
+          display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px',
+          background: '#4f46e5', color: '#fff', borderRadius: 12,
+          fontWeight: 800, fontSize: 12, cursor: uploading ? 'not-allowed' : 'pointer',
+          boxShadow: '0 4px 12px rgba(79,70,229,0.3)', opacity: uploading ? 0.6 : 1,
+          transition: 'transform 0.15s'
+        }}
+        onMouseEnter={e => !uploading && (e.currentTarget.style.transform = 'scale(1.02)')}
+        onMouseLeave={e => !uploading && (e.currentTarget.style.transform = 'scale(1)')}>
+          <Upload size={14} />
+          {photoUrl ? `Change ${label}` : `Upload ${label}`}
+          <input type="file" accept="image/*" onChange={onPhotoSelect} style={{ display: 'none' }} disabled={uploading} />
+        </label>
+        
+        {photoUrl && onEdit && (
+          <button type="button" onClick={onEdit} style={{
+            display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px',
+            background: '#f1f5f9', color: '#475569', borderRadius: 12,
+            fontWeight: 800, fontSize: 12, cursor: 'pointer', border: 'none',
+            transition: 'transform 0.15s'
+          }}
+          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+            Edit / Crop
+          </button>
+        )}
+      </div>
       <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>
         {recommendedText}
       </p>

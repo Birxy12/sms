@@ -564,7 +564,8 @@ const StudentManagement = () => {
               <button onClick={() => setShowModal(false)} className="hover:opacity-50 transition-opacity"><X size={24} /></button>
             </div>
             
-            <form onSubmit={handleSave} className="p-8 space-y-6 text-left overflow-y-auto flex-1 custom-scrollbar">
+            <div className="overflow-y-auto flex-1 custom-scrollbar">
+              <form id="student-form" onSubmit={handleSave} className="p-8 space-y-6 text-left">
               <GlobalPhotoUploader
                 photoUrl={currentStudent.photo}
                 uploading={uploading}
@@ -660,15 +661,15 @@ const StudentManagement = () => {
                     className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
                   />
                 </div>
-              </div>
+              </form>
+            </div>
 
-              <div className="flex items-center gap-4 pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 bg-slate-100 text-slate-600 px-6 py-4 rounded-2xl font-black hover:bg-slate-200 transition-all">Cancel</button>
-                <button type="submit" disabled={saving} className="flex-1 bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all disabled:opacity-50">
-                  {saving ? <Loader2 size={24} className="animate-spin mx-auto" /> : isEditing ? 'Save Changes' : 'Enroll Student'}
-                </button>
-              </div>
-            </form>
+            <div className="p-6 border-t border-slate-100 bg-slate-50 flex items-center gap-4 shrink-0">
+              <button type="button" onClick={() => setShowModal(false)} className="flex-1 bg-slate-200 text-slate-700 px-6 py-4 rounded-2xl font-black hover:bg-slate-300 transition-all">Cancel</button>
+              <button form="student-form" type="submit" disabled={saving} className="flex-1 bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all disabled:opacity-50">
+                {saving ? <Loader2 size={24} className="animate-spin mx-auto" /> : isEditing ? 'Save Changes' : 'Enroll Student'}
+              </button>
+            </div>
           </div>
         </div>
       )}

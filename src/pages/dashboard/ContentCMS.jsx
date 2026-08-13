@@ -4,6 +4,7 @@ import { doc, getDoc, setDoc, collection, addDoc, getDocs, deleteDoc, query, ord
 import { uploadFileToSupabase } from '../../lib/supabase';
 import { Save, FileText, Image as ImageIcon, MessageSquare, Trash2, Edit2, Loader2, CheckCircle, AlertCircle, Phone, MapPin, Plus, Info, Upload, Crop as CropIcon, SlidersHorizontal, X, Check, RotateCcw } from 'lucide-react';
 import Cropper from 'react-easy-crop';
+import GlobalPhotoUploader from '../../components/GlobalPhotoUploader';
 
 // ── Standalone Image Cropper Container (Isolates layout & render state) ──
 const ImageCropperContainer = React.memo(({ image, aspectRatio, filterStyle, cropperStateRef }) => {
@@ -368,51 +369,19 @@ const ContentCMS = () => {
 
   const resetFilters = () => setFilters({ brightness: 100, contrast: 100, saturation: 100, grayscale: 0 });
 
-  // ── Inline Image Upload Component (with editor support) ──────────
   const renderFileUploader = ({ onUpload, label, currentUrl, folder }) => (
-    <div className="space-y-3">
-      <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">{label}</label>
-      <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border-2 border-slate-100 hover:border-indigo-200 transition-all">
-        {currentUrl ? (
-          <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 bg-white shrink-0 shadow-sm">
-            <img src={currentUrl} alt="Preview" className="w-full h-full object-cover" />
-          </div>
-        ) : (
-          <div className="w-16 h-16 rounded-xl bg-slate-200 flex items-center justify-center shrink-0">
-            <ImageIcon size={24} className="text-slate-400" />
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-slate-500 mb-1 truncate">{currentUrl || 'No image selected'}</p>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) openEditorFromFile(file, folder, onUpload);
-                }}
-                className="absolute inset-0 opacity-0 cursor-pointer"
-                disabled={uploading}
-              />
-              <button className="flex items-center gap-1.5 text-indigo-600 font-black text-xs px-3 py-2 bg-white rounded-lg border border-indigo-100 hover:bg-indigo-50 transition-colors">
-                {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-                {currentUrl ? 'Change Image' : 'Upload Image'}
-              </button>
-            </div>
-            {currentUrl && (
-              <button
-                type="button"
-                onClick={() => openEditor(currentUrl, folder, onUpload)}
-                className="flex items-center gap-1.5 text-slate-600 font-black text-xs px-3 py-2 bg-white rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-              >
-                <CropIcon size={14} /> Edit / Crop
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+    <div className="mb-4">
+      <GlobalPhotoUploader 
+        photoUrl={currentUrl}
+        uploading={uploading}
+        onPhotoSelect={(e) => {
+          const file = e.target.files[0];
+          if (file) openEditorFromFile(file, folder, onUpload);
+        }}
+        onEdit={() => openEditor(currentUrl, folder, onUpload)}
+        label={label.replace(/ Slide \d+|'s Official Photo| Section Illustration \/ Image/gi, '')} // Clean up label
+        recommendedText=""
+      />
     </div>
   );
 
