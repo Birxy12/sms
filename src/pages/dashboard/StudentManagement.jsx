@@ -605,123 +605,172 @@ const StudentManagement = () => {
       })()}
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-            <div className="p-8 border-b border-slate-100 bg-indigo-600 text-white flex justify-between items-center shrink-0">
-              <h3 className="text-2xl font-black">{isEditing ? 'Edit Student' : 'Student Enrollment'}</h3>
-              <button onClick={() => setShowModal(false)} className="hover:opacity-50 transition-opacity"><X size={24} /></button>
-            </div>
-            
-            <div className="overflow-y-auto flex-1 custom-scrollbar">
-              <form id="student-form" onSubmit={handleSave} className="p-8 space-y-6 text-left">
-                <GlobalPhotoUploader
-                  photoUrl={currentStudent.photo}
-                  uploading={uploading}
-                  onPhotoSelect={handlePhotoSelect}
-                  label="Student Photo"
-                />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
 
-                <div className="space-y-4">
+            {/* ── Header ── */}
+            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 px-8 py-6 shrink-0">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-400 mb-1">
+                    {isEditing ? 'Edit Record' : 'New Enrollment'}
+                  </p>
+                  <h3 className="text-xl font-black text-white">{isEditing ? 'Edit Student' : 'Student Enrollment'}</h3>
+                  <p className="text-xs text-slate-400 mt-1">Fill in the details below and save</p>
+                </div>
+                <button onClick={() => setShowModal(false)} className="p-2 rounded-xl hover:bg-white/10 transition-colors text-slate-400 hover:text-white">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* ── Scrollable body ── */}
+            <div className="overflow-y-auto flex-1 custom-scrollbar bg-slate-50">
+              <form id="student-form" onSubmit={handleSave} className="p-6 space-y-5">
+
+                {/* Photo Upload */}
+                <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Student Photo</p>
+                  <GlobalPhotoUploader
+                    photoUrl={currentStudent.photo}
+                    uploading={uploading}
+                    onPhotoSelect={handlePhotoSelect}
+                    label="Student Photo"
+                    recommendedText="Square image recommended · Max 2MB"
+                  />
+                </div>
+
+                {/* Identity Section */}
+                <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3 border-b border-slate-100">Identity</p>
+
                   <div>
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Full Name</label>
-                    <input 
-                      type="text" required 
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 block">Full Name *</label>
+                    <input
+                      type="text" required
                       value={currentStudent.name}
                       onChange={(e) => setCurrentStudent({...currentStudent, name: e.target.value})}
                       placeholder="Enter student's full name"
-                      className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                      className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-800 placeholder:text-slate-300"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Reg Number</label>
-                      <input 
-                        type="text" required 
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 block">Reg Number *</label>
+                      <input
+                        type="text" required
                         readOnly={isEditing}
                         value={currentStudent.regNo}
                         onChange={(e) => !isEditing && setCurrentStudent({...currentStudent, regNo: e.target.value.toUpperCase()})}
                         placeholder="e.g. BDS/25/001"
-                        className={`w-full px-5 py-3.5 rounded-2xl border-2 border-transparent outline-none transition-all font-bold ${isEditing ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-slate-50 focus:border-indigo-600 focus:bg-white'}`}
+                        className={`w-full px-4 py-3 rounded-xl border outline-none transition-all text-sm font-semibold ${isEditing ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : 'bg-slate-50 border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 focus:bg-white text-slate-800'}`}
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">{isEditing ? 'Change Class (Promote/Demote)' : 'Assigned Class'}</label>
-                      <select 
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 block">
+                        {isEditing ? 'Change Class' : 'Assigned Class'}
+                      </label>
+                      <select
                         value={currentStudent.className}
                         onChange={(e) => setCurrentStudent({...currentStudent, className: e.target.value})}
-                        className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                        className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-800 cursor-pointer"
                       >
                         {classes.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                     <div>
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Gender</label>
-                      <select 
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 block">Gender</label>
+                      <select
                         value={currentStudent.gender}
                         onChange={(e) => setCurrentStudent({...currentStudent, gender: e.target.value})}
-                        className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                        className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-800 cursor-pointer"
                       >
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">House / Wing</label>
-                      <input 
-                        type="text" 
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 block">House / Wing</label>
+                      <input
+                        type="text"
                         value={currentStudent.house || ''}
                         onChange={(e) => setCurrentStudent({...currentStudent, house: e.target.value})}
                         placeholder="e.g. Blue House"
-                        className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                        className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-800 placeholder:text-slate-300"
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                </div>
+
+                {/* Contact Section */}
+                <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3 border-b border-slate-100">Contact & Personal</p>
+
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Phone Number</label>
-                      <input 
-                        type="tel" 
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 block">Phone Number</label>
+                      <input
+                        type="tel"
                         value={currentStudent.phone || ''}
                         onChange={(e) => setCurrentStudent({...currentStudent, phone: e.target.value})}
                         placeholder="+234..."
-                        className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                        className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-800 placeholder:text-slate-300"
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Date of Birth</label>
-                      <input 
-                        type="date" 
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 block">Date of Birth</label>
+                      <input
+                        type="date"
                         value={formatDateForInput(currentStudent.dob)}
                         onChange={(e) => setCurrentStudent({...currentStudent, dob: e.target.value})}
-                        className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                        className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-800"
                       />
                     </div>
                   </div>
+
                   <div>
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Guardian Email</label>
-                    <input 
-                      type="email" 
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 block">Guardian Email</label>
+                    <input
+                      type="email"
                       value={currentStudent.email}
                       onChange={(e) => setCurrentStudent({...currentStudent, email: e.target.value})}
                       placeholder="parent@email.com"
-                      className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                      className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-800 placeholder:text-slate-300"
                     />
                   </div>
                 </div>
+
               </form>
             </div>
 
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex items-center gap-4 shrink-0">
-              <button type="button" onClick={() => setShowModal(false)} className="flex-1 bg-slate-200 text-slate-700 px-6 py-4 rounded-2xl font-black hover:bg-slate-300 transition-all">Cancel</button>
-              <button form="student-form" type="submit" disabled={saving} className="flex-1 bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all disabled:opacity-50">
-                {saving ? <Loader2 size={24} className="animate-spin mx-auto" /> : isEditing ? 'Save Changes' : 'Enroll Student'}
+            {/* ── Pinned Footer ── */}
+            <div className="px-6 py-4 border-t border-slate-100 bg-white flex items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="flex-1 py-3.5 bg-slate-100 text-slate-600 rounded-2xl font-black hover:bg-slate-200 transition-all text-sm active:scale-95"
+              >
+                Cancel
+              </button>
+              <button
+                form="student-form"
+                type="submit"
+                disabled={saving}
+                className="flex-[2] py-3.5 bg-indigo-600 text-white rounded-2xl font-black hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all text-sm active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {saving ? <Loader2 size={18} className="animate-spin" /> : null}
+                {saving ? 'Saving…' : isEditing ? 'Save Changes' : 'Enroll Student'}
               </button>
             </div>
+
           </div>
         </div>
       )}
+
 
       {status.message && (
         <div className={`fixed bottom-8 right-8 p-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-8 ${
