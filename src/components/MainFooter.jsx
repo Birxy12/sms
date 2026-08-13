@@ -22,6 +22,7 @@ const MainFooter = () => {
   const displayLogo = schoolLogo || bdsLogo;
 
   const apkDownloadUrl = 'https://github.com/Birxy12/sms/raw/main/app-debug.apk';
+  const iosDownloadUrl = '#'; // TODO: Update with actual iOS App Store link
 
   const quickLinks = [
     { to: '/check-result', label: 'Check Result' },
@@ -32,7 +33,8 @@ const MainFooter = () => {
     { to: '/contact', label: 'Support Hub' },
     { to: '/privacy', label: 'Privacy Policy' },
     { to: '/terms', label: 'Terms of Service' },
-    { href: apkDownloadUrl, label: '⚡ Download Flutter App (APK)', external: true },
+    { href: apkDownloadUrl, label: '⚡ Download Android App', external: true },
+    { href: iosDownloadUrl, label: '🍎 Download iOS App', external: true },
   ];
 
   const getDashboardPath = () => {
@@ -515,36 +517,68 @@ const MainFooter = () => {
         <span style={{ fontSize: '13px', opacity: 0.6 }}>
           &copy; {currentYear} {displayName}. All rights reserved.
         </span>
-        <a
-          href={apkDownloadUrl}
-          download
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '6px 14px',
-            borderRadius: '8px',
-            backgroundColor: '#10b981',
-            color: '#ffffff',
-            fontSize: '12px',
-            fontWeight: 600,
-            textDecoration: 'none',
-            transition: 'all 0.2s ease',
-            border: 'none',
-            cursor: 'pointer'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.filter = 'brightness(1.2)';
-            e.currentTarget.style.transform = 'scale(1.03)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.filter = 'brightness(1)';
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
-        >
-          <Smartphone size={14} />
-          Download Flutter App (APK)
-        </a>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <a
+            href={apkDownloadUrl}
+            download
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '8px',
+              backgroundColor: '#10b981',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 600,
+              textDecoration: 'none',
+              transition: 'all 0.2s ease',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.filter = 'brightness(1.2)';
+              e.currentTarget.style.transform = 'scale(1.03)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.filter = 'brightness(1)';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            <Smartphone size={14} />
+            Android APK
+          </a>
+          
+          <a
+            href={iosDownloadUrl}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '8px',
+              backgroundColor: '#4f46e5',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 600,
+              textDecoration: 'none',
+              transition: 'all 0.2s ease',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.filter = 'brightness(1.2)';
+              e.currentTarget.style.transform = 'scale(1.03)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.filter = 'brightness(1)';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            <Smartphone size={14} />
+            iOS App
+          </a>
+        </div>
         <span style={{ fontSize: '12px', opacity: 0.4 }}>
           Designed with care for our community
         </span>
