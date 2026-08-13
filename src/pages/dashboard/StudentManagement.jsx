@@ -566,100 +566,101 @@ const StudentManagement = () => {
             
             <div className="overflow-y-auto flex-1 custom-scrollbar">
               <form id="student-form" onSubmit={handleSave} className="p-8 space-y-6 text-left">
-              <GlobalPhotoUploader
-                photoUrl={currentStudent.photo}
-                uploading={uploading}
-                onPhotoSelect={handlePhotoSelect}
-                label="Student Photo"
-              />
+                <GlobalPhotoUploader
+                  photoUrl={currentStudent.photo}
+                  uploading={uploading}
+                  onPhotoSelect={handlePhotoSelect}
+                  label="Student Photo"
+                />
 
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Full Name</label>
-                  <input 
-                    type="text" required 
-                    value={currentStudent.name}
-                    onChange={(e) => setCurrentStudent({...currentStudent, name: e.target.value})}
-                    placeholder="Enter student's full name"
-                    className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div>
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Reg Number</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Full Name</label>
                     <input 
                       type="text" required 
-                      readOnly={isEditing}
-                      value={currentStudent.regNo}
-                      onChange={(e) => !isEditing && setCurrentStudent({...currentStudent, regNo: e.target.value.toUpperCase()})}
-                      placeholder="e.g. BDS/25/001"
-                      className={`w-full px-5 py-3.5 rounded-2xl border-2 border-transparent outline-none transition-all font-bold ${isEditing ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-slate-50 focus:border-indigo-600 focus:bg-white'}`}
+                      value={currentStudent.name}
+                      onChange={(e) => setCurrentStudent({...currentStudent, name: e.target.value})}
+                      placeholder="Enter student's full name"
+                      className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
                     />
                   </div>
-                  <div>
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">{isEditing ? 'Change Class (Promote/Demote)' : 'Assigned Class'}</label>
-                    <select 
-                      value={currentStudent.className}
-                      onChange={(e) => setCurrentStudent({...currentStudent, className: e.target.value})}
-                      className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
-                    >
-                      {classes.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Reg Number</label>
+                      <input 
+                        type="text" required 
+                        readOnly={isEditing}
+                        value={currentStudent.regNo}
+                        onChange={(e) => !isEditing && setCurrentStudent({...currentStudent, regNo: e.target.value.toUpperCase()})}
+                        placeholder="e.g. BDS/25/001"
+                        className={`w-full px-5 py-3.5 rounded-2xl border-2 border-transparent outline-none transition-all font-bold ${isEditing ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-slate-50 focus:border-indigo-600 focus:bg-white'}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">{isEditing ? 'Change Class (Promote/Demote)' : 'Assigned Class'}</label>
+                      <select 
+                        value={currentStudent.className}
+                        onChange={(e) => setCurrentStudent({...currentStudent, className: e.target.value})}
+                        className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                      >
+                        {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                   <div>
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Gender</label>
-                    <select 
-                      value={currentStudent.gender}
-                      onChange={(e) => setCurrentStudent({...currentStudent, gender: e.target.value})}
-                      className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
-                    >
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                    </select>
+                  <div className="grid grid-cols-2 gap-4">
+                     <div>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Gender</label>
+                      <select 
+                        value={currentStudent.gender}
+                        onChange={(e) => setCurrentStudent({...currentStudent, gender: e.target.value})}
+                        className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                      >
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">House / Wing</label>
+                      <input 
+                        type="text" 
+                        value={currentStudent.house || ''}
+                        onChange={(e) => setCurrentStudent({...currentStudent, house: e.target.value})}
+                        placeholder="e.g. Blue House"
+                        className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Phone Number</label>
+                      <input 
+                        type="tel" 
+                        value={currentStudent.phone || ''}
+                        onChange={(e) => setCurrentStudent({...currentStudent, phone: e.target.value})}
+                        placeholder="+234..."
+                        className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Date of Birth</label>
+                      <input 
+                        type="date" 
+                        value={formatDateForInput(currentStudent.dob)}
+                        onChange={(e) => setCurrentStudent({...currentStudent, dob: e.target.value})}
+                        className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                      />
+                    </div>
                   </div>
                   <div>
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">House / Wing</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Guardian Email</label>
                     <input 
-                      type="text" 
-                      value={currentStudent.house || ''}
-                      onChange={(e) => setCurrentStudent({...currentStudent, house: e.target.value})}
-                      placeholder="e.g. Blue House"
+                      type="email" 
+                      value={currentStudent.email}
+                      onChange={(e) => setCurrentStudent({...currentStudent, email: e.target.value})}
+                      placeholder="parent@email.com"
                       className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
                     />
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Phone Number</label>
-                    <input 
-                      type="tel" 
-                      value={currentStudent.phone || ''}
-                      onChange={(e) => setCurrentStudent({...currentStudent, phone: e.target.value})}
-                      placeholder="+234..."
-                      className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Date of Birth</label>
-                    <input 
-                      type="date" 
-                      value={formatDateForInput(currentStudent.dob)}
-                      onChange={(e) => setCurrentStudent({...currentStudent, dob: e.target.value})}
-                      className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Guardian Email</label>
-                  <input 
-                    type="email" 
-                    value={currentStudent.email}
-                    onChange={(e) => setCurrentStudent({...currentStudent, email: e.target.value})}
-                    placeholder="parent@email.com"
-                    className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
-                  />
                 </div>
               </form>
             </div>
