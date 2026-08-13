@@ -7,6 +7,7 @@ import {
   GraduationCap, Calendar, Heart, MapPin, Mail, Sparkles
 } from 'lucide-react';
 import ImageCropperModal from '../../components/ImageCropperModal';
+import GlobalPhotoUploader from '../../components/GlobalPhotoUploader';
 
 const EMPTY_FORM = {
   name: '',
@@ -336,41 +337,12 @@ const FameManagement = () => {
             <form onSubmit={handleSave} style={{ padding: '24px 28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
               {/* Portrait Upload */}
-              <div style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
-                padding: '24px 0', background: '#f8fafc', borderRadius: 16,
-                border: '2px dashed #c7d2fe'
-              }}>
-                <div style={{
-                  width: 120, height: 120, borderRadius: 16, overflow: 'hidden',
-                  background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                }}>
-                  {uploading ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                      <Loader2 size={24} style={{ color: '#4f46e5', animation: 'spin 1s linear infinite' }} />
-                      <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>Uploading…</span>
-                    </div>
-                  ) : formData.photo ? (
-                    <img src={formData.photo} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <Camera size={36} style={{ color: '#cbd5e1' }} />
-                  )}
-                </div>
-                <label style={{
-                  display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px',
-                  background: '#4f46e5', color: '#fff', borderRadius: 12,
-                  fontWeight: 800, fontSize: 12, cursor: uploading ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 4px 12px rgba(79,70,229,0.3)', opacity: uploading ? 0.6 : 1
-                }}>
-                  <Upload size={14} />
-                  {formData.photo ? 'Change Portrait' : 'Upload Portrait'}
-                  <input type="file" accept="image/*" onChange={handlePhotoSelect} style={{ display: 'none' }} disabled={uploading} />
-                </label>
-                <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>
-                  Saved to Supabase Storage · Recommended: Square image &lt; 2MB
-                </p>
-              </div>
+              <GlobalPhotoUploader
+                photoUrl={formData.photo}
+                uploading={uploading}
+                onPhotoSelect={handlePhotoSelect}
+                label="Portrait"
+              />
 
               {/* Two-column fields */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

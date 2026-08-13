@@ -5,6 +5,7 @@ import { Users, UserPlus, Mail, Phone, Briefcase, Trash2, Edit2, CheckCircle, Al
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { uploadAvatar } from '../../lib/supabase';
 import ImageCropperModal from '../../components/ImageCropperModal';
+import GlobalPhotoUploader from '../../components/GlobalPhotoUploader';
 
 const StaffManagement = () => {
   const { currentAdmin, adminResetCredentials } = useAdminAuth();
@@ -365,23 +366,12 @@ const StaffManagement = () => {
             </div>
             
             <form onSubmit={handleSave} className="p-8 space-y-6 text-left overflow-y-auto flex-1 custom-scrollbar">
-              <div className="flex justify-center mb-6">
-                <div className="relative group">
-                  <div className="w-24 h-24 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden group-hover:border-indigo-400 transition-all">
-                    {uploadingPhoto ? (
-                      <Loader2 className="animate-spin text-indigo-600" />
-                    ) : currentStaff.photo ? (
-                      <img src={currentStaff.photo} alt="Passport" className="w-full h-full object-cover rounded-full" />
-                    ) : (
-                      <Camera className="text-slate-400" size={32} />
-                    )}
-                  </div>
-                  <label className="absolute bottom-0 right-0 bg-indigo-600 text-white p-2 rounded-full cursor-pointer shadow-lg hover:bg-indigo-700 transition-all">
-                    <Upload size={16} />
-                    <input type="file" accept="image/*" onChange={handlePhotoSelect} className="hidden" />
-                  </label>
-                </div>
-              </div>
+              <GlobalPhotoUploader
+                photoUrl={currentStaff.photo}
+                uploading={uploadingPhoto}
+                onPhotoSelect={handlePhotoSelect}
+                label="Staff Photo"
+              />
 
               <div className="grid grid-cols-2 gap-6">
                 <div className="col-span-2">

@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList, Printer } from 'lucide-react';
 import { getSubjectsForClass } from '../../utils/subjectConfig';
 import ImageCropperModal from '../../components/ImageCropperModal';
+import GlobalPhotoUploader from '../../components/GlobalPhotoUploader';
 import { formatDateForInput } from '../../utils/dateFormatter';
 import { useGlobalClasses } from '../../utils/classUtils';
 
@@ -564,23 +565,12 @@ const StudentManagement = () => {
             </div>
             
             <form onSubmit={handleSave} className="p-8 space-y-6 text-left overflow-y-auto flex-1 custom-scrollbar">
-              <div className="flex justify-center mb-6">
-                <div className="relative group">
-                  <div className="w-24 h-24 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden group-hover:border-indigo-400 transition-all">
-                    {uploading ? (
-                      <Loader2 className="animate-spin text-indigo-600" />
-                    ) : currentStudent.photo ? (
-                      <img src={currentStudent.photo} alt="Passport" className="w-full h-full object-cover rounded-full" />
-                    ) : (
-                      <Camera className="text-slate-400" size={32} />
-                    )}
-                  </div>
-                  <label className="absolute -bottom-2 -right-2 bg-indigo-600 text-white p-2 rounded-xl cursor-pointer shadow-lg hover:bg-indigo-700 transition-all">
-                    <Upload size={16} />
-                    <input type="file" accept="image/*" onChange={handlePhotoSelect} className="hidden" />
-                  </label>
-                </div>
-              </div>
+              <GlobalPhotoUploader
+                photoUrl={currentStudent.photo}
+                uploading={uploading}
+                onPhotoSelect={handlePhotoSelect}
+                label="Student Photo"
+              />
 
               <div className="space-y-4">
                 <div>
