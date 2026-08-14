@@ -277,7 +277,7 @@ const StudentProfile = () => {
         <div className="relative mb-3 group/avatar">
           <div
             className="w-12 h-12 rounded-full border-4 border-white shadow-xl bg-indigo-50 flex items-center justify-center overflow-hidden cursor-pointer"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => setShowAvatarMenu(!showAvatarMenu)}
           >
             {uploadingAvatar ? (
               <Loader2 size={24} className="animate-spin text-indigo-500" />
