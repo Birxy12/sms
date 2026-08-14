@@ -3,6 +3,7 @@ import Sidebar from './Sidebar';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useStudentAuth } from '../context/StudentAuthContext';
 import { useTheme } from '../context/ThemeContext';
+import StudentAvatar from './StudentAvatar';
 import { useState, useEffect } from 'react';
 import { 
   Menu, LayoutDashboard, Award, CreditCard, 
@@ -164,16 +165,7 @@ const Layout = ({ children }) => {
               }} 
             />
           ) : isStudentZone ? (
-            <img 
-              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff`}
-              alt="Default Avatar"
-              style={{
-                width: '34px', height: '34px', borderRadius: '50%',
-                objectFit: 'cover', flexShrink: 0,
-                border: `2px solid ${primaryColor}60`,
-                opacity: 0.9
-              }} 
-            />
+            <StudentAvatar gender={user?.gender} size={34} className="rounded-full shadow-sm" />
           ) : (
             <div style={{
               width: '34px', height: '34px', borderRadius: '50%',

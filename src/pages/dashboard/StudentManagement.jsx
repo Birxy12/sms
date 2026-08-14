@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList, Printer, MoreVertical } from 'lucide-react';
 import { getSubjectsForClass } from '../../utils/subjectConfig';
 import ImageCropperModal from '../../components/ImageCropperModal';
+import StudentAvatar from '../../components/StudentAvatar';
 import GlobalPhotoUploader from '../../components/GlobalPhotoUploader';
 import StudentFormModal from '../../components/StudentFormModal';
 import { formatDateForInput } from '../../utils/dateFormatter';
@@ -352,11 +353,7 @@ const StudentManagement = () => {
                         {student.photo ? (
                           <img src={student.photo} alt={student.name} className="w-full h-full object-cover" />
                         ) : (
-                          <img 
-                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(student.name || 'Student')}&background=random&color=fff`}
-                            alt={student.name} 
-                            className="w-full h-full object-cover opacity-90"
-                          />
+                          <StudentAvatar gender={student.gender} size="100%" className="opacity-90" />
                         )}
                       </div>
                       <p className="font-bold text-slate-900">{student.name}</p>

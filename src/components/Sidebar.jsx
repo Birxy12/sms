@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useStudentAuth } from '../context/StudentAuthContext';
 import { useTheme } from '../context/ThemeContext';
+import StudentAvatar from './StudentAvatar';
 import { 
   LayoutDashboard, Users, BookOpen, GraduationCap, Settings, LogOut,
   DollarSign, Calendar, Layers, FileText, Mail, UserCircle, Award,
@@ -152,16 +153,7 @@ const Sidebar = ({ sidebarOpen, onClose }) => {
             }
             if (isStudentZone) {
               return (
-                <img 
-                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff`}
-                  alt="Default Profile" 
-                  style={{
-                    width: '38px', height: '38px', borderRadius: '50%',
-                    objectFit: 'cover', flexShrink: 0,
-                    border: `2px solid ${primaryColor}60`,
-                    opacity: 0.9
-                  }} 
-                />
+                <StudentAvatar gender={user?.gender} size={38} className="rounded-full border-2 border-indigo-200/50 shadow-sm" />
               );
             }
             return (

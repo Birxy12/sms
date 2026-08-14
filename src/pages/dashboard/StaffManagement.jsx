@@ -6,6 +6,7 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import { uploadAvatar } from '../../lib/supabase';
 import ImageCropperModal from '../../components/ImageCropperModal';
 import GlobalPhotoUploader from '../../components/GlobalPhotoUploader';
+import StudentAvatar from '../../components/StudentAvatar';
 
 const StaffManagement = () => {
   const { currentAdmin, adminResetCredentials } = useAdminAuth();
@@ -436,8 +437,10 @@ const StaffManagement = () => {
               
               <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '16px', padding: '14px 16px', background: 'rgb(248, 250, 252)', borderRadius: '14px', border: '1.5px dashed rgb(199, 210, 254)', width: '100%', boxSizing: 'border-box' }}>
                 <div style={{ width: '64px', height: '64px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0, background: 'rgb(226, 232, 240)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'rgba(0, 0, 0, 0.1) 0px 2px 8px' }}>
-                  {currentStaff.photo || currentStaff.name ? (
-                    <img src={currentStaff.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentStaff.name || 'Staff')}&background=random&color=fff`} alt="Staff" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {currentStaff.photo ? (
+                    <img src={currentStaff.photo} alt="Staff" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : currentStaff.name ? (
+                    <StudentAvatar gender="male" size="100%" />
                   ) : (
                     <Camera size={24} style={{ color: 'rgb(203, 213, 225)' }} />
                   )}
@@ -611,7 +614,7 @@ const StaffManagement = () => {
                   {activeActionStaff.photo ? (
                     <img src={activeActionStaff.photo} alt={activeActionStaff.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    <span style={{ fontSize: '32px', fontWeight: 900, color: '#64748b' }}>{activeActionStaff.name[0]}</span>
+                    <StudentAvatar gender="male" size="100%" />
                   )}
                 </div>
                 <div style={{ textAlign: 'center' }}>

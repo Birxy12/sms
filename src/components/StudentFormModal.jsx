@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { X, Loader2, Camera, Upload } from 'lucide-react';
+import StudentAvatar from './StudentAvatar';
 
 const FieldError = ({ message }) => (
   <span style={{ display: 'block', marginTop: '4px', fontSize: '11px', fontWeight: 600, color: '#ef4444' }}>
@@ -62,11 +63,6 @@ const StudentFormModal = ({
     handleSave(e);
   };
 
-  const getFallbackPhoto = () => {
-    if (currentStudent.photo) return currentStudent.photo;
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(currentStudent.name || (currentStudent.gender === 'Female' ? 'Jane' : 'John'))}&background=random&color=fff`;
-  };
-
   if (!showModal) return null;
 
   return (
@@ -96,8 +92,10 @@ const StudentFormModal = ({
           
           <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '16px', padding: '14px 16px', background: 'rgb(248, 250, 252)', borderRadius: '14px', border: '1.5px dashed rgb(199, 210, 254)', width: '100%', boxSizing: 'border-box' }}>
             <div style={{ width: '64px', height: '64px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0, background: 'rgb(226, 232, 240)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'rgba(0, 0, 0, 0.1) 0px 2px 8px' }}>
-              {currentStudent.photo || currentStudent.name ? (
-                <img src={getFallbackPhoto()} alt="Student" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {currentStudent.photo ? (
+                <img src={currentStudent.photo} alt="Student" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : currentStudent.name ? (
+                <StudentAvatar gender={currentStudent.gender} size="100%" />
               ) : (
                 <Camera size={24} style={{ color: 'rgb(203, 213, 225)' }} />
               )}
