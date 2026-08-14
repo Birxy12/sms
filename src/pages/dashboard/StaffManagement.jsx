@@ -27,6 +27,21 @@ const StaffManagement = () => {
 
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState(null);
+  const [activeDropdown, setActiveDropdown] = useState(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.dropdown-container')) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
 
   // Fetch staff list
   const fetchStaffData = async () => {
@@ -286,7 +301,6 @@ const StaffManagement = () => {
               ) : filteredStaff.length > 0 ? filteredStaff.map((person) => (
                 <tr 
                   key={person.id} 
-                  onClick={() => isAdmin && setActiveActionStaff(person)}
                   className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
                 >
                   <td className="px-8 py-5">
@@ -321,13 +335,54 @@ const StaffManagement = () => {
                     </span>
                   </td>
                   {isAdmin && (
-                    <td className="px-8 py-5 text-right relative" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-8 py-5 text-right relative dropdown-container">
                       <button 
-                        onClick={() => setActiveActionStaff(person)}
-                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                        onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === person.id ? null : person.id); }}
+                        className="p-2 rounded-full hover:bg-slate-100 text-slate-400 transition-colors focus:outline-none"
                       >
-                        <MoreVertical size={18} />
+                        <MoreVertical size={16} />
                       </button>
+
+                      {activeDropdown === person.id && (
+                        <div className="absolute right-12 top-0 mt-2 w-48 bg-white/95 backdrop-blur-xl shadow-2xl border border-slate-100 p-1.5 rounded-2xl z-50 flex flex-col gap-0.5">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); setActiveActionStaff(person); }} 
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 transition-colors text-xs font-bold text-left w-full"
+                          >
+                            <Users size={15} strokeWidth={2.5} /> View Profile
+                          </button>
+                          
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); setIsEditing(true); setCurrentStaff(person); setShowModal(true); }} 
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition-colors text-xs font-bold text-left w-full"
+                          >
+                            <Edit2 size={15} strokeWidth={2.5} /> Edit Staff
+                          </button>
+                          
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); openResetPasswordModal(person); }} 
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 text-slate-600 hover:text-slate-800 transition-colors text-xs font-bold text-left w-full"
+                          >
+                            <Lock size={15} strokeWidth={2.5} /> Reset Password
+                          </button>
+                          
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); handleResetPin(person); }} 
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-amber-50 text-slate-600 hover:text-amber-600 transition-colors text-xs font-bold text-left w-full"
+                          >
+                            <Key size={15} strokeWidth={2.5} /> Reset PIN
+                          </button>
+                          
+                          <div className="w-full h-px bg-slate-100 my-1"></div>
+                          
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); handleDelete(person.id); }} 
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-rose-50 text-slate-600 hover:text-rose-600 transition-colors text-xs font-bold text-left w-full"
+                          >
+                            <Trash2 size={15} strokeWidth={2.5} /> Delete Staff
+                          </button>
+                        </div>
+                      )}
                     </td>
                   )}
                 </tr>
@@ -585,56 +640,7 @@ const StaffManagement = () => {
                     <span className="font-extrabold text-slate-800 select-all">{activeActionStaff.phone}</span>
                   </div>
                 )}
-              </div>
-
-              {/* Actions Grid */}
-              <div className="space-y-3 pt-2 text-left">
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Administrative Actions</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={() => { 
-                      setIsEditing(true); 
-                      setCurrentStaff(activeActionStaff); 
-                      setShowModal(true); 
-                      setActiveActionStaff(null); 
-                    }}
-                    className="p-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95"
-                  >
-                    <Edit2 size={20} />
-                    <span className="text-xs">Edit Profile</span>
-                  </button>
-                  <button 
-                    onClick={() => { 
-                      openResetPasswordModal(activeActionStaff); 
-                      setActiveActionStaff(null); 
-                    }}
-                    className="p-4 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95"
-                  >
-                    <Lock size={20} />
-                    <span className="text-xs">Reset Password</span>
-                  </button>
-                  <button 
-                    onClick={() => { 
-                      handleResetPin(activeActionStaff); 
-                      setActiveActionStaff(null); 
-                    }}
-                    className="p-4 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95"
-                  >
-                    <Key size={20} />
-                    <span className="text-xs">Reset PIN</span>
-                  </button>
-                  <button 
-                    onClick={() => { 
-                      handleDelete(activeActionStaff.id); 
-                      setActiveActionStaff(null); 
-                    }}
-                    className="p-4 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 col-span-2"
-                  >
-                    <Trash2 size={20} />
-                    <span className="text-xs">Delete Staff</span>
-                  </button>
-                </div>
-              </div>
+               </div>
             </div>
           </div>
         </div>
