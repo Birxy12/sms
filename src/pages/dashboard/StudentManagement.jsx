@@ -391,7 +391,7 @@ const StudentManagement = () => {
                         e.stopPropagation();
                         setActiveDropdown(activeDropdown === student.id ? null : student.id);
                       }}
-                      className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                      className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
                     >
                       <MoreVertical size={20} />
                     </button>
