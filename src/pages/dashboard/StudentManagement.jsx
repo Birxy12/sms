@@ -4,7 +4,7 @@ import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, where, setDoc, serverTimestamp } from 'firebase/firestore';
 import { uploadAvatar } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList, Printer } from 'lucide-react';
+import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList, Printer, MoreVertical } from 'lucide-react';
 import { getSubjectsForClass } from '../../utils/subjectConfig';
 import ImageCropperModal from '../../components/ImageCropperModal';
 import GlobalPhotoUploader from '../../components/GlobalPhotoUploader';
@@ -34,6 +34,19 @@ const StudentManagement = () => {
   const [promoteModal, setPromoteModal] = useState(null); // { student }
   const [newClass, setNewClass] = useState('');
   const [promoting, setPromoting] = useState(false);
+  
+  // Actions Dropdown state
+  const [activeDropdown, setActiveDropdown] = useState(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.action-menu-container')) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Admin Subject Registration state
   const [subjectRegModal, setSubjectRegModal] = useState(null); // { student }
@@ -328,7 +341,7 @@ const StudentManagement = () => {
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto text-left">
+        <div className="overflow-x-auto text-left min-h-[400px]">
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-[11px] font-black uppercase tracking-widest border-b border-slate-100">
@@ -372,35 +385,55 @@ const StudentManagement = () => {
                   <td className="px-6 py-5">
                     <span className={`text-[10px] font-black uppercase tracking-widest ${student.gender === 'Male' ? 'text-blue-500' : 'text-pink-500'}`}>{student.gender}</span>
                   </td>
-                  <td className="px-8 py-5 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                      <button onClick={() => navigate(`/admin/student-results?regNo=${encodeURIComponent(student.regNo)}&className=${encodeURIComponent(student.className)}&name=${encodeURIComponent(student.name)}`)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg" title="View Results"><Award size={16} /></button>
-                      <button 
-                        onClick={() => {
-                          // Open result in a new window for printing
+                  <td className="px-8 py-5 text-right relative action-menu-container">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveDropdown(activeDropdown === student.id ? null : student.id);
+                      }}
+                      className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                    >
+                      <MoreVertical size={20} />
+                    </button>
+
+                    {activeDropdown === student.id && (
+                      <div 
+                        className="absolute right-8 top-12 w-52 bg-white border border-slate-100 shadow-2xl rounded-2xl py-2 z-[999] animate-in fade-in zoom-in-95 flex flex-col text-left"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button onClick={() => { setActiveDropdown(null); navigate(`/admin/student-results?regNo=${encodeURIComponent(student.regNo)}&className=${encodeURIComponent(student.className)}&name=${encodeURIComponent(student.name)}`); }} className="w-full px-4 py-2 text-sm hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-3 transition-colors">
+                          <Award size={16} className="text-indigo-500" /> View Results
+                        </button>
+                        <button onClick={() => { 
+                          setActiveDropdown(null); 
                           const printUrl = `/admin/student-results?regNo=${encodeURIComponent(student.regNo)}&className=${encodeURIComponent(student.className)}&name=${encodeURIComponent(student.name)}&print=1`;
                           const win = window.open(printUrl, '_blank', 'width=900,height=700');
-                          if (win) {
-                            win.onload = () => {
-                              setTimeout(() => win.print(), 1200);
-                            };
-                          }
-                        }}
-                        className="p-2 text-slate-400 hover:text-purple-600 hover:bg-white rounded-lg" 
-                        title="Print Student Result"
-                      >
-                        <Printer size={16} />
-                      </button>
-                      {student.status === 'pending_activation' || student.requiresAdminConfirmation || student.admissionConfirmed === false ? (
-                        <button onClick={() => handleConfirmAdmission(student)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-white rounded-lg" title="Confirm Admission"><CheckCircle size={16} /></button>
-                      ) : null}
-                      <button onClick={() => { setPromoteModal({ student }); setNewClass(student.className); }} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-white rounded-lg" title="Promote / Demote"><ArrowUpDown size={16} /></button>
-                      {(student.className?.startsWith('SS2') || student.className?.startsWith('SS3')) && (
-                        <button onClick={() => openSubjectRegModal(student)} className="p-2 text-slate-400 hover:text-pink-600 hover:bg-white rounded-lg" title="Subject Registration"><ClipboardList size={16} /></button>
-                      )}
-                      <button onClick={() => { setIsEditing(true); setCurrentStudent(student); setShowModal(true); }} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg" title="Edit Student"><Edit2 size={16} /></button>
-                      <button onClick={() => handleDelete(student.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg" title="Delete Student"><Trash2 size={16} /></button>
-                    </div>
+                          if (win) { win.onload = () => { setTimeout(() => win.print(), 1200); }; }
+                        }} className="w-full px-4 py-2 text-sm hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-3 transition-colors">
+                          <Printer size={16} className="text-purple-500" /> Print Result
+                        </button>
+                        {student.status === 'pending_activation' || student.requiresAdminConfirmation || student.admissionConfirmed === false ? (
+                          <button onClick={() => { setActiveDropdown(null); handleConfirmAdmission(student); }} className="w-full px-4 py-2 text-sm hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-3 transition-colors">
+                            <CheckCircle size={16} className="text-emerald-500" /> Confirm Admission
+                          </button>
+                        ) : null}
+                        <button onClick={() => { setActiveDropdown(null); setPromoteModal({ student }); setNewClass(student.className); }} className="w-full px-4 py-2 text-sm hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-3 transition-colors">
+                          <ArrowUpDown size={16} className="text-amber-500" /> Promote / Demote
+                        </button>
+                        {(student.className?.startsWith('SS2') || student.className?.startsWith('SS3')) && (
+                          <button onClick={() => { setActiveDropdown(null); openSubjectRegModal(student); }} className="w-full px-4 py-2 text-sm hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-3 transition-colors">
+                            <ClipboardList size={16} className="text-pink-500" /> Subjects
+                          </button>
+                        )}
+                        <button onClick={() => { setActiveDropdown(null); setIsEditing(true); setCurrentStudent(student); setShowModal(true); }} className="w-full px-4 py-2 text-sm hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-3 transition-colors">
+                          <Edit2 size={16} className="text-blue-500" /> Edit Student
+                        </button>
+                        <div className="h-px bg-slate-100 my-1 mx-4"></div>
+                        <button onClick={() => { setActiveDropdown(null); handleDelete(student.id); }} className="w-full px-4 py-2 text-sm hover:bg-rose-50 text-rose-600 font-bold flex items-center gap-3 transition-colors">
+                          <Trash2 size={16} /> Delete Student
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               )) : (
