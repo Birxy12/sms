@@ -18,8 +18,8 @@ const StudentFormModal = ({
   if (!showModal) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-md h-full shadow-2xl border-l border-white/10 flex flex-col overflow-hidden animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-500">
+      <div className="bg-white w-full max-w-md h-full shadow-[0_0_80px_rgba(0,0,0,0.15)] rounded-l-[2rem] flex flex-col overflow-hidden animate-in slide-in-from-right duration-500 ease-out">
 
         {/* ── Header ── */}
         <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 px-8 py-6 shrink-0">

@@ -35,18 +35,7 @@ const StudentManagement = () => {
   const [newClass, setNewClass] = useState('');
   const [promoting, setPromoting] = useState(false);
   
-  // Actions Dropdown state
-  const [activeDropdown, setActiveDropdown] = useState(null);
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest('.action-menu-container')) {
-        setActiveDropdown(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Admin Subject Registration state
   const [subjectRegModal, setSubjectRegModal] = useState(null); // { student }
@@ -385,54 +374,44 @@ const StudentManagement = () => {
                   <td className="px-6 py-5">
                     <span className={`text-[10px] font-black uppercase tracking-widest ${student.gender === 'Male' ? 'text-blue-500' : 'text-pink-500'}`}>{student.gender}</span>
                   </td>
-                  <td className="px-8 py-5 text-right relative action-menu-container">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveDropdown(activeDropdown === student.id ? null : student.id);
-                      }}
-                      className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
-                    >
-                      <MoreVertical size={20} />
-                    </button>
-
-                    {activeDropdown === student.id && (
-                      <div 
-                        className="absolute right-8 top-12 w-max max-w-[200px] bg-white border border-slate-200 shadow-xl rounded-2xl p-2 z-[999] animate-in fade-in zoom-in-95 flex flex-row flex-wrap gap-1 justify-center"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button title="View Results" onClick={() => { setActiveDropdown(null); navigate(`/admin/student-results?regNo=${encodeURIComponent(student.regNo)}&className=${encodeURIComponent(student.className)}&name=${encodeURIComponent(student.name)}`); }} className="p-2.5 rounded-xl hover:bg-slate-100 text-black transition-colors">
-                          <Award size={18} />
+                  <td className="px-8 py-5 text-right relative">
+                    <div className="absolute right-8 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0 bg-white/90 backdrop-blur-xl shadow-xl shadow-slate-200/50 border border-slate-200/60 p-1.5 rounded-full z-10">
+                      <button title="View Results" onClick={() => navigate(`/admin/student-results?regNo=${encodeURIComponent(student.regNo)}&className=${encodeURIComponent(student.className)}&name=${encodeURIComponent(student.name)}`)} className="p-2 rounded-full hover:bg-slate-100 text-slate-600 hover:text-indigo-600 hover:scale-110 active:scale-95 transition-all">
+                        <Award size={15} strokeWidth={2.5} />
+                      </button>
+                      <button title="Print Result" onClick={() => { 
+                        const printUrl = `/admin/student-results?regNo=${encodeURIComponent(student.regNo)}&className=${encodeURIComponent(student.className)}&name=${encodeURIComponent(student.name)}&print=1`;
+                        const win = window.open(printUrl, '_blank', 'width=900,height=700');
+                        if (win) { win.onload = () => { setTimeout(() => win.print(), 1200); }; }
+                      }} className="p-2 rounded-full hover:bg-slate-100 text-slate-600 hover:text-purple-600 hover:scale-110 active:scale-95 transition-all">
+                        <Printer size={15} strokeWidth={2.5} />
+                      </button>
+                      
+                      {student.status === 'pending_activation' || student.requiresAdminConfirmation || student.admissionConfirmed === false ? (
+                        <button title="Confirm Admission" onClick={() => handleConfirmAdmission(student)} className="p-2 rounded-full hover:bg-emerald-50 text-slate-600 hover:text-emerald-600 hover:scale-110 active:scale-95 transition-all">
+                          <CheckCircle size={15} strokeWidth={2.5} />
                         </button>
-                        <button title="Print Result" onClick={() => { 
-                          setActiveDropdown(null); 
-                          const printUrl = `/admin/student-results?regNo=${encodeURIComponent(student.regNo)}&className=${encodeURIComponent(student.className)}&name=${encodeURIComponent(student.name)}&print=1`;
-                          const win = window.open(printUrl, '_blank', 'width=900,height=700');
-                          if (win) { win.onload = () => { setTimeout(() => win.print(), 1200); }; }
-                        }} className="p-2.5 rounded-xl hover:bg-slate-100 text-black transition-colors">
-                          <Printer size={18} />
+                      ) : null}
+                      
+                      <button title="Promote / Demote" onClick={() => { setPromoteModal({ student }); setNewClass(student.className); }} className="p-2 rounded-full hover:bg-slate-100 text-slate-600 hover:text-amber-600 hover:scale-110 active:scale-95 transition-all">
+                        <ArrowUpDown size={15} strokeWidth={2.5} />
+                      </button>
+                      
+                      {(student.className?.startsWith('SS2') || student.className?.startsWith('SS3')) && (
+                        <button title="Subjects" onClick={() => openSubjectRegModal(student)} className="p-2 rounded-full hover:bg-slate-100 text-slate-600 hover:text-pink-600 hover:scale-110 active:scale-95 transition-all">
+                          <ClipboardList size={15} strokeWidth={2.5} />
                         </button>
-                        {student.status === 'pending_activation' || student.requiresAdminConfirmation || student.admissionConfirmed === false ? (
-                          <button title="Confirm Admission" onClick={() => { setActiveDropdown(null); handleConfirmAdmission(student); }} className="p-2.5 rounded-xl hover:bg-slate-100 text-black transition-colors">
-                            <CheckCircle size={18} />
-                          </button>
-                        ) : null}
-                        <button title="Promote / Demote" onClick={() => { setActiveDropdown(null); setPromoteModal({ student }); setNewClass(student.className); }} className="p-2.5 rounded-xl hover:bg-slate-100 text-black transition-colors">
-                          <ArrowUpDown size={18} />
-                        </button>
-                        {(student.className?.startsWith('SS2') || student.className?.startsWith('SS3')) && (
-                          <button title="Subjects" onClick={() => { setActiveDropdown(null); openSubjectRegModal(student); }} className="p-2.5 rounded-xl hover:bg-slate-100 text-black transition-colors">
-                            <ClipboardList size={18} />
-                          </button>
-                        )}
-                        <button title="Edit Student" onClick={() => { setActiveDropdown(null); setIsEditing(true); setCurrentStudent(student); setShowModal(true); }} className="p-2.5 rounded-xl hover:bg-slate-100 text-black transition-colors">
-                          <Edit2 size={18} />
-                        </button>
-                        <button title="Delete Student" onClick={() => { setActiveDropdown(null); handleDelete(student.id); }} className="p-2.5 rounded-xl hover:bg-rose-50 text-rose-600 transition-colors">
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    )}
+                      )}
+                      
+                      <div className="w-px h-5 bg-slate-200 mx-1"></div>
+                      
+                      <button title="Edit Student" onClick={() => { setIsEditing(true); setCurrentStudent(student); setShowModal(true); }} className="p-2 rounded-full hover:bg-slate-100 text-slate-600 hover:text-blue-600 hover:scale-110 active:scale-95 transition-all">
+                        <Edit2 size={15} strokeWidth={2.5} />
+                      </button>
+                      <button title="Delete Student" onClick={() => handleDelete(student.id)} className="p-2 rounded-full hover:bg-rose-50 text-slate-600 hover:text-rose-600 hover:scale-110 active:scale-95 transition-all">
+                        <Trash2 size={15} strokeWidth={2.5} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               )) : (
