@@ -7,7 +7,8 @@ const GlobalPhotoUploader = ({
   onPhotoSelect, 
   onEdit,
   label = 'Portrait',
-  recommendedText = 'Square image · Max 2MB'
+  recommendedText = 'Square image · Max 2MB',
+  fallbackUrl = null
 }) => {
   return (
     <div style={{
@@ -25,6 +26,8 @@ const GlobalPhotoUploader = ({
           <Loader2 size={20} style={{ color: '#4f46e5', animation: 'spin 1s linear infinite' }} />
         ) : photoUrl ? (
           <img src={photoUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : fallbackUrl ? (
+          <img src={fallbackUrl} alt="Default Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
         ) : (
           <Camera size={24} style={{ color: '#cbd5e1' }} />
         )}

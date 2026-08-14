@@ -64,8 +64,7 @@ const StudentFormModal = ({
 
   const getFallbackPhoto = () => {
     if (currentStudent.photo) return currentStudent.photo;
-    if (currentStudent.gender === 'Female') return `https://avatar.iran.liara.run/public/girl?username=${encodeURIComponent(currentStudent.name || 'Jane')}`;
-    return `https://avatar.iran.liara.run/public/boy?username=${encodeURIComponent(currentStudent.name || 'John')}`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(currentStudent.name || (currentStudent.gender === 'Female' ? 'Jane' : 'John'))}&background=random&color=fff`;
   };
 
   if (!showModal) return null;

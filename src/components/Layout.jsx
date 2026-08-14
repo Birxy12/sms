@@ -163,6 +163,17 @@ const Layout = ({ children }) => {
                 border: `2px solid ${primaryColor}60`
               }} 
             />
+          ) : isStudentZone ? (
+            <img 
+              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff`}
+              alt="Default Avatar"
+              style={{
+                width: '34px', height: '34px', borderRadius: '50%',
+                objectFit: 'cover', flexShrink: 0,
+                border: `2px solid ${primaryColor}60`,
+                opacity: 0.9
+              }} 
+            />
           ) : (
             <div style={{
               width: '34px', height: '34px', borderRadius: '50%',

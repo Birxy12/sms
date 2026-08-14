@@ -437,7 +437,7 @@ const StaffManagement = () => {
               <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '16px', padding: '14px 16px', background: 'rgb(248, 250, 252)', borderRadius: '14px', border: '1.5px dashed rgb(199, 210, 254)', width: '100%', boxSizing: 'border-box' }}>
                 <div style={{ width: '64px', height: '64px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0, background: 'rgb(226, 232, 240)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'rgba(0, 0, 0, 0.1) 0px 2px 8px' }}>
                   {currentStaff.photo || currentStaff.name ? (
-                    <img src={currentStaff.photo || `https://avatar.iran.liara.run/public/job/teacher?username=${encodeURIComponent(currentStaff.name || 'Staff')}`} alt="Staff" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={currentStaff.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentStaff.name || 'Staff')}&background=random&color=fff`} alt="Staff" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     <Camera size={24} style={{ color: 'rgb(203, 213, 225)' }} />
                   )}

@@ -353,7 +353,7 @@ const StudentManagement = () => {
                           <img src={student.photo} alt={student.name} className="w-full h-full object-cover" />
                         ) : (
                           <img 
-                            src={`https://avatar.iran.liara.run/public/${student.gender === 'Female' ? 'girl' : 'boy'}?username=${encodeURIComponent(student.name || 'Student')}`} 
+                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(student.name || 'Student')}&background=random&color=fff`}
                             alt={student.name} 
                             className="w-full h-full object-cover opacity-90"
                           />

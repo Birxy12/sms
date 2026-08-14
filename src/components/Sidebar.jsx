@@ -150,6 +150,20 @@ const Sidebar = ({ sidebarOpen, onClose }) => {
                 />
               );
             }
+            if (isStudentZone) {
+              return (
+                <img 
+                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff`}
+                  alt="Default Profile" 
+                  style={{
+                    width: '38px', height: '38px', borderRadius: '50%',
+                    objectFit: 'cover', flexShrink: 0,
+                    border: `2px solid ${primaryColor}60`,
+                    opacity: 0.9
+                  }} 
+                />
+              );
+            }
             return (
               <div style={{
                 width: '38px', height: '38px',
