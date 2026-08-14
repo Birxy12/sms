@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Loader2, Camera, Upload } from 'lucide-react';
+import { X, Loader2, Camera, Upload, UserCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import StudentAvatar from './StudentAvatar';
 import AvatarSelector from './AvatarSelector';
 
@@ -25,6 +26,7 @@ const StudentFormModal = ({
   const modalRef = useRef(null);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  const [showAvatarSelector, setShowAvatarSelector] = useState(false);
 
   useEffect(() => {
     if (!showModal) return;
@@ -92,7 +94,10 @@ const StudentFormModal = ({
         <form id="student-form" onSubmit={onSubmit} style={{ padding: '24px 28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, minHeight: 0, WebkitOverflowScrolling: 'touch' }} noValidate>
           
           <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '16px', padding: '14px 16px', background: 'rgb(248, 250, 252)', borderRadius: '14px', border: '1.5px dashed rgb(199, 210, 254)', width: '100%', boxSizing: 'border-box' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0, background: 'rgb(226, 232, 240)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'rgba(0, 0, 0, 0.1) 0px 2px 8px' }}>
+            <div 
+              onClick={() => setShowAvatarSelector(!showAvatarSelector)}
+              style={{ width: '64px', height: '64px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0, background: 'rgb(226, 232, 240)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'rgba(0, 0, 0, 0.1) 0px 2px 8px', cursor: 'pointer' }}
+            >
               {currentStudent.photo ? (
                 <img src={currentStudent.photo} alt="Student" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : currentStudent.name ? (
@@ -105,25 +110,41 @@ const StudentFormModal = ({
               <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)' }}>
                 {uploading ? 'Uploading...' : (currentStudent.photo ? 'Portrait uploaded' : 'No Portrait yet')}
               </p>
-              <p style={{ margin: 0, fontSize: '10px', color: 'rgb(148, 163, 184)', fontWeight: 500 }}>Square image · Max 2MB</p>
               <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', background: 'rgb(79, 70, 229)', color: 'rgb(255, 255, 255)', borderRadius: '8px', fontWeight: 700, fontSize: '11px', cursor: uploading ? 'not-allowed' : 'pointer', boxShadow: 'rgba(79, 70, 229, 0.25) 0px 2px 8px', opacity: uploading ? 0.7 : 1, transition: 'transform 0.15s, opacity 0.15s', whiteSpace: 'nowrap' }}>
                   {uploading ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />}
                   {uploading ? 'Uploading...' : 'Upload'}
                   <input type="file" accept="image/*" onChange={handlePhotoSelect} disabled={uploading} style={{ display: 'none' }} />
                 </label>
+                <button type="button" onClick={() => setShowAvatarSelector(!showAvatarSelector)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', background: 'rgb(241, 245, 249)', color: 'rgb(71, 85, 105)', borderRadius: '8px', fontWeight: 700, fontSize: '11px', cursor: 'pointer', transition: 'background 0.15s' }}>
+                  <UserCircle size={11} /> Select Avatar
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="space-y-1.5" style={{ paddingBottom: '12px', borderBottom: '1px solid rgb(241, 245, 249)', marginBottom: '12px' }}>
-             <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>Select 3D Avatar (Optional)</label>
-             <AvatarSelector 
-               genderFilter={currentStudent.gender || 'Male'} 
-               selected={currentStudent.avatarId || ''} 
-               onSelect={(id) => setCurrentStudent({ ...currentStudent, avatarId: id })} 
-             />
-          </div>
+          <AnimatePresence>
+            {showAvatarSelector && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                animate={{ opacity: 1, height: 'auto', marginBottom: 12 }}
+                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="space-y-1.5" style={{ paddingBottom: '12px', borderBottom: '1px solid rgb(241, 245, 249)' }}>
+                   <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>Select 3D Avatar</label>
+                   <AvatarSelector 
+                     genderFilter={currentStudent.gender || 'Male'} 
+                     selected={currentStudent.avatarId || ''} 
+                     onSelect={(id) => {
+                       setCurrentStudent({ ...currentStudent, avatarId: id });
+                       setShowAvatarSelector(false);
+                     }} 
+                   />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div className="space-y-1.5">
