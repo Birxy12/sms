@@ -358,113 +358,100 @@ const StaffManagement = () => {
 
       {/* Modal Backdrop */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-            <div className="p-8 border-b border-slate-100 flex justify-between items-center shrink-0">
-              <h3 className="text-2xl font-bold text-slate-900">{isEditing ? 'Edit Staff Profile' : 'Add New Staff Member'}</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={24} /></button>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', padding: 16, boxSizing: 'border-box' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} onClick={() => setShowModal(false)} />
+          
+          <div style={{ position: 'relative', backgroundColor: '#fff', width: '100%', maxWidth: 500, borderRadius: 24, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflow: 'hidden' }}>
+            <div style={{ padding: '24px 28px', borderBottom: '1px solid #f1f5f9', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontSize: 20, fontWeight: 900, color: '#0f172a', margin: 0 }}>
+                {isEditing ? 'Edit Profile' : 'Add New Staff'}
+              </h2>
+              <div className="flex items-center gap-4">
+                <button form="staff-form" type="submit" disabled={saving} className="sm:hidden" style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', background: 'rgb(79, 70, 229)', color: 'white', fontWeight: 800, fontSize: '12px', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: 'rgba(79, 70, 229, 0.3) 0px 4px 16px', opacity: saving ? 0.7 : 1 }}>
+                  {saving && <Loader2 size={12} className="animate-spin" />}
+                  Save
+                </button>
+                <button type="button" onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex' }}>
+                  <X size={20} />
+                </button>
+              </div>
             </div>
-            
-            <div className="overflow-y-auto flex-1 custom-scrollbar">
-              <form id="staff-form" onSubmit={handleSave} className="p-8 space-y-6 text-left">
-              <GlobalPhotoUploader
-                photoUrl={currentStaff.photo}
-                uploading={uploadingPhoto}
-                onPhotoSelect={handlePhotoSelect}
-                label="Staff Photo"
-              />
 
-              <div className="grid grid-cols-2 gap-6">
-                <div className="col-span-2">
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Full Name</label>
-                  <input 
-                    type="text" 
-                    required 
-                    value={currentStaff.name}
-                    onChange={(e) => setCurrentStaff({...currentStaff, name: e.target.value})}
-                    placeholder="e.g. John Doe"
-                    className="w-full px-5 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none transition-all placeholder:text-slate-300 font-medium"
-                  />
+            <form id="staff-form" onSubmit={handleSave} style={{ padding: '24px 28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, minHeight: 0, WebkitOverflowScrolling: 'touch' }} noValidate>
+              
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '16px', padding: '14px 16px', background: 'rgb(248, 250, 252)', borderRadius: '14px', border: '1.5px dashed rgb(199, 210, 254)', width: '100%', boxSizing: 'border-box' }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0, background: 'rgb(226, 232, 240)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'rgba(0, 0, 0, 0.1) 0px 2px 8px' }}>
+                  {currentStaff.photo || currentStaff.name ? (
+                    <img src={currentStaff.photo || `https://avatar.iran.liara.run/public/job/teacher?username=${encodeURIComponent(currentStaff.name || 'Staff')}`} alt="Staff" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <Camera size={24} style={{ color: 'rgb(203, 213, 225)' }} />
+                  )}
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Email Address</label>
-                  <input 
-                    type="email" 
-                    required 
-                    value={currentStaff.email}
-                    onChange={(e) => setCurrentStaff({...currentStaff, email: e.target.value})}
-                    placeholder="john@school.com"
-                    className="w-full px-5 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none transition-all placeholder:text-slate-300 font-medium"
-                  />
+                <div style={{ flex: '1 1 0%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)' }}>
+                    {uploadingPhoto ? 'Uploading...' : (currentStaff.photo ? 'Portrait uploaded' : 'No Portrait yet')}
+                  </p>
+                  <p style={{ margin: 0, fontSize: '10px', color: 'rgb(148, 163, 184)', fontWeight: 500 }}>Square image · Max 2MB</p>
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', background: 'rgb(79, 70, 229)', color: 'rgb(255, 255, 255)', borderRadius: '8px', fontWeight: 700, fontSize: '11px', cursor: uploadingPhoto ? 'not-allowed' : 'pointer', boxShadow: 'rgba(79, 70, 229, 0.25) 0px 2px 8px', opacity: uploadingPhoto ? 0.7 : 1, transition: 'transform 0.15s, opacity 0.15s', whiteSpace: 'nowrap' }}>
+                      {uploadingPhoto ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />}
+                      {uploadingPhoto ? 'Uploading...' : 'Upload'}
+                      <input type="file" accept="image/*" onChange={handlePhotoSelect} disabled={uploadingPhoto} style={{ display: 'none' }} />
+                    </label>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Phone Number</label>
-                  <input 
-                    type="text" 
-                    value={currentStaff.phone}
-                    onChange={(e) => setCurrentStaff({...currentStaff, phone: e.target.value})}
-                    placeholder="+1 234 567 890"
-                    className="w-full px-5 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none transition-all placeholder:text-slate-300 font-medium"
-                  />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="space-y-1.5">
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Full Name</label>
+                  <input type="text" placeholder="e.g. John Doe" required value={currentStaff.name || ''} onChange={(e) => setCurrentStaff({...currentStaff, name: e.target.value})} style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '13px', fontWeight: 500, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }} />
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Department</label>
-                  <select 
-                    value={currentStaff.department}
-                    onChange={(e) => setCurrentStaff({...currentStaff, department: e.target.value})}
-                    className="w-full px-5 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none transition-all font-medium"
-                  >
+                
+                <div className="space-y-1.5">
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Phone Number</label>
+                  <input type="tel" placeholder="+1 234 567 890" value={currentStaff.phone || ''} onChange={(e) => setCurrentStaff({...currentStaff, phone: e.target.value})} style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '13px', fontWeight: 500, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }} />
+                </div>
+                
+                <div className="space-y-1.5">
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>Department</label>
+                  <select value={currentStaff.department || 'Science'} onChange={(e) => setCurrentStaff({...currentStaff, department: e.target.value})} style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '13px', fontWeight: 500, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }}>
                     <option value="Science">Science</option>
                     <option value="Arts">Arts</option>
                     <option value="Commercial">Commercial</option>
                     <option value="Admin">Administration</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Role</label>
-                  <select 
-                    value={currentStaff.role}
-                    onChange={(e) => setCurrentStaff({...currentStaff, role: e.target.value})}
-                    className="w-full px-5 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none transition-all font-medium"
-                  >
+
+                <div className="space-y-1.5">
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>Role</label>
+                  <select value={currentStaff.role || 'teacher'} onChange={(e) => setCurrentStaff({...currentStaff, role: e.target.value})} style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '13px', fontWeight: 500, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }}>
                     <option value="teacher">Teacher</option>
                     <option value="admin">Administrator</option>
                     <option value="principal">Principal</option>
                     <option value="bursar">Bursar</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">{isEditing ? 'New Password (leave blank to keep current)' : 'Password'}</label>
-                  <input 
-                    type="password" 
-                    value={currentStaff.password || ''}
-                    onChange={(e) => setCurrentStaff({...currentStaff, password: e.target.value})}
-                    placeholder={isEditing ? '••••••••' : 'Enter password'}
-                    required={!isEditing}
-                    className="w-full px-5 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none transition-all placeholder:text-slate-300 font-medium"
-                  />
-                </div>
               </div>
-              </form>
-            </div>
 
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex items-center gap-4 shrink-0">
-              <button 
-                type="button"
-                onClick={() => setShowModal(false)} 
-                className="flex-1 bg-slate-200 text-slate-700 px-6 py-4 rounded-xl font-bold hover:bg-slate-300 transition-all active:scale-95"
-              >
-                Cancel
-              </button>
-              <button 
-                form="staff-form"
-                type="submit" 
-                disabled={saving} 
-                className="flex-1 bg-indigo-600 text-white px-6 py-4 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-50"
-              >
-                {saving ? <Loader2 className="animate-spin w-5 h-5 mx-auto" /> : isEditing ? 'Save Changes' : 'Add Staff'}
-              </button>
-            </div>
+              <div className="space-y-1.5">
+                <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email Address</label>
+                <input type="email" placeholder="john@school.com" required value={currentStaff.email || ''} onChange={(e) => setCurrentStaff({...currentStaff, email: e.target.value})} style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '13px', fontWeight: 500, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }} />
+              </div>
+
+              <div className="space-y-1.5">
+                <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{isEditing ? 'New Password (optional)' : 'Password'}</label>
+                <input type="password" placeholder={isEditing ? '••••••••' : 'Enter password'} required={!isEditing} value={currentStaff.password || ''} onChange={(e) => setCurrentStaff({...currentStaff, password: e.target.value})} style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '13px', fontWeight: 500, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }} />
+              </div>
+
+              <div className="hidden sm:flex" style={{ gap: '10px', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid rgb(241, 245, 249)', margin: '4px 0 0 0', flexShrink: 0 }}>
+                <button type="button" onClick={() => setShowModal(false)} style={{ padding: '11px 22px', borderRadius: '12px', border: 'none', background: 'rgb(241, 245, 249)', color: 'rgb(100, 116, 139)', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" disabled={saving} style={{ padding: '11px 24px', borderRadius: '12px', border: 'none', background: 'rgb(79, 70, 229)', color: 'white', fontWeight: 900, fontSize: '13px', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: 'rgba(79, 70, 229, 0.3) 0px 4px 16px', opacity: saving ? 0.7 : 1 }}>
+                  {saving && <Loader2 size={14} className="animate-spin" />}
+                  {isEditing ? 'Save Profile' : 'Add Staff'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
