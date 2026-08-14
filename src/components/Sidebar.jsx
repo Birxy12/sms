@@ -153,7 +153,7 @@ const Sidebar = ({ sidebarOpen, onClose }) => {
             }
             if (isStudentZone) {
               return (
-                <StudentAvatar gender={user?.gender} size={38} className="rounded-full border-2 border-indigo-200/50 shadow-sm" />
+                <StudentAvatar gender={user?.gender} avatarId={user?.avatarId} size={38} className="rounded-full border-2 border-indigo-200/50 shadow-sm" />
               );
             }
             return (

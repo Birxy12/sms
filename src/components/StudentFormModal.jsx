@@ -95,7 +95,7 @@ const StudentFormModal = ({
               {currentStudent.photo ? (
                 <img src={currentStudent.photo} alt="Student" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : currentStudent.name ? (
-                <StudentAvatar gender={currentStudent.gender} size="100%" />
+                <StudentAvatar gender={currentStudent.gender} avatarId={currentStudent.avatarId} size="100%" />
               ) : (
                 <Camera size={24} style={{ color: 'rgb(203, 213, 225)' }} />
               )}

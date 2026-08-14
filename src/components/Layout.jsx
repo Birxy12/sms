@@ -165,7 +165,7 @@ const Layout = ({ children }) => {
               }} 
             />
           ) : isStudentZone ? (
-            <StudentAvatar gender={user?.gender} size={34} className="rounded-full shadow-sm" />
+            <StudentAvatar gender={user?.gender} avatarId={user?.avatarId} size={34} className="rounded-full shadow-sm" />
           ) : (
             <div style={{
               width: '34px', height: '34px', borderRadius: '50%',

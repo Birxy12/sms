@@ -353,7 +353,7 @@ const StudentManagement = () => {
                         {student.photo ? (
                           <img src={student.photo} alt={student.name} className="w-full h-full object-cover" />
                         ) : (
-                          <StudentAvatar gender={student.gender} size="100%" className="opacity-90" />
+                          <StudentAvatar gender={student.gender} avatarId={student.avatarId} size="100%" className="opacity-90" />
                         )}
                       </div>
                       <p className="font-bold text-slate-900">{student.name}</p>

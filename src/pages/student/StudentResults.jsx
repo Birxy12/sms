@@ -959,7 +959,7 @@ const StudentResults = ({ isPublic }) => {
             {currentStudent?.photo ? (
               <img src={currentStudent.photo} alt="Student" />
             ) : (
-              <StudentAvatar gender={currentStudent?.gender} size="100%" />
+              <StudentAvatar gender={currentStudent?.gender} avatarId={currentStudent?.avatarId} size="100%" />
             )}
           </div>
         </div>
@@ -1251,7 +1251,7 @@ const StudentResults = ({ isPublic }) => {
                   {currentStudent?.photo || currentStudent?.photoURL ? (
                     <img src={currentStudent.photo || currentStudent.photoURL} alt="Student" className="w-full h-full object-cover" />
                   ) : (
-                    <StudentAvatar gender={currentStudent?.gender} size="100%" />
+                    <StudentAvatar gender={currentStudent?.gender} avatarId={currentStudent?.avatarId} size="100%" />
                   )}
                 </div>
                 <p className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{currentStudent?.name}</p>

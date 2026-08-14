@@ -205,7 +205,7 @@ const StudentIDCard = () => {
                         {currentStudent?.photo || currentStudent?.photoURL ? (
                           <img src={currentStudent.photo || currentStudent.photoURL} alt="Student" />
                         ) : (
-                          <StudentAvatar gender={currentStudent?.gender} size="100%" />
+                          <StudentAvatar gender={currentStudent?.gender} avatarId={currentStudent?.avatarId} size="100%" />
                         )}
                       </div>
                       <div className="photo-corner tl" style={{ borderColor: primaryColor }} />

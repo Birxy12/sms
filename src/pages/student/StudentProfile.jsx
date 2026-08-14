@@ -11,6 +11,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import ImageCropperModal from '../../components/ImageCropperModal';
+import AvatarSelector from '../../components/AvatarSelector';
+import StudentAvatar from '../../components/StudentAvatar';
 
 const StudentProfile = () => {
   const navigate = useNavigate();
@@ -22,6 +24,11 @@ const StudentProfile = () => {
   const [saving, setSaving] = useState(false);
   const canEdit = true; // Always allow student profile editing
   const [status, setStatus] = useState({ type: '', message: '' });
+  
+  // -- Form State --
+  const [formData, setFormData] = useState({ name: '', phone: '', dob: '', email: '', gender: '', house: '' });
+  const [selectedAvatarId, setSelectedAvatarId] = useState('');
+  const [avatarFile, setAvatarFile] = useState(null);
   
   // -- Date Formatting --
   const formatDateForInput = (dateVal) => {
@@ -67,16 +74,6 @@ const StudentProfile = () => {
     return dateVal;
   };
 
-  const [formData, setFormData] = useState({
-    name: currentStudent?.name || '',
-    phone: currentStudent?.phone || '',
-    dob: formatDateForInput(currentStudent?.dob || ''),
-    email: currentStudent?.email || '',
-    gender: currentStudent?.gender || '',
-    house: currentStudent?.house || ''
-  });
-
-  const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [errors, setErrors] = useState({});
@@ -100,6 +97,7 @@ const StudentProfile = () => {
                      formData.email !== (currentStudent?.email || '') ||
                      formData.gender !== (currentStudent?.gender || '') ||
                      formData.house !== (currentStudent?.house || '') ||
+                     selectedAvatarId !== (currentStudent?.avatarId || '') ||
                      avatarFile !== null;
 
   const validateField = useCallback((field, value) => {
@@ -134,6 +132,7 @@ const StudentProfile = () => {
         gender: currentStudent.gender || '',
         house: currentStudent.house || ''
       });
+      setSelectedAvatarId(currentStudent.avatarId || '');
     }
   }, [currentStudent, isEditing]);
 
@@ -168,6 +167,7 @@ const StudentProfile = () => {
 
     const payload = { ...formData };
     if (photoUrl) payload.photo = photoUrl;
+    payload.avatarId = selectedAvatarId || null;
 
     const result = await updateProfile(payload);
     if (result.success) {
@@ -179,7 +179,7 @@ const StudentProfile = () => {
       setStatus({ type: 'error', message: result.message || 'Sync failed' });
     }
     setSaving(false);
-  }, [formData, avatarFile, currentStudent, isFormValid, updateProfile]);
+  }, [formData, avatarFile, currentStudent, isFormValid, updateProfile, selectedAvatarId]);
 
   const handleCancel = useCallback(() => {
     setIsEditing(false);
@@ -188,8 +188,10 @@ const StudentProfile = () => {
       phone: currentStudent?.phone || '',
       dob: formatDateForInput(currentStudent?.dob || ''),
       email: currentStudent?.email || '',
-      gender: currentStudent?.gender || ''
+      gender: currentStudent?.gender || '',
+      house: currentStudent?.house || ''
     });
+    setSelectedAvatarId(currentStudent?.avatarId || '');
     setAvatarFile(null);
     setAvatarPreview(null);
     setErrors({});
@@ -280,7 +282,7 @@ const StudentProfile = () => {
             ) : avatarPreview || currentStudent?.photo ? (
               <img src={avatarPreview || currentStudent.photo} alt="Avatar" className="w-full h-full object-cover rounded-full" />
             ) : (
-              <span className="text-4xl font-black text-indigo-600">{(currentStudent?.name?.[0] || '?').toUpperCase()}</span>
+              <StudentAvatar gender={currentStudent?.gender} avatarId={selectedAvatarId || currentStudent?.avatarId} size="100%" />
             )}
           </div>
           <button 
@@ -347,6 +349,19 @@ const StudentProfile = () => {
       <div className="p-4 mt-2">
         {activeTab === 'info' && (
            <div className="space-y-5 max-w-md mx-auto">
+             <SectionHeader title="Personal Information" icon={User} />
+             
+             {isEditing && (
+               <div className="space-y-3 mb-8 bg-slate-50 p-5 rounded-3xl border border-slate-100">
+                 <label className="text-sm font-black text-slate-800 ml-1 block mb-3">Select 3D Avatar (Optional)</label>
+                 <AvatarSelector 
+                   genderFilter={currentStudent?.gender} 
+                   selected={selectedAvatarId} 
+                   onSelect={setSelectedAvatarId} 
+                 />
+               </div>
+             )}
+
              <div className="space-y-1.5">
                <label className="text-xs font-bold text-slate-500 ml-1">Full Legal Name</label>
                <input
