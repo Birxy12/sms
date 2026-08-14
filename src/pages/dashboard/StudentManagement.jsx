@@ -43,6 +43,19 @@ const StudentManagement = () => {
   const [savingSubjects, setSavingSubjects] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.dropdown-container')) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
   const openSubjectRegModal = (student) => {
     setSubjectRegModal({ student });
     const available = getSubjectsForClass(student.className);
@@ -365,15 +378,12 @@ const StudentManagement = () => {
                   <td className="px-6 py-5">
                     <span className={`text-[10px] font-black uppercase tracking-widest ${student.gender === 'Male' ? 'text-blue-500' : 'text-pink-500'}`}>{student.gender}</span>
                   </td>
-                  <td className="px-8 py-5 text-right relative"
-                      onMouseLeave={() => setActiveDropdown(null)}
-                      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setActiveDropdown(null); }}
-                  >
+                  <td className="px-8 py-5 text-right relative dropdown-container">
                     <button 
                       onClick={() => setActiveDropdown(activeDropdown === student.id ? null : student.id)}
                       className="p-2 rounded-full hover:bg-slate-100 text-slate-400 transition-colors focus:outline-none"
                     >
-                      <MoreVertical size={20} />
+                      <MoreVertical size={16} />
                     </button>
                     
                     {activeDropdown === student.id && (
