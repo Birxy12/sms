@@ -586,61 +586,67 @@ const StaffManagement = () => {
         </div>
       )}
 
-      {/* Staff Details & Actions Card Modal */}
+      {/* Staff Details Card Modal */}
       {activeActionStaff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
-              <h3 className="text-xl font-bold text-slate-900">Staff Member Details</h3>
-              <button 
-                onClick={() => setActiveActionStaff(null)} 
-                className="text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <X size={24} />
-              </button>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', padding: 16, boxSizing: 'border-box' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} onClick={() => setActiveActionStaff(null)} />
+          
+          <div style={{ position: 'relative', backgroundColor: '#fff', width: '100%', maxWidth: 500, borderRadius: 24, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflow: 'hidden' }}>
+            <div style={{ padding: '24px 28px', borderBottom: '1px solid #f1f5f9', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontSize: 20, fontWeight: 900, color: '#0f172a', margin: 0 }}>
+                Staff Profile
+              </h2>
+              <div className="flex items-center gap-4">
+                <button type="button" onClick={() => setActiveActionStaff(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex' }}>
+                  <X size={20} />
+                </button>
+              </div>
             </div>
             
-            <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar text-center">
-              {/* Profile Photo - Circle */}
-              <div className="relative w-28 h-28 mx-auto">
-                <div className="w-28 h-28 rounded-full bg-slate-100 flex items-center justify-center font-extrabold text-slate-600 overflow-hidden border-4 border-indigo-50 shadow-md">
+            <div style={{ padding: '24px 28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px', flex: 1, minHeight: 0, WebkitOverflowScrolling: 'touch' }}>
+              
+              {/* Profile Header */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '100px', height: '100px', borderRadius: '24px', overflow: 'hidden', flexShrink: 0, background: 'rgb(241, 245, 249)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'rgba(0, 0, 0, 0.1) 0px 4px 12px' }}>
                   {activeActionStaff.photo ? (
-                    <img src={activeActionStaff.photo} alt={activeActionStaff.name} className="w-full h-full object-cover rounded-full" />
+                    <img src={activeActionStaff.photo} alt={activeActionStaff.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    <span className="text-3xl">{activeActionStaff.name[0]}</span>
+                    <span style={{ fontSize: '32px', fontWeight: 900, color: '#64748b' }}>{activeActionStaff.name[0]}</span>
                   )}
                 </div>
+                <div style={{ textAlign: 'center' }}>
+                  <h4 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: 0 }}>{activeActionStaff.name}</h4>
+                  <p style={{ margin: '8px 0 0 0', display: 'inline-block', fontSize: '13px', fontWeight: 800, color: 'rgb(79, 70, 229)', background: 'rgb(238, 242, 255)', padding: '4px 12px', borderRadius: '99px' }}>
+                    {activeActionStaff.staffId}
+                  </p>
+                </div>
               </div>
 
-              {/* Staff Main Info */}
-              <div>
-                <h4 className="text-2xl font-black text-slate-900">{activeActionStaff.name}</h4>
-                <p className="text-sm font-mono text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full inline-block mt-2 font-bold">
-                  {activeActionStaff.staffId}
-                </p>
-              </div>
-
-              {/* Staff Detailed Fields */}
-              <div className="bg-slate-50 rounded-2xl p-5 text-left space-y-4">
-                <div className="flex justify-between items-center text-sm border-b border-slate-200/60 pb-3">
-                  <span className="text-slate-400 font-bold flex items-center gap-2"><Briefcase size={16} /> Department</span>
-                  <span className="font-extrabold text-slate-800">{activeActionStaff.department}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: 'rgb(248, 250, 252)', borderRadius: '16px', padding: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid rgba(226, 232, 240, 0.6)' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '8px' }}><Briefcase size={16} /> Department</span>
+                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#1e293b' }}>{activeActionStaff.department}</span>
                 </div>
-                <div className="flex justify-between items-center text-sm border-b border-slate-200/60 pb-3">
-                  <span className="text-slate-400 font-bold flex items-center gap-2"><ShieldCheck size={16} /> Role</span>
-                  <span className="font-extrabold text-slate-800 capitalize">{activeActionStaff.role}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid rgba(226, 232, 240, 0.6)' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '8px' }}><ShieldCheck size={16} /> Role</span>
+                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#1e293b', textTransform: 'capitalize' }}>{activeActionStaff.role}</span>
                 </div>
-                <div className="flex justify-between items-center text-sm border-b border-slate-200/60 pb-3">
-                  <span className="text-slate-400 font-bold flex items-center gap-2"><Mail size={16} /> Email</span>
-                  <span className="font-extrabold text-slate-800 select-all">{activeActionStaff.email}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid rgba(226, 232, 240, 0.6)' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '8px' }}><Mail size={16} /> Email</span>
+                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#1e293b', userSelect: 'all' }}>{activeActionStaff.email}</span>
                 </div>
                 {activeActionStaff.phone && (
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-400 font-bold flex items-center gap-2"><Phone size={16} /> Phone</span>
-                    <span className="font-extrabold text-slate-800 select-all">{activeActionStaff.phone}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '8px' }}><Phone size={16} /> Phone</span>
+                    <span style={{ fontSize: '14px', fontWeight: 800, color: '#1e293b', userSelect: 'all' }}>{activeActionStaff.phone}</span>
                   </div>
                 )}
-               </div>
+              </div>
+
+              <div className="hidden sm:flex" style={{ gap: '10px', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid rgb(241, 245, 249)', margin: 'auto 0 0 0', flexShrink: 0 }}>
+                <button type="button" onClick={() => setActiveActionStaff(null)} style={{ padding: '11px 22px', borderRadius: '12px', border: 'none', background: 'rgb(241, 245, 249)', color: 'rgb(100, 116, 139)', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>Close</button>
+              </div>
+
             </div>
           </div>
         </div>
