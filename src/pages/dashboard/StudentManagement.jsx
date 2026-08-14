@@ -625,18 +625,18 @@ const StudentManagement = () => {
             </div>
 
             {/* ── Scrollable body ── */}
-            <div className="overflow-y-auto flex-1 custom-scrollbar bg-slate-50">
-              <form id="student-form" onSubmit={handleSave} className="p-6 space-y-5">
+            <div className="overflow-y-auto flex-1 custom-scrollbar bg-slate-50" style={{ minHeight: 0 }}>
+              <form id="student-form" onSubmit={handleSave} className="p-5 space-y-4">
 
                 {/* Photo Upload */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Student Photo</p>
+                <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Student Photo</p>
                   <GlobalPhotoUploader
                     photoUrl={currentStudent.photo}
                     uploading={uploading}
                     onPhotoSelect={handlePhotoSelect}
                     label="Student Photo"
-                    recommendedText="Square image recommended · Max 2MB"
+                    recommendedText="Square image · Max 2MB"
                   />
                 </div>
 
