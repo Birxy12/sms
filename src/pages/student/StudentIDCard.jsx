@@ -7,6 +7,7 @@ import {
   Fingerprint, Sparkles, CheckCircle2, AlertCircle 
 } from 'lucide-react';
 import bdsLogo from '../../assets/bdslogo.jpg';
+import StudentAvatar from '../../components/StudentAvatar';
 
 const StudentIDCard = () => {
   const { currentStudent } = useStudentAuth();
@@ -204,9 +205,7 @@ const StudentIDCard = () => {
                         {currentStudent?.photo || currentStudent?.photoURL ? (
                           <img src={currentStudent.photo || currentStudent.photoURL} alt="Student" />
                         ) : (
-                          <div className="photo-placeholder">
-                            <User size={28} className="text-slate-300" />
-                          </div>
+                          <StudentAvatar gender={currentStudent?.gender} size="100%" />
                         )}
                       </div>
                       <div className="photo-corner tl" style={{ borderColor: primaryColor }} />

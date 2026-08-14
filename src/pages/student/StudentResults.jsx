@@ -14,6 +14,7 @@ import Navbar from '../../components/Navbar';
 import { getAverageDivisor } from '../../utils/averageDivisor';
 import { generateAutoComments } from '../../utils/commentGenerator';
 import html2pdf from 'html2pdf.js';
+import StudentAvatar from '../../components/StudentAvatar';
 
 const StudentResults = ({ isPublic }) => {
   const { currentStudent: loggedInStudent, authError, authReady } = useStudentAuth();
@@ -958,7 +959,7 @@ const StudentResults = ({ isPublic }) => {
             {currentStudent?.photo ? (
               <img src={currentStudent.photo} alt="Student" />
             ) : (
-              <div className="rc-photo-placeholder">PHOTO</div>
+              <StudentAvatar gender={currentStudent?.gender} size="100%" />
             )}
           </div>
         </div>
@@ -1250,9 +1251,7 @@ const StudentResults = ({ isPublic }) => {
                   {currentStudent?.photo || currentStudent?.photoURL ? (
                     <img src={currentStudent.photo || currentStudent.photoURL} alt="Student" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-600">
-                      <User size={24} />
-                    </div>
+                    <StudentAvatar gender={currentStudent?.gender} size="100%" />
                   )}
                 </div>
                 <p className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{currentStudent?.name}</p>
