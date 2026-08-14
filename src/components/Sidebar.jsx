@@ -134,17 +134,36 @@ const Sidebar = ({ sidebarOpen, onClose }) => {
         marginBottom: '6px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '38px', height: '38px',
-            borderRadius: '50%',
-            background: `linear-gradient(135deg, ${primaryColor}33, ${primaryColor}66)`,
-            border: `2px solid ${primaryColor}60`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: '900', color: primaryColor,
-            fontSize: '15px', flexShrink: 0,
-          }}>
-            {initial}
-          </div>
+          {(() => {
+            const user = isStudentZone ? currentStudent : currentAdmin;
+            const photo = user?.photo || user?.photoURL;
+            if (photo) {
+              return (
+                <img 
+                  src={photo} 
+                  alt="Profile" 
+                  style={{
+                    width: '38px', height: '38px', borderRadius: '50%',
+                    objectFit: 'cover', flexShrink: 0,
+                    border: `2px solid ${primaryColor}60`
+                  }} 
+                />
+              );
+            }
+            return (
+              <div style={{
+                width: '38px', height: '38px',
+                borderRadius: '50%',
+                background: `linear-gradient(135deg, ${primaryColor}33, ${primaryColor}66)`,
+                border: `2px solid ${primaryColor}60`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: '900', color: primaryColor,
+                fontSize: '15px', flexShrink: 0,
+              }}>
+                {initial}
+              </div>
+            );
+          })()}
           <div style={{ overflow: 'hidden' }}>
             <p style={{
               margin: 0, fontWeight: '800', color: 'rgba(255,255,255,0.92)',

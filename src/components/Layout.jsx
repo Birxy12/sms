@@ -153,16 +153,28 @@ const Layout = ({ children }) => {
           </div>
 
           {/* Avatar */}
-          <div style={{
-            width: '34px', height: '34px', borderRadius: '50%',
-            background: `linear-gradient(135deg, ${primaryColor}33, ${primaryColor}88)`,
-            border: `2px solid ${primaryColor}60`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: '900', fontSize: '13px', color: primaryColor,
-            flexShrink: 0,
-          }}>
-            {initial}
-          </div>
+          {user?.photo || user?.photoURL ? (
+            <img 
+              src={user.photo || user.photoURL} 
+              alt="Avatar"
+              style={{
+                width: '34px', height: '34px', borderRadius: '50%',
+                objectFit: 'cover', flexShrink: 0,
+                border: `2px solid ${primaryColor}60`
+              }} 
+            />
+          ) : (
+            <div style={{
+              width: '34px', height: '34px', borderRadius: '50%',
+              background: `linear-gradient(135deg, ${primaryColor}33, ${primaryColor}88)`,
+              border: `2px solid ${primaryColor}60`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: '900', fontSize: '13px', color: primaryColor,
+              flexShrink: 0,
+            }}>
+              {initial}
+            </div>
+          )}
         </div>
 
         <div className="page-content">
