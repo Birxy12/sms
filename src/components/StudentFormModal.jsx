@@ -82,12 +82,18 @@ const StudentFormModal = ({
           <h2 style={{ fontSize: 20, fontWeight: 900, color: '#0f172a', margin: 0 }}>
             {isEditing ? 'Edit Profile' : 'Enroll Student'}
           </h2>
-          <button type="button" onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-4">
+            <button form="student-form" type="submit" disabled={saving} className="sm:hidden" style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', background: 'rgb(79, 70, 229)', color: 'white', fontWeight: 800, fontSize: '12px', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: 'rgba(79, 70, 229, 0.3) 0px 4px 16px', opacity: saving ? 0.7 : 1 }}>
+              {saving && <Loader2 size={12} className="animate-spin" />}
+              Save
+            </button>
+            <button type="button" onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex' }}>
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={onSubmit} style={{ padding: '24px 28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, minHeight: 0, WebkitOverflowScrolling: 'touch' }} noValidate>
+        <form id="student-form" onSubmit={onSubmit} style={{ padding: '24px 28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, minHeight: 0, WebkitOverflowScrolling: 'touch' }} noValidate>
           
           <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '16px', padding: '14px 16px', background: 'rgb(248, 250, 252)', borderRadius: '14px', border: '1.5px dashed rgb(199, 210, 254)', width: '100%', boxSizing: 'border-box' }}>
             <div style={{ width: '64px', height: '64px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0, background: 'rgb(226, 232, 240)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'rgba(0, 0, 0, 0.1) 0px 2px 8px' }}>
@@ -163,7 +169,7 @@ const StudentFormModal = ({
             {errors.email && touched.email && <FieldError message={errors.email} />}
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid rgb(241, 245, 249)', margin: '4px 0 0 0', flexShrink: 0 }}>
+          <div className="hidden sm:flex" style={{ gap: '10px', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid rgb(241, 245, 249)', margin: '4px 0 0 0', flexShrink: 0 }}>
             <button type="button" onClick={() => setShowModal(false)} style={{ padding: '11px 22px', borderRadius: '12px', border: 'none', background: 'rgb(241, 245, 249)', color: 'rgb(100, 116, 139)', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={saving} style={{ padding: '11px 24px', borderRadius: '12px', border: 'none', background: 'rgb(79, 70, 229)', color: 'white', fontWeight: 900, fontSize: '13px', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: 'rgba(79, 70, 229, 0.3) 0px 4px 16px', opacity: saving ? 0.7 : 1 }}>
               {saving && <Loader2 size={14} className="animate-spin" />}
