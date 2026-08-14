@@ -288,20 +288,6 @@ const StudentManagement = () => {
               <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${allowProfileEdit ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
-          <button 
-            onClick={() => { 
-              setIsEditing(false); 
-              setCurrentStudent({ 
-                name: '', regNo: '', className: 'JSS1', gender: 'Male', email: '',
-                phone: '', dob: '', house: '', photo: ''
-              }); 
-              setShowModal(true); 
-            }}
-            className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95"
-          >
-            <UserPlus size={20} />
-            Enroll New Student
-          </button>
         </div>
       </div>
 
@@ -689,6 +675,23 @@ const StudentManagement = () => {
           aspect={1}
         />
       )}
+
+      {/* Floating Enroll Button */}
+      <button 
+        onClick={() => { 
+          setIsEditing(false); 
+          setCurrentStudent({ 
+            name: '', regNo: '', className: 'JSS1', gender: 'Male', email: '',
+            phone: '', dob: '', house: '', photo: ''
+          }); 
+          setShowModal(true); 
+        }}
+        className="fixed bottom-8 right-8 z-[100] flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-4 rounded-full font-bold hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-300 active:scale-95 hover:scale-105 group"
+      >
+        <UserPlus size={24} />
+        <span className="hidden sm:inline">Enroll New Student</span>
+        <span className="sm:hidden inline">Enroll</span>
+      </button>
     </div>
   );
 };
