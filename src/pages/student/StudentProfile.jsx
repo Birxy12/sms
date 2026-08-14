@@ -86,8 +86,10 @@ const StudentProfile = () => {
   const [showCropper, setShowCropper] = useState(false);
   const [cropperFile, setCropperFile] = useState(null);
   const [activeTab, setActiveTab] = useState('info');
+  const [showAvatarMenu, setShowAvatarMenu] = useState(false);
 
   const fileInputRef = useRef(null);
+  const captureInputRef = useRef(null);
   const statusTimerRef = useRef(null);
 
   // -- Helpers --
@@ -286,12 +288,45 @@ const StudentProfile = () => {
             )}
           </div>
           <button 
-            onClick={() => fileInputRef.current?.click()}
-            className="absolute bottom-0 right-0 p-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-transform active:scale-95"
+            type="button"
+            onClick={() => setShowAvatarMenu(!showAvatarMenu)}
+            className="absolute bottom-0 right-0 p-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-transform active:scale-95 z-20"
           >
             <Camera size={16} />
           </button>
+          
+          <AnimatePresence>
+            {showAvatarMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-30" 
+                  onClick={() => setShowAvatarMenu(false)}
+                />
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="absolute top-14 left-1/2 -translate-x-1/2 mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 w-48 z-40 flex flex-col gap-1"
+                >
+                  <button type="button" onClick={() => { setIsEditing(true); setShowAvatarMenu(false); setTimeout(() => document.getElementById('avatar-selector-section')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="text-left px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-colors">
+                    Change 3D Avatar
+                  </button>
+                  <button type="button" onClick={() => { fileInputRef.current?.click(); setShowAvatarMenu(false); }} className="text-left px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-colors">
+                    Select Photo
+                  </button>
+                  <button type="button" onClick={() => { captureInputRef.current?.click(); setShowAvatarMenu(false); }} className="text-left px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-colors">
+                    Take Photo
+                  </button>
+                  <button type="button" onClick={() => { fileInputRef.current?.click(); setShowAvatarMenu(false); }} className="text-left px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-colors">
+                    Upload File
+                  </button>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
           <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
+          <input type="file" ref={captureInputRef} onChange={handleFileChange} className="hidden" accept="image/*" capture="environment" />
         </div>
 
         {/* Names */}
@@ -352,7 +387,7 @@ const StudentProfile = () => {
              <SectionHeader title="Personal Information" icon={User} />
              
              {isEditing && (
-               <div className="space-y-3 mb-8 bg-slate-50 p-5 rounded-3xl border border-slate-100">
+               <div id="avatar-selector-section" className="space-y-3 mb-8 bg-slate-50 p-5 rounded-3xl border border-slate-100">
                  <label className="text-sm font-black text-slate-800 ml-1 block mb-3">Select 3D Avatar (Optional)</label>
                  <AvatarSelector 
                    genderFilter={currentStudent?.gender} 
