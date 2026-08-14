@@ -87,9 +87,11 @@ const StudentProfile = () => {
   const [cropperFile, setCropperFile] = useState(null);
   const [activeTab, setActiveTab] = useState('info');
   const [showAvatarMenu, setShowAvatarMenu] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
 
   const fileInputRef = useRef(null);
   const captureInputRef = useRef(null);
+  const genericFileInputRef = useRef(null);
   const statusTimerRef = useRef(null);
 
   // -- Helpers --
@@ -308,7 +310,7 @@ const StudentProfile = () => {
                   exit={{ opacity: 0, scale: 0.95 }}
                   className="absolute top-14 left-1/2 -translate-x-1/2 mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 w-48 z-40 flex flex-col gap-1"
                 >
-                  <button type="button" onClick={() => { setIsEditing(true); setShowAvatarMenu(false); setTimeout(() => document.getElementById('avatar-selector-section')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="text-left px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-colors">
+                  <button type="button" onClick={() => { setShowAvatarModal(true); setShowAvatarMenu(false); }} className="text-left px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-colors">
                     Change 3D Avatar
                   </button>
                   <button type="button" onClick={() => { fileInputRef.current?.click(); setShowAvatarMenu(false); }} className="text-left px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-colors">
@@ -317,7 +319,7 @@ const StudentProfile = () => {
                   <button type="button" onClick={() => { captureInputRef.current?.click(); setShowAvatarMenu(false); }} className="text-left px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-colors">
                     Take Photo
                   </button>
-                  <button type="button" onClick={() => { fileInputRef.current?.click(); setShowAvatarMenu(false); }} className="text-left px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-colors">
+                  <button type="button" onClick={() => { genericFileInputRef.current?.click(); setShowAvatarMenu(false); }} className="text-left px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-colors">
                     Upload File
                   </button>
                 </motion.div>
@@ -327,7 +329,40 @@ const StudentProfile = () => {
 
           <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
           <input type="file" ref={captureInputRef} onChange={handleFileChange} className="hidden" accept="image/*" capture="environment" />
+          <input type="file" ref={genericFileInputRef} onChange={handleFileChange} className="hidden" />
         </div>
+
+        {/* 3D Avatar Selection Modal */}
+        <AnimatePresence>
+          {showAvatarModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-black text-slate-800 tracking-tight">Select 3D Avatar</h3>
+                  <button onClick={() => setShowAvatarModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500">
+                    <X size={20} />
+                  </button>
+                </div>
+                <AvatarSelector 
+                  genderFilter={currentStudent?.gender} 
+                  selected={selectedAvatarId} 
+                  onSelect={(id) => {
+                    setSelectedAvatarId(id);
+                    setShowAvatarModal(false);
+                    if (!isEditing) {
+                      updateProfile({ ...currentStudent, avatarId: id });
+                    }
+                  }} 
+                />
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
         {/* Names */}
         <h1 className="text-2xl font-black text-slate-900 text-center">{currentStudent?.name}</h1>
