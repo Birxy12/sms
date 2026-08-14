@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { X, Loader2, Camera, Upload } from 'lucide-react';
 import StudentAvatar from './StudentAvatar';
+import AvatarSelector from './AvatarSelector';
 
 const FieldError = ({ message }) => (
   <span style={{ display: 'block', marginTop: '4px', fontSize: '11px', fontWeight: 600, color: '#ef4444' }}>
@@ -113,6 +114,15 @@ const StudentFormModal = ({
                 </label>
               </div>
             </div>
+          </div>
+
+          <div className="space-y-1.5" style={{ paddingBottom: '12px', borderBottom: '1px solid rgb(241, 245, 249)', marginBottom: '12px' }}>
+             <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>Select 3D Avatar (Optional)</label>
+             <AvatarSelector 
+               genderFilter={currentStudent.gender || 'Male'} 
+               selected={currentStudent.avatarId || ''} 
+               onSelect={(id) => setCurrentStudent({ ...currentStudent, avatarId: id })} 
+             />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
