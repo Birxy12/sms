@@ -398,39 +398,38 @@ const StudentManagement = () => {
 
                     {activeDropdown === student.id && (
                       <div 
-                        className="absolute right-8 top-12 w-52 bg-white border border-slate-200 shadow-xl rounded-2xl p-2 z-[999] animate-in fade-in zoom-in-95 flex flex-col text-left space-y-1"
+                        className="absolute right-8 top-12 w-max max-w-[200px] bg-white border border-slate-200 shadow-xl rounded-2xl p-2 z-[999] animate-in fade-in zoom-in-95 flex flex-row flex-wrap gap-1 justify-center"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <button onClick={() => { setActiveDropdown(null); navigate(`/admin/student-results?regNo=${encodeURIComponent(student.regNo)}&className=${encodeURIComponent(student.className)}&name=${encodeURIComponent(student.name)}`); }} className="group w-full px-4 py-2.5 rounded-xl text-sm hover:bg-emerald-500 hover:text-white text-slate-700 font-semibold flex items-center gap-3 transition-colors">
-                          <Award size={16} className="text-indigo-500 group-hover:text-white" /> View Results
+                        <button title="View Results" onClick={() => { setActiveDropdown(null); navigate(`/admin/student-results?regNo=${encodeURIComponent(student.regNo)}&className=${encodeURIComponent(student.className)}&name=${encodeURIComponent(student.name)}`); }} className="p-2.5 rounded-xl hover:bg-slate-100 text-black transition-colors">
+                          <Award size={18} />
                         </button>
-                        <button onClick={() => { 
+                        <button title="Print Result" onClick={() => { 
                           setActiveDropdown(null); 
                           const printUrl = `/admin/student-results?regNo=${encodeURIComponent(student.regNo)}&className=${encodeURIComponent(student.className)}&name=${encodeURIComponent(student.name)}&print=1`;
                           const win = window.open(printUrl, '_blank', 'width=900,height=700');
                           if (win) { win.onload = () => { setTimeout(() => win.print(), 1200); }; }
-                        }} className="group w-full px-4 py-2.5 rounded-xl text-sm hover:bg-emerald-500 hover:text-white text-slate-700 font-semibold flex items-center gap-3 transition-colors">
-                          <Printer size={16} className="text-purple-500 group-hover:text-white" /> Print Result
+                        }} className="p-2.5 rounded-xl hover:bg-slate-100 text-black transition-colors">
+                          <Printer size={18} />
                         </button>
                         {student.status === 'pending_activation' || student.requiresAdminConfirmation || student.admissionConfirmed === false ? (
-                          <button onClick={() => { setActiveDropdown(null); handleConfirmAdmission(student); }} className="group w-full px-4 py-2.5 rounded-xl text-sm hover:bg-emerald-500 hover:text-white text-slate-700 font-semibold flex items-center gap-3 transition-colors">
-                            <CheckCircle size={16} className="text-emerald-500 group-hover:text-white" /> Confirm Admission
+                          <button title="Confirm Admission" onClick={() => { setActiveDropdown(null); handleConfirmAdmission(student); }} className="p-2.5 rounded-xl hover:bg-slate-100 text-black transition-colors">
+                            <CheckCircle size={18} />
                           </button>
                         ) : null}
-                        <button onClick={() => { setActiveDropdown(null); setPromoteModal({ student }); setNewClass(student.className); }} className="group w-full px-4 py-2.5 rounded-xl text-sm hover:bg-emerald-500 hover:text-white text-slate-700 font-semibold flex items-center gap-3 transition-colors">
-                          <ArrowUpDown size={16} className="text-amber-500 group-hover:text-white" /> Promote / Demote
+                        <button title="Promote / Demote" onClick={() => { setActiveDropdown(null); setPromoteModal({ student }); setNewClass(student.className); }} className="p-2.5 rounded-xl hover:bg-slate-100 text-black transition-colors">
+                          <ArrowUpDown size={18} />
                         </button>
                         {(student.className?.startsWith('SS2') || student.className?.startsWith('SS3')) && (
-                          <button onClick={() => { setActiveDropdown(null); openSubjectRegModal(student); }} className="group w-full px-4 py-2.5 rounded-xl text-sm hover:bg-emerald-500 hover:text-white text-slate-700 font-semibold flex items-center gap-3 transition-colors">
-                            <ClipboardList size={16} className="text-pink-500 group-hover:text-white" /> Subjects
+                          <button title="Subjects" onClick={() => { setActiveDropdown(null); openSubjectRegModal(student); }} className="p-2.5 rounded-xl hover:bg-slate-100 text-black transition-colors">
+                            <ClipboardList size={18} />
                           </button>
                         )}
-                        <button onClick={() => { setActiveDropdown(null); setIsEditing(true); setCurrentStudent(student); setShowModal(true); }} className="group w-full px-4 py-2.5 rounded-xl text-sm hover:bg-emerald-500 hover:text-white text-slate-700 font-semibold flex items-center gap-3 transition-colors">
-                          <Edit2 size={16} className="text-blue-500 group-hover:text-white" /> Edit Student
+                        <button title="Edit Student" onClick={() => { setActiveDropdown(null); setIsEditing(true); setCurrentStudent(student); setShowModal(true); }} className="p-2.5 rounded-xl hover:bg-slate-100 text-black transition-colors">
+                          <Edit2 size={18} />
                         </button>
-                        <div className="h-px bg-slate-100 my-1 mx-4"></div>
-                        <button onClick={() => { setActiveDropdown(null); handleDelete(student.id); }} className="group w-full px-4 py-2.5 rounded-xl text-sm hover:bg-rose-500 hover:text-white text-rose-600 font-bold flex items-center gap-3 transition-colors">
-                          <Trash2 size={16} className="group-hover:text-white" /> Delete Student
+                        <button title="Delete Student" onClick={() => { setActiveDropdown(null); handleDelete(student.id); }} className="p-2.5 rounded-xl hover:bg-rose-50 text-rose-600 transition-colors">
+                          <Trash2 size={18} />
                         </button>
                       </div>
                     )}
