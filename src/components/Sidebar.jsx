@@ -50,6 +50,7 @@ const Sidebar = ({ sidebarOpen, onClose }) => {
     { name: 'Manage Fame',        path: '/admin/fame',     icon: Star,            roles: ['admin', 'principal'] },
     { name: 'CBT Exams',          path: '/cbt',            icon: MonitorCheck,    roles: ['admin', 'principal', 'teacher'] },
     { name: 'Admission CBT',      path: '/admin/admission-cbt', icon: MonitorCheck, roles: ['admin', 'principal'] },
+    { name: 'Notification Center',path: '/admin/notifications', icon: Mail,       roles: ['admin', 'principal'] },
     { name: 'Attendance',         path: '/attendance',     icon: Fingerprint,     roles: ['admin', 'principal', 'teacher', 'bursar'] },
     { name: 'School Branding',    path: '/settings',       icon: Settings,        roles: ['admin'] },
     { name: 'My Profile',         path: '/profile',        icon: UserCircle,      roles: ['admin', 'teacher', 'principal', 'bursar'] },

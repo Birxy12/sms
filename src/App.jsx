@@ -41,6 +41,7 @@ import AdmissionPortal from './pages/public/AdmissionPortal';
 import FameManagement from './pages/dashboard/FameManagement';
 import BiometricAttendance from './pages/dashboard/BiometricAttendance';
 import AdmissionCBTManagement from './pages/dashboard/AdmissionCBTManagement';
+import NotificationCenter from './pages/dashboard/NotificationCenter';
 import { useStudentAuth } from './context/StudentAuthContext';
 import { useAdminAuth } from './context/AdminAuthContext';
 import BonusAI from './components/BonusAI';
@@ -294,6 +295,12 @@ function App() {
       <Route path="/admin/admission-cbt" element={
         <ProtectedAdminRoute requiredRole={['admin', 'principal']}>
           <Layout><AdmissionCBTManagement /></Layout>
+        </ProtectedAdminRoute>
+      } />
+
+      <Route path="/admin/notifications" element={
+        <ProtectedAdminRoute requiredRole={['admin', 'principal']}>
+          <Layout><NotificationCenter /></Layout>
         </ProtectedAdminRoute>
       } />
 
