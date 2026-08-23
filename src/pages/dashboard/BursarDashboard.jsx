@@ -12,6 +12,7 @@ import { addDoc, serverTimestamp } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { fetchGlobalClasses, DEFAULT_CLASSES } from '../../utils/classUtils';
+import SchoolManagementDashboard from '../../components/SchoolManagementDashboard';
 import Papa from 'papaparse';
 
 const OldFeesAnalytics = ({ currentCollected, currentExpected }) => {
@@ -1173,6 +1174,8 @@ const BursarDashboard = () => {
 
     return (
       <div className="space-y-8 mt-6">
+        <SchoolManagementDashboard userRole="bursar" />
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Pie Chart */}
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex flex-col items-center">

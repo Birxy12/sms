@@ -7,7 +7,7 @@ import StudentAvatar from './StudentAvatar';
 import { 
   LayoutDashboard, Users, BookOpen, GraduationCap, Settings, LogOut,
   DollarSign, Calendar, Layers, FileText, Mail, UserCircle, Award,
-  Inbox as InboxIcon, CreditCard, Home, X, MonitorCheck, UserPlus, Star, Fingerprint
+  Inbox as InboxIcon, CreditCard, Home, X, MonitorCheck, UserPlus, Star, Fingerprint, BarChart3
 } from 'lucide-react';
 
 const Sidebar = ({ sidebarOpen, onClose }) => {
@@ -39,6 +39,10 @@ const Sidebar = ({ sidebarOpen, onClose }) => {
     { name: 'Principal Panel',    path: '/principal',      icon: LayoutDashboard, roles: ['principal', 'admin'] },
     { name: 'Teacher Dashboard',  path: '/teachers',       icon: LayoutDashboard, roles: ['teacher', 'principal', 'admin'] },
     { name: 'Finance Control',    path: '/finance',        icon: DollarSign,      roles: ['bursar', 'admin'] },
+    { name: 'Analysis & Metrics', path: '/admin/analysis', icon: BarChart3,       roles: ['admin'] },
+    { name: 'School Analysis',    path: '/principal/analysis', icon: BarChart3,   roles: ['principal'] },
+    { name: 'Class Analysis',     path: '/teachers/analysis', icon: BarChart3,    roles: ['teacher'] },
+    { name: 'Financial Analysis', path: '/finance/analysis', icon: BarChart3,     roles: ['bursar'] },
     { name: 'Register Student',   path: '/finance?tab=register', icon: UserPlus,  roles: ['bursar', 'admin'] },
     { name: 'Manual Payment',     path: '/finance?tab=cashpay',  icon: CreditCard,roles: ['bursar', 'admin'] },
     { name: 'Manage Students',    path: '/admin/students', icon: GraduationCap,   roles: ['admin', 'principal'] },
@@ -55,6 +59,7 @@ const Sidebar = ({ sidebarOpen, onClose }) => {
     { name: 'School Branding',    path: '/settings',       icon: Settings,        roles: ['admin'] },
     { name: 'My Profile',         path: '/profile',        icon: UserCircle,      roles: ['admin', 'teacher', 'principal', 'bursar'] },
     { name: 'Overview',           path: '/students',       icon: LayoutDashboard, roles: ['student'], exact: true },
+    { name: 'Analysis',           path: '/students/analysis', icon: BarChart3,    roles: ['student'] },
     { name: 'Inbox',              path: '/students/inbox', icon: InboxIcon,       roles: ['student'] },
     { name: 'Assignments',        path: '/students/assignments', icon: Calendar,  roles: ['student'] },
     { name: 'CBT Exams',          path: '/students/cbt',   icon: MonitorCheck,    roles: ['student'] },

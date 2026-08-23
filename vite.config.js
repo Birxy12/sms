@@ -31,7 +31,8 @@ export default defineConfig({
     }
   },
   build: {
-    sourcemap: true
+    sourcemap: false,
+    chunkSizeWarningLimit: 2000
   },
   optimizeDeps: {
     include: ['react-easy-crop']

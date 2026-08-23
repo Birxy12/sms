@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
-import { Users, BookOpen, PenTool, DollarSign, ArrowUpRight, GraduationCap, BarChart, TrendingUp, UserCheck, Shield, User } from 'lucide-react';
+import { Users, BookOpen, PenTool, DollarSign, ArrowUpRight, GraduationCap, BarChart, TrendingUp, UserCheck, Shield, User, BarChart3 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 
@@ -113,8 +113,14 @@ const PrincipalDashboard = () => {
             <p className="text-slate-500 font-medium mt-1">Welcome back, {currentAdmin?.name || 'Principal'}. Holistic oversight of {stats.totalStudents} students and {stats.totalTeachers} staff members.</p>
           </div>
         </div>
-        <div className="flex gap-3">
-           <Link 
+        <div className="flex flex-wrap gap-3">
+          <Link 
+            to="/principal/analysis"
+            className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
+          >
+            <BarChart3 size={20} /> School Analysis
+          </Link>
+          <Link 
             to="/staff"
             className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 px-6 py-3 rounded-2xl font-bold hover:bg-slate-50 transition-all shadow-sm active:scale-95"
           >
@@ -122,7 +128,7 @@ const PrincipalDashboard = () => {
           </Link>
           <Link 
             to="/admin/posts"
-            className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
+            className="flex items-center justify-center gap-2 bg-slate-100 text-slate-800 px-6 py-3 rounded-2xl font-bold hover:bg-slate-200 transition-all active:scale-95"
           >
             <PenTool size={20} /> CMS
           </Link>

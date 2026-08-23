@@ -7,13 +7,14 @@ import {
   LayoutDashboard, Award, CreditCard, Calendar, Bell, ChevronRight, 
   Inbox as InboxIcon, Trophy, Wallet, BookOpen, Library, MonitorCheck, 
   AlertCircle, Star, ArrowUpRight, ArrowDownRight, Clock, User, Zap, GraduationCap, ChevronDown,
-  Eye, EyeOff, PlusCircle, Search, CheckCircle2, X, RefreshCw
+  Eye, EyeOff, PlusCircle, Search, CheckCircle2, X, RefreshCw, BarChart3
 } from 'lucide-react';
 import { getStudentWallet, fundStudentWallet, debitStudentWallet } from '../../utils/wallet';
 import { MARKS_KEYS, expandMarks } from '../../utils/firestoreSchema';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import PinSetupModal from '../../components/student/PinSetupModal';
+import SchoolManagementDashboard from '../../components/SchoolManagementDashboard';
 
 import { useSearchParams } from 'react-router-dom';
 
@@ -295,6 +296,7 @@ const StudentDashboard = () => {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard, color: '#6366f1' },
+    { id: 'analysis', label: 'Analysis & Metrics', icon: BarChart3, color: '#ec4899' },
     { id: 'wallet', label: 'Student Wallet', icon: Wallet, color: '#10b981' },
     { id: 'academic', label: 'Academic', icon: GraduationCap, color: '#3b82f6' },
     { id: 'notices', label: 'Notices', icon: Bell, color: '#f59e0b' },
@@ -459,6 +461,12 @@ const StudentDashboard = () => {
                     </div>
                   </div>
                 </>
+              )}
+
+              {activeTab === 'analysis' && (
+                <div className="space-y-6 animate-in fade-in duration-300">
+                  <SchoolManagementDashboard userRole="student" />
+                </div>
               )}
 
               {activeTab === 'wallet' && (

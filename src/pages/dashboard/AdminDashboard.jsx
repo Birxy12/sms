@@ -11,7 +11,7 @@ import ScoreEntry from '../../components/ScoreEntry';
 import StaffDashboard from './StaffDashboard';
 import StudentDashboard from './StudentDashboard';
 import { expandStudent } from '../../utils/firestoreSchema';
-import { Users, User, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw } from 'lucide-react';
+import { Users, User, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw, BarChart3 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useGlobalClasses } from '../../utils/classUtils';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -717,6 +717,14 @@ const AdminDashboard = () => {
                     <p className="text-slate-300 text-sm mt-1 max-w-xl">
                       Real-time school performance analytics, demographic summaries, academic score tracking, and system health status.
                     </p>
+                    <div className="mt-3 flex items-center gap-3">
+                      <button 
+                        onClick={() => navigate('/admin/analysis')}
+                        className="px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2"
+                      >
+                        <BarChart3 size={15} /> Open Multi-Role Analysis Hub
+                      </button>
+                    </div>
                   </div>
                   <div className="bg-white/10 backdrop-blur-md px-6 py-4 rounded-3xl border border-white/10 text-right md:min-w-[200px]">
                     <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest block">System Live Time</span>

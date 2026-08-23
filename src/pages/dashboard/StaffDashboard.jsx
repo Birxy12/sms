@@ -5,7 +5,8 @@ import ScoreEntry from '../../components/ScoreEntry';
 import AssignmentManager from '../../components/AssignmentManager';
 import NoteManager from '../../components/NoteManager';
 import TeacherAttendance from '../../components/TeacherAttendance';
-import { Book, CheckCircle, Clock, Edit3, List, Calendar as CalendarIcon, FileText, ClipboardList, Users, User } from 'lucide-react';
+import SchoolManagementDashboard from '../../components/SchoolManagementDashboard';
+import { Book, CheckCircle, Clock, Edit3, List, Calendar as CalendarIcon, FileText, ClipboardList, Users, User, BarChart3 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { db } from '../../lib/firebase';
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
@@ -64,6 +65,7 @@ const StaffDashboard = () => {
 
   const tabs = [
     { id: 'entry', label: 'Score Entry', icon: Edit3 },
+    { id: 'analysis', label: 'Class Analysis', icon: BarChart3 },
     { id: 'assignments', label: 'Assignments', icon: ClipboardList },
     { id: 'materials', label: 'Materials', icon: FileText },
     { id: 'schedule', label: 'Schedule', icon: CalendarIcon },
@@ -155,6 +157,12 @@ const StaffDashboard = () => {
         {activeTab === 'entry' && (
           <div>
             <ScoreEntry />
+          </div>
+        )}
+
+        {activeTab === 'analysis' && (
+          <div className="animate-in fade-in space-y-6">
+            <SchoolManagementDashboard userRole="teacher" />
           </div>
         )}
 

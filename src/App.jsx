@@ -42,6 +42,7 @@ import FameManagement from './pages/dashboard/FameManagement';
 import BiometricAttendance from './pages/dashboard/BiometricAttendance';
 import AdmissionCBTManagement from './pages/dashboard/AdmissionCBTManagement';
 import NotificationCenter from './pages/dashboard/NotificationCenter';
+import AnalysisPage from './pages/dashboard/AnalysisPage';
 import { useStudentAuth } from './context/StudentAuthContext';
 import { useAdminAuth } from './context/AdminAuthContext';
 import BonusAI from './components/BonusAI';
@@ -202,9 +203,39 @@ function App() {
           <Layout><StudentSubjectRegistration /></Layout>
         </ProtectedStudentRoute>
       } />
+      <Route path="/students/analysis" element={
+        <ProtectedStudentRoute>
+          <Layout><AnalysisPage forcedRole="student" /></Layout>
+        </ProtectedStudentRoute>
+      } />
 
 
       {/* Admin/Teacher Dashboards (Protected) */}
+      <Route path="/analysis" element={
+        <ProtectedAdminRoute requiredRole={['admin', 'principal', 'teacher', 'bursar']}>
+          <Layout><AnalysisPage /></Layout>
+        </ProtectedAdminRoute>
+      } />
+      <Route path="/admin/analysis" element={
+        <ProtectedAdminRoute requiredRole="admin">
+          <Layout><AnalysisPage forcedRole="admin" /></Layout>
+        </ProtectedAdminRoute>
+      } />
+      <Route path="/principal/analysis" element={
+        <ProtectedAdminRoute requiredRole={['principal', 'admin']}>
+          <Layout><AnalysisPage forcedRole="principal" /></Layout>
+        </ProtectedAdminRoute>
+      } />
+      <Route path="/teachers/analysis" element={
+        <ProtectedAdminRoute requiredRole={['teacher', 'principal', 'admin', 'bursar']}>
+          <Layout><AnalysisPage forcedRole="teacher" /></Layout>
+        </ProtectedAdminRoute>
+      } />
+      <Route path="/finance/analysis" element={
+        <ProtectedAdminRoute requiredRole={['bursar', 'admin']}>
+          <Layout><AnalysisPage forcedRole="bursar" /></Layout>
+        </ProtectedAdminRoute>
+      } />
       <Route path="/admin" element={
         <ProtectedAdminRoute requiredRole="admin">
           <Layout><AdminDashboard /></Layout>
