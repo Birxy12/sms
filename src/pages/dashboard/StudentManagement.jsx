@@ -4,7 +4,7 @@ import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, where, setDoc, serverTimestamp } from 'firebase/firestore';
 import { uploadAvatar } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList, Printer, MoreVertical } from 'lucide-react';
+import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList, Printer, MoreVertical, KeyRound, Lock, RefreshCw, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { getSubjectsForClass } from '../../utils/subjectConfig';
 import ImageCropperModal from '../../components/ImageCropperModal';
 import StudentAvatar from '../../components/StudentAvatar';
@@ -43,6 +43,13 @@ const StudentManagement = () => {
   const [adminSelectedSubjects, setAdminSelectedSubjects] = useState([]);
   const [savingSubjects, setSavingSubjects] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
+
+  // Reset PIN state
+  const [resetPinModal, setResetPinModal] = useState(null); // { student }
+  const [pinMode, setPinMode] = useState('clear'); // 'clear' or 'custom'
+  const [newPinValue, setNewPinValue] = useState('');
+  const [showPinValue, setShowPinValue] = useState(false);
+  const [resettingPin, setResettingPin] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -88,6 +95,61 @@ const StudentManagement = () => {
       setStatus({ type: 'error', message: 'Failed to save subjects.' });
     } finally {
       setSavingSubjects(false);
+    }
+  };
+
+  const openResetPinModal = (student) => {
+    setResetPinModal({ student });
+    setPinMode('clear');
+    setNewPinValue('');
+    setShowPinValue(false);
+  };
+
+  const handleResetPinSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!resetPinModal?.student) return;
+
+    if (pinMode === 'custom') {
+      if (!newPinValue || newPinValue.length !== 6 || !/^\d{6}$/.test(newPinValue)) {
+        setStatus({ type: 'error', message: 'Please enter a valid 6-digit numerical PIN.' });
+        return;
+      }
+    }
+
+    setResettingPin(true);
+    try {
+      await ensureFirebaseAuth();
+      const studentRef = doc(db, 'students', resetPinModal.student.id);
+
+      if (pinMode === 'clear') {
+        await updateDoc(studentRef, {
+          pin: null,
+          securityQuestion: null,
+          securityAnswer: null,
+          updatedAt: new Date().toISOString()
+        });
+        setStatus({
+          type: 'success',
+          message: `PIN cleared for ${resetPinModal.student.name}. Student will be prompted to set a new PIN on next login.`
+        });
+      } else {
+        await updateDoc(studentRef, {
+          pin: newPinValue,
+          updatedAt: new Date().toISOString()
+        });
+        setStatus({
+          type: 'success',
+          message: `PIN successfully updated to ${newPinValue} for ${resetPinModal.student.name}.`
+        });
+      }
+
+      setResetPinModal(null);
+      await fetchStudents();
+    } catch (err) {
+      console.error('Error resetting student PIN:', err);
+      setStatus({ type: 'error', message: 'Failed to reset student PIN. Please try again.' });
+    } finally {
+      setResettingPin(false);
     }
   };
 
@@ -429,6 +491,13 @@ const StudentManagement = () => {
                           </button>
                         )}
                         
+                        <button 
+                          onClick={() => { setActiveDropdown(null); openResetPinModal(student); }} 
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-amber-50 text-slate-600 hover:text-amber-700 transition-colors text-xs font-bold text-left w-full"
+                        >
+                          <KeyRound size={15} strokeWidth={2.5} className="text-amber-500" /> Reset PIN
+                        </button>
+                        
                         <div className="w-full h-px bg-slate-100 my-1"></div>
                         
                         <button 
@@ -649,6 +718,176 @@ const StudentManagement = () => {
           </div>
         );
       })()}
+
+      {/* Reset Student PIN Modal */}
+      {resetPinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white px-7 py-6 shrink-0">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center">
+                    <KeyRound size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-400 mb-0.5">Authentication Control</p>
+                    <h3 className="text-xl font-black text-white">Reset Student PIN</h3>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setResetPinModal(null)} 
+                  className="p-2 rounded-xl hover:bg-white/10 transition-colors text-slate-400 hover:text-white"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5">
+              {/* Student Summary Info */}
+              <div className="flex items-center gap-3.5 p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-100 to-indigo-200 text-indigo-700 flex items-center justify-center font-black text-lg overflow-hidden shrink-0 shadow-inner">
+                  {resetPinModal.student.photo ? (
+                    <img src={resetPinModal.student.photo} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    resetPinModal.student.name?.[0] || 'S'
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-black text-slate-900 text-sm truncate">{resetPinModal.student.name}</p>
+                  <p className="text-xs font-mono text-slate-500 truncate">{resetPinModal.student.regNo} • {resetPinModal.student.className}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] font-bold text-slate-400">Current PIN:</span>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                      resetPinModal.student.pin 
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                        : 'bg-amber-50 text-amber-700 border border-amber-200'
+                    }`}>
+                      {resetPinModal.student.pin ? 'Active (Set)' : 'Not Configured'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mode Selection Options */}
+              <div className="space-y-2.5">
+                <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Select Reset Method</p>
+                
+                {/* Option 1: Clear PIN */}
+                <div
+                  onClick={() => setPinMode('clear')}
+                  className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all ${
+                    pinMode === 'clear'
+                      ? 'border-indigo-600 bg-indigo-50/50 shadow-sm'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      pinMode === 'clear' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300'
+                    }`}>
+                      {pinMode === 'clear' && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                        <RefreshCw size={13} className="text-indigo-600" /> Clear PIN (Prompt on Next Login)
+                      </p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Erases the existing PIN so the student creates their own new PIN next time.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Option 2: Set New Custom PIN */}
+                <div
+                  onClick={() => setPinMode('custom')}
+                  className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all ${
+                    pinMode === 'custom'
+                      ? 'border-indigo-600 bg-indigo-50/50 shadow-sm'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      pinMode === 'custom' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300'
+                    }`}>
+                      {pinMode === 'custom' && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                        <Lock size={13} className="text-indigo-600" /> Assign New 6-Digit PIN
+                      </p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Directly sets a new 6-digit numerical PIN chosen by the administrator.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Custom PIN Input Field */}
+              {pinMode === 'custom' && (
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700">Enter New 6-Digit PIN</label>
+                    <button
+                      type="button"
+                      onClick={() => setNewPinValue(String(Math.floor(100000 + Math.random() * 900000)))}
+                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                    >
+                      <Sparkles size={12} /> Generate Random
+                    </button>
+                  </div>
+                  
+                  <div className="relative">
+                    <input
+                      type={showPinValue ? 'text' : 'password'}
+                      maxLength={6}
+                      value={newPinValue}
+                      onChange={(e) => setNewPinValue(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="e.g. 123456"
+                      className="w-full bg-white border-2 border-slate-200 focus:border-indigo-600 rounded-xl px-4 py-2.5 text-center text-lg font-mono font-black tracking-widest outline-none transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPinValue(!showPinValue)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                    >
+                      {showPinValue ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-400 text-center font-medium">
+                    {newPinValue.length}/6 digits entered
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-5 border-t border-slate-100 bg-slate-50 flex gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setResetPinModal(null)}
+                className="flex-1 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-2xl font-black transition-all text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleResetPinSubmit}
+                disabled={resettingPin || (pinMode === 'custom' && newPinValue.length !== 6)}
+                className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 transition-all text-xs disabled:opacity-50"
+              >
+                {resettingPin ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />}
+                <span>{resettingPin ? 'Updating...' : 'Confirm Reset PIN'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <StudentFormModal
         showModal={showModal}
