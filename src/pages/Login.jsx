@@ -10,7 +10,8 @@ import { expandStudent, STUDENT_KEYS } from '../utils/firestoreSchema';
 import { 
   GraduationCap, ShieldCheck, ArrowRight, ChevronLeft, Loader2,
   AlertCircle, HelpCircle, Phone, Lock, Mail, User, 
-  School, CheckCircle, Crown, Wallet, Eye, EyeOff, ChevronDown, Fingerprint
+  School, CheckCircle, Crown, Wallet, Eye, EyeOff, ChevronDown, Fingerprint,
+  KeyRound, Sparkles
 } from 'lucide-react';
 import './Auth.css';
 import bdsLogo from '../assets/bdslogo.jpg';
@@ -119,6 +120,7 @@ const Login = () => {
   });
   const [securityQuestion, setSecurityQuestion] = useState('');
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [pendingUser, setPendingUser] = useState(null);
@@ -423,22 +425,28 @@ const Login = () => {
     }
   };
 
-  const handleForgotPinSendToInbox = async () => {
+  const handleForgotPinSendToInbox = async (e) => {
+    if (e) e.preventDefault();
     if (!formData.regNo || !formData.className) {
-      setError('Please enter your Registration Number and Class first.');
+      setError('Please enter both your Registration Number and Class Section.');
+      setSuccessMessage('');
       return;
     }
     setLoading(true);
     setError('');
+    setSuccessMessage('');
     try {
       const result = await studentAuth.forgotPinSendToInbox(formData.regNo, formData.className);
       if (result.success) {
-        setError(result.message);
+        setSuccessMessage(result.message);
+        setError('');
       } else {
-        setError(result.message || 'Failed to send PIN.');
+        setError(result.message || 'Failed to process PIN recovery.');
+        setSuccessMessage('');
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError('An unexpected error occurred. Please try again.');
+      setSuccessMessage('');
     } finally {
       setLoading(false);
     }
@@ -651,6 +659,17 @@ const Login = () => {
                     value={formData.className}
                     onChange={handleInputChange}
                   />
+
+                  <div className="form-options">
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#94a3b8' }}>Forgot your 6-digit PIN?</span>
+                    <button 
+                      type="button" 
+                      className="text-link forgot-link" 
+                      onClick={() => { setLoginStep('forgot_pin'); setError(''); setSuccessMessage(''); }}
+                    >
+                      Forgot PIN?
+                    </button>
+                  </div>
                   
                   <motion.button
                     type="submit"
@@ -848,37 +867,93 @@ const Login = () => {
               initial={{ opacity: 0, x: 15 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -15 }}
-              onSubmit={(e) => { e.preventDefault(); handleForgotPinSendToInbox(); }}
+              onSubmit={handleForgotPinSendToInbox}
               className="auth-form"
             >
-              <button type="button" className="back-btn" onClick={() => setLoginStep('pin')}>
-                <ChevronLeft size={14} /> Back
+              <button 
+                type="button" 
+                className="back-btn" 
+                onClick={() => { setLoginStep('credentials'); setSuccessMessage(''); setError(''); }}
+              >
+                <ChevronLeft size={14} /> Back to Sign In
               </button>
 
-              <div className="security-banner alert">
-                <AlertCircle size={16} />
-                <p>Reset your PIN</p>
+              <div className="pin-recovery-header">
+                <div className="pin-recovery-icon" style={{ background: `${currentRole.color}18`, color: currentRole.color }}>
+                  <KeyRound size={24} />
+                </div>
+                <h2 className="pin-recovery-title">Student PIN Recovery</h2>
+                <p className="pin-recovery-subtitle">
+                  Verify your registration number and class to reset your PIN.
+                </p>
               </div>
 
-              <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '15px' }}>
-                We will generate a new PIN and send it to your registered inbox.
-              </p>
+              <div className="pin-info-banner highlight">
+                <HelpCircle size={16} />
+                <span>
+                  Your new PIN will be dispatched to your registered <strong>Email or Phone</strong>. If no contact is on file, it will be securely routed to the <strong>Admin Inbox</strong>.
+                </span>
+              </div>
+
+              <InputField
+                label="Registration Number"
+                name="regNo"
+                type="text"
+                placeholder="e.g. BDS/25/001"
+                icon={User}
+                value={formData.regNo}
+                onChange={handleInputChange}
+                required
+              />
+
+              <SelectField
+                label="Class Section"
+                name="className"
+                options={classOptions}
+                icon={School}
+                value={formData.className}
+                onChange={handleInputChange}
+                required
+              />
 
               <motion.button
                 type="submit"
                 className="submit-btn"
-                disabled={loading}
+                disabled={loading || !formData.regNo || !formData.className}
                 whileHover={{ y: -1 }}
                 whileTap={{ scale: 0.98 }}
                 style={{ background: currentRole.color }}
               >
-                {loading ? <Loader2 className="spin" size={18} /> : <><Mail size={16} /> Send to Inbox</>}
+                {loading ? <Loader2 className="spin" size={18} /> : <><Sparkles size={16} /> Generate & Send New PIN</>}
               </motion.button>
             </motion.form>
           )}
         </AnimatePresence>
 
         <AnimatePresence>
+          {successMessage && (
+            <motion.div
+              className="auth-success"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+            >
+              <CheckCircle size={18} className="shrink-0 mt-0.5" />
+              <div>
+                <p style={{ fontWeight: 800, margin: 0, fontSize: '0.85rem' }}>PIN Recovery Successful</p>
+                <p style={{ margin: '4px 0 8px 0', fontSize: '0.75rem', lineHeight: '1.4' }}>{successMessage}</p>
+                <button
+                  type="button"
+                  className="text-link"
+                  style={{ textAlign: 'left', margin: 0, color: '#15803d', fontWeight: 800, textDecoration: 'underline', padding: 0 }}
+                  onClick={() => { setLoginStep('credentials'); setSuccessMessage(''); setError(''); }}
+                >
+                  ← Sign in with new PIN
+                </button>
+              </div>
+            </motion.div>
+          )}
+
           {error && (
             <motion.div
               className="auth-error"
@@ -886,8 +961,8 @@ const Login = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
             >
-              <AlertCircle size={14} />
-              {error}
+              <AlertCircle size={16} className="shrink-0" />
+              <span>{error}</span>
             </motion.div>
           )}
         </AnimatePresence>

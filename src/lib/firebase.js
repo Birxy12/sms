@@ -40,7 +40,8 @@ const initFirestore = () => {
         localCache: persistentLocalCache({
           tabManager: persistentMultipleTabManager()
         }),
-        experimentalAutoDetectLongPolling: true
+        experimentalForceLongPolling: true,
+        useFetchStreams: false
       });
     } catch (error) {
       console.warn('Firestore local cache initialization failed; falling back to network-only Firestore.', error?.message || error);

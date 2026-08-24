@@ -4,7 +4,7 @@ import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, where, setDoc, serverTimestamp } from 'firebase/firestore';
 import { uploadAvatar } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList, Printer, MoreVertical, KeyRound, Lock, RefreshCw, Sparkles, Eye, EyeOff } from 'lucide-react';
+import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList, Printer, MoreVertical, KeyRound, Lock, RefreshCw, Sparkles, Eye, EyeOff, Phone, Copy, Check, ShieldCheck, Layers } from 'lucide-react';
 import { getSubjectsForClass } from '../../utils/subjectConfig';
 import ImageCropperModal from '../../components/ImageCropperModal';
 import StudentAvatar from '../../components/StudentAvatar';
@@ -12,6 +12,7 @@ import GlobalPhotoUploader from '../../components/GlobalPhotoUploader';
 import StudentFormModal from '../../components/StudentFormModal';
 import { formatDateForInput } from '../../utils/dateFormatter';
 import { useGlobalClasses } from '../../utils/classUtils';
+import { generateUniqueRegNoSync } from '../../utils/regNoGenerator';
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
@@ -31,13 +32,12 @@ const StudentManagement = () => {
   const [uploading, setUploading] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState(null);
   const [allowProfileEdit, setAllowProfileEdit] = useState(true);
+  const [copiedRegId, setCopiedRegId] = useState(null);
   // Promote/Demote state
   const [promoteModal, setPromoteModal] = useState(null); // { student }
   const [newClass, setNewClass] = useState('');
   const [promoting, setPromoting] = useState(false);
   
-
-
   // Admin Subject Registration state
   const [subjectRegModal, setSubjectRegModal] = useState(null); // { student }
   const [adminSelectedSubjects, setAdminSelectedSubjects] = useState([]);
@@ -50,6 +50,14 @@ const StudentManagement = () => {
   const [newPinValue, setNewPinValue] = useState('');
   const [showPinValue, setShowPinValue] = useState(false);
   const [resettingPin, setResettingPin] = useState(false);
+
+  const copyRegNo = (reg, id, e) => {
+    if (e) e.stopPropagation();
+    if (!reg) return;
+    navigator.clipboard.writeText(reg);
+    setCopiedRegId(id);
+    setTimeout(() => setCopiedRegId(null), 2000);
+  };
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -119,7 +127,8 @@ const StudentManagement = () => {
     setResettingPin(true);
     try {
       await ensureFirebaseAuth();
-      const studentRef = doc(db, 'students', resetPinModal.student.id);
+      const student = resetPinModal.student;
+      const studentRef = doc(db, 'students', student.id);
 
       if (pinMode === 'clear') {
         await updateDoc(studentRef, {
@@ -130,24 +139,102 @@ const StudentManagement = () => {
         });
         setStatus({
           type: 'success',
-          message: `PIN cleared for ${resetPinModal.student.name}. Student will be prompted to set a new PIN on next login.`
+          message: `PIN cleared for ${student.name}. Student will be prompted to set a new PIN on next login.`
         });
       } else {
         await updateDoc(studentRef, {
           pin: newPinValue,
+          pinUpdatedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
-        setStatus({
-          type: 'success',
-          message: `PIN successfully updated to ${newPinValue} for ${resetPinModal.student.name}.`
-        });
+
+        const sEmail = (student.email || student.mail || student.e || '').trim();
+        const sPhone = (student.phone || student.phoneNo || student.phoneNumber || student.tel || student.p || '').trim();
+        const sName = student.name || student.n || student['STUDENT NAME'] || 'Student';
+        const sReg = student.regNo || student.r || student['REG NO'] || 'N/A';
+        const sClass = student.className || student.c || student.class || '';
+
+        const hasEmail = Boolean(sEmail);
+        const hasPhone = Boolean(sPhone);
+
+        if (hasEmail || hasPhone) {
+          // Send to student inbox
+          await addDoc(collection(db, 'notifications'), {
+            title: 'Your Portal PIN Has Been Assigned',
+            body: `Hello ${sName}, your school portal login PIN has been updated by Administration to: ${newPinValue}. Please use this PIN to log in.`,
+            targetType: 'student',
+            targetValue: sReg,
+            recipientName: sName,
+            sender: 'School Administration',
+            createdAt: new Date().toISOString(),
+            type: 'pin_assigned'
+          });
+
+          // Send via external notification (Email / SMS)
+          try {
+            const { sendNotification } = await import('../../utils/notifications');
+            const recipients = [{
+              email: sEmail,
+              phone: sPhone,
+              name: sName
+            }];
+            const notifyType = hasEmail && hasPhone ? 'both' : hasEmail ? 'email' : 'sms';
+            await sendNotification({
+              type: notifyType,
+              subject: 'School Portal PIN Assignment',
+              message: `Hello ${sName} (${sReg}), the School Administrator has set your portal login PIN to: ${newPinValue}`,
+              recipients
+            });
+          } catch (notifyErr) {
+            console.warn('External notification dispatch warning:', notifyErr);
+          }
+
+          const dest = [hasEmail ? 'Email' : '', hasPhone ? 'Phone/SMS' : ''].filter(Boolean).join(' and ');
+          setStatus({
+            type: 'success',
+            message: `PIN set to ${newPinValue} for ${sName} and sent to student's registered ${dest} & inbox.`
+          });
+        } else {
+          // Neither email nor phone on profile -> Route to Admin Inbox
+          await addDoc(collection(db, 'notifications'), {
+            title: `Admin PIN Assignment: ${sName} (${sReg})`,
+            body: `Admin assigned a new PIN (${newPinValue}) for student ${sName} (${sReg} - ${sClass}). Since no email or phone is linked to the student profile, this notice has been recorded in the Admin Inbox.`,
+            targetType: 'admin',
+            targetValue: 'admin',
+            studentId: student.id,
+            studentName: sName,
+            regNo: sReg,
+            className: sClass,
+            assignedPin: newPinValue,
+            sender: 'School Administration',
+            createdAt: new Date().toISOString(),
+            type: 'admin_pin_record'
+          });
+
+          // Also put in student personal inbox
+          await addDoc(collection(db, 'notifications'), {
+            title: 'Portal PIN Updated',
+            body: `Hello ${sName}, your portal login PIN has been updated by Administration. Because no email or phone is linked to your profile, the PIN record was routed to the Admin Inbox. Please contact Admin if you need assistance.`,
+            targetType: 'student',
+            targetValue: sReg,
+            recipientName: sName,
+            sender: 'School Administration',
+            createdAt: new Date().toISOString(),
+            type: 'pin_assigned'
+          });
+
+          setStatus({
+            type: 'success',
+            message: `PIN set to ${newPinValue} for ${sName}. (No email/phone on profile; notification routed to Admin Inbox).`
+          });
+        }
       }
 
       setResetPinModal(null);
       await fetchStudents();
     } catch (err) {
       console.error('Error resetting student PIN:', err);
-      setStatus({ type: 'error', message: 'Failed to reset student PIN. Please try again.' });
+      setStatus({ type: 'error', message: 'Failed to update student PIN. Please try again.' });
     } finally {
       setResettingPin(false);
     }
@@ -203,14 +290,9 @@ const StudentManagement = () => {
 
   // Auto-generate RegNo when enrolling a new student and class changes
   useEffect(() => {
-    if (showModal && !isEditing) {
-      const cls = currentStudent.className;
-      const classStudentsCount = students.filter(s => s.className === cls).length;
-      const nextNum = classStudentsCount + 1;
-      const year = new Date().getFullYear().toString().slice(-2);
-      const shortClass = cls.replace(/\s+/g, '');
-      const generatedRegNo = `BDS/${year}/${shortClass}/${String(nextNum).padStart(3, '0')}`;
-      
+    if (showModal && !isEditing && currentStudent.className) {
+      const existingSet = new Set(students.map(s => s.regNo).filter(Boolean));
+      const generatedRegNo = generateUniqueRegNoSync(currentStudent.className, existingSet);
       setCurrentStudent(prev => ({ ...prev, regNo: generatedRegNo }));
     }
   }, [currentStudent.className, showModal, isEditing, students]);
@@ -253,17 +335,80 @@ const StudentManagement = () => {
     e.preventDefault();
     setSaving(true);
     try {
+      await ensureFirebaseAuth();
       const { id, ...saveData } = currentStudent;
+      let targetStudentId = id;
+
       if (isEditing) {
-        await updateDoc(doc(db, 'students', id), saveData);
+        await updateDoc(doc(db, 'students', id), {
+          ...saveData,
+          updatedAt: new Date().toISOString()
+        });
         setStatus({ type: 'success', message: 'Student updated successfully!' });
       } else {
-        await addDoc(collection(db, 'students'), {
+        const docRef = await addDoc(collection(db, 'students'), {
           ...saveData,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         });
+        targetStudentId = docRef.id;
         setStatus({ type: 'success', message: 'Student registered successfully!' });
       }
+
+      // If a 6-digit PIN was provided or changed during save
+      if (saveData.pin && /^\d{6}$/.test(saveData.pin)) {
+        const sEmail = (saveData.email || '').trim();
+        const sPhone = (saveData.phone || '').trim();
+        const sName = saveData.name || 'Student';
+        const sReg = saveData.regNo || 'N/A';
+        const sClass = saveData.className || '';
+
+        const hasEmail = Boolean(sEmail);
+        const hasPhone = Boolean(sPhone);
+
+        if (hasEmail || hasPhone) {
+          await addDoc(collection(db, 'notifications'), {
+            title: 'Your Portal Login PIN',
+            body: `Hello ${sName}, your portal login PIN is: ${saveData.pin}. Please use this to sign in.`,
+            targetType: 'student',
+            targetValue: sReg,
+            recipientName: sName,
+            sender: 'School Administration',
+            createdAt: new Date().toISOString(),
+            type: 'pin_assigned'
+          });
+
+          try {
+            const { sendNotification } = await import('../../utils/notifications');
+            const recipients = [{ email: sEmail, phone: sPhone, name: sName }];
+            const notifyType = hasEmail && hasPhone ? 'both' : hasEmail ? 'email' : 'sms';
+            await sendNotification({
+              type: notifyType,
+              subject: 'School Portal PIN Assignment',
+              message: `Hello ${sName} (${sReg}), your portal login PIN is: ${saveData.pin}`,
+              recipients
+            });
+          } catch (notifyErr) {
+            console.warn('External notification dispatch warning:', notifyErr);
+          }
+        } else {
+          await addDoc(collection(db, 'notifications'), {
+            title: `PIN Record: ${sName} (${sReg})`,
+            body: `Portal PIN (${saveData.pin}) assigned for ${sName} (${sReg} - ${sClass}). No email/phone was found on profile, so this record was routed to the Admin Inbox.`,
+            targetType: 'admin',
+            targetValue: 'admin',
+            studentId: targetStudentId,
+            studentName: sName,
+            regNo: sReg,
+            className: sClass,
+            assignedPin: saveData.pin,
+            sender: 'School Administration',
+            createdAt: new Date().toISOString(),
+            type: 'admin_pin_record'
+          });
+        }
+      }
+
       setShowModal(false);
       fetchStudents();
     } catch (error) {

@@ -253,38 +253,144 @@ export const StudentAuthProvider = ({ children }) => {
   const forgotPinSendToInbox = async (regNo, className) => {
     try {
       const studentsRef = collection(db, 'students');
+      const cleanReg = regNo ? regNo.trim().toUpperCase() : '';
+      const cleanClass = className ? className.trim() : '';
+
+      if (!cleanReg || !cleanClass) {
+        return { success: false, message: 'Please provide both Registration Number and Class Section.' };
+      }
+
       let q = query(
         studentsRef,
-        where(STUDENT_KEYS.regNo, '==', regNo.trim().toUpperCase()),
-        where(STUDENT_KEYS.className, '==', className.trim())
+        where(STUDENT_KEYS.regNo, '==', cleanReg),
+        where(STUDENT_KEYS.className, '==', cleanClass)
       );
       let snap = await getDocs(q);
 
       if (snap.empty) {
         q = query(
           studentsRef,
-          where('regNo', '==', regNo.trim().toUpperCase()),
-          where('className', '==', className.trim())
+          where('regNo', '==', cleanReg),
+          where('className', '==', cleanClass)
         );
         snap = await getDocs(q);
       }
+
+      if (snap.empty) {
+        // Also try case-insensitive check on all students if exact index match differed slightly
+        const allSnap = await getDocs(studentsRef);
+        const match = allSnap.docs.find(d => {
+          const data = d.data();
+          const r = (data.regNo || data.r || data['REG NO'] || data.REGNO || '').toString().trim().toUpperCase();
+          const c = (data.className || data.c || data.class || data.CLASS || '').toString().trim().toUpperCase();
+          return r === cleanReg && c === cleanClass.toUpperCase();
+        });
+        if (match) {
+          snap = { empty: false, docs: [match] };
+        }
+      }
       
-      if (snap.empty) return { success: false, message: 'Student not found.' };
+      if (snap.empty) return { success: false, message: 'Student record not found. Please verify your Reg Number and Class.' };
       
-      const studentId = snap.docs[0].id;
+      const studentDoc = snap.docs[0];
+      const studentId = studentDoc.id;
+      const rawData = studentDoc.data();
+      const sData = expandStudent(rawData);
+
+      const studentName = sData.name || rawData.name || rawData.n || rawData['STUDENT NAME'] || 'Student';
+      const studentEmail = sData.email || rawData.email || rawData.mail || rawData.e || '';
+      const studentPhone = sData.phone || rawData.phone || rawData.phoneNo || rawData.phoneNumber || rawData.tel || rawData.p || '';
+      const stdReg = sData.regNo || rawData.regNo || cleanReg;
+      const stdClass = sData.className || rawData.className || cleanClass;
+
       const newPin = Math.floor(100000 + Math.random() * 900000).toString(); // Generate 6-digit PIN
       
-      const { doc, updateDoc } = await import('firebase/firestore');
+      const { doc, updateDoc, addDoc } = await import('firebase/firestore');
       await ensureFirebaseAuth();
-      await updateDoc(doc(db, 'students', studentId), { pin: newPin });
+      await updateDoc(doc(db, 'students', studentId), { 
+        pin: newPin,
+        pinUpdatedAt: new Date().toISOString()
+      });
       
-      // Simulate sending to user's inbox
-      console.log(`[SIMULATED EMAIL] To: Student ${regNo} | Subject: Your new PIN | Body: Your new PIN is ${newPin}`);
-      
-      return { success: true, message: 'A new PIN has been sent to your registered inbox.' };
+      const hasEmail = Boolean(studentEmail && studentEmail.trim());
+      const hasPhone = Boolean(studentPhone && studentPhone.trim());
+
+      if (hasEmail || hasPhone) {
+        // 1. Add to student's personal notifications inbox
+        await addDoc(collection(db, 'notifications'), {
+          title: 'Your New Login PIN',
+          body: `Hello ${studentName}, your 6-digit portal login PIN has been reset to: ${newPin}. Please keep it confidential.`,
+          targetType: 'student',
+          targetValue: stdReg,
+          recipientName: studentName,
+          sender: 'School Administration (Automated)',
+          createdAt: new Date().toISOString(),
+          type: 'pin_reset'
+        });
+
+        // 2. Dispatch via notification service (Email / SMS)
+        try {
+          const { sendNotification } = await import('../utils/notifications');
+          const recipients = [{
+            email: studentEmail.trim(),
+            phone: studentPhone.trim(),
+            name: studentName
+          }];
+          const notifyType = hasEmail && hasPhone ? 'both' : hasEmail ? 'email' : 'sms';
+          await sendNotification({
+            type: notifyType,
+            subject: 'Your School Portal Login PIN',
+            message: `Hello ${studentName} (${stdReg}), your new 6-digit portal login PIN is: ${newPin}`,
+            recipients
+          });
+        } catch (e) {
+          console.warn('External notification dispatch warning:', e);
+        }
+
+        const destination = [hasEmail ? 'Email' : '', hasPhone ? 'Phone/SMS' : ''].filter(Boolean).join(' and ');
+        return { 
+          success: true, 
+          hasContact: true,
+          message: `A new 6-digit PIN has been generated and sent to your registered ${destination} and student inbox.` 
+        };
+      } else {
+        // No email or phone on profile: Send to Admin Inbox
+        await addDoc(collection(db, 'notifications'), {
+          title: `PIN Reset Request: ${studentName} (${stdReg})`,
+          body: `Student ${studentName} (${stdReg} - Class: ${stdClass}) requested a PIN reset. Because no email or phone is linked to their profile, the new 6-digit PIN has been generated: ${newPin}. Please provide this PIN to the student or parent.`,
+          targetType: 'admin',
+          targetValue: 'admin',
+          studentId,
+          studentName,
+          regNo: stdReg,
+          className: stdClass,
+          generatedPin: newPin,
+          sender: 'Automated PIN Recovery System',
+          createdAt: new Date().toISOString(),
+          type: 'admin_pin_alert'
+        });
+
+        // Also add note in student inbox
+        await addDoc(collection(db, 'notifications'), {
+          title: 'PIN Reset Forwarded to School Admin',
+          body: `Hello ${studentName}, your PIN reset request was received. Because no email or phone is registered on your profile, your PIN reset notification was forwarded to the School Admin Inbox. Please contact School Admin to get your new PIN.`,
+          targetType: 'student',
+          targetValue: stdReg,
+          recipientName: studentName,
+          sender: 'School Administration',
+          createdAt: new Date().toISOString(),
+          type: 'pin_reset'
+        });
+
+        return { 
+          success: true, 
+          hasContact: false,
+          message: `No email or phone number is linked to your profile. A PIN reset notification with your new PIN has been forwarded to the School Admin Inbox. Please contact School Admin.` 
+        };
+      }
     } catch (error) {
       console.error('Forgot PIN error:', error);
-      return { success: false, message: 'An error occurred while resetting the PIN. Try again.' };
+      return { success: false, message: 'An error occurred while resetting the PIN. Please try again.' };
     }
   };
 

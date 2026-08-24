@@ -504,16 +504,17 @@ const Marksheet = ({ className: propClassName }) => {
         </div>
       </div>
 
-      <div className="marksheet-table-wrapper" style={{ 
+      <div className="marksheet-table-wrapper webapp-table-scroll custom-scrollbar" style={{ 
         overflow: 'auto', 
-        maxHeight: '700px', 
+        maxHeight: 'calc(100vh - 280px)', 
+        minHeight: '440px',
         background: darkMode ? '#1e293b' : 'white', 
-        borderRadius: '12px', 
-        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+        borderRadius: '1.25rem', 
+        boxShadow: '0 10px 30px -5px rgba(0,0,0,0.04), 0 4px 12px -2px rgba(0,0,0,0.02)',
         border: darkMode ? '1px solid #334155' : '1px solid #e2e8f0'
       }}>
         <table className="marksheet-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-          <thead>
+          <thead style={{ position: 'sticky', top: 0, zIndex: 10, backdropFilter: 'blur(8px)' }}>
             <tr style={{ backgroundColor: darkMode ? '#0f172a' : '#f8fafc' }}>
               <th rowSpan="2" style={thStyle}>Roll No.</th>
               <th rowSpan="2" style={thStyle}>Student Name</th>

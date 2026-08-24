@@ -12,6 +12,7 @@ import { addDoc, serverTimestamp } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { fetchGlobalClasses, DEFAULT_CLASSES } from '../../utils/classUtils';
+import { getClassCode, formatRegNumberSuffix } from '../../utils/regNoGenerator';
 import SchoolManagementDashboard from '../../components/SchoolManagementDashboard';
 import Papa from 'papaparse';
 
@@ -228,25 +229,39 @@ const BursarDashboard = () => {
     setStatus({ type: 'info', message: 'Wiping all fee records...' });
     
     try {
-      const batch = writeBatch(db);
+      const { ensureFirebaseAuth } = await import('../../lib/ensureAuth');
+      await ensureFirebaseAuth();
+      let batch = writeBatch(db);
       let count = 0;
       
       for (const student of allStudents) {
         const ref = doc(db, 'students', student.id);
-        batch.update(ref, { paidFee: 0, expectedFee: 0, lastPaymentDate: 'N/A' });
+        batch.update(ref, { 
+          paidFee: 0, 
+          paidAmount: 0, 
+          expectedFee: 0, 
+          lastPaymentDate: 'N/A',
+          lastPaymentTerm: 'N/A',
+          lastPaymentSession: 'N/A',
+          txnId: '',
+          serialNo: '',
+          paymentStatus: 'Pending',
+          updatedAt: new Date().toISOString()
+        });
         count++;
-        // commit in chunks if needed, but usually school size is < 500
-        if (count % 450 === 0) {
+        // commit in chunks of 300
+        if (count % 300 === 0) {
           await batch.commit();
+          batch = writeBatch(db);
         }
       }
       
-      if (count % 450 !== 0) {
+      if (count % 300 !== 0) {
         await batch.commit();
       }
       
       await fetchFinancialData();
-      setStatus({ type: 'success', message: `Successfully cleared fees for ${count} students.` });
+      setStatus({ type: 'success', message: `Successfully cleared fees and payments for ${count} students.` });
     } catch (error) {
       console.error(error);
       setStatus({ type: 'error', message: 'Failed to reset fees.' });
@@ -908,8 +923,9 @@ const BursarDashboard = () => {
 
     const generateRegNo = () => {
       const year = new Date().getFullYear();
-      const rand = Math.floor(Math.random() * 9000 + 1000);
-      return `BDS/${year}/${rand}`;
+      const code = getClassCode(form.className);
+      const rand = Math.floor(Math.random() * 899 + 100);
+      return `BDS/${code}/${year}/${formatRegNumberSuffix(rand)}`;
     };
 
     const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });

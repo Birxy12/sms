@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { Save, RefreshCcw, Palette, School, BookOpen, CheckCircle, Loader2, Calendar, GraduationCap, Users, ChevronDown, AlertTriangle, ArrowRight, X, CheckSquare, Image as ImageIcon, Upload } from 'lucide-react';
+import { Save, RefreshCcw, Palette, School, BookOpen, CheckCircle, Loader2, Calendar, GraduationCap, Users, ChevronDown, AlertTriangle, ArrowRight, X, CheckSquare, Image as ImageIcon, Upload, Search, Zap, Check, Square, Filter, UserCheck } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import { uploadFileToSupabase } from '../lib/supabase';
@@ -99,13 +99,21 @@ const BrandingSettings = () => {
   // Move Students Modal
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [promotionStep, setPromotionStep] = useState('idle'); // idle | loading | auto_done | ss1_placement | done
-  const [promotionMode, setPromotionMode] = useState('auto'); // 'auto' | 'manual'
+  const [promotionMode, setPromotionMode] = useState('auto'); // 'auto' | 'manual' | 'selective'
   const [manualFromClass, setManualFromClass] = useState('JSS1');
   const [manualToClass, setManualToClass] = useState('JSS2');
   const [promotionResult, setPromotionResult] = useState(null);
   const [ss1Students, setSs1Students] = useState([]);
   const [ss1Assignments, setSs1Assignments] = useState({}); // { [studentId]: 'SS2 ART' | 'SS2 SCIENCE' }
   const [ss1Saving, setSs1Saving] = useState(false);
+
+  // Selective Move States (Option 3: Select Students from Class to Move)
+  const [selectiveFromClass, setSelectiveFromClass] = useState('JSS 2');
+  const [selectiveToClass, setSelectiveToClass] = useState('JSS 3');
+  const [selectiveStudents, setSelectiveStudents] = useState([]);
+  const [loadingSelective, setLoadingSelective] = useState(false);
+  const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
+  const [selectiveSearch, setSelectiveSearch] = useState('');
 
   // Sync with context once loaded
   React.useEffect(() => {
@@ -280,7 +288,130 @@ const BrandingSettings = () => {
     }
   };
 
+  const loadSelectiveStudents = async (className) => {
+    if (!className) return;
+    setLoadingSelective(true);
+    setSelectedStudentIds(new Set());
+    try {
+      const snap = await getDocs(collection(db, 'students'));
+      const list = [];
+      const normTarget = className.trim().toLowerCase().replace(/\s+/g, '');
+      
+      snap.forEach(docSnap => {
+        const data = docSnap.data();
+        const c = (data.className || data.c || data.class || data.classId || '').trim();
+        const normC = c.toLowerCase().replace(/\s+/g, '');
+        
+        if (normC === normTarget || c === className) {
+          list.push({
+            id: docSnap.id,
+            name: data.name || data.n || data['STUDENT NAME'] || 'N/A',
+            regNo: data.regNo || data.r || '',
+            gender: data.gender || data.g || 'Male',
+            className: c,
+            photo: data.photo || data.photoURL || null,
+            avatarId: data.avatarId || null
+          });
+        }
+      });
+
+      list.sort((a, b) => (a.regNo || '').localeCompare(b.regNo || '', undefined, { numeric: true }) || a.name.localeCompare(b.name));
+      setSelectiveStudents(list);
+    } catch (err) {
+      console.error('Error fetching students for selective move:', err);
+    } finally {
+      setLoadingSelective(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (showMoveModal && promotionMode === 'selective') {
+      loadSelectiveStudents(selectiveFromClass);
+    }
+  }, [showMoveModal, promotionMode, selectiveFromClass]);
+
+  const toggleStudentSelection = (id) => {
+    setSelectedStudentIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAllVisible = (filteredList) => {
+    const allSelected = filteredList.length > 0 && filteredList.every(s => selectedStudentIds.has(s.id));
+    if (allSelected) {
+      setSelectedStudentIds(prev => {
+        const next = new Set(prev);
+        filteredList.forEach(s => next.delete(s.id));
+        return next;
+      });
+    } else {
+      setSelectedStudentIds(prev => {
+        const next = new Set(prev);
+        filteredList.forEach(s => next.add(s.id));
+        return next;
+      });
+    }
+  };
+
+  const handleSelectiveMove = async () => {
+    if (selectedStudentIds.size === 0) {
+      alert('Please select at least one student to move.');
+      return;
+    }
+    if (!selectiveToClass) {
+      alert('Please select a target class.');
+      return;
+    }
+    if (selectiveFromClass === selectiveToClass) {
+      alert('Source and target classes are identical.');
+      return;
+    }
+
+    setPromotionStep('loading');
+    try {
+      const batch = writeBatch(db);
+      const movedList = [];
+
+      selectedStudentIds.forEach(id => {
+        const studentRef = doc(db, 'students', id);
+        batch.update(studentRef, {
+          className: selectiveToClass,
+          classId: selectiveToClass,
+          c: selectiveToClass,
+          updatedAt: new Date().toISOString()
+        });
+        const found = selectiveStudents.find(s => s.id === id);
+        if (found) {
+          movedList.push({ ...found, from: selectiveFromClass, to: selectiveToClass });
+        }
+      });
+
+      await batch.commit();
+      setPromotionResult({
+        promoted: movedList,
+        failed: [],
+        skipped: [],
+        selectiveCount: movedList.length,
+        fromClass: selectiveFromClass,
+        toClass: selectiveToClass
+      });
+      setPromotionStep('done');
+    } catch (err) {
+      console.error('Selective move error:', err);
+      alert('An error occurred during selective student move. Check console.');
+      setPromotionStep('idle');
+    }
+  };
+
   const handleRunPromotion = async () => {
+    if (promotionMode === 'selective') {
+      handleSelectiveMove();
+      return;
+    }
+
     if (promotionMode === 'manual') {
       handleManualMove();
       return;
@@ -318,7 +449,8 @@ const BrandingSettings = () => {
       snap.docs.forEach(docSnap => {
         batch.update(docSnap.ref, { 
           c: manualToClass, 
-          className: manualToClass 
+          className: manualToClass,
+          classId: manualToClass
         });
       });
       await batch.commit();
@@ -1247,18 +1379,30 @@ const BrandingSettings = () => {
               {/* STEP: idle */}
               {promotionStep === 'idle' && (
                 <div>
-                  <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '20px' }}>
                     <button 
+                      type="button"
                       onClick={() => setPromotionMode('auto')}
-                      style={{ flex: 1, padding: '12px', borderRadius: '12px', border: promotionMode === 'auto' ? '2px solid #3b82f6' : '2px solid #e2e8f0', background: promotionMode === 'auto' ? '#eff6ff' : '#fff', fontWeight: '700', color: promotionMode === 'auto' ? '#1d4ed8' : '#64748b' }}
+                      style={{ padding: '12px 14px', borderRadius: '12px', border: promotionMode === 'auto' ? '2px solid #3b82f6' : '2px solid #e2e8f0', background: promotionMode === 'auto' ? '#eff6ff' : '#fff', fontWeight: '700', color: promotionMode === 'auto' ? '#1d4ed8' : '#64748b', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                     >
-                      End of Year Auto-Promotion
+                      <Zap size={16} /> End of Year Auto
                     </button>
                     <button 
+                      type="button"
                       onClick={() => setPromotionMode('manual')}
-                      style={{ flex: 1, padding: '12px', borderRadius: '12px', border: promotionMode === 'manual' ? '2px solid #3b82f6' : '2px solid #e2e8f0', background: promotionMode === 'manual' ? '#eff6ff' : '#fff', fontWeight: '700', color: promotionMode === 'manual' ? '#1d4ed8' : '#64748b' }}
+                      style={{ padding: '12px 14px', borderRadius: '12px', border: promotionMode === 'manual' ? '2px solid #3b82f6' : '2px solid #e2e8f0', background: promotionMode === 'manual' ? '#eff6ff' : '#fff', fontWeight: '700', color: promotionMode === 'manual' ? '#1d4ed8' : '#64748b', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                     >
-                      Manual Class Move
+                      <Users size={16} /> Entire Class Move
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => { 
+                        setPromotionMode('selective'); 
+                        loadSelectiveStudents(selectiveFromClass); 
+                      }}
+                      style={{ padding: '12px 14px', borderRadius: '12px', border: promotionMode === 'selective' ? '2px solid #3b82f6' : '2px solid #e2e8f0', background: promotionMode === 'selective' ? '#eff6ff' : '#fff', fontWeight: '800', color: promotionMode === 'selective' ? '#1d4ed8' : '#64748b', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: promotionMode === 'selective' ? '0 4px 12px rgba(59,130,246,0.15)' : 'none' }}
+                    >
+                      <CheckSquare size={16} /> Select Students to Move
                     </button>
                   </div>
 
@@ -1296,7 +1440,7 @@ const BrandingSettings = () => {
                             onChange={(e) => setManualFromClass(e.target.value)}
                             style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                           >
-                            {['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 SCIENCE', 'SS2 ART', 'SS3 SCIENCE', 'SS3 ART'].map(c => <option key={c} value={c}>{c}</option>)}
+                            {['JSS 1', 'JSS 2', 'JSS 3', 'SS 1', 'SS 2 SCIENCE', 'SS 2 ART', 'SS 3 SCIENCE', 'SS 3 ART', 'JSS1', 'JSS2', 'JSS3', 'SS1'].map(c => <option key={c} value={c}>{c}</option>)}
                           </select>
                         </div>
                         <ArrowRight size={24} color="#94a3b8" style={{ marginBottom: '10px' }} />
@@ -1307,7 +1451,7 @@ const BrandingSettings = () => {
                             onChange={(e) => setManualToClass(e.target.value)}
                             style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                           >
-                            {['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 SCIENCE', 'SS2 ART', 'SS3 SCIENCE', 'SS3 ART', 'GRADUATED'].map(c => <option key={c} value={c}>{c}</option>)}
+                            {['JSS 1', 'JSS 2', 'JSS 3', 'SS 1', 'SS 2 SCIENCE', 'SS 2 ART', 'SS 3 SCIENCE', 'SS 3 ART', 'GRADUATED'].map(c => <option key={c} value={c}>{c}</option>)}
                           </select>
                         </div>
                       </div>
@@ -1316,12 +1460,182 @@ const BrandingSettings = () => {
                       </p>
                     </div>
                   )}
+
+                  {promotionMode === 'selective' && (() => {
+                    const filtered = selectiveStudents.filter(s => {
+                      if (!selectiveSearch.trim()) return true;
+                      const q = selectiveSearch.toLowerCase();
+                      return s.name.toLowerCase().includes(q) || (s.regNo && s.regNo.toLowerCase().includes(q));
+                    });
+
+                    const allFilteredSelected = filtered.length > 0 && filtered.every(s => selectedStudentIds.has(s.id));
+                    const CLASS_OPTIONS = ['JSS 1', 'JSS 2', 'JSS 3', 'SS 1', 'SS 2 SCIENCE', 'SS 2 ART', 'SS 3 SCIENCE', 'SS 3 ART', 'GRADUATED'];
+
+                    return (
+                      <div style={{ background: '#f8fafc', borderRadius: '18px', padding: '20px', marginBottom: '24px', border: '1px solid #e2e8f0' }}>
+                        <p style={{ fontWeight: '800', color: '#1e293b', marginBottom: '14px', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <CheckSquare size={18} style={{ color: '#3b82f6' }} /> Select Students from Class to Move
+                        </p>
+
+                        {/* Class Selectors */}
+                        <div style={{ display: 'flex', gap: '14px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
+                          <div style={{ flex: 1, minWidth: '160px' }}>
+                            <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px' }}>Source Class</label>
+                            <select 
+                              value={selectiveFromClass} 
+                              onChange={(e) => {
+                                setSelectiveFromClass(e.target.value);
+                                loadSelectiveStudents(e.target.value);
+                              }}
+                              style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontWeight: '700', color: '#1e293b', background: '#fff' }}
+                            >
+                              {CLASS_OPTIONS.filter(c => c !== 'GRADUATED').map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '20px' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <ArrowRight size={16} color="#64748b" />
+                            </div>
+                          </div>
+
+                          <div style={{ flex: 1, minWidth: '160px' }}>
+                            <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px' }}>Target New Class</label>
+                            <select 
+                              value={selectiveToClass} 
+                              onChange={(e) => setSelectiveToClass(e.target.value)}
+                              style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontWeight: '700', color: '#1e293b', background: '#fff' }}
+                            >
+                              {CLASS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Search & Bulk Selector Bar */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                          <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
+                            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                            <input 
+                              type="text"
+                              placeholder="Search students in class..."
+                              value={selectiveSearch}
+                              onChange={(e) => setSelectiveSearch(e.target.value)}
+                              style={{ width: '100%', padding: '8px 12px 8px 34px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                            />
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleSelectAllVisible(filtered)}
+                              disabled={filtered.length === 0}
+                              style={{
+                                padding: '7px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700',
+                                border: '1px solid #cbd5e1', background: allFilteredSelected ? '#eff6ff' : '#fff',
+                                color: allFilteredSelected ? '#1d4ed8' : '#475569', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: '6px'
+                              }}
+                            >
+                              {allFilteredSelected ? <CheckSquare size={14} /> : <Square size={14} />}
+                              {allFilteredSelected ? 'Deselect All' : `Select All (${filtered.length})`}
+                            </button>
+                            <span style={{ fontSize: '12px', fontWeight: '800', color: '#3b82f6', background: '#dbeafe', padding: '4px 10px', borderRadius: '100px' }}>
+                              {selectedStudentIds.size} Selected
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Student Roster List Card */}
+                        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+                          {loadingSelective ? (
+                            <div style={{ padding: '36px', textAlign: 'center' }}>
+                              <Loader2 size={28} className="animate-spin" style={{ color: '#3b82f6', margin: '0 auto 8px' }} />
+                              <p style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', margin: 0 }}>Loading students in {selectiveFromClass}...</p>
+                            </div>
+                          ) : filtered.length === 0 ? (
+                            <div style={{ padding: '36px', textAlign: 'center' }}>
+                              <Users size={32} style={{ color: '#cbd5e1', margin: '0 auto 8px' }} />
+                              <p style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', margin: 0 }}>
+                                {selectiveStudents.length === 0 ? `No students currently found in ${selectiveFromClass}.` : 'No students match your search filter.'}
+                              </p>
+                            </div>
+                          ) : (
+                            <div style={{ maxHeight: '280px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                              {filtered.map(student => {
+                                const isSelected = selectedStudentIds.has(student.id);
+                                return (
+                                  <div 
+                                    key={student.id}
+                                    onClick={() => toggleStudentSelection(student.id)}
+                                    style={{
+                                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                      padding: '10px 14px', borderBottom: '1px solid #f1f5f9',
+                                      background: isSelected ? '#f0f7ff' : 'transparent',
+                                      cursor: 'pointer', transition: 'background 0.15s',
+                                      gap: '12px'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                                      <div style={{ color: isSelected ? '#2563eb' : '#94a3b8', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                                        {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+                                      </div>
+                                      <div style={{ minWidth: 0 }}>
+                                        <p style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          {student.name}
+                                        </p>
+                                        <p style={{ margin: 0, fontSize: '11px', color: '#64748b', fontFamily: 'monospace', fontWeight: '700' }}>
+                                          {student.regNo || 'No Reg No'}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                      <span style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', padding: '2px 8px', borderRadius: '6px', background: '#f1f5f9', color: '#475569' }}>
+                                        {student.className}
+                                      </span>
+                                      <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 6px', borderRadius: '6px', background: student.gender === 'Female' ? '#fdf2f8' : '#f0f9ff', color: student.gender === 'Female' ? '#db2777' : '#0284c7' }}>
+                                        {student.gender?.[0] || 'M'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {selectedStudentIds.size > 0 && (
+                          <div style={{ marginTop: '12px', padding: '10px 14px', borderRadius: '10px', background: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '700', color: '#1e40af' }}>
+                              Ready to move <strong>{selectedStudentIds.size}</strong> student(s) from <strong>{selectiveFromClass}</strong> to <strong>{selectiveToClass}</strong>.
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                     <button onClick={() => setShowMoveModal(false)} style={{ padding: '11px 22px', borderRadius: '10px', border: '2px solid #e2e8f0', background: '#fff', fontWeight: '700', cursor: 'pointer', color: '#475569' }}>
                       Cancel
                     </button>
-                    <button onClick={handleRunPromotion} style={{ padding: '11px 28px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
-                      <Users size={16} /> Run Promotion
+                    <button 
+                      onClick={handleRunPromotion} 
+                      disabled={promotionMode === 'selective' && selectedStudentIds.size === 0}
+                      style={{ 
+                        padding: '11px 28px', borderRadius: '10px', border: 'none', 
+                        background: promotionMode === 'selective' && selectedStudentIds.size === 0 ? '#cbd5e1' : 'linear-gradient(135deg,#f59e0b,#d97706)', 
+                        color: '#fff', fontWeight: '800', cursor: promotionMode === 'selective' && selectedStudentIds.size === 0 ? 'not-allowed' : 'pointer', 
+                        display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' 
+                      }}
+                    >
+                      {promotionMode === 'selective' ? (
+                        <><CheckSquare size={16} /> Move {selectedStudentIds.size} Selected Students</>
+                      ) : promotionMode === 'manual' ? (
+                        <><Users size={16} /> Move Entire Class</>
+                      ) : (
+                        <><Zap size={16} /> Run Auto Promotion</>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -1331,8 +1645,8 @@ const BrandingSettings = () => {
               {promotionStep === 'loading' && (
                 <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                   <Loader2 size={48} style={{ color: '#f59e0b', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-                  <p style={{ fontWeight: '700', color: '#1e293b', fontSize: '16px' }}>Promoting students…</p>
-                  <p style={{ color: '#64748b', fontSize: '13px' }}>Fetching Third Term marks and updating classes. Please wait.</p>
+                  <p style={{ fontWeight: '700', color: '#1e293b', fontSize: '16px' }}>Moving / promoting students…</p>
+                  <p style={{ color: '#64748b', fontSize: '13px' }}>Updating student records in Firestore. Please wait.</p>
                 </div>
               )}
 
@@ -1417,11 +1731,23 @@ const BrandingSettings = () => {
                   <div style={{ width: '72px', height: '72px', background: 'linear-gradient(135deg,#10b981,#059669)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
                     <CheckCircle size={36} color="#fff" />
                   </div>
-                  <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#1e293b', marginBottom: '8px' }}>Promotion Complete!</h3>
+                  <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#1e293b', marginBottom: '8px' }}>
+                    {promotionResult?.selectiveCount ? 'Students Moved Successfully!' : 'Promotion Complete!'}
+                  </h3>
                   <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '24px' }}>
-                    All students have been moved to their new classes. The changes are live in Firestore.
+                    {promotionResult?.selectiveCount 
+                      ? `${promotionResult.selectiveCount} selected student(s) have been moved from ${promotionResult.fromClass} to ${promotionResult.toClass}.`
+                      : 'All students have been moved to their new classes. The changes are live in Firestore.'}
                   </p>
-                  {promotionResult && (
+
+                  {promotionResult?.selectiveCount ? (
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '14px', padding: '18px', marginBottom: '24px', textAlign: 'center', maxWidth: '360px', margin: '0 auto 24px' }}>
+                      <p style={{ fontSize: '32px', fontWeight: '900', color: '#16a34a', margin: 0 }}>{promotionResult.selectiveCount}</p>
+                      <p style={{ fontSize: '13px', fontWeight: '700', color: '#166534', margin: '4px 0 0' }}>
+                        Students placed in <strong>{promotionResult.toClass}</strong>
+                      </p>
+                    </div>
+                  ) : promotionResult && (
                     <div style={{ display: 'inline-grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '24px' }}>
                       {[
                         { label: 'Promoted', value: promotionResult.promoted.length, bg: '#f0fdf4', color: '#16a34a' },

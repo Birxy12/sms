@@ -24,6 +24,7 @@ import {
   Trash2,
   X,
   Upload,
+  Download,
   Wand2,
 } from 'lucide-react';
 import Papa from 'papaparse';
@@ -148,6 +149,24 @@ const CBTManagement = () => {
     setEditingId('');
   };
 
+  const downloadCsvTemplate = () => {
+    const csvContent = 'Question,Option A,Option B,Option C,Option D,Correct Answer\n' +
+      '"What is 15 multiplied by 8?","100","110","120","130","C"\n' +
+      '"Which planet is closest to the Sun?","Venus","Earth","Mars","Mercury","D"\n' +
+      '"What is the chemical formula for water?","CO2","O2","H2O","NaCl","C"\n' +
+      '"Who wrote Things Fall Apart?","Wole Soyinka","Chinua Achebe","Ben Okri","Ngugi wa Thiong\'o","B"\n';
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'cbt_exam_questions_template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleImportCSV = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -157,33 +176,38 @@ const CBTManagement = () => {
       skipEmptyLines: true,
       complete: (results) => {
         const importedQuestions = results.data.map((row) => {
-          const options = [
-            row['Option A'] || '',
-            row['Option B'] || '',
-            row['Option C'] || '',
-            row['Option D'] || '',
-          ];
+          const prompt = (row['Question'] || row['question'] || row['prompt'] || row['Prompt'] || '').trim();
+          const optionA = (row['Option A'] || row['option_a'] || row['Option 1'] || row['A'] || '').trim();
+          const optionB = (row['Option B'] || row['option_b'] || row['Option 2'] || row['B'] || '').trim();
+          const optionC = (row['Option C'] || row['option_c'] || row['Option 3'] || row['C'] || '').trim();
+          const optionD = (row['Option D'] || row['option_d'] || row['Option 4'] || row['D'] || '').trim();
+          const options = [optionA, optionB, optionC, optionD];
           
-          const correctLetter = (row['Correct Answer'] || 'A').toUpperCase();
-          const correctIndex = ['A', 'B', 'C', 'D'].indexOf(correctLetter);
+          const rawAnswer = (row['Correct Answer'] || row['correct_answer'] || row['Answer'] || row['Correct'] || row['correctIndex'] || 'A').toString().trim().toUpperCase();
+          let correctIndex = 0;
+          if (rawAnswer === 'B' || rawAnswer === '1') correctIndex = 1;
+          else if (rawAnswer === 'C' || rawAnswer === '2') correctIndex = 2;
+          else if (rawAnswer === 'D' || rawAnswer === '3') correctIndex = 3;
+          else if (rawAnswer === optionB.toUpperCase()) correctIndex = 1;
+          else if (rawAnswer === optionC.toUpperCase()) correctIndex = 2;
+          else if (rawAnswer === optionD.toUpperCase()) correctIndex = 3;
 
           return {
-            prompt: row['Question'] || '',
-            options: options,
-            correctIndex: correctIndex !== -1 ? correctIndex : 0,
+            prompt,
+            options,
+            correctIndex,
           };
-        }).filter(q => q.prompt && q.options.some(o => o));
+        }).filter(q => q.prompt && q.options.filter(Boolean).length >= 2);
 
         if (importedQuestions.length > 0) {
           setForm(prev => ({
             ...prev,
             questions: importedQuestions
           }));
-          setStatus({ type: 'success', message: `Successfully imported ${importedQuestions.length} questions.` });
+          setStatus({ type: 'success', message: `Successfully imported ${importedQuestions.length} questions from CSV.` });
         } else {
           setStatus({ type: 'error', message: 'No valid questions found in CSV.' });
         }
-        // Reset file input
         event.target.value = '';
       },
       error: (error) => {
@@ -414,6 +438,9 @@ const CBTManagement = () => {
                 onChange={handleImportCSV} 
               />
             </label>
+            <button type="button" onClick={downloadCsvTemplate} className="cbt-secondary-button" title="Download Sample CSV Template">
+              <Download size={18} /> CSV Template
+            </button>
           </div>
           <button type="submit" className="cbt-primary-button" disabled={saving}>
             {saving ? <Loader2 size={18} className="cbt-spin" /> : <Save size={18} />}

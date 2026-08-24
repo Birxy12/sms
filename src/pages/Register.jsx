@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { formatDateForInput } from '../utils/dateFormatter';
 import { useGlobalClasses } from '../utils/classUtils';
+import { getClassCode, formatRegNumberSuffix } from '../utils/regNoGenerator';
 import './Auth.css';
 import bdsLogo from '../assets/bdslogo.jpg';
 
@@ -23,13 +24,12 @@ const Register = () => {
     regNo: '',
     parentName: '',
     parentPhone: '',
+    address: '',
+    gender: 'Male',
     dob: '',
-    gender: '',
-    club: '',
-    house: ''
   });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   
   const navigate = useNavigate();
@@ -40,10 +40,10 @@ const Register = () => {
 
     // Auto-generate RegNo when class is selected
     if (name === 'className' && value) {
-      const year = new Date().getFullYear().toString().slice(-2);
-      const randomId = Math.floor(1000 + Math.random() * 9000); // 4 digit random
-      const classShort = value.replace(/\s+/g, '').slice(0, 3).toUpperCase();
-      updatedData.regNo = `BDS/${year}/${classShort}/${randomId}`;
+      const year = new Date().getFullYear();
+      const classCode = getClassCode(value);
+      const randomId = Math.floor(100 + Math.random() * 899);
+      updatedData.regNo = `BDS/${classCode}/${year}/${formatRegNumberSuffix(randomId)}`;
     }
 
     setFormData(updatedData);

@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import { Send, Mail, Users, Inbox, Clock, CheckCircle, AlertCircle, Trash2, Loader2 } from 'lucide-react';
+import { Send, Mail, Users, Inbox, Clock, CheckCircle, AlertCircle, Trash2, Loader2, KeyRound, Copy, Check, ShieldAlert } from 'lucide-react';
 import { useGlobalClasses } from '../../utils/classUtils';
 
 const MessageHub = () => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [activeTab, setActiveTab] = useState('inbox'); // 'inbox' or 'broadcasts'
+  const [copiedId, setCopiedId] = useState(null);
   const [status, setStatus] = useState({ type: '', text: '' });
   const classes = useGlobalClasses();
   
@@ -62,7 +64,7 @@ const MessageHub = () => {
   };
 
   const deleteMessage = async (id) => {
-    if(!window.confirm("Are you sure you want to delete this broadcast? It will be removed from all student inboxes.")) return;
+    if(!window.confirm("Are you sure you want to delete this notification record?")) return;
     try {
       await deleteDoc(doc(db, 'notifications', id));
       fetchMessages();
@@ -70,6 +72,16 @@ const MessageHub = () => {
       alert("Failed to delete");
     }
   };
+
+  const copyPin = (pin, id) => {
+    if (!pin) return;
+    navigator.clipboard.writeText(pin);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const adminInboxMessages = messages.filter(m => m.targetType === 'admin' || m.type === 'admin_pin_alert' || m.type === 'admin_pin_record');
+  const broadcastMessages = messages.filter(m => m.targetType !== 'admin' && m.type !== 'admin_pin_alert' && m.type !== 'admin_pin_record');
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
@@ -81,7 +93,7 @@ const MessageHub = () => {
             <Mail className="text-indigo-600" size={32} />
             Mailing Hub
           </h2>
-          <p className="text-slate-500 mt-2">Broadcast alerts, exam schedules, and fee reminders.</p>
+          <p className="text-slate-500 mt-2">Manage student communications, PIN recovery alerts, and broadcast announcements.</p>
         </div>
 
         <div className="bg-white p-6 rounded-3xl shadow-lg border border-slate-100">
@@ -94,7 +106,7 @@ const MessageHub = () => {
               <select 
                 value={compose.targetType} 
                 onChange={(e) => setCompose({...compose, targetType: e.target.value, targetValue: ''})}
-                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold"
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold text-slate-800"
               >
                 <option value="global">All Students (Global)</option>
                 <option value="class">Specific Class</option>
@@ -162,49 +174,150 @@ const MessageHub = () => {
         </div>
       </div>
 
-      {/* Outbox / History Pane */}
+      {/* Messages Pane */}
       <div className="lg:col-span-2">
-        <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-200 min-h-full">
-          <div className="flex justify-between items-center mb-8 border-b border-slate-100 pb-4">
-            <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
-              <Inbox size={20} className="text-slate-400" /> Broadcast History
-            </h3>
-            <span className="bg-slate-100 text-slate-600 font-bold px-3 py-1 rounded-lg text-sm">{messages.length} Sent</span>
+        <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-200 min-h-full flex flex-col">
+          
+          {/* Navigation Tabs */}
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-6">
+            <div className="flex gap-2 p-1.5 bg-slate-100 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => setActiveTab('inbox')}
+                className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${
+                  activeTab === 'inbox'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Inbox size={15} />
+                <span>Admin Inbox</span>
+                {adminInboxMessages.length > 0 && (
+                  <span className="bg-indigo-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-black">
+                    {adminInboxMessages.length}
+                  </span>
+                )}
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setActiveTab('broadcasts')}
+                className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${
+                  activeTab === 'broadcasts'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Send size={15} />
+                <span>Broadcast Outbox</span>
+                <span className="bg-slate-200 text-slate-700 text-[10px] px-1.5 py-0.5 rounded-full font-black">
+                  {broadcastMessages.length}
+                </span>
+              </button>
+            </div>
+
+            <span className="text-xs font-bold text-slate-400">
+              {activeTab === 'inbox' ? `${adminInboxMessages.length} Alerts` : `${broadcastMessages.length} Sent`}
+            </span>
           </div>
 
-          <div className="space-y-4 max-h-[700px] overflow-y-auto pr-2">
+          {/* List Area */}
+          <div className="space-y-4 max-h-[700px] overflow-y-auto pr-2 flex-1">
             {loading ? (
                <div className="flex justify-center py-12"><Loader2 size={32} className="text-indigo-600 animate-spin" /></div>
-            ) : messages.length === 0 ? (
-               <div className="text-center py-16">
-                 <Mail size={48} className="mx-auto text-slate-200 mb-4" />
-                 <h4 className="text-lg font-bold text-slate-600">No broadcasts yet</h4>
-                 <p className="text-slate-400 text-sm">Messages sent from the hub will appear here.</p>
-               </div>
+            ) : activeTab === 'inbox' ? (
+              adminInboxMessages.length === 0 ? (
+                <div className="text-center py-16">
+                  <Inbox size={48} className="mx-auto text-slate-200 mb-4" />
+                  <h4 className="text-lg font-bold text-slate-600">Admin Inbox is Clear</h4>
+                  <p className="text-slate-400 text-sm max-w-sm mx-auto mt-1">
+                    Student PIN recovery requests without registered contact details and admin PIN alerts will appear here.
+                  </p>
+                </div>
+              ) : (
+                adminInboxMessages.map(msg => {
+                  const pin = msg.generatedPin || msg.assignedPin;
+                  return (
+                    <div key={msg.id} className="p-5 rounded-2xl border border-indigo-100 bg-indigo-50/20 hover:border-indigo-300 transition-colors group relative">
+                      <button onClick={() => deleteMessage(msg.id)} className="absolute top-4 right-4 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Trash2 size={18} />
+                      </button>
+                      
+                      <div className="flex flex-wrap items-center gap-3 mb-3">
+                        <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md bg-indigo-100 text-indigo-700 flex items-center gap-1.5">
+                          <KeyRound size={12}/> {msg.type === 'admin_pin_alert' ? 'PIN Reset Request' : 'Admin PIN Record'}
+                        </span>
+                        {msg.className && (
+                          <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                            Class: {msg.className}
+                          </span>
+                        )}
+                        {msg.regNo && (
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                            {msg.regNo}
+                          </span>
+                        )}
+                        <span className="text-xs text-slate-400 font-medium flex items-center gap-1 ml-auto">
+                          <Clock size={12} /> {new Date(msg.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+
+                      <h4 className="text-base font-black text-slate-900 mb-2">{msg.title}</h4>
+                      <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap font-medium">{msg.body}</p>
+
+                      {pin && (
+                        <div className="mt-4 p-3 bg-white rounded-xl border border-indigo-100 flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-500">Assigned 6-Digit PIN:</span>
+                            <span className="font-mono text-base font-black text-indigo-600 tracking-widest px-2 py-0.5 bg-indigo-50 rounded">
+                              {pin}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => copyPin(pin, msg.id)}
+                            className="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                          >
+                            {copiedId === msg.id ? <><Check size={14} className="text-emerald-600" /> Copied</> : <><Copy size={14} /> Copy PIN</>}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )
             ) : (
-               messages.map(msg => (
-                 <div key={msg.id} className="p-5 rounded-2xl border border-slate-200 hover:border-indigo-200 transition-colors group relative">
-                   <button onClick={() => deleteMessage(msg.id)} className="absolute top-4 right-4 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                     <Trash2 size={18} />
-                   </button>
-                   
-                   <div className="flex items-center gap-3 mb-3">
-                     <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md flex items-center gap-1 ${
-                       msg.targetType === 'global' ? 'bg-emerald-50 text-emerald-600' :
-                       msg.targetType === 'class' ? 'bg-amber-50 text-amber-600' :
-                       'bg-blue-50 text-blue-600'
-                     }`}>
-                       {msg.targetType === 'global' && <Users size={12}/>}
-                       {msg.targetValue}
-                     </span>
-                     <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                       <Clock size={12} /> {new Date(msg.createdAt).toLocaleString()}
-                     </span>
-                   </div>
-                   <h4 className="text-lg font-bold text-slate-800 mb-2">{msg.title}</h4>
-                   <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">{msg.body}</p>
-                 </div>
-               ))
+              broadcastMessages.length === 0 ? (
+                <div className="text-center py-16">
+                  <Mail size={48} className="mx-auto text-slate-200 mb-4" />
+                  <h4 className="text-lg font-bold text-slate-600">No broadcasts yet</h4>
+                  <p className="text-slate-400 text-sm">Messages sent from the composer will appear here.</p>
+                </div>
+              ) : (
+                broadcastMessages.map(msg => (
+                  <div key={msg.id} className="p-5 rounded-2xl border border-slate-200 hover:border-indigo-200 transition-colors group relative">
+                    <button onClick={() => deleteMessage(msg.id)} className="absolute top-4 right-4 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Trash2 size={18} />
+                    </button>
+                    
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md flex items-center gap-1 ${
+                        msg.targetType === 'global' ? 'bg-emerald-50 text-emerald-600' :
+                        msg.targetType === 'class' ? 'bg-amber-50 text-amber-600' :
+                        'bg-blue-50 text-blue-600'
+                      }`}>
+                        {msg.targetType === 'global' && <Users size={12}/>}
+                        {msg.targetValue}
+                      </span>
+                      <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
+                        <Clock size={12} /> {new Date(msg.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <h4 className="text-lg font-bold text-slate-800 mb-2">{msg.title}</h4>
+                    <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">{msg.body}</p>
+                  </div>
+                ))
+              )
             )}
           </div>
         </div>
@@ -223,3 +336,4 @@ const MessageHub = () => {
 };
 
 export default MessageHub;
+

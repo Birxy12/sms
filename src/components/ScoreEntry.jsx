@@ -573,10 +573,10 @@ const ScoreEntry = () => {
             ) : students.length > 0 ? (
               <div>
                 {/* ── Desktop Table ── */}
-                <div className="score-table-wrap">
+                <div className="score-table-wrap webapp-table-scroll custom-scrollbar border border-slate-200/80 rounded-2xl overflow-auto shadow-xs bg-white">
                   <table className="w-full border-collapse score-table">
                     <thead>
-                      <tr className="bg-slate-50 border-y border-slate-200">
+                      <tr className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
                         <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Reg No.</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Student Name</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">CAT 1 (20)</th>

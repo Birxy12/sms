@@ -77,10 +77,10 @@ const StudentDashboard = () => {
       try {
         setDashboardError('');
 
-        // PIN verification for public access
-        if (!isAdminBypass) {
+        // PIN verification for external / public link access
+        if (publicPin && !isAdminBypass) {
           const storedPin = currentStudent?.pin || '';
-          if (!publicPin || storedPin !== publicPin) {
+          if (storedPin && storedPin !== publicPin) {
             setDashboardError('Unauthorized access. Invalid PIN.');
             setLoading(false);
             return;

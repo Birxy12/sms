@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import {
-  collection, addDoc, getDocs, deleteDoc, doc, updateDoc, serverTimestamp, getDoc, setDoc
+  collection, addDoc, getDocs, deleteDoc, doc, updateDoc, serverTimestamp, getDoc, setDoc, writeBatch
 } from 'firebase/firestore';
 import {
   Plus, Trash2, Edit3, Save, X, Loader2, BookOpen,
-  CheckCircle2, AlertCircle, Wand2, ChevronDown, ChevronUp, Clock, Calendar, Filter
+  CheckCircle2, AlertCircle, Wand2, ChevronDown, ChevronUp, Clock, Calendar, Filter, Upload, Download, FileSpreadsheet
 } from 'lucide-react';
+import Papa from 'papaparse';
 
 // ─── 20 default seed questions ────────────────────────────────────────────────
 const DEFAULT_QUESTIONS = [
@@ -177,6 +178,96 @@ const AdmissionCBTManagement = () => {
   };
 
   // ─── Delete question ──────────────────────────────────────────────────────
+  // ─── CSV Download Template ────────────────────────────────────────────────
+  const downloadCsvTemplate = () => {
+    const csvContent = 'Question,Option A,Option B,Option C,Option D,Correct Answer,Target Class\n' +
+      '"What is the capital of Nigeria?","Lagos","Abuja","Kano","Port Harcourt","B","All"\n' +
+      '"How many states are in Nigeria?","34","36","38","40","B","All"\n' +
+      '"What is 15 multiplied by 8?","100","110","120","130","C","All"\n' +
+      '"Which river is the longest in Africa?","Niger River","Nile River","Congo River","Zambezi River","B","All"\n';
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'admission_questions_template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // ─── CSV Import Questions ────────────────────────────────────────────────
+  const handleImportCSV = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const parsedQuestions = results.data.map(row => {
+            const prompt = (row['Question'] || row['question'] || row['prompt'] || row['Prompt'] || '').trim();
+            const optionA = (row['Option A'] || row['option_a'] || row['Option 1'] || row['A'] || '').trim();
+            const optionB = (row['Option B'] || row['option_b'] || row['Option 2'] || row['B'] || '').trim();
+            const optionC = (row['Option C'] || row['option_c'] || row['Option 3'] || row['C'] || '').trim();
+            const optionD = (row['Option D'] || row['option_d'] || row['Option 4'] || row['D'] || '').trim();
+
+            const rawAnswer = (row['Correct Answer'] || row['correct_answer'] || row['Answer'] || row['Correct'] || row['correctIndex'] || 'A').toString().trim().toUpperCase();
+            let correctIndex = 0;
+            if (rawAnswer === 'B' || rawAnswer === '1') correctIndex = 1;
+            else if (rawAnswer === 'C' || rawAnswer === '2') correctIndex = 2;
+            else if (rawAnswer === 'D' || rawAnswer === '3') correctIndex = 3;
+            else if (rawAnswer === optionB.toUpperCase()) correctIndex = 1;
+            else if (rawAnswer === optionC.toUpperCase()) correctIndex = 2;
+            else if (rawAnswer === optionD.toUpperCase()) correctIndex = 3;
+
+            const targetClass = (row['Target Class'] || row['Class'] || row['class'] || row['targetClass'] || 'All').trim();
+
+            return {
+              prompt,
+              options: [optionA, optionB, optionC, optionD],
+              correctIndex,
+              targetClass: targetClass || 'All'
+            };
+          }).filter(q => q.prompt && q.options.filter(Boolean).length >= 2);
+
+          if (parsedQuestions.length === 0) {
+            showStatus('error', 'No valid questions found in CSV. Please verify column headers.');
+            return;
+          }
+
+          setSaving(true);
+          await ensureFirebaseAuth();
+          const batch = writeBatch(db);
+
+          parsedQuestions.forEach(q => {
+            const docRef = doc(collection(db, 'admissionQuestions'));
+            batch.set(docRef, {
+              ...q,
+              createdAt: serverTimestamp()
+            });
+          });
+
+          await batch.commit();
+          showStatus('success', `Successfully imported ${parsedQuestions.length} admission questions from CSV!`);
+          load();
+        } catch (err) {
+          console.error('CSV import error:', err);
+          showStatus('error', 'Failed to import CSV: ' + (err.message || 'Error occurred'));
+        } finally {
+          setSaving(false);
+          event.target.value = '';
+        }
+      },
+      error: (err) => {
+        console.error('Papa parse error:', err);
+        showStatus('error', 'Failed to parse CSV file.');
+      }
+    });
+  };
+
   const deleteQuestion = async (id) => {
     if (!window.confirm('Delete this question?')) return;
     try {
@@ -219,7 +310,29 @@ const AdmissionCBTManagement = () => {
             </p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <button 
+            type="button"
+            onClick={downloadCsvTemplate}
+            title="Download Sample CSV Template for Admission Questions"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 12, border: '1.5px solid #cbd5e1', background: '#fff', color: '#334155', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+          >
+            <Download size={16} color="#6366f1" /> Download CSV Template
+          </button>
+
+          <label
+            title="Upload CSV containing multiple admission questions"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 12, border: '1.5px solid #6366f1', background: '#eef2ff', color: '#4f46e5', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
+          >
+            <Upload size={16} /> Upload CSV
+            <input 
+              type="file" 
+              accept=".csv" 
+              onChange={handleImportCSV} 
+              style={{ display: 'none' }} 
+            />
+          </label>
+
           {questions.length === 0 && (
             <button onClick={seedDefaults} disabled={seeding}
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 12, border: '2px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Loader2, Camera, Upload, UserCircle } from 'lucide-react';
+import { X, Loader2, Camera, Upload, UserCircle, KeyRound, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import StudentAvatar from './StudentAvatar';
 import AvatarSelector from './AvatarSelector';
@@ -195,6 +195,32 @@ const StudentFormModal = ({
             <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Guardian Email</label>
             <input type="email" placeholder="parent@school.edu" value={currentStudent.email || ''} onChange={(e) => setCurrentStudent({...currentStudent, email: e.target.value})} onBlur={() => markTouched('email')} style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '13px', fontWeight: 500, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }} />
             {errors.email && touched.email && <FieldError message={errors.email} />}
+          </div>
+
+          <div className="space-y-1.5 p-3.5 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+            <div className="flex items-center justify-between">
+              <label style={{ fontSize: '11px', fontWeight: 800, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <KeyRound size={13} /> 6-Digit Portal PIN
+              </label>
+              <button
+                type="button"
+                onClick={() => setCurrentStudent({ ...currentStudent, pin: String(Math.floor(100000 + Math.random() * 900000)) })}
+                style={{ background: 'none', border: 'none', color: '#4f46e5', fontWeight: 700, fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+              >
+                <Sparkles size={11} /> Generate Random
+              </button>
+            </div>
+            <input 
+              type="text" 
+              maxLength={6} 
+              placeholder="e.g. 123456 (Leave blank to keep unchanged or auto-prompt on login)" 
+              value={currentStudent.pin || ''} 
+              onChange={(e) => setCurrentStudent({...currentStudent, pin: e.target.value.replace(/\D/g, '').slice(0, 6)})} 
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(199, 210, 254)', fontSize: '14px', fontWeight: 700, fontFamily: 'monospace', letterSpacing: '2px', background: 'white', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }} 
+            />
+            <p style={{ fontSize: '10px', color: '#64748b', margin: '4px 0 0 0' }}>
+              If assigned, PIN will be sent to the student's email/phone if provided, or recorded in Admin Inbox.
+            </p>
           </div>
 
           <div className="hidden sm:flex" style={{ gap: '10px', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid rgb(241, 245, 249)', margin: '4px 0 0 0', flexShrink: 0 }}>

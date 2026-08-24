@@ -15,6 +15,8 @@ import {
 } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
 import brandLogo from '../../assets/bdslogo.jpg';
+import { NIGERIA_STATES, getLgasForState } from '../../utils/nigeriaStatesLga';
+import { generateUniqueClassRegNo } from '../../utils/regNoGenerator';
 import '../home.css';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -22,43 +24,6 @@ const generateAppNo = () => {
   const year = new Date().getFullYear();
   const num = Math.floor(1000 + Math.random() * 9000);
   return `BDS/APN/${year}/${num}`;
-};
-
-// Class-dependent registration number generator with duplicate prevention
-const generateUniqueClassRegNo = async (className) => {
-  let classCode = 'GEN';
-  if (className) {
-    const upper = className.trim().toUpperCase();
-    if (upper.includes('JSS 1') || upper === 'JSS1') classCode = 'JSS1';
-    else if (upper.includes('JSS 2') || upper === 'JSS2') classCode = 'JSS2';
-    else if (upper.includes('JSS 3') || upper === 'JSS3') classCode = 'JSS3';
-    else if (upper.includes('SS 1') || upper === 'SS1') classCode = 'SS1';
-    else if (upper.includes('SS 2 SCI') || upper.includes('SS2 SCIENCE')) classCode = 'SS2-SCI';
-    else if (upper.includes('SS 2 ART') || upper.includes('SS2 ART')) classCode = 'SS2-ART';
-    else if (upper.includes('SS 3 SCI') || upper.includes('SS3 SCIENCE')) classCode = 'SS3-SCI';
-    else if (upper.includes('SS 3 ART') || upper.includes('SS3 ART')) classCode = 'SS3-ART';
-    else classCode = upper.replace(/[^A-Z0-9]/g, '');
-  }
-
-  const year = new Date().getFullYear();
-  const prefix = `BDS/${classCode}/${year}/`;
-
-  try {
-    const snap = await getDocs(collection(db, 'students'));
-    const existingRegNos = new Set(snap.docs.map(d => d.data().regNo).filter(Boolean));
-
-    let seq = 1;
-    let candidate = `${prefix}${String(seq).padStart(3, '0')}`;
-    while (existingRegNos.has(candidate)) {
-      seq++;
-      candidate = `${prefix}${String(seq).padStart(3, '0')}`;
-    }
-    return candidate;
-  } catch (err) {
-    console.error('Error checking existing registration numbers:', err);
-    const rand = Math.floor(100 + Math.random() * 900);
-    return `${prefix}${rand}`;
-  }
 };
 
 const fmt = (s) =>
@@ -616,8 +581,39 @@ const AdmissionPortal = () => {
                       </select>
                     </div>
 
-                    <FInput label="State of Origin *" name="stateOfOrigin" placeholder="e.g. Enugu" value={formData.stateOfOrigin} onChange={e => setFormData({ ...formData, stateOfOrigin: e.target.value })} />
-                    <FInput label="Local Government (LGA) *" name="localGovernment" placeholder="e.g. Nsukka" value={formData.localGovernment} onChange={e => setFormData({ ...formData, localGovernment: e.target.value })} />
+                    <div>
+                      <label className="home-form-label">State of Origin *</label>
+                      <select
+                        name="stateOfOrigin"
+                        required
+                        value={formData.stateOfOrigin}
+                        onChange={e => {
+                          const newState = e.target.value;
+                          setFormData({ ...formData, stateOfOrigin: newState, localGovernment: '' });
+                        }}
+                        className="home-form-input"
+                      >
+                        <option value="">Select State of Origin</option>
+                        {NIGERIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="home-form-label">Local Government (LGA) *</label>
+                      <select
+                        name="localGovernment"
+                        required
+                        value={formData.localGovernment}
+                        onChange={e => setFormData({ ...formData, localGovernment: e.target.value })}
+                        className="home-form-input"
+                        disabled={!formData.stateOfOrigin}
+                      >
+                        <option value="">{formData.stateOfOrigin ? 'Select Local Government (LGA)' : 'Select State first...'}</option>
+                        {getLgasForState(formData.stateOfOrigin).map(lga => (
+                          <option key={lga} value={lga}>{lga}</option>
+                        ))}
+                      </select>
+                    </div>
                     <FInput label="Parent / Guardian Phone *" name="phone" type="tel" placeholder="e.g. 08012345678" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
                     <FInput label="Previous School Attended *" name="previousSchool" placeholder="e.g. St. Jude Academy" value={formData.previousSchool} onChange={e => setFormData({ ...formData, previousSchool: e.target.value })} />
                     <FInput label="Last Academic Average (%)" name="lastAverage" type="number" min="0" max="100" placeholder="e.g. 75" value={formData.lastAverage} onChange={e => setFormData({ ...formData, lastAverage: e.target.value })} required={false} />
