@@ -700,52 +700,6 @@ const BrandingSettings = () => {
           </div>
         </div>
 
-        {/* Session Configuration Card */}
-        <div className="card-white branding-card">
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-            <Calendar color="var(--primary)" />
-            <h3>Academic Session</h3>
-          </div>
-          <div className="input-group">
-            <label style={{ fontWeight: '700', fontSize: '13px', color: '#334155', display: 'block', marginBottom: '8px' }}>Current Academic Session</label>
-            <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>This session label is used across fee receipts, ID cards, result sheets, and the markbook.</p>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative', flex: 1, minWidth: '160px' }}>
-                <select
-                  value={sessionInput}
-                  onChange={e => setSessionInput(e.target.value)}
-                  style={{
-                    width: '100%', padding: '10px 36px 10px 14px', borderRadius: '10px',
-                    border: '2px solid #e2e8f0', fontSize: '14px', fontWeight: '700',
-                    background: '#f8fafc', appearance: 'none', cursor: 'pointer',
-                    color: '#1e293b', outline: 'none'
-                  }}
-                >
-                  {SESSION_LIST.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <ChevronDown size={16} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#64748b' }} />
-              </div>
-              <button
-                onClick={handleSaveSession}
-                disabled={sessionSaving}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  padding: '10px 20px', borderRadius: '10px', fontWeight: '800',
-                  fontSize: '13px', cursor: 'pointer', border: 'none',
-                  background: sessionSaved ? '#10b981' : 'var(--primary)',
-                  color: '#fff', transition: 'all 0.2s'
-                }}
-              >
-                {sessionSaving ? <Loader2 size={16} className="animate-spin" /> : sessionSaved ? <CheckCircle size={16} /> : <Save size={16} />}
-                {sessionSaving ? 'Saving...' : sessionSaved ? 'Saved!' : 'Set Session'}
-              </button>
-            </div>
-            <p style={{ marginTop: '10px', fontSize: '11px', color: '#94a3b8' }}>
-              Active: <strong style={{ color: '#1e293b' }}>{currentSession}</strong>
-            </p>
-          </div>
-        </div>
-
         {/* Move Students Card */}
         <div className="card-white branding-card" style={{ borderLeft: '4px solid #f59e0b' }}>
           <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
