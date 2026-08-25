@@ -9,6 +9,7 @@ import {
   CheckCircle2, AlertCircle, Wand2, ChevronDown, ChevronUp, Clock, Calendar, Filter, Upload, Download, FileSpreadsheet
 } from 'lucide-react';
 import Papa from 'papaparse';
+import { parseQuestionsCsv } from '../../utils/csvQuestionParser';
 
 // ─── 20 default seed questions ────────────────────────────────────────────────
 const DEFAULT_QUESTIONS = [
@@ -198,74 +199,40 @@ const AdmissionCBTManagement = () => {
   };
 
   // ─── CSV Import Questions ────────────────────────────────────────────────
-  const handleImportCSV = (event) => {
+  const handleImportCSV = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: async (results) => {
-        try {
-          const parsedQuestions = results.data.map(row => {
-            const prompt = (row['Question'] || row['question'] || row['prompt'] || row['Prompt'] || '').trim();
-            const optionA = (row['Option A'] || row['option_a'] || row['Option 1'] || row['A'] || '').trim();
-            const optionB = (row['Option B'] || row['option_b'] || row['Option 2'] || row['B'] || '').trim();
-            const optionC = (row['Option C'] || row['option_c'] || row['Option 3'] || row['C'] || '').trim();
-            const optionD = (row['Option D'] || row['option_d'] || row['Option 4'] || row['D'] || '').trim();
+    try {
+      setSaving(true);
+      const parsedQuestions = await parseQuestionsCsv(file, classFilter !== 'All' ? classFilter : 'All');
 
-            const rawAnswer = (row['Correct Answer'] || row['correct_answer'] || row['Answer'] || row['Correct'] || row['correctIndex'] || 'A').toString().trim().toUpperCase();
-            let correctIndex = 0;
-            if (rawAnswer === 'B' || rawAnswer === '1') correctIndex = 1;
-            else if (rawAnswer === 'C' || rawAnswer === '2') correctIndex = 2;
-            else if (rawAnswer === 'D' || rawAnswer === '3') correctIndex = 3;
-            else if (rawAnswer === optionB.toUpperCase()) correctIndex = 1;
-            else if (rawAnswer === optionC.toUpperCase()) correctIndex = 2;
-            else if (rawAnswer === optionD.toUpperCase()) correctIndex = 3;
-
-            const targetClass = (row['Target Class'] || row['Class'] || row['class'] || row['targetClass'] || 'All').trim();
-
-            return {
-              prompt,
-              options: [optionA, optionB, optionC, optionD],
-              correctIndex,
-              targetClass: targetClass || 'All'
-            };
-          }).filter(q => q.prompt && q.options.filter(Boolean).length >= 2);
-
-          if (parsedQuestions.length === 0) {
-            showStatus('error', 'No valid questions found in CSV. Please verify column headers.');
-            return;
-          }
-
-          setSaving(true);
-          await ensureFirebaseAuth();
-          const batch = writeBatch(db);
-
-          parsedQuestions.forEach(q => {
-            const docRef = doc(collection(db, 'admissionQuestions'));
-            batch.set(docRef, {
-              ...q,
-              createdAt: serverTimestamp()
-            });
-          });
-
-          await batch.commit();
-          showStatus('success', `Successfully imported ${parsedQuestions.length} admission questions from CSV!`);
-          load();
-        } catch (err) {
-          console.error('CSV import error:', err);
-          showStatus('error', 'Failed to import CSV: ' + (err.message || 'Error occurred'));
-        } finally {
-          setSaving(false);
-          event.target.value = '';
-        }
-      },
-      error: (err) => {
-        console.error('Papa parse error:', err);
-        showStatus('error', 'Failed to parse CSV file.');
+      if (!parsedQuestions || parsedQuestions.length === 0) {
+        showStatus('error', 'No valid questions found in CSV. Please verify your file format or use the CSV template.');
+        return;
       }
-    });
+
+      await ensureFirebaseAuth();
+      const batch = writeBatch(db);
+
+      parsedQuestions.forEach(q => {
+        const docRef = doc(collection(db, 'admissionQuestions'));
+        batch.set(docRef, {
+          ...q,
+          createdAt: serverTimestamp()
+        });
+      });
+
+      await batch.commit();
+      showStatus('success', `Successfully imported ${parsedQuestions.length} admission questions from CSV!`);
+      load();
+    } catch (err) {
+      console.error('CSV import error:', err);
+      showStatus('error', 'Failed to import CSV: ' + (err.message || 'Error occurred during parsing'));
+    } finally {
+      setSaving(false);
+      event.target.value = '';
+    }
   };
 
   const deleteQuestion = async (id) => {

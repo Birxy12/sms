@@ -27,8 +27,8 @@ import {
   Download,
   Wand2,
 } from 'lucide-react';
-import Papa from 'papaparse';
 import { generateQuestions } from '../../utils/questionGenerator';
+import { parseQuestionsCsv } from '../../utils/csvQuestionParser';
 import { CLASS_LIST, getSubjectsForClass } from '../../utils/subjectConfig';
 import './CBT.css';
 
@@ -167,54 +167,28 @@ const CBTManagement = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleImportCSV = (event) => {
+  const handleImportCSV = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        const importedQuestions = results.data.map((row) => {
-          const prompt = (row['Question'] || row['question'] || row['prompt'] || row['Prompt'] || '').trim();
-          const optionA = (row['Option A'] || row['option_a'] || row['Option 1'] || row['A'] || '').trim();
-          const optionB = (row['Option B'] || row['option_b'] || row['Option 2'] || row['B'] || '').trim();
-          const optionC = (row['Option C'] || row['option_c'] || row['Option 3'] || row['C'] || '').trim();
-          const optionD = (row['Option D'] || row['option_d'] || row['Option 4'] || row['D'] || '').trim();
-          const options = [optionA, optionB, optionC, optionD];
-          
-          const rawAnswer = (row['Correct Answer'] || row['correct_answer'] || row['Answer'] || row['Correct'] || row['correctIndex'] || 'A').toString().trim().toUpperCase();
-          let correctIndex = 0;
-          if (rawAnswer === 'B' || rawAnswer === '1') correctIndex = 1;
-          else if (rawAnswer === 'C' || rawAnswer === '2') correctIndex = 2;
-          else if (rawAnswer === 'D' || rawAnswer === '3') correctIndex = 3;
-          else if (rawAnswer === optionB.toUpperCase()) correctIndex = 1;
-          else if (rawAnswer === optionC.toUpperCase()) correctIndex = 2;
-          else if (rawAnswer === optionD.toUpperCase()) correctIndex = 3;
+    try {
+      const importedQuestions = await parseQuestionsCsv(file, form.targetClass);
 
-          return {
-            prompt,
-            options,
-            correctIndex,
-          };
-        }).filter(q => q.prompt && q.options.filter(Boolean).length >= 2);
-
-        if (importedQuestions.length > 0) {
-          setForm(prev => ({
-            ...prev,
-            questions: importedQuestions
-          }));
-          setStatus({ type: 'success', message: `Successfully imported ${importedQuestions.length} questions from CSV.` });
-        } else {
-          setStatus({ type: 'error', message: 'No valid questions found in CSV.' });
-        }
-        event.target.value = '';
-      },
-      error: (error) => {
-        console.error('CSV Parse Error:', error);
-        setStatus({ type: 'error', message: 'Failed to parse CSV file.' });
+      if (importedQuestions && importedQuestions.length > 0) {
+        setForm(prev => ({
+          ...prev,
+          questions: importedQuestions
+        }));
+        setStatus({ type: 'success', message: `Successfully imported ${importedQuestions.length} questions from CSV.` });
+      } else {
+        setStatus({ type: 'error', message: 'No valid questions found in CSV. Please verify file format or download the CSV template.' });
       }
-    });
+    } catch (error) {
+      console.error('CSV Parse Error:', error);
+      setStatus({ type: 'error', message: 'Failed to parse CSV file: ' + (error.message || 'Error occurred') });
+    } finally {
+      event.target.value = '';
+    }
   };
 
   const editExam = (exam) => {
