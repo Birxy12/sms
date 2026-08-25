@@ -4,7 +4,8 @@ import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Users, BookOpen, PenTool, DollarSign, ArrowUpRight, GraduationCap, BarChart, TrendingUp, UserCheck, Shield, User, BarChart3 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
-import { normalizeClassName } from '../../utils/classUtils';
+import { normalizeClassName, fetchGlobalClasses, DEFAULT_CLASSES, getUniqueClasses } from '../../utils/classUtils';
+import { expandStudent } from '../../utils/firestoreSchema';
 
 const PrincipalDashboard = () => {
   const { authReady, currentAdmin } = useAdminAuth();
@@ -28,28 +29,36 @@ const PrincipalDashboard = () => {
     if (!authReady) return; // Wait for Firebase auth before reading staff collection
     const fetchDashboardData = async () => {
       try {
-        // 1. Get Fee Settings for expected fees
-        const feeSnap = await getDoc(doc(db, 'settings', 'fees'));
-        const fees = feeSnap.exists() ? feeSnap.data() : { default: 0 };
-
-        // 2. Get Students and Staff
-        const [studentSnap, staffSnap] = await Promise.all([
+        // 1. Get Fee Settings, Students, Staff, and Dynamic Classes from DB in parallel
+        const [feeSnap, studentSnap, staffSnap, globalClasses] = await Promise.all([
+          getDoc(doc(db, 'settings', 'fees')).catch(() => ({ exists: () => false })),
           getDocs(collection(db, 'students')),
-          getDocs(collection(db, 'staff'))
+          getDocs(collection(db, 'staff')),
+          fetchGlobalClasses().catch(() => DEFAULT_CLASSES)
         ]);
+
+        const fees = feeSnap.exists?.() ? feeSnap.data() : { default: 0 };
+
+        // 2. Initialize classes map with ALL classes from database to guarantee complete representation
+        const allDbClasses = getUniqueClasses([...DEFAULT_CLASSES, ...(globalClasses || [])]);
+        const classesMap = {};
+        allDbClasses.forEach(cls => {
+          classesMap[cls] = 0;
+        });
 
         let male = 0;
         let female = 0;
         let totalExpected = 0;
         let totalPaid = 0;
-        const classesMap = {};
 
-        studentSnap.forEach(doc => {
-          const s = doc.data();
-          const gender = (s.gender || 'm').toLowerCase();
+        studentSnap.forEach(docSnap => {
+          const raw = docSnap.data();
+          const s = expandStudent(raw) || raw;
+          
+          const gender = (s.gender || raw.gender || raw.g || 'm').toLowerCase();
           if (gender.startsWith('f')) female++; else male++;
           
-          const rawCls = s.className || s.classId || s.CLASS || 'Unassigned';
+          const rawCls = s.className || s.classId || s.CLASS || s.class_name || s.class || s.c || raw.c || raw.className || raw.CLASS || raw.class_name || raw.class || '';
           const cls = normalizeClassName(rawCls);
           if (cls) {
             classesMap[cls] = (classesMap[cls] || 0) + 1;
@@ -61,9 +70,13 @@ const PrincipalDashboard = () => {
           totalPaid += (parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0);
         });
 
+        // 3. Format into sorted array (classes with students first, then others, or sorted by count)
         const classArray = Object.keys(classesMap)
           .map(c => ({ name: c, count: classesMap[c] }))
-          .sort((a, b) => b.count - a.count);
+          .sort((a, b) => {
+            if (b.count !== a.count) return b.count - a.count;
+            return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+          });
 
         setStats({
           totalStudents: studentSnap.size,
@@ -224,20 +237,25 @@ const PrincipalDashboard = () => {
             <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-4 py-1.5 rounded-full uppercase tracking-tighter">Active Terms</span>
           </div>
           
-          <div className="space-y-6">
+          <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
             {stats.classData.map((cls, idx) => {
-              const percentage = (cls.count / stats.totalStudents) * 100;
+              const percentage = stats.totalStudents > 0 ? (cls.count / stats.totalStudents) * 100 : 0;
               return (
-                <div key={idx}>
-                  <div className="flex justify-between text-sm font-bold mb-2">
-                    <span className="text-slate-700">{cls.name}</span>
-                    <span className="text-slate-500">{cls.count} Students ({percentage.toFixed(1)}%)</span>
+                <div key={idx} className="group">
+                  <div className="flex justify-between items-center text-sm font-bold mb-2">
+                    <span className="text-slate-800 font-extrabold flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                      {cls.name}
+                    </span>
+                    <span className="text-slate-500 font-bold bg-slate-50 px-2.5 py-0.5 rounded-lg border border-slate-100 group-hover:border-indigo-100 transition-colors">
+                      {cls.count} {cls.count === 1 ? 'Student' : 'Students'} ({percentage.toFixed(1)}%)
+                    </span>
                   </div>
                   <div className="w-full h-3 bg-slate-50 rounded-full overflow-hidden shadow-inner">
                     <div 
                       className="h-full rounded-full transition-all duration-1000 ease-out"
                       style={{ 
-                        width: `${percentage}%`,
+                        width: `${Math.max(percentage > 0 ? percentage : 0, percentage > 0 ? 3 : 0)}%`,
                         background: `linear-gradient(90deg, #4f46e5 0%, #818cf8 100%)`
                       }}
                     ></div>
