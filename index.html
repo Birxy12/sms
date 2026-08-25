@@ -12,7 +12,10 @@
       (function() {
         var isHarmless = function(msg) {
           if (!msg) return false;
-          var s = typeof msg === 'string' ? msg : (msg.message || msg.reason || '');
+          var s = typeof msg === 'string' ? msg : (msg.message || msg.reason || msg.stack || '');
+          try {
+            if (typeof msg === 'object') s += ' ' + JSON.stringify(msg);
+          } catch (err) {}
           return s.indexOf('save-page') !== -1 ||
                  s.indexOf('Cannot find menu item') !== -1 ||
                  s.indexOf('play() request was interrupted') !== -1 ||
@@ -23,6 +26,7 @@
                  s.indexOf('Firestore/Listen/channel') !== -1;
         };
 
+        // Suppress at event listener level
         window.addEventListener('error', function(e) {
           if (isHarmless(e.message) || isHarmless(e.error)) {
             e.preventDefault();
@@ -38,6 +42,25 @@
             return true;
           }
         }, true);
+
+        // Suppress at console level
+        if (typeof console !== 'undefined') {
+          var origError = console.error;
+          console.error = function() {
+            for (var i = 0; i < arguments.length; i++) {
+              if (isHarmless(arguments[i])) return;
+            }
+            if (origError) origError.apply(console, arguments);
+          };
+
+          var origWarn = console.warn;
+          console.warn = function() {
+            for (var i = 0; i < arguments.length; i++) {
+              if (isHarmless(arguments[i])) return;
+            }
+            if (origWarn) origWarn.apply(console, arguments);
+          };
+        }
       })();
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />

@@ -49,6 +49,23 @@ if (typeof window !== 'undefined') {
       event.stopImmediatePropagation();
     }
   });
+
+  // Filter console.error and console.warn for extension errors
+  const origError = console.error;
+  console.error = function(...args) {
+    const msg = args.map(a => typeof a === 'object' ? (a?.message || a?.stack || JSON.stringify(a)) : String(a)).join(' ');
+    if (
+      msg.includes('save-page') ||
+      msg.includes('Cannot find menu item') ||
+      msg.includes('INTERNAL ASSERTION FAILED') ||
+      msg.includes('BloomFilter') ||
+      msg.includes('ve":-1') ||
+      msg.includes('ERR_INTERNET_DISCONNECTED')
+    ) {
+      return;
+    }
+    origError.apply(console, args);
+  };
 }
 
 createRoot(document.getElementById('root')).render(
