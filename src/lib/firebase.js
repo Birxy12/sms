@@ -56,5 +56,21 @@ const db = initFirestore();
 const auth = getAuth(app);
 const storage = getStorage(app);
 
+// Automatically manage network reconnection on online/offline window events
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', async () => {
+    try {
+      const { enableNetwork } = await import('firebase/firestore');
+      await enableNetwork(db).catch(() => {});
+    } catch (e) {}
+  });
+  window.addEventListener('offline', async () => {
+    try {
+      const { disableNetwork } = await import('firebase/firestore');
+      await disableNetwork(db).catch(() => {});
+    } catch (e) {}
+  });
+}
+
 export { app, analytics, db, auth, storage };
 export default app;

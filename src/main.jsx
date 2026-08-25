@@ -7,13 +7,13 @@ import { AdminAuthProvider } from './context/AdminAuthContext'
 import './index.css'
 import App from './App.jsx'
 
-// Gracefully handle harmless browser/extension errors (e.g. extension context menus, autoplay interruptions, Firestore SDK internal race assertions)
+// Gracefully handle harmless browser/extension errors (e.g. extension context menus, autoplay interruptions, Firestore SDK internal race assertions, network reconnection events)
 if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event?.reason;
     const msg = typeof reason === 'string' ? reason : (reason?.message || '');
     
-    // Suppress harmless extension / browser background errors and internal SDK assertions
+    // Suppress harmless extension / browser background errors, internal SDK assertions, and transient network disconnects
     if (
       msg.includes('Cannot find menu item with id') ||
       msg.includes('save-page') ||
@@ -21,7 +21,11 @@ if (typeof window !== 'undefined') {
       msg.includes('ResizeObserver loop') ||
       msg.includes('INTERNAL ASSERTION FAILED') ||
       msg.includes('BloomFilter') ||
-      msg.includes('ve":-1')
+      msg.includes('ve":-1') ||
+      msg.includes('ERR_INTERNET_DISCONNECTED') ||
+      msg.includes('net::ERR_INTERNET_DISCONNECTED') ||
+      msg.includes('Firestore/Listen/channel') ||
+      msg.includes('network-request-failed')
     ) {
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -35,7 +39,11 @@ if (typeof window !== 'undefined') {
       msg.includes('save-page') ||
       msg.includes('INTERNAL ASSERTION FAILED') ||
       msg.includes('BloomFilter') ||
-      msg.includes('ve":-1')
+      msg.includes('ve":-1') ||
+      msg.includes('ERR_INTERNET_DISCONNECTED') ||
+      msg.includes('net::ERR_INTERNET_DISCONNECTED') ||
+      msg.includes('Firestore/Listen/channel') ||
+      msg.includes('network-request-failed')
     ) {
       event.preventDefault();
       event.stopImmediatePropagation();
