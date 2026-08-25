@@ -11,7 +11,7 @@ import {
   GraduationCap, ShieldCheck, ArrowRight, ChevronLeft, Loader2,
   AlertCircle, HelpCircle, Phone, Lock, Mail, User, 
   School, CheckCircle, Crown, Wallet, Eye, EyeOff, ChevronDown, Fingerprint,
-  KeyRound, Sparkles
+  KeyRound, Sparkles, MessageCircle
 } from 'lucide-react';
 import './Auth.css';
 import bdsLogo from '../assets/bdslogo.jpg';
@@ -124,6 +124,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [pendingUser, setPendingUser] = useState(null);
+  const [whatsAppPinUrl, setWhatsAppPinUrl] = useState(null);
   
   // Real-time name lookup for students
   const [lookupName, setLookupName] = useState('');
@@ -435,18 +436,24 @@ const Login = () => {
     setLoading(true);
     setError('');
     setSuccessMessage('');
+    setWhatsAppPinUrl(null);
     try {
       const result = await studentAuth.forgotPinSendToInbox(formData.regNo, formData.className);
       if (result.success) {
         setSuccessMessage(result.message);
+        if (result.whatsAppUrl) {
+          setWhatsAppPinUrl(result.whatsAppUrl);
+        }
         setError('');
       } else {
         setError(result.message || 'Failed to process PIN recovery.');
         setSuccessMessage('');
+        setWhatsAppPinUrl(null);
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
       setSuccessMessage('');
+      setWhatsAppPinUrl(null);
     } finally {
       setLoading(false);
     }
@@ -939,17 +946,44 @@ const Login = () => {
               exit={{ opacity: 0, y: -8 }}
             >
               <CheckCircle size={18} className="shrink-0 mt-0.5" />
-              <div>
+              <div className="w-full">
                 <p style={{ fontWeight: 800, margin: 0, fontSize: '0.85rem' }}>PIN Recovery Successful</p>
                 <p style={{ margin: '4px 0 8px 0', fontSize: '0.75rem', lineHeight: '1.4' }}>{successMessage}</p>
-                <button
-                  type="button"
-                  className="text-link"
-                  style={{ textAlign: 'left', margin: 0, color: '#15803d', fontWeight: 800, textDecoration: 'underline', padding: 0 }}
-                  onClick={() => { setLoginStep('credentials'); setSuccessMessage(''); setError(''); }}
-                >
-                  ← Sign in with new PIN
-                </button>
+                
+                {whatsAppPinUrl && (
+                  <a
+                    href={whatsAppPinUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: '#16a34a',
+                      color: '#ffffff',
+                      padding: '8px 14px',
+                      borderRadius: '10px',
+                      fontSize: '0.75rem',
+                      fontWeight: '800',
+                      textDecoration: 'none',
+                      margin: '6px 0 10px 0',
+                      boxShadow: '0 4px 12px rgba(22, 163, 74, 0.25)'
+                    }}
+                  >
+                    <MessageCircle size={15} /> Open & Send PIN on WhatsApp
+                  </a>
+                )}
+
+                <div>
+                  <button
+                    type="button"
+                    className="text-link"
+                    style={{ textAlign: 'left', margin: 0, color: '#15803d', fontWeight: 800, textDecoration: 'underline', padding: 0 }}
+                    onClick={() => { setLoginStep('credentials'); setSuccessMessage(''); setError(''); setWhatsAppPinUrl(null); }}
+                  >
+                    ← Sign in with new PIN
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}

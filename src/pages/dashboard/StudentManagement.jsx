@@ -4,7 +4,7 @@ import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, where, setDoc, serverTimestamp } from 'firebase/firestore';
 import { uploadAvatar } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList, Printer, MoreVertical, KeyRound, Lock, RefreshCw, Sparkles, Eye, EyeOff, Phone, Copy, Check, ShieldCheck, Layers } from 'lucide-react';
+import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList, Printer, MoreVertical, KeyRound, Lock, RefreshCw, Sparkles, Eye, EyeOff, Phone, Copy, Check, ShieldCheck, Layers, MessageCircle } from 'lucide-react';
 import { getSubjectsForClass } from '../../utils/subjectConfig';
 import ImageCropperModal from '../../components/ImageCropperModal';
 import StudentAvatar from '../../components/StudentAvatar';
@@ -13,6 +13,7 @@ import StudentFormModal from '../../components/StudentFormModal';
 import { formatDateForInput } from '../../utils/dateFormatter';
 import { useGlobalClasses } from '../../utils/classUtils';
 import { generateUniqueRegNoSync } from '../../utils/regNoGenerator';
+import { generateWhatsAppPinReset } from '../../utils/whatsapp';
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
@@ -189,10 +190,28 @@ const StudentManagement = () => {
             console.warn('External notification dispatch warning:', notifyErr);
           }
 
-          const dest = [hasEmail ? 'Email' : '', hasPhone ? 'Phone/SMS' : ''].filter(Boolean).join(' and ');
+          const dest = [hasEmail ? 'Email' : '', hasPhone ? 'WhatsApp / SMS' : ''].filter(Boolean).join(' and ');
+          
+          let whatsAppUrl = null;
+          if (hasPhone) {
+            try {
+              const waData = generateWhatsAppPinReset({
+                phone: sPhone,
+                studentName: sName,
+                regNo: sReg,
+                newPin: newPinValue,
+                className: sClass
+              });
+              whatsAppUrl = waData.url;
+            } catch (waErr) {
+              console.warn('WhatsApp URL generation error:', waErr);
+            }
+          }
+
           setStatus({
             type: 'success',
-            message: `PIN set to ${newPinValue} for ${sName} and sent to student's registered ${dest} & inbox.`
+            message: `PIN set to ${newPinValue} for ${sName} and sent to registered ${dest} & inbox.`,
+            whatsAppUrl
           });
         } else {
           // Neither email nor phone on profile -> Route to Admin Inbox
@@ -915,7 +934,7 @@ const StudentManagement = () => {
                 <div className="min-w-0 flex-1">
                   <p className="font-black text-slate-900 text-sm truncate">{resetPinModal.student.name}</p>
                   <p className="text-xs font-mono text-slate-500 truncate">{resetPinModal.student.regNo} • {resetPinModal.student.className}</p>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className="text-[10px] font-bold text-slate-400">Current PIN:</span>
                     <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
                       resetPinModal.student.pin 
@@ -924,6 +943,11 @@ const StudentManagement = () => {
                     }`}>
                       {resetPinModal.student.pin ? 'Active (Set)' : 'Not Configured'}
                     </span>
+                    {(resetPinModal.student.phone || resetPinModal.student.p) && (
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                        <MessageCircle size={11} /> WhatsApp: {resetPinModal.student.phone || resetPinModal.student.p}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1062,11 +1086,24 @@ const StudentManagement = () => {
 
 
       {status.message && (
-        <div className={`fixed bottom-8 right-8 p-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-8 ${
+        <div className={`fixed bottom-8 right-8 p-4 rounded-2xl shadow-2xl flex flex-col md:flex-row items-start md:items-center gap-3 animate-in slide-in-from-bottom-8 ${
           status.type === 'success' ? 'bg-indigo-600' : 'bg-rose-600'
-        } text-white`}>
-          <CheckCircle size={20} />
-          <span className="font-bold tracking-tight">{status.message}</span>
+        } text-white z-[110]`}>
+          <div className="flex items-center gap-2">
+            <CheckCircle size={20} className="shrink-0" />
+            <span className="font-bold tracking-tight text-xs md:text-sm">{status.message}</span>
+          </div>
+
+          {status.whatsAppUrl && (
+            <a
+              href={status.whatsAppUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-emerald-700/40 transition-all shrink-0"
+            >
+              <MessageCircle size={14} /> Send PIN via WhatsApp
+            </a>
+          )}
         </div>
       )}
 

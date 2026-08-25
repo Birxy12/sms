@@ -347,10 +347,32 @@ export const StudentAuthProvider = ({ children }) => {
           console.warn('External notification dispatch warning:', e);
         }
 
-        const destination = [hasEmail ? 'Email' : '', hasPhone ? 'Phone/SMS' : ''].filter(Boolean).join(' and ');
+        const destination = [hasEmail ? 'Email' : '', hasPhone ? 'WhatsApp / SMS' : ''].filter(Boolean).join(' and ');
+        
+        let whatsAppUrl = null;
+        if (hasPhone) {
+          try {
+            const { generateWhatsAppPinReset } = await import('../utils/whatsapp');
+            const waData = generateWhatsAppPinReset({
+              phone: studentPhone,
+              studentName,
+              regNo: stdReg,
+              newPin,
+              className: stdClass
+            });
+            whatsAppUrl = waData.url;
+          } catch (waErr) {
+            console.warn('WhatsApp URL generation error:', waErr);
+          }
+        }
+
         return { 
           success: true, 
           hasContact: true,
+          hasPhone,
+          phone: studentPhone,
+          whatsAppUrl,
+          generatedPin: newPin,
           message: `A new 6-digit PIN has been generated and sent to your registered ${destination} and student inbox.` 
         };
       } else {
@@ -385,6 +407,8 @@ export const StudentAuthProvider = ({ children }) => {
         return { 
           success: true, 
           hasContact: false,
+          hasPhone: false,
+          generatedPin: newPin,
           message: `No email or phone number is linked to your profile. A PIN reset notification with your new PIN has been forwarded to the School Admin Inbox. Please contact School Admin.` 
         };
       }
