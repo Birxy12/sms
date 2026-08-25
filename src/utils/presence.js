@@ -72,49 +72,64 @@ export const useOnlineUsers = (user) => {
 
     const startPresence = async () => {
       try {
-        // Start heartbeat immediately
+        // Guarantee authenticated session first
+        await ensureFirebaseAuth();
+        if (!isMounted) return;
+
+        // 1. Send immediate heartbeat on mount
         await updateHeartbeat(true);
 
-        // Balanced 25-second heartbeat loop
+        // 2. Balanced 25-second heartbeat loop
         interval = setInterval(() => updateHeartbeat(true), 25000);
 
-        // Realtime Snapshot Listener for live updates across all network clients
-        const presenceCol = collection(db, 'presence');
-        unsubscribe = onSnapshot(presenceCol, (snapshot) => {
+        // 3. Attach snapshot listener with safe retry mechanism
+        const attachListener = () => {
           if (!isMounted) return;
-          const now = Date.now();
-          const cutoff = 180 * 1000; // 3 minutes active threshold
+          if (typeof unsubscribe === 'function') {
+            try { unsubscribe(); } catch(e){}
+          }
 
-          const activeUsers = new Set();
-          snapshot.docs.forEach(docSnap => {
-            const data = docSnap.data();
-            if (data && data.lastSeen && (now - data.lastSeen) < cutoff) {
-              activeUsers.add(data.userId || docSnap.id);
+          const presenceCol = collection(db, 'presence');
+          unsubscribe = onSnapshot(presenceCol, (snapshot) => {
+            if (!isMounted) return;
+            const now = Date.now();
+            const cutoff = 180 * 1000; // 3 minutes active threshold
+
+            const activeUsers = new Set();
+            snapshot.docs.forEach(docSnap => {
+              const data = docSnap.data();
+              if (data && data.lastSeen && (now - data.lastSeen) < cutoff) {
+                activeUsers.add(data.userId || docSnap.id);
+              }
+            });
+
+            // Always ensure current user/session is counted
+            activeUsers.add(userId);
+
+            const finalCount = Math.max(1, activeUsers.size);
+            setOnlineCount(finalCount);
+
+            try {
+              sessionStorage.setItem('sms_cached_online_count', String(finalCount));
+              localStorage.setItem('sms_cached_online_count', String(finalCount));
+              if (broadcastChannel) {
+                broadcastChannel.postMessage({ type: 'COUNT_UPDATE', count: finalCount });
+              }
+            } catch (e) {}
+          }, (err) => {
+            // Auto-reconnect cleanly if token refreshed or temporary network interruption
+            if (isMounted) {
+              setTimeout(async () => {
+                await ensureFirebaseAuth().catch(() => {});
+                attachListener();
+              }, 3000);
             }
           });
+        };
 
-          // Always ensure current user/session is counted
-          activeUsers.add(userId);
-
-          const finalCount = Math.max(1, activeUsers.size);
-          setOnlineCount(finalCount);
-
-          try {
-            sessionStorage.setItem('sms_cached_online_count', String(finalCount));
-            localStorage.setItem('sms_cached_online_count', String(finalCount));
-            if (broadcastChannel) {
-              broadcastChannel.postMessage({ type: 'COUNT_UPDATE', count: finalCount });
-            }
-          } catch (e) {}
-        }, (err) => {
-          // If network error, keep current count
-          console.warn('Presence snapshot warning:', err?.message);
-        });
-
-        // Ensure background auth state in parallel
-        ensureFirebaseAuth().catch(() => {});
+        attachListener();
       } catch (e) {
-        // Fallback
+        // Silent fallback
       }
     };
 
