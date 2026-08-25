@@ -4,6 +4,7 @@ import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Users, BookOpen, PenTool, DollarSign, ArrowUpRight, GraduationCap, BarChart, TrendingUp, UserCheck, Shield, User, BarChart3 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { normalizeClassName } from '../../utils/classUtils';
 
 const PrincipalDashboard = () => {
   const { authReady, currentAdmin } = useAdminAuth();
@@ -48,8 +49,11 @@ const PrincipalDashboard = () => {
           const gender = (s.gender || 'm').toLowerCase();
           if (gender.startsWith('f')) female++; else male++;
           
-          const cls = s.className || s.classId || 'Unassigned';
-          classesMap[cls] = (classesMap[cls] || 0) + 1;
+          const rawCls = s.className || s.classId || s.CLASS || 'Unassigned';
+          const cls = normalizeClassName(rawCls);
+          if (cls) {
+            classesMap[cls] = (classesMap[cls] || 0) + 1;
+          }
 
           // Financials
           const expected = parseFloat(s.expectedFee) || fees[cls] || fees['default'] || 0;

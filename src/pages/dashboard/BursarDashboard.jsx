@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
-import { fetchGlobalClasses, DEFAULT_CLASSES } from '../../utils/classUtils';
+import { fetchGlobalClasses, DEFAULT_CLASSES, normalizeClassName, getUniqueClasses } from '../../utils/classUtils';
 import { getClassCode, formatRegNumberSuffix } from '../../utils/regNoGenerator';
 import { createWhatsAppChatUrl } from '../../utils/whatsapp';
 import SchoolManagementDashboard from '../../components/SchoolManagementDashboard';
@@ -310,21 +310,29 @@ const BursarDashboard = () => {
         weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
       });
 
-      // Construct WhatsApp Direct Message
-      const waMsg = `🔐 *ADMIN SECURITY 2FA AUTHORIZATION PIN*\n\n🏫 *Bonus Dominus School Portal*\n👤 *Requester:* ${bursarName}\n⏰ *Time:* ${nowStr}\n📋 *Action:* Reset / Clear All Student Fee Balances\n\n🔑 *YOUR 4-DIGIT 2FA RESET PIN:*\n👉 *${pin}*\n\n⚠️ *Security Notice:* Share this PIN with the Bursar only if you authorize resetting current fee records.`;
+      // Construct WhatsApp Direct Message tagged with BDS ADMIN
+      const waMsg = `🔐 *BDS ADMIN - 2FA SECURITY RESET PIN*\n\n🏫 *Bonus Dominus School Portal*\n👤 *Requester:* ${bursarName}\n⏰ *Time:* ${nowStr}\n📋 *Action:* Reset / Clear All Student Fee Balances\n\n🔑 *YOUR 4-DIGIT 2FA RESET PIN:*\n👉 *${pin}*\n\n⚠️ *Security Notice:* Share this PIN with the Bursar only if you authorize resetting current fee records.`;
       const waLink = createWhatsAppChatUrl(ADMIN_WHATSAPP_PHONE, waMsg);
       setResetWhatsAppUrl(waLink);
+
+      // Automatically dispatch / open WhatsApp window without requiring click
+      try {
+        window.open(waLink, '_blank', 'noopener,noreferrer');
+      } catch (openErr) {
+        console.warn("Auto-open WhatsApp popup was blocked:", openErr);
+      }
 
       // Dispatch urgent 2FA PIN message to Admin Inbox in Firestore
       try {
         await addDoc(collection(db, 'notifications'), {
-          title: '🔐 URGENT: 4-Digit Security PIN for Bursar Payment Reset',
+          title: '🔐 URGENT: 4-Digit Security PIN for Bursar Payment Reset (BDS ADMIN)',
           message: `The Bursar (${bursarName}) has requested authorization to wipe and reset student fee/payment records.\n\nAUTHORIZATION PIN: ${pin}\n\nGenerated: ${nowStr}.\nAdmin WhatsApp: +234 9066202949\n\nShare this 4-digit PIN with the Bursar only if you authorize this reset action.`,
           targetType: 'admin',
           targetValue: 'admin',
           type: 'bursar_payment_reset_otp',
           pin: pin,
           bursarName: bursarName,
+          senderTag: 'BDS ADMIN',
           createdAt: serverTimestamp(),
           isRead: false,
           priority: 'urgent'
@@ -348,7 +356,7 @@ const BursarDashboard = () => {
       setShowPinModal(true);
       setStatus({ 
         type: 'info', 
-        message: 'Security PIN generated. Sent to Admin Inbox and available via WhatsApp (+234 9066202949).' 
+        message: 'Security PIN generated. Auto-dispatched to Admin WhatsApp (+234 9066202949) and Admin Inbox.' 
       });
     } catch (err) {
       console.error("Error generating reset PIN:", err);
@@ -1386,18 +1394,16 @@ const BursarDashboard = () => {
   };
 
   const AnalysisView = () => {
-    const dynamicClasses = [
-      ...new Set([
-        ...classes,
-        ...allStudents.map(s => (s.className || s.class_name || s.CLASS || '').trim()).filter(Boolean),
-        ...DEFAULT_CLASSES
-      ])
-    ].filter(Boolean);
+    const dynamicClasses = getUniqueClasses([
+      ...classes,
+      ...allStudents.map(s => s.className || s.class_name || s.CLASS || '').filter(Boolean),
+      ...DEFAULT_CLASSES
+    ]);
 
     const classBreakdown = dynamicClasses.map(cls => {
       const students = allStudents.filter(s => {
-        const c = (s.className || s.class_name || s.CLASS || '').trim();
-        return c.replace(/\s+/g, '').toUpperCase() === cls.replace(/\s+/g, '').toUpperCase();
+        const c = normalizeClassName(s.className || s.class_name || s.CLASS || '');
+        return c === cls;
       });
       const expected = students.reduce((sum, s) => sum + (parseFloat(s.expectedFee) || 0), 0);
       const collected = students.reduce((sum, s) => sum + (parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0), 0);

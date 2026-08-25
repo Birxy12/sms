@@ -17,7 +17,7 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 import { useStudentAuth } from '../context/StudentAuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { expandStudent, expandMarks, MARKS_KEYS, STUDENT_KEYS } from '../utils/firestoreSchema';
-import { fetchGlobalClasses, DEFAULT_CLASSES } from '../utils/classUtils';
+import { fetchGlobalClasses, DEFAULT_CLASSES, normalizeClassName, getUniqueClasses } from '../utils/classUtils';
 import { useOnlineUsers } from '../utils/presence';
 import AnalyticsReportModal from './AnalyticsReportModal';
 
@@ -627,11 +627,12 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
 
       const feesObj = feeSnap && feeSnap.exists() ? feeSnap.data() : { default: 0 };
 
-      // Process Students
+      // Process Students with canonical normalized class names
       const parsedStudents = studentsSnap.docs.map(d => {
         const raw = d.data();
         const expanded = expandStudent(raw) || {};
-        const cls = expanded.className || raw.className || raw.classId || raw.CLASS || 'Unassigned';
+        const rawCls = expanded.className || raw.className || raw.classId || raw.CLASS || 'Unassigned';
+        const cls = normalizeClassName(rawCls);
         const rawExpected = raw.expectedFee;
         const expected = (rawExpected !== undefined && rawExpected !== null && rawExpected !== '' && !isNaN(parseFloat(rawExpected)))
           ? parseFloat(rawExpected)
@@ -686,15 +687,13 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
         ...d.data()
       }));
 
-      // Combine all classes dynamically from database and student records
-      const studentClassNames = parsedStudents.map(s => (s.className || '').trim()).filter(Boolean);
-      const combinedClasses = [
-        ...new Set([
-          ...classesList,
-          ...studentClassNames,
-          ...DEFAULT_CLASSES
-        ])
-      ].filter(Boolean);
+      // Combine all classes dynamically from database and student records without duplicates
+      const studentClassNames = parsedStudents.map(s => s.className).filter(Boolean);
+      const combinedClasses = getUniqueClasses([
+        ...classesList,
+        ...studentClassNames,
+        ...DEFAULT_CLASSES
+      ]);
 
       setDbData({
         students: parsedStudents,
@@ -788,32 +787,27 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
       { grade: 'F (<40)', count: countF || 4, fill: '#f87171' },
     ];
 
-    // Class Population Distribution across ALL classes from database
+    // Class Population Distribution across ALL classes from database without duplicates
     const classCountMap = {};
     students.forEach(s => {
-      const c = (s.className || 'Unassigned').trim();
-      const normC = c.replace(/\s+/g, '').toUpperCase();
-      classCountMap[normC] = (classCountMap[normC] || 0) + 1;
+      const cls = normalizeClassName(s.className || 'Unassigned');
+      if (cls) {
+        classCountMap[cls] = (classCountMap[cls] || 0) + 1;
+      }
     });
 
-    const dynamicClassList = [
-      ...new Set([
-        ...classes,
-        ...students.map(s => (s.className || '').trim()).filter(Boolean),
-        ...DEFAULT_CLASSES
-      ])
-    ].filter(Boolean);
+    const dynamicClassList = getUniqueClasses([
+      ...classes,
+      ...students.map(s => s.className).filter(Boolean),
+      ...DEFAULT_CLASSES
+    ]);
 
-    // 1. Enrollment & Class Population for Principal & Admin - INCLUDE ALL CLASSES FROM DATABASE
-    const enrollmentTrend = dynamicClassList.map(cls => {
-      const normCls = cls.replace(/\s+/g, '').toUpperCase();
-      const count = classCountMap[normCls] || 0;
-      return {
-        period: cls,
-        students: count,
-        teachers: Math.max(1, Math.round(count / 18))
-      };
-    });
+    // 1. Enrollment & Class Population for Principal & Admin - INCLUDE ALL REAL CLASSES FROM DATABASE
+    const enrollmentTrend = dynamicClassList.map(cls => ({
+      period: cls,
+      students: classCountMap[cls] || 0,
+      teachers: Math.max(1, Math.round((classCountMap[cls] || 0) / 18))
+    }));
 
     // --- 1. PRINCIPAL DATA ---
     const principal = {
