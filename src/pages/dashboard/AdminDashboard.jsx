@@ -996,20 +996,10 @@ const AdminDashboard = () => {
       {activeTab === 'Academics' && (
         <div className="animate-in fade-in space-y-6">
           <div className="card-premium">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div className="mb-6">
               <h3 className="text-xl font-bold text-slate-800 m-0">Comprehensive Class Marksheet</h3>
-              <div className="flex items-center gap-3 w-full sm:w-auto">
-                <span className="text-sm font-bold text-slate-500">Class:</span>
-                <select 
-                  value={selectedClass} 
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                  className="flex-1 sm:flex-none px-4 py-2 rounded-xl border border-slate-200 outline-none bg-slate-50 font-bold focus:ring-2 focus:ring-indigo-500"
-                >
-                  {classes.map(cls => <option key={cls} value={cls}>{cls}</option>)}
-                </select>
-              </div>
             </div>
-            <Marksheet className={selectedClass} />
+            <Marksheet />
           </div>
           <div className="card-premium">
             <ScoreEntry />
