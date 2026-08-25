@@ -151,8 +151,8 @@ const StudentAssignments = () => {
             </div>
 
             <div className="mb-6">
-              <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Instructions</h5>
-              <div className="p-4 bg-slate-50/70 rounded-2xl text-slate-800 text-sm font-medium leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto">
+              <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Instructions & Questions</h5>
+              <div className="p-5 bg-slate-900 text-slate-100 rounded-2xl text-sm font-medium leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto border border-slate-800 shadow-inner selection:bg-indigo-500 selection:text-white">
                 {selectedTask.description || 'Complete the assignment as instructed by your teacher.'}
               </div>
             </div>

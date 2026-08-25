@@ -245,6 +245,35 @@ const AdmissionCBTManagement = () => {
     } catch { showStatus('error', 'Failed to delete question.'); }
   };
 
+  const clearAllQuestions = async () => {
+    if (questions.length === 0) return;
+    const isFiltered = classFilter !== 'All';
+    const targetCount = isFiltered ? filteredQuestions.length : questions.length;
+    const confirmMessage = isFiltered
+      ? `Are you sure you want to delete all ${targetCount} admission questions for class "${classFilter}"? This cannot be undone.`
+      : `Are you sure you want to delete ALL ${targetCount} admission questions? This cannot be undone.`;
+
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      setSaving(true);
+      await ensureFirebaseAuth();
+      const targetQuestions = isFiltered ? filteredQuestions : questions;
+      const batch = writeBatch(db);
+      targetQuestions.forEach((q) => {
+        batch.delete(doc(db, 'admissionQuestions', q.id));
+      });
+      await batch.commit();
+      showStatus('success', `Successfully cleared ${targetQuestions.length} admission questions.`);
+      load();
+    } catch (err) {
+      console.error('Error clearing admission questions:', err);
+      showStatus('error', 'Failed to clear questions: ' + (err.message || 'Error occurred'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const openAdd = () => { setEditQ({ ...blankQ(), targetClass: classFilter !== 'All' ? classFilter : 'All' }); setEditId(''); };
   const openEdit = (q) => { setEditQ({ prompt: q.prompt, options: [...q.options], correctIndex: q.correctIndex, targetClass: q.targetClass || 'All' }); setEditId(q.id); };
   const updateOption = (i, val) => setEditQ((p) => { const o = [...p.options]; o[i] = val; return { ...p, options: o }; });
@@ -299,6 +328,18 @@ const AdmissionCBTManagement = () => {
               style={{ display: 'none' }} 
             />
           </label>
+
+          {questions.length > 0 && (
+            <button
+              type="button"
+              onClick={clearAllQuestions}
+              disabled={saving}
+              title={classFilter !== 'All' ? `Clear all questions for ${classFilter}` : 'Clear all admission questions'}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 12, border: '1.5px solid #fecdd3', background: '#fff1f2', color: '#e11d48', fontWeight: 800, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s' }}
+            >
+              <Trash2 size={16} /> Clear All
+            </button>
+          )}
 
           {questions.length === 0 && (
             <button onClick={seedDefaults} disabled={seeding}
