@@ -18,6 +18,7 @@ import { useStudentAuth } from '../context/StudentAuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { expandStudent, expandMarks, MARKS_KEYS, STUDENT_KEYS } from '../utils/firestoreSchema';
 import { fetchGlobalClasses, DEFAULT_CLASSES } from '../utils/classUtils';
+import { useOnlineUsers } from '../utils/presence';
 import AnalyticsReportModal from './AnalyticsReportModal';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -559,9 +560,13 @@ export const ROLE_CONFIG = {
 export default function SchoolManagementDashboard({ userRole = 'student', showRoleSwitcher = false, onRoleChange }) {
   const { currentAdmin } = useAdminAuth();
   const { currentStudent } = useStudentAuth();
+  const { schoolName } = useTheme();
+  const user = currentAdmin || currentStudent;
+  const onlineCount = useOnlineUsers(user);
+
+  const [activeRole, setActiveRole] = useState(userRole);
   const { 
     currentSession, 
-    schoolName, 
     schoolLogo, 
     primaryColor, 
     principalStamp, 
@@ -807,7 +812,7 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
       kpis: [
         { title: 'Registered Users', value: (students.length + staff.length + 1).toLocaleString(), change: '+100% Live', isPositive: true, icon: Users, subText: `${students.length} Students, ${staff.length} Staff` },
         { title: 'Active Classes', value: classes.length.toLocaleString(), change: 'Configured', isPositive: true, icon: School, subText: 'Classrooms' },
-        { title: 'Subjects Catalog', value: (subjects.length || 18).toLocaleString(), change: 'Curriculum', isPositive: true, icon: BookOpen, subText: 'Active Courses' },
+        { title: 'Online Users (Real-Time)', value: onlineCount.toLocaleString(), change: '🟢 Live Realtime', isPositive: true, icon: Activity, subText: 'Active on Webapp Now' },
         { title: 'Mark Records', value: marks.length.toLocaleString(), change: 'Synchronized', isPositive: true, icon: Database, subText: 'Exam Entries' },
       ],
       userGrowth: enrollmentTrend.map(e => ({ period: e.period, users: e.students })),

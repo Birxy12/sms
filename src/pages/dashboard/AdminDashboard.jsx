@@ -13,9 +13,10 @@ import NoteManager from '../../components/NoteManager';
 import StaffDashboard from './StaffDashboard';
 import StudentDashboard from './StudentDashboard';
 import { expandStudent } from '../../utils/firestoreSchema';
-import { Users, User, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw, BarChart3, FileText, BookMarked } from 'lucide-react';
+import { Users, User, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw, BarChart3, FileText, BookMarked, Globe } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useGlobalClasses } from '../../utils/classUtils';
+import { useOnlineUsers } from '../../utils/presence';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 // Isolated clock component — ticks every second without re-rendering AdminDashboard
 const LiveClock = memo(() => {
@@ -30,6 +31,7 @@ LiveClock.displayName = 'LiveClock';
 
 const AdminDashboard = () => {
   const { currentAdmin, changePassword, authReady } = useAdminAuth();
+  const onlineCount = useOnlineUsers(currentAdmin);
   const [viewMode, setViewMode] = useState('admin'); // admin, staff, student
   const [selectedClass, setSelectedClass] = useState('JSS1');
   const [activeTab, setActiveTab] = useState('Overview');
@@ -585,8 +587,8 @@ const AdminDashboard = () => {
   const stats = [
     { title: 'Total Students', value: realStats.students.toLocaleString(), icon: GraduationCap, color: '#ff6b00' },
     { title: 'Total Teachers', value: realStats.teachers.toLocaleString(), icon: Briefcase, color: '#111111' },
+    { title: 'Online Users (Real-Time)', value: `${onlineCount.toLocaleString()} Online`, icon: Activity, color: '#10b981' },
     { title: 'Active Classes', value: realStats.classes.toLocaleString(), icon: Users, color: '#ff6b00' },
-    { title: 'Total Subjects', value: realStats.subjects.toLocaleString(), icon: BookOpen, color: '#111111' },
   ];
 
   const recentActivities = [
@@ -733,7 +735,7 @@ const AdminDashboard = () => {
                     <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest block">System Live Time</span>
                     <LiveClock />
                     <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1.5 justify-end mt-1">
-                      <span style={{width:'8px',height:'8px',borderRadius:'50%',background:'#10b981',display:'inline-block',flexShrink:0}}></span> Live Connection
+                      <span style={{width:'8px',height:'8px',borderRadius:'50%',background:'#10b981',display:'inline-block',flexShrink:0}} className="animate-pulse"></span> {onlineCount} Online Real-Time
                     </span>
                   </div>
                 </div>
