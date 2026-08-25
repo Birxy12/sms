@@ -7,15 +7,32 @@ import { AdminAuthProvider } from './context/AdminAuthContext'
 import './index.css'
 import App from './App.jsx'
 
-// Gracefully handle harmless browser/extension media play interruption errors
+// Gracefully handle harmless browser/extension errors (e.g. extension context menus, autoplay interruptions)
 if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
+    const reason = event?.reason;
+    const msg = typeof reason === 'string' ? reason : (reason?.message || '');
+    
+    // Suppress harmless extension / browser background errors
     if (
-      event?.reason?.name === 'AbortError' &&
-      typeof event?.reason?.message === 'string' &&
-      event.reason.message.includes('play() request was interrupted')
+      msg.includes('Cannot find menu item with id') ||
+      msg.includes('save-page') ||
+      (reason?.name === 'AbortError' && msg.includes('play() request was interrupted')) ||
+      msg.includes('ResizeObserver loop')
     ) {
-      event.preventDefault(); // Suppress noisy harmless browser autoplay/extension interruption
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  });
+
+  window.addEventListener('error', (event) => {
+    const msg = event?.message || '';
+    if (
+      msg.includes('Cannot find menu item with id') ||
+      msg.includes('save-page')
+    ) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
     }
   });
 }
