@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../lib/firebase';
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
-import { collection, query, getDocs, orderBy, where, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, where, doc, updateDoc, writeBatch, addDoc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
 import { 
   Wallet, DollarSign, TrendingUp, TrendingDown, Users, 
   Search, Download, Plus, ArrowUpRight, 
   CheckCircle, AlertCircle, Loader2, Briefcase, Settings, Printer, MessageSquare, AlertTriangle, FileText, UserPlus, Banknote,
-  FileSpreadsheet, User
+  FileSpreadsheet, User, ShieldCheck, Key, Lock, Clock, History, CheckCheck, RefreshCw, X, ShieldAlert
 } from 'lucide-react';
-import { addDoc, serverTimestamp } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { fetchGlobalClasses, DEFAULT_CLASSES } from '../../utils/classUtils';
@@ -158,6 +157,29 @@ const BursarDashboard = () => {
 
   const [classes, setClasses] = useState(DEFAULT_CLASSES);
 
+  // Security 2FA PIN & Payment Reset Audit State
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [enteredPin, setEnteredPin] = useState('');
+  const [generatedPin, setGeneratedPin] = useState('');
+  const [pinSending, setPinSending] = useState(false);
+  const [pinError, setPinError] = useState('');
+  const [resetsHistory, setResetsHistory] = useState([]);
+  const [lastResetInfo, setLastResetInfo] = useState(null);
+
+  const fetchResetHistory = async () => {
+    try {
+      const q = query(collection(db, 'payment_resets'), orderBy('createdAt', 'desc'));
+      const snap = await getDocs(q);
+      const history = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setResetsHistory(history);
+      if (history.length > 0) {
+        setLastResetInfo(history[0]);
+      }
+    } catch (e) {
+      console.log("Could not load payment reset history:", e);
+    }
+  };
+
   const fetchFinancialData = async () => {
     setLoading(true);
     try {
@@ -213,6 +235,7 @@ const BursarDashboard = () => {
 
   useEffect(() => {
     fetchFinancialData();
+    fetchResetHistory();
   }, []);
 
   useEffect(() => {
@@ -222,13 +245,89 @@ const BursarDashboard = () => {
     }
   }, [window.location.search]);
 
-  const handleResetFees = async () => {
-    if (!window.confirm("CRITICAL WARNING: This will set ALL students' paid and expected fees to 0 Naira. Proceed?")) return;
-    
-    setLoading(true);
-    setStatus({ type: 'info', message: 'Wiping all fee records...' });
-    
+  // 1. INITIATE PAYMENT RESET: Send 4-digit PIN to Admin Inbox in webapp
+  const handleRequestResetPin = async () => {
+    setPinSending(true);
+    setPinError('');
     try {
+      const pin = Math.floor(1000 + Math.random() * 9000).toString();
+      setGeneratedPin(pin);
+      setEnteredPin('');
+
+      const bursarName = currentAdmin?.name || currentAdmin?.email || 'Bursar';
+      const nowStr = new Date().toLocaleDateString('en-NG', { 
+        weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+      });
+
+      // Dispatch urgent 2FA PIN message to Admin Inbox in Firestore
+      await addDoc(collection(db, 'notifications'), {
+        title: '🔐 URGENT: 4-Digit Security PIN for Bursar Payment Reset',
+        message: `The Bursar (${bursarName}) has requested authorization to wipe and reset student fee/payment records.\n\nAUTHORIZATION PIN: ${pin}\n\nGenerated: ${nowStr}. Share this 4-digit PIN with the Bursar only if you authorize this reset action.`,
+        targetType: 'admin',
+        targetValue: 'admin',
+        type: 'bursar_payment_reset_otp',
+        pin: pin,
+        bursarName: bursarName,
+        createdAt: serverTimestamp(),
+        isRead: false,
+        priority: 'urgent'
+      });
+
+      // Save to settings/bursar_reset_auth for server-like validation
+      await setDoc(doc(db, 'settings', 'bursar_reset_auth'), {
+        pin: pin,
+        requestedBy: bursarName,
+        requestedAt: Date.now(),
+        expiresAt: Date.now() + 15 * 60 * 1000
+      }, { merge: true });
+
+      setShowPinModal(true);
+      setStatus({ 
+        type: 'info', 
+        message: 'Security PIN dispatched to the School Admin Inbox. Obtain the 4-digit PIN to proceed.' 
+      });
+    } catch (err) {
+      console.error("Error generating reset PIN:", err);
+      setStatus({ type: 'error', message: 'Failed to send security PIN to Admin Inbox.' });
+    } finally {
+      setPinSending(false);
+    }
+  };
+
+  // 2. VERIFY PIN & EXECUTE RESET: Clears fees and logs date in analysis report
+  const handleVerifyPinAndResetFees = async (e) => {
+    if (e) e.preventDefault();
+    if (!enteredPin || enteredPin.trim().length !== 4) {
+      setPinError('Please enter the 4-digit PIN sent to the Admin Inbox.');
+      return;
+    }
+
+    setPinSending(true);
+    setPinError('');
+
+    try {
+      let isValid = (enteredPin.trim() === generatedPin);
+      
+      if (!isValid) {
+        const authSnap = await getDoc(doc(db, 'settings', 'bursar_reset_auth'));
+        if (authSnap.exists()) {
+          const authData = authSnap.data();
+          if (authData.pin === enteredPin.trim() && Date.now() < (authData.expiresAt || Infinity)) {
+            isValid = true;
+          }
+        }
+      }
+
+      if (!isValid) {
+        setPinError('Invalid 4-digit PIN. Please check the School Administrator\'s Inbox in the webapp.');
+        setPinSending(false);
+        return;
+      }
+
+      setShowPinModal(false);
+      setLoading(true);
+      setStatus({ type: 'info', message: 'PIN Verified. Wiping all fee records and logging audit date...' });
+
       const { ensureFirebaseAuth } = await import('../../lib/ensureAuth');
       await ensureFirebaseAuth();
       let batch = writeBatch(db);
@@ -249,7 +348,6 @@ const BursarDashboard = () => {
           updatedAt: new Date().toISOString()
         });
         count++;
-        // commit in chunks of 300
         if (count % 300 === 0) {
           await batch.commit();
           batch = writeBatch(db);
@@ -259,14 +357,41 @@ const BursarDashboard = () => {
       if (count % 300 !== 0) {
         await batch.commit();
       }
-      
+
+      // Record Reset Date & Audit Log in Firestore
+      const nowFormatted = new Date().toLocaleDateString('en-NG', { 
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+      });
+
+      const resetRecord = {
+        resetDate: new Date().toISOString(),
+        formattedDate: nowFormatted,
+        bursarName: currentAdmin?.name || currentAdmin?.email || 'Bursar',
+        bursarEmail: currentAdmin?.email || '',
+        studentsCount: count,
+        wipedExpected: stats.totalExpected,
+        wipedCollected: stats.totalCollected,
+        authorizedByPin: true,
+        authorizedPinCode: enteredPin,
+        createdAt: serverTimestamp()
+      };
+
+      await addDoc(collection(db, 'payment_resets'), resetRecord);
+      await setDoc(doc(db, 'settings', 'bursar_last_reset'), resetRecord, { merge: true });
+
       await fetchFinancialData();
-      setStatus({ type: 'success', message: `Successfully cleared fees and payments for ${count} students.` });
+      await fetchResetHistory();
+
+      setStatus({ 
+        type: 'success', 
+        message: `Payment Reset Authorized & Logged on ${nowFormatted}. ${count} student accounts cleared.` 
+      });
     } catch (error) {
       console.error(error);
       setStatus({ type: 'error', message: 'Failed to reset fees.' });
     } finally {
       setLoading(false);
+      setPinSending(false);
     }
   };
 
@@ -1243,6 +1368,84 @@ const BursarDashboard = () => {
           <p className="text-xs text-slate-400 mb-4">Enter and review previous sessions' totals to track growth trends.</p>
           <OldFeesAnalytics currentCollected={stats.totalCollected} currentExpected={stats.totalExpected} />
         </div>
+
+        {/* Payment Reset Date & Security Audit Log in Analysis Report */}
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                <ShieldCheck size={24} />
+              </div>
+              <div>
+                <h4 className="text-base font-black text-slate-900">Payment Reset & Security Audit Trail</h4>
+                <p className="text-xs text-slate-500">Official log of payment wipes authorized via Admin Inbox 4-Digit PIN.</p>
+              </div>
+            </div>
+            <button 
+              onClick={handleRequestResetPin}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs transition"
+            >
+              <Key size={14} /> Request Payment Reset PIN
+            </button>
+          </div>
+
+          {/* Last Reset Banner */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Clock size={20} className="text-indigo-600 shrink-0" />
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Last Payment Reset Recorded</span>
+                <span className="text-sm font-black text-slate-800">
+                  {lastResetInfo ? lastResetInfo.formattedDate : 'No Payment Resets Recorded Yet'}
+                </span>
+              </div>
+            </div>
+            {lastResetInfo && (
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black flex items-center gap-1">
+                  <CheckCheck size={14} /> Admin 2FA PIN Verified
+                </span>
+                <span className="text-xs font-bold text-slate-500">
+                  By {lastResetInfo.bursarName} ({lastResetInfo.studentsCount} students reset)
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Historical Resets Table */}
+          {resetsHistory.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-400 font-black uppercase">
+                    <th className="py-2.5 px-3">Date & Time</th>
+                    <th className="py-2.5 px-3">Bursar / Requester</th>
+                    <th className="py-2.5 px-3">Students Reset</th>
+                    <th className="py-2.5 px-3">Wiped Collections</th>
+                    <th className="py-2.5 px-3">Security 2FA</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                  {resetsHistory.map((rh) => (
+                    <tr key={rh.id} className="hover:bg-slate-50">
+                      <td className="py-3 px-3 font-bold text-slate-900">{rh.formattedDate}</td>
+                      <td className="py-3 px-3">{rh.bursarName}</td>
+                      <td className="py-3 px-3 font-bold">{rh.studentsCount} Students</td>
+                      <td className="py-3 px-3 font-mono font-bold text-rose-600">₦{(rh.wipedCollected || 0).toLocaleString()}</td>
+                      <td className="py-3 px-3">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                          <CheckCheck size={12} /> Admin Inbox PIN Verified
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 text-center py-4 italic">No payment reset records found in the audit history.</p>
+          )}
+        </div>
       </div>
     );
   };
@@ -1464,10 +1667,10 @@ const BursarDashboard = () => {
         </div>
         <div className="flex gap-3">
           <button 
-            onClick={handleResetFees}
+            onClick={handleRequestResetPin}
             className="flex items-center gap-2 bg-rose-600 text-white px-6 py-3.5 rounded-2xl font-bold hover:bg-rose-700 transition-all active:scale-95 text-sm shadow-xl shadow-rose-200"
           >
-            <AlertCircle size={18} />
+            <ShieldAlert size={18} />
             Reset All Fees
           </button>
         </div>
@@ -1626,16 +1829,16 @@ const BursarDashboard = () => {
 
           {activeView === 'overview' && (
             <div className="mt-12 bg-rose-50 border border-rose-200 rounded-3xl p-8 flex flex-col items-center text-center max-w-xl mx-auto shadow-sm">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-rose-500 mb-4 shadow-sm">
-                <AlertTriangle size={32} />
+              <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShieldAlert size={32} />
               </div>
               <h4 className="text-xl font-black text-rose-900 mb-2">Emergency Fee Reset</h4>
-              <p className="text-sm text-rose-700 mb-6">This action will instantly wipe all expected and paid fee records for EVERY student in the database, setting them to ₦0. This cannot be undone.</p>
+              <p className="text-sm text-rose-700 mb-6">This action will instantly wipe all expected and paid fee records for EVERY student in the database, setting them to ₦0. For maximum security, a 4-digit PIN is sent to the Admin Inbox.</p>
               <button 
-                onClick={handleResetFees}
-                className="bg-rose-600 hover:bg-rose-700 text-white font-black px-8 py-3 rounded-xl transition-all shadow-lg hover:shadow-xl active:scale-95"
+                onClick={handleRequestResetPin}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-black px-8 py-3 rounded-xl transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center gap-2 mx-auto"
               >
-                Reset ALL Fees to ₦0
+                <Key size={18} /> Request Admin PIN & Reset ALL Fees
               </button>
             </div>
           )}
@@ -1650,6 +1853,92 @@ const BursarDashboard = () => {
           {activeView === 'analysis' && <AnalysisView />}
           {activeView === 'staffpay' && <StaffPayView />}
 
+        </div>
+      )}
+
+      {/* 2FA Admin PIN Verification Modal for Payment Reset */}
+      {showPinModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                  <Lock size={20} />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-900 text-lg">Admin 2FA Authorization</h3>
+                  <p className="text-xs text-slate-500 font-bold">Payment Reset Security Check</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowPinModal(false)} 
+                className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 mb-5 text-amber-900 text-xs font-medium leading-relaxed">
+              🛡️ **Max Security Protocol Active**<br />
+              A **4-Digit Authorization PIN** has been sent to the **Admin Inbox in the webapp**. Obtain this PIN from the School Administrator to approve wiping all fee records.
+            </div>
+
+            <form onSubmit={handleVerifyPinAndResetFees} className="space-y-4">
+              <div>
+                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 text-center">
+                  Enter 4-Digit Authorization PIN
+                </label>
+                <input 
+                  type="text" 
+                  maxLength={4}
+                  autoFocus
+                  value={enteredPin}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setEnteredPin(val);
+                    if (pinError) setPinError('');
+                  }}
+                  placeholder="••••"
+                  className="w-full text-center text-3xl font-mono font-black tracking-[0.5em] py-3 rounded-2xl bg-slate-50 border-2 border-slate-200 focus:border-rose-500 outline-none transition"
+                />
+                {pinError && (
+                  <p className="text-xs text-rose-600 font-bold mt-2 text-center flex items-center justify-center gap-1">
+                    <AlertCircle size={14} /> {pinError}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-1">
+                <button
+                  type="button"
+                  onClick={handleRequestResetPin}
+                  disabled={pinSending}
+                  className="text-indigo-600 hover:text-indigo-800 font-black flex items-center gap-1"
+                >
+                  <RefreshCw size={12} className={pinSending ? "animate-spin" : ""} /> Resend PIN to Admin Inbox
+                </button>
+                <span className="text-slate-400 font-bold">Valid for 15 mins</span>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPinModal(false)}
+                  className="flex-1 py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={pinSending || enteredPin.length !== 4}
+                  className="flex-1 py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs transition shadow-lg shadow-rose-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {pinSending ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                  Verify & Reset Fees
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
