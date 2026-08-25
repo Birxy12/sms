@@ -181,6 +181,14 @@ export const compressStudent = (data) => ({
   [STUDENT_KEYS.photo]: data.photo
 });
 
+export const normalizeGender = (g) => {
+  if (!g) return 'Male';
+  const str = String(g).trim().toUpperCase();
+  if (str === 'F' || str === 'FEMALE' || str.startsWith('F')) return 'Female';
+  if (str === 'M' || str === 'MALE' || str.startsWith('M')) return 'Male';
+  return 'Male';
+};
+
 export const expandStudent = (compressed) => {
   if (!compressed) return null;
   
@@ -189,7 +197,7 @@ export const expandStudent = (compressed) => {
     return {
       regNo: compressed.regNo || compressed.REGNO || compressed['REG NO'],
       name: compressed.name || compressed['STUDENT NAME'],
-      gender: compressed.gender || compressed.GENDER,
+      gender: normalizeGender(compressed.gender || compressed.GENDER || compressed.g),
       className: compressed.className || compressed.CLASS || compressed.class_name,
       dob: compressed.dob || compressed.DOB,
       club: compressed.club,
@@ -205,7 +213,7 @@ export const expandStudent = (compressed) => {
   return {
     regNo: compressed[STUDENT_KEYS.regNo],
     name: compressed[STUDENT_KEYS.name],
-    gender: compressed[STUDENT_KEYS.gender],
+    gender: normalizeGender(compressed[STUDENT_KEYS.gender]),
     className: compressed[STUDENT_KEYS.className],
     dob: compressed[STUDENT_KEYS.dob],
     club: compressed[STUDENT_KEYS.club],

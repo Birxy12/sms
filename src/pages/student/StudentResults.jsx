@@ -970,7 +970,7 @@ const StudentResults = ({ isPublic }) => {
         <div className="rc-student-grid">
           <div className="rc-stat"><span className="rc-stat-label">Name:</span> <span className="rc-stat-value">{currentStudent?.name}</span></div>
           <div className="rc-stat"><span className="rc-stat-label">Reg No:</span> <span className="rc-stat-value">{regNum}</span></div>
-          <div className="rc-stat"><span className="rc-stat-label">Sex:</span> <span className="rc-stat-value">{currentStudent?.gender || 'N/A'}</span></div>
+          <div className="rc-stat"><span className="rc-stat-label">Sex:</span> <span className="rc-stat-value">{(currentStudent?.gender === 'M' || (currentStudent?.gender && currentStudent?.gender.toLowerCase().startsWith('m'))) ? 'Male' : (currentStudent?.gender === 'F' || (currentStudent?.gender && currentStudent?.gender.toLowerCase().startsWith('f'))) ? 'Female' : (currentStudent?.gender || 'N/A')}</span></div>
           <div className="rc-stat"><span className="rc-stat-label">Average:</span> <span className="rc-stat-value accent">{studentMarks?.average}%</span></div>
           <div className="rc-stat"><span className="rc-stat-label">Position:</span> <span className="rc-stat-value accent">{classStats.position}</span></div>
           <div className="rc-stat"><span className="rc-stat-label">Class:</span> <span className="rc-stat-value">{classStats.historicalClass || currentStudent?.className}</span></div>

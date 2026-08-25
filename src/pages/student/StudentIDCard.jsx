@@ -257,7 +257,9 @@ const StudentIDCard = () => {
                           <MapPin size={7} className="text-slate-400" />
                           <span>Gender</span>
                         </div>
-                        <span className="gender">{currentStudent?.gender || 'N/A'}</span>
+                        <span className="gender">
+                          {(currentStudent?.gender === 'M' || (currentStudent?.gender && currentStudent?.gender.toLowerCase().startsWith('m'))) ? 'Male' : (currentStudent?.gender === 'F' || (currentStudent?.gender && currentStudent?.gender.toLowerCase().startsWith('f'))) ? 'Female' : (currentStudent?.gender || 'N/A')}
+                        </span>
                       </div>
                     </div>
 

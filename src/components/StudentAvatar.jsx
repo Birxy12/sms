@@ -76,7 +76,8 @@ const StudentAvatar = ({ gender, avatarId, data, size = 120, className = '' }) =
   }
 
   // Fallback Legacy Avatars
-  const isFemaleFallback = gender?.toLowerCase() === 'female';
+  const normG = (gender || '').toString().trim().toLowerCase();
+  const isFemaleFallback = normG === 'female' || normG === 'f' || normG.startsWith('f');
 
   if (isFemaleFallback) {
     return (

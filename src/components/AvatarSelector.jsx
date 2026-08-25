@@ -13,8 +13,13 @@ export const AVATARS = [
 ];
 
 const AvatarSelector = ({ selected, onSelect, genderFilter }) => {
-  const filteredAvatars = genderFilter 
-    ? AVATARS.filter(a => a.gender === genderFilter.toLowerCase())
+  const g = (genderFilter || '').toString().trim().toLowerCase();
+  const isFemale = g === 'female' || g === 'f' || g.startsWith('f');
+  const isMale = g === 'male' || g === 'm' || g.startsWith('m');
+  const targetGender = isFemale ? 'female' : isMale ? 'male' : null;
+
+  const filteredAvatars = targetGender 
+    ? AVATARS.filter(a => a.gender === targetGender)
     : AVATARS;
 
   return (

@@ -580,7 +580,14 @@ const StudentManagement = () => {
                     </div>
                   </td>
                   <td className="px-6 py-5">
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${student.gender === 'Male' ? 'text-blue-500' : 'text-pink-500'}`}>{student.gender}</span>
+                    {(() => {
+                      const isMale = student.gender === 'Male' || student.gender === 'M' || (student.gender && student.gender.toLowerCase().startsWith('m'));
+                      return (
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${isMale ? 'text-blue-500' : 'text-pink-500'}`}>
+                          {isMale ? 'Male' : 'Female'}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-8 py-5 text-right relative dropdown-container">
                     <button 
@@ -702,9 +709,14 @@ const StudentManagement = () => {
                   <div>
                     <p className="font-black text-slate-900 text-base leading-tight">{promoteModal.student.name}</p>
                     <p className="text-xs font-mono text-slate-400 mt-0.5">{promoteModal.student.regNo}</p>
-                    <span className={`inline-block mt-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${promoteModal.student.gender === 'Male' ? 'bg-blue-50 text-blue-500' : 'bg-pink-50 text-pink-500'}`}>
-                      {promoteModal.student.gender}
-                    </span>
+                    {(() => {
+                      const isMale = promoteModal.student.gender === 'Male' || promoteModal.student.gender === 'M' || (promoteModal.student.gender && promoteModal.student.gender.toLowerCase().startsWith('m'));
+                      return (
+                        <span className={`inline-block mt-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${isMale ? 'bg-blue-50 text-blue-500' : 'bg-pink-50 text-pink-500'}`}>
+                          {isMale ? 'Male' : 'Female'}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
 
