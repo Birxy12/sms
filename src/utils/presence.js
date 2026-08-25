@@ -81,15 +81,20 @@ export const useOnlineUsers = (user) => {
     // Cleanup on window unload or unmount
     const handleUnload = () => {
       try {
-        deleteDoc(presenceRef);
+        deleteDoc(presenceRef).catch(() => {});
       } catch (e) {}
     };
 
     window.addEventListener('beforeunload', handleUnload);
 
     return () => {
-      clearInterval(interval);
-      unsubscribe();
+      isMounted = false;
+      if (interval) clearInterval(interval);
+      if (typeof unsubscribe === 'function') {
+        try {
+          unsubscribe();
+        } catch (e) {}
+      }
       window.removeEventListener('beforeunload', handleUnload);
     };
   }, [user?.id, user?.regNo, user?.email]);
