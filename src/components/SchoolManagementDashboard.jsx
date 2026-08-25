@@ -25,28 +25,40 @@ import AnalyticsReportModal from './AnalyticsReportModal';
 // REUSABLE UI COMPONENTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export const KPICard = ({ title, value, change, isPositive, icon: Icon, subText }) => (
-  <div className="bg-slate-900/90 border border-slate-700/60 rounded-2xl p-5 backdrop-blur-md hover:border-slate-500/50 transition-all duration-300 shadow-lg shadow-black/20 hover:translate-y-[-2px] flex flex-col justify-between">
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">{title}</span>
-        <div className={`p-2.5 rounded-xl ${isPositive ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/15 text-rose-400 border border-rose-500/20'}`}>
-          <Icon size={18} />
+export const KPICard = ({ title, value, change, isPositive, icon: Icon, subText }) => {
+  const isOnline = title?.toLowerCase().includes('online');
+  return (
+    <div className="bg-slate-900/90 border border-slate-700/60 rounded-2xl p-5 backdrop-blur-md hover:border-slate-500/50 transition-all duration-300 shadow-lg shadow-black/20 hover:translate-y-[-2px] flex flex-col justify-between group">
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">{title}</span>
+            {isOnline && (
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+            )}
+          </div>
+          <div className={`p-2.5 rounded-xl ${isPositive ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/15 text-rose-400 border border-rose-500/20'}`}>
+            <Icon size={18} className={isOnline ? 'animate-pulse' : ''} />
+          </div>
+        </div>
+        <div className="text-2xl lg:text-3xl font-black text-white mb-1 tracking-tight truncate flex items-baseline gap-2" title={String(value)}>
+          <span>{value}</span>
+          {isOnline && <span className="text-xs font-bold text-emerald-400 tracking-normal">Online</span>}
         </div>
       </div>
-      <div className="text-2xl lg:text-3xl font-black text-white mb-1 tracking-tight truncate" title={String(value)}>
-        {value}
+      <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between">
+        <div className={`flex items-center gap-1 text-xs font-semibold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+          {isPositive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+          <span>{change}</span>
+        </div>
+        {subText && <span className="text-[10px] text-slate-500 font-medium truncate">{subText}</span>}
       </div>
     </div>
-    <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between">
-      <div className={`flex items-center gap-1 text-xs font-semibold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
-        {isPositive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-        <span>{change}</span>
-      </div>
-      {subText && <span className="text-[10px] text-slate-500 font-medium truncate">{subText}</span>}
-    </div>
-  </div>
-);
+  );
+};
 
 export const SectionCard = ({ title, children, className = '', rightAction }) => (
   <div className={`bg-slate-900/90 border border-slate-700/60 rounded-2xl p-5 md:p-6 backdrop-blur-md shadow-lg shadow-black/20 ${className}`}>
@@ -1026,7 +1038,7 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
     };
 
     return { principal, admin, bursar, teacher, student };
-  }, [dbData, currentAdmin, currentStudent]);
+  }, [dbData, currentAdmin, currentStudent, onlineCount]);
 
   const activeData = computedRoleData[activeRoleKey] || computedRoleData.student;
 

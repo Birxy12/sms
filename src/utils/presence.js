@@ -53,8 +53,8 @@ export const useOnlineUsers = (user) => {
     // Light-speed heartbeat function
     const updateHeartbeat = async (force = false) => {
       const now = Date.now();
-      if (!force && now - lastHeartbeatTime.current < 8000) {
-        return; // Debounce rapid activity bursts to 8s
+      if (!force && now - lastHeartbeatTime.current < 5000) {
+        return; // Debounce rapid activity bursts to 5s
       }
       lastHeartbeatTime.current = now;
 
@@ -79,15 +79,15 @@ export const useOnlineUsers = (user) => {
         // 1. Send immediate heartbeat on mount
         await updateHeartbeat(true);
 
-        // 2. High-frequency 15-second heartbeat loop
-        interval = setInterval(() => updateHeartbeat(true), 15000);
+        // 2. Ultra-responsive 10-second heartbeat loop
+        interval = setInterval(() => updateHeartbeat(true), 10000);
 
         // 3. Realtime Snapshot Listener for live updates across all network clients
         const presenceCol = collection(db, 'presence');
         unsubscribe = onSnapshot(presenceCol, (snapshot) => {
           if (!isMounted) return;
           const now = Date.now();
-          const cutoff = now - 2 * 60 * 1000; // Active within last 2 minutes
+          const cutoff = now - 90 * 1000; // Active within last 90 seconds
 
           let count = 0;
           snapshot.docs.forEach(docSnap => {
@@ -101,6 +101,7 @@ export const useOnlineUsers = (user) => {
           setOnlineCount(finalCount);
           try {
             sessionStorage.setItem('sms_cached_online_count', String(finalCount));
+            localStorage.setItem('sms_cached_online_count', String(finalCount));
             if (broadcastChannel) {
               broadcastChannel.postMessage({ type: 'COUNT_UPDATE', count: finalCount });
             }
@@ -120,6 +121,8 @@ export const useOnlineUsers = (user) => {
     const handleUserActivity = () => updateHeartbeat(false);
     window.addEventListener('focus', handleUserActivity);
     window.addEventListener('pointerdown', handleUserActivity);
+    window.addEventListener('keydown', handleUserActivity);
+    window.addEventListener('scroll', handleUserActivity, { passive: true });
     document.addEventListener('visibilitychange', handleUserActivity);
 
     // Instant cleanup on window unload
