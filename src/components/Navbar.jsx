@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, LogIn, LogOut, X, Home, Award, BookOpen, Phone, Newspaper, BarChart3, User, Sun, Moon, ClipboardSignature } from 'lucide-react';
+import { Menu, LogIn, LogOut, X, Home, Award, BookOpen, Phone, Newspaper, BarChart3, User, Sun, Moon, ClipboardSignature, Activity, Users } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useStudentAuth } from '../context/StudentAuthContext';
+import { useOnlineUsers } from '../utils/presence';
 import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import brandlogo from '../assets/bdslogo.jpg';
@@ -51,6 +52,7 @@ const Navbar = ({ hideHamburger = false }) => {
   }, [isMobileMenuOpen]);
 
   const user = currentAdmin || currentStudent;
+  const onlineCount = useOnlineUsers(user);
   const isStudent = !!currentStudent;
   const displayName = user?.name || user?.['STUDENT NAME'] || user?.email?.split('@')[0] || 'User';
   const userRole = isStudent ? 'Student' : currentAdmin?.role || 'Staff';
@@ -81,6 +83,7 @@ const Navbar = ({ hideHamburger = false }) => {
       name: 'Leaderboard', 
       path: '/leaderboard', 
       icon: Award,
+      badge: `${onlineCount} Online`,
       dropdown: [
         { name: 'Leaderboard', path: '/leaderboard' },
         { name: 'Wall of Fame', path: '/fame' }
@@ -151,6 +154,12 @@ const Navbar = ({ hideHamburger = false }) => {
                       >
                         <Icon size={16} strokeWidth={2.5} />
                         <span>{link.name}</span>
+                        {link.badge && (
+                          <span className="inline-flex items-center gap-1 ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            {link.badge}
+                          </span>
+                        )}
                         {active && <span className="nav-dot" />}
                       </Link>
                       <div className="nav-dropdown-menu">
@@ -179,6 +188,12 @@ const Navbar = ({ hideHamburger = false }) => {
                   >
                     <Icon size={16} strokeWidth={2.5} />
                     <span>{link.name}</span>
+                    {link.badge && (
+                      <span className="inline-flex items-center gap-1 ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        {link.badge}
+                      </span>
+                    )}
                     {active && <span className="nav-dot" />}
                   </Link>
                 );
@@ -191,7 +206,16 @@ const Navbar = ({ hideHamburger = false }) => {
             </div>
 
             {/* Right: User or Login */}
-            <div className="nav-right">
+            <div className="nav-right flex items-center">
+              {/* Online Users Pill Indicator */}
+              <div 
+                className="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 rounded-full text-xs font-black mr-2 shadow-xs cursor-default"
+                title="Total active online users connected to the portal right now"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{onlineCount} Online</span>
+              </div>
+
               {/* Dark Mode Toggle Button */}
               <button 
                 onClick={toggleDarkMode} 
@@ -300,10 +324,18 @@ const Navbar = ({ hideHamburger = false }) => {
                       <Link
                         to={link.path}
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className={`mobile-link ${active ? 'mobile-link--active' : ''}`}
+                        className={`mobile-link ${active ? 'mobile-link--active' : ''} flex items-center justify-between`}
                       >
-                        <Icon size={18} />
-                        {link.name}
+                        <span className="flex items-center gap-2">
+                          <Icon size={18} />
+                          {link.name}
+                        </span>
+                        {link.badge && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            {link.badge}
+                          </span>
+                        )}
                       </Link>
                       {link.dropdown.map((sub) => {
                         const subActive = isActive(sub.path);
