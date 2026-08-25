@@ -128,7 +128,7 @@ export const PrincipalAnalysisView = ({ data }) => (
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" vertical={false} />
-              <XAxis dataKey="period" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+              <XAxis dataKey="period" interval={0} angle={-30} textAnchor="end" height={55} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
               <Tooltip content={<CustomTooltip />} />
               <Area type="monotone" dataKey="students" name="Students" stroke="#3b82f6" strokeWidth={2.5} fill="url(#studentGrad)" dot={{ r: 3, fill: '#3b82f6' }} />
@@ -224,7 +224,7 @@ export const AdminAnalysisView = ({ data }) => (
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" vertical={false} />
-              <XAxis dataKey="period" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+              <XAxis dataKey="period" interval={0} angle={-30} textAnchor="end" height={55} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
               <Tooltip content={<CustomTooltip suffix=" students" />} />
               <Area type="monotone" dataKey="users" name="Students in Class" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#userGrad)" dot={{ r: 3, fill: '#8b5cf6' }} activeDot={{ r: 6, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2 }} />
@@ -297,7 +297,7 @@ export const BursarAnalysisView = ({ data }) => (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data.monthlyRevenue} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" vertical={false} />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+              <XAxis dataKey="month" interval={0} angle={-30} textAnchor="end" height={55} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={(v) => `₦${(v/1000).toFixed(0)}k`} />
               <Tooltip content={<CustomTooltip prefix="₦" />} />
               <Bar dataKey="collected" name="Collected (₦)" fill="#10b981" radius={[6, 6, 0, 0]} />
@@ -683,12 +683,22 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
         ...d.data()
       }));
 
+      // Combine all classes dynamically from database and student records
+      const studentClassNames = parsedStudents.map(s => (s.className || '').trim()).filter(Boolean);
+      const combinedClasses = [
+        ...new Set([
+          ...classesList,
+          ...studentClassNames,
+          ...DEFAULT_CLASSES
+        ])
+      ].filter(Boolean);
+
       setDbData({
         students: parsedStudents,
         staff: parsedStaff,
         marks: parsedMarks,
         feesConfig: feesObj,
-        classes: classesList,
+        classes: combinedClasses,
         subjects: subjectsSnap.docs.map(d => d.id),
         notifications: parsedNotifs,
         assignments: parsedAssignments,
@@ -775,18 +785,32 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
       { grade: 'F (<40)', count: countF || 4, fill: '#f87171' },
     ];
 
-    // Class Population Distribution
+    // Class Population Distribution across ALL classes from database
     const classCountMap = {};
     students.forEach(s => {
-      const c = s.className || 'Unassigned';
-      classCountMap[c] = (classCountMap[c] || 0) + 1;
+      const c = (s.className || 'Unassigned').trim();
+      const normC = c.replace(/\s+/g, '').toUpperCase();
+      classCountMap[normC] = (classCountMap[normC] || 0) + 1;
     });
 
-    const enrollmentTrend = (classes.length > 0 ? classes : DEFAULT_CLASSES).map(cls => ({
-      period: cls,
-      students: classCountMap[cls] || 0,
-      teachers: Math.max(1, Math.round((classCountMap[cls] || 0) / 18))
-    })).slice(0, 8);
+    const dynamicClassList = [
+      ...new Set([
+        ...classes,
+        ...students.map(s => (s.className || '').trim()).filter(Boolean),
+        ...DEFAULT_CLASSES
+      ])
+    ].filter(Boolean);
+
+    // 1. Enrollment & Class Population for Principal & Admin - INCLUDE ALL CLASSES FROM DATABASE
+    const enrollmentTrend = dynamicClassList.map(cls => {
+      const normCls = cls.replace(/\s+/g, '').toUpperCase();
+      const count = classCountMap[normCls] || 0;
+      return {
+        period: cls,
+        students: count,
+        teachers: Math.max(1, Math.round(count / 18))
+      };
+    });
 
     // --- 1. PRINCIPAL DATA ---
     const principal = {
@@ -811,7 +835,7 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
     const admin = {
       kpis: [
         { title: 'Registered Users', value: (students.length + staff.length + 1).toLocaleString(), change: '+100% Live', isPositive: true, icon: Users, subText: `${students.length} Students, ${staff.length} Staff` },
-        { title: 'Active Classes', value: classes.length.toLocaleString(), change: 'Configured', isPositive: true, icon: School, subText: 'Classrooms' },
+        { title: 'Active Classes', value: dynamicClassList.length.toLocaleString(), change: 'Configured', isPositive: true, icon: School, subText: 'Classrooms' },
         { title: 'Online Users (Real-Time)', value: onlineCount.toLocaleString(), change: '🟢 Live Realtime', isPositive: true, icon: Activity, subText: 'Active on Webapp Now' },
         { title: 'Mark Records', value: marks.length.toLocaleString(), change: 'Synchronized', isPositive: true, icon: Database, subText: 'Exam Entries' },
       ],
@@ -831,16 +855,17 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
     };
 
     // --- 3. BURSAR DATA ---
-    const monthlyRev = (classes.length > 0 ? classes : DEFAULT_CLASSES).map(cls => {
-      const clsStudents = students.filter(s => s.className === cls);
+    const monthlyRev = dynamicClassList.map(cls => {
+      const normCls = cls.replace(/\s+/g, '').toUpperCase();
+      const clsStudents = students.filter(s => (s.className || '').trim().replace(/\s+/g, '').toUpperCase() === normCls);
       const col = clsStudents.reduce((sum, s) => sum + (s.paidFee || 0), 0);
       const exp = clsStudents.reduce((sum, s) => sum + (s.expectedFee || 0), 0);
       return {
         month: cls,
         collected: col,
-        target: exp || 100000
+        target: exp || (clsStudents.length > 0 ? clsStudents.length * 45000 : 100000)
       };
-    }).slice(0, 8);
+    });
 
     const debtorsList = students
       .filter(s => s.balance > 0)

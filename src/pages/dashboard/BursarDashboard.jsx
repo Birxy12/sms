@@ -1296,9 +1296,17 @@ const BursarDashboard = () => {
   };
 
   const AnalysisView = () => {
-    const classBreakdown = classes.map(cls => {
+    const dynamicClasses = [
+      ...new Set([
+        ...classes,
+        ...allStudents.map(s => (s.className || s.class_name || s.CLASS || '').trim()).filter(Boolean),
+        ...DEFAULT_CLASSES
+      ])
+    ].filter(Boolean);
+
+    const classBreakdown = dynamicClasses.map(cls => {
       const students = allStudents.filter(s => {
-        const c = s.className || s.class_name || s.CLASS || '';
+        const c = (s.className || s.class_name || s.CLASS || '').trim();
         return c.replace(/\s+/g, '').toUpperCase() === cls.replace(/\s+/g, '').toUpperCase();
       });
       const expected = students.reduce((sum, s) => sum + (parseFloat(s.expectedFee) || 0), 0);
