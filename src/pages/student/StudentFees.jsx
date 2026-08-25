@@ -130,9 +130,9 @@ const StudentFees = () => {
     }
   };
 
-  const balance = feeData.expected - feeData.paid;
-  const isCleared = balance <= 0;
-  const percentPaid = Math.min(100, Math.round((feeData.paid / feeData.expected) * 100)) || 0;
+  const balance = Math.max(0, feeData.expected - feeData.paid);
+  const isCleared = feeData.paid > 0 && (feeData.expected === 0 || feeData.paid >= feeData.expected);
+  const percentPaid = feeData.expected > 0 ? Math.min(100, Math.round((feeData.paid / feeData.expected) * 100)) : (feeData.paid > 0 ? 100 : 0);
 
   // Set default payAmount when outstanding balance is fetched
   useEffect(() => {
@@ -418,11 +418,11 @@ const StudentFees = () => {
           <p className="text-xs font-bold text-indigo-200">Current Session: {currentSession}</p>
         </div>
 
-        <div className={`lg:col-span-1 p-8 rounded-3xl shadow-lg relative overflow-hidden ${isCleared ? 'bg-emerald-600 shadow-emerald-100' : 'bg-rose-600 shadow-rose-100'} text-white transition-all`}>
+        <div className={`lg:col-span-1 p-8 rounded-3xl shadow-lg relative overflow-hidden ${isCleared ? 'bg-emerald-600 shadow-emerald-100' : 'bg-slate-800 shadow-slate-900/20'} text-white transition-all`}>
            <CreditCard size={80} style={{ position: 'absolute', right: '-10px', top: '-10px', opacity: 0.15 }} />
            <p className="text-xs font-black opacity-80 uppercase tracking-widest mb-4">Outstanding Balance</p>
            <h3 className="text-4xl font-black mb-1">₦{balance.toLocaleString()}</h3>
-           <p className="text-xs font-bold opacity-80">{isCleared ? 'Status: Fully Cleared' : 'Status: Payment Pending'}</p>
+           <p className="text-xs font-bold opacity-80">{isCleared ? 'Status: Fully Cleared' : (feeData.paid > 0 ? 'Status: Partial Payment' : 'Status: Pending Fee')}</p>
         </div>
 
         <div className="lg:col-span-1 bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-center">
@@ -432,7 +432,7 @@ const StudentFees = () => {
                 <h3 className="text-2xl font-black text-slate-800 dark:text-white">{percentPaid}%</h3>
               </div>
               <span className={`text-[10px] font-black px-3 py-1 rounded-full ${isCleared ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'}`}>
-                {percentPaid === 100 ? 'COMPLETED' : 'IN PROGRESS'}
+                {isCleared ? 'COMPLETED' : (feeData.paid > 0 ? 'PARTIAL' : 'PENDING')}
               </span>
            </div>
            <div className="h-3 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">

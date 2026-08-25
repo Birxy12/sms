@@ -632,7 +632,10 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
         const raw = d.data();
         const expanded = expandStudent(raw) || {};
         const cls = expanded.className || raw.className || raw.classId || raw.CLASS || 'Unassigned';
-        const expected = parseFloat(raw.expectedFee) || feesObj[cls] || feesObj['default'] || 0;
+        const rawExpected = raw.expectedFee;
+        const expected = (rawExpected !== undefined && rawExpected !== null && rawExpected !== '' && !isNaN(parseFloat(rawExpected)))
+          ? parseFloat(rawExpected)
+          : ((feesObj && feesObj[cls] !== undefined && feesObj[cls] !== null) ? parseFloat(feesObj[cls]) : (feesObj && feesObj['default'] !== undefined ? parseFloat(feesObj['default']) : 0));
         const paid = parseFloat(raw.paidFee) || parseFloat(raw.paidAmount) || 0;
         return {
           id: d.id,
@@ -863,7 +866,7 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
       return {
         month: cls,
         collected: col,
-        target: exp || (clsStudents.length > 0 ? clsStudents.length * 45000 : 100000)
+        target: exp || 0
       };
     });
 
@@ -889,10 +892,10 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
       ],
       monthlyRevenue: monthlyRev,
       feeBreakdown: [
-        { category: 'Tuition Fees', amount: Math.round(totalCollected * 0.7) || 70000 },
-        { category: 'ICT & CBT Fees', amount: Math.round(totalCollected * 0.15) || 15000 },
-        { category: 'Development Levy', amount: Math.round(totalCollected * 0.08) || 8000 },
-        { category: 'Library & Labs', amount: Math.round(totalCollected * 0.07) || 7000 },
+        { category: 'Tuition Fees', amount: totalCollected > 0 ? Math.round(totalCollected * 0.7) : 0 },
+        { category: 'ICT & CBT Fees', amount: totalCollected > 0 ? Math.round(totalCollected * 0.15) : 0 },
+        { category: 'Development Levy', amount: totalCollected > 0 ? Math.round(totalCollected * 0.08) : 0 },
+        { category: 'Library & Labs', amount: totalCollected > 0 ? Math.round(totalCollected * 0.07) : 0 },
       ],
       pendingPayments: debtorsList
     };
@@ -969,7 +972,34 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
     }
 
     const myAvg = studentCount > 0 ? (studentSum / studentCount).toFixed(1) : '85.0';
-    const myBalance = currentStudent?.balance !== undefined ? currentStudent.balance : (currentStudent?.expectedFee || 0) - (currentStudent?.paidFee || 0);
+    const myPaid = parseFloat(currentStudent?.paidFee) || parseFloat(currentStudent?.paidAmount) || 0;
+    const myExpected = parseFloat(currentStudent?.expectedFee) || 0;
+    const myBalance = currentStudent?.balance !== undefined ? currentStudent.balance : Math.max(0, myExpected - myPaid);
+
+    const hasPaidFully = myPaid > 0 && (myExpected === 0 || myPaid >= myExpected);
+    const hasPaidPartial = myPaid > 0 && myPaid < myExpected;
+    
+    let feeStatusText = 'Pending Fee';
+    let feeChangeText = 'Awaiting Payment';
+    let feeSubText = myBalance > 0 ? `₦${myBalance.toLocaleString()} Due` : 'No Invoice Set';
+    let isFeePositive = false;
+
+    if (hasPaidFully) {
+      feeStatusText = 'Cleared ✓';
+      feeChangeText = 'Paid in Full';
+      feeSubText = `₦${myPaid.toLocaleString()} Paid`;
+      isFeePositive = true;
+    } else if (hasPaidPartial) {
+      feeStatusText = `₦${myPaid.toLocaleString()} Paid`;
+      feeChangeText = 'Partial Payment';
+      feeSubText = `₦${myBalance.toLocaleString()} Due`;
+      isFeePositive = false;
+    } else if (myBalance > 0) {
+      feeStatusText = `₦${myBalance.toLocaleString()} Due`;
+      feeChangeText = 'Payment Overdue';
+      feeSubText = 'Awaiting Payment';
+      isFeePositive = false;
+    }
 
     const studentClassAssignments = assignments
       .filter(a => !a.targetClass || a.targetClass === currentStudent?.className)
@@ -987,7 +1017,7 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
         { title: 'Academic Average', value: `${myAvg}%`, change: '+2.1% Higher', isPositive: true, icon: Award, subText: `${studentCount} Subjects Graded` },
         { title: 'Attendance Record', value: '96.5%', change: 'Excellent', isPositive: true, icon: UserCheck, subText: 'Present 62/64 Days' },
         { title: 'Coursework Tasks', value: `${studentClassAssignments.length} Due`, change: 'Active', isPositive: studentClassAssignments.length <= 2, icon: ClipboardList, subText: 'Assignments' },
-        { title: 'School Fee Status', value: myBalance <= 0 ? 'Cleared ✓' : `₦${myBalance.toLocaleString()}`, change: myBalance <= 0 ? 'Paid in Full' : 'Due Now', isPositive: myBalance <= 0, icon: CreditCard, subText: myBalance <= 0 ? 'Zero Balance' : 'Outstanding' },
+        { title: 'School Fee Status', value: feeStatusText, change: feeChangeText, isPositive: isFeePositive, icon: CreditCard, subText: feeSubText },
       ],
       gradeTrend: studentScores,
       semesterProgress: studentScores.slice(0, 6).map((s, idx) => ({
