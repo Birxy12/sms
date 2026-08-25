@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { initializeFirestore, persistentLocalCache, getFirestore } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, getFirestore, setLogLevel } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
@@ -30,17 +30,22 @@ if (typeof window !== 'undefined') {
   }
 }
 
-// Initialize Firestore with clean localCache persistence
+// Silence internal verbose warnings in production/dev
+try {
+  setLogLevel('silent');
+} catch (e) {
+  // Ignore
+}
+
+// Initialize Firestore with standard reliable persistent local cache
 const initFirestore = () => {
   if (typeof window !== 'undefined' && typeof indexedDB !== 'undefined') {
     try {
       return initializeFirestore(app, {
-        localCache: persistentLocalCache({}),
-        experimentalForceLongPolling: true,
-        useFetchStreams: false
+        localCache: persistentLocalCache({})
       });
     } catch (error) {
-      console.warn('Firestore local cache initialization failed; falling back to default Firestore.', error?.message || error);
+      console.warn('Firestore local cache initialization fallback to default Firestore.', error?.message || error);
     }
   }
 

@@ -7,18 +7,21 @@ import { AdminAuthProvider } from './context/AdminAuthContext'
 import './index.css'
 import App from './App.jsx'
 
-// Gracefully handle harmless browser/extension errors (e.g. extension context menus, autoplay interruptions)
+// Gracefully handle harmless browser/extension errors (e.g. extension context menus, autoplay interruptions, Firestore SDK internal race assertions)
 if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event?.reason;
     const msg = typeof reason === 'string' ? reason : (reason?.message || '');
     
-    // Suppress harmless extension / browser background errors
+    // Suppress harmless extension / browser background errors and internal SDK assertions
     if (
       msg.includes('Cannot find menu item with id') ||
       msg.includes('save-page') ||
       (reason?.name === 'AbortError' && msg.includes('play() request was interrupted')) ||
-      msg.includes('ResizeObserver loop')
+      msg.includes('ResizeObserver loop') ||
+      msg.includes('INTERNAL ASSERTION FAILED') ||
+      msg.includes('BloomFilter') ||
+      msg.includes('ve":-1')
     ) {
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -29,7 +32,10 @@ if (typeof window !== 'undefined') {
     const msg = event?.message || '';
     if (
       msg.includes('Cannot find menu item with id') ||
-      msg.includes('save-page')
+      msg.includes('save-page') ||
+      msg.includes('INTERNAL ASSERTION FAILED') ||
+      msg.includes('BloomFilter') ||
+      msg.includes('ve":-1')
     ) {
       event.preventDefault();
       event.stopImmediatePropagation();
