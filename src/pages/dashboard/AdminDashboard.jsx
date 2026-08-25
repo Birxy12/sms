@@ -12,8 +12,9 @@ import AssignmentManager from '../../components/AssignmentManager';
 import NoteManager from '../../components/NoteManager';
 import StaffDashboard from './StaffDashboard';
 import StudentDashboard from './StudentDashboard';
+import NotificationCenter from './NotificationCenter';
 import { expandStudent } from '../../utils/firestoreSchema';
-import { Users, User, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw, BarChart3, FileText, BookMarked, Globe } from 'lucide-react';
+import { Users, User, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw, BarChart3, FileText, BookMarked, Globe, Mail, Inbox } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useGlobalClasses } from '../../utils/classUtils';
 import { useOnlineUsers } from '../../utils/presence';
@@ -121,6 +122,7 @@ const AdminDashboard = () => {
     { id: 'Overview', label: 'Overview', icon: TrendingUp },
     { id: 'Academics', label: 'Academics', icon: BookOpen },
     { id: 'Finance', label: 'Finance', icon: DollarSign },
+    { id: 'Inbox', label: 'Inbox', icon: Mail },
     { id: 'Management', label: 'Management', icon: Briefcase },
     { id: 'Biometrics', label: 'Biometrics', icon: Fingerprint },
     ...(currentAdmin?.isSuperAdmin ? [{ id: 'Security', label: 'System Security', icon: Shield }] : []),
@@ -1155,6 +1157,16 @@ const AdminDashboard = () => {
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Curriculum & Teachers</p>
               </div>
             </button>
+            <button 
+              onClick={() => setActiveTab('Inbox')}
+              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+            >
+              <div className="p-3 bg-purple-50 text-purple-600 rounded-xl"><Mail size={24} /></div>
+              <div>
+                <h4 className="font-black text-slate-800">Admin Inbox & Broadcasts</h4>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Messages & OTP PINs</p>
+              </div>
+            </button>
           </div>
           <BulkUpload />
           <ResultPublisher />
@@ -1206,6 +1218,13 @@ const AdminDashboard = () => {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Inbox Tab */}
+      {activeTab === 'Inbox' && (
+        <div className="animate-in fade-in space-y-6">
+          <NotificationCenter />
         </div>
       )}
 
