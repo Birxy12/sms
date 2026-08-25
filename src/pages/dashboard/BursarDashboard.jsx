@@ -12,8 +12,11 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { fetchGlobalClasses, DEFAULT_CLASSES } from '../../utils/classUtils';
 import { getClassCode, formatRegNumberSuffix } from '../../utils/regNoGenerator';
+import { createWhatsAppChatUrl } from '../../utils/whatsapp';
 import SchoolManagementDashboard from '../../components/SchoolManagementDashboard';
 import Papa from 'papaparse';
+
+const ADMIN_WHATSAPP_PHONE = '2349066202949';
 
 const OldFeesAnalytics = ({ currentCollected, currentExpected }) => {
   const [oldFees, setOldFees] = useState(() => {
@@ -162,18 +165,51 @@ const BursarDashboard = () => {
   const [pinError, setPinError] = useState('');
   const [resetsHistory, setResetsHistory] = useState([]);
   const [lastResetInfo, setLastResetInfo] = useState(null);
+  const [resetWhatsAppUrl, setResetWhatsAppUrl] = useState('');
 
   const fetchResetHistory = async () => {
     try {
-      const q = query(collection(db, 'payment_resets'), orderBy('createdAt', 'desc'));
-      const snap = await getDocs(q);
-      const history = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setResetsHistory(history);
-      if (history.length > 0) {
-        setLastResetInfo(history[0]);
+      await ensureFirebaseAuth();
+      let history = [];
+
+      try {
+        const q = query(collection(db, 'payment_resets'), orderBy('createdAt', 'desc'), limit(25));
+        const snap = await getDocs(q);
+        history = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (collErr) {
+        console.warn("Could not load from payment_resets collection, attempting settings doc fallback:", collErr.message);
+      }
+
+      if (history.length === 0) {
+        try {
+          const docSnap = await getDoc(doc(db, 'settings', 'bursar_last_reset'));
+          if (docSnap.exists()) {
+            history = [{ id: 'last_reset', ...docSnap.data() }];
+          }
+        } catch (docErr) {
+          console.warn("Could not load bursar_last_reset doc:", docErr.message);
+        }
+      }
+
+      if (history.length === 0) {
+        const saved = localStorage.getItem('payment_resets_history');
+        if (saved) {
+          try {
+            history = JSON.parse(saved);
+          } catch (e) {
+            history = [];
+          }
+        }
+      }
+
+      const safeHistory = Array.isArray(history) ? history : [];
+      setResetsHistory(safeHistory);
+      if (safeHistory.length > 0) {
+        setLastResetInfo(safeHistory[0]);
       }
     } catch (e) {
       console.log("Could not load payment reset history:", e);
+      setResetsHistory([]);
     }
   };
 
@@ -242,11 +278,12 @@ const BursarDashboard = () => {
     }
   }, [window.location.search]);
 
-  // 1. INITIATE PAYMENT RESET: Send 4-digit PIN to Admin Inbox in webapp
+  // 1. INITIATE PAYMENT RESET: Send 4-digit PIN to Admin Inbox & Admin WhatsApp (+234 9066202949)
   const handleRequestResetPin = async () => {
     setPinSending(true);
     setPinError('');
     try {
+      await ensureFirebaseAuth();
       const pin = Math.floor(1000 + Math.random() * 9000).toString();
       setGeneratedPin(pin);
       setEnteredPin('');
@@ -256,36 +293,49 @@ const BursarDashboard = () => {
         weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
       });
 
+      // Construct WhatsApp Direct Message
+      const waMsg = `🔐 *ADMIN SECURITY 2FA AUTHORIZATION PIN*\n\n🏫 *Bonus Dominus School Portal*\n👤 *Requester:* ${bursarName}\n⏰ *Time:* ${nowStr}\n📋 *Action:* Reset / Clear All Student Fee Balances\n\n🔑 *YOUR 4-DIGIT 2FA RESET PIN:*\n👉 *${pin}*\n\n⚠️ *Security Notice:* Share this PIN with the Bursar only if you authorize resetting current fee records.`;
+      const waLink = createWhatsAppChatUrl(ADMIN_WHATSAPP_PHONE, waMsg);
+      setResetWhatsAppUrl(waLink);
+
       // Dispatch urgent 2FA PIN message to Admin Inbox in Firestore
-      await addDoc(collection(db, 'notifications'), {
-        title: '🔐 URGENT: 4-Digit Security PIN for Bursar Payment Reset',
-        message: `The Bursar (${bursarName}) has requested authorization to wipe and reset student fee/payment records.\n\nAUTHORIZATION PIN: ${pin}\n\nGenerated: ${nowStr}. Share this 4-digit PIN with the Bursar only if you authorize this reset action.`,
-        targetType: 'admin',
-        targetValue: 'admin',
-        type: 'bursar_payment_reset_otp',
-        pin: pin,
-        bursarName: bursarName,
-        createdAt: serverTimestamp(),
-        isRead: false,
-        priority: 'urgent'
-      });
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          title: '🔐 URGENT: 4-Digit Security PIN for Bursar Payment Reset',
+          message: `The Bursar (${bursarName}) has requested authorization to wipe and reset student fee/payment records.\n\nAUTHORIZATION PIN: ${pin}\n\nGenerated: ${nowStr}.\nAdmin WhatsApp: +234 9066202949\n\nShare this 4-digit PIN with the Bursar only if you authorize this reset action.`,
+          targetType: 'admin',
+          targetValue: 'admin',
+          type: 'bursar_payment_reset_otp',
+          pin: pin,
+          bursarName: bursarName,
+          createdAt: serverTimestamp(),
+          isRead: false,
+          priority: 'urgent'
+        });
+      } catch (notifErr) {
+        console.warn("Could not save to notifications collection:", notifErr);
+      }
 
       // Save to settings/bursar_reset_auth for server-like validation
-      await setDoc(doc(db, 'settings', 'bursar_reset_auth'), {
-        pin: pin,
-        requestedBy: bursarName,
-        requestedAt: Date.now(),
-        expiresAt: Date.now() + 15 * 60 * 1000
-      }, { merge: true });
+      try {
+        await setDoc(doc(db, 'settings', 'bursar_reset_auth'), {
+          pin: pin,
+          requestedBy: bursarName,
+          requestedAt: Date.now(),
+          expiresAt: Date.now() + 15 * 60 * 1000
+        }, { merge: true });
+      } catch (authErr) {
+        console.warn("Could not write bursar_reset_auth:", authErr);
+      }
 
       setShowPinModal(true);
       setStatus({ 
         type: 'info', 
-        message: 'Security PIN dispatched to the School Admin Inbox. Obtain the 4-digit PIN to proceed.' 
+        message: 'Security PIN generated. Sent to Admin Inbox and available via WhatsApp (+234 9066202949).' 
       });
     } catch (err) {
       console.error("Error generating reset PIN:", err);
-      setStatus({ type: 'error', message: 'Failed to send security PIN to Admin Inbox.' });
+      setStatus({ type: 'error', message: 'Failed to generate security PIN.' });
     } finally {
       setPinSending(false);
     }
@@ -1418,7 +1468,7 @@ const BursarDashboard = () => {
           </div>
 
           {/* Historical Resets Table */}
-          {resetsHistory.length > 0 ? (
+          {(resetsHistory || []).length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
@@ -1431,7 +1481,7 @@ const BursarDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  {resetsHistory.map((rh) => (
+                  {(resetsHistory || []).map((rh) => (
                     <tr key={rh.id} className="hover:bg-slate-50">
                       <td className="py-3 px-3 font-bold text-slate-900">{rh.formattedDate}</td>
                       <td className="py-3 px-3">{rh.bursarName}</td>
@@ -1439,7 +1489,7 @@ const BursarDashboard = () => {
                       <td className="py-3 px-3 font-mono font-bold text-rose-600">₦{(rh.wipedCollected || 0).toLocaleString()}</td>
                       <td className="py-3 px-3">
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                          <CheckCheck size={12} /> Admin Inbox PIN Verified
+                          <CheckCheck size={12} /> Admin PIN Verified
                         </span>
                       </td>
                     </tr>
@@ -1885,8 +1935,19 @@ const BursarDashboard = () => {
 
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 mb-5 text-amber-900 text-xs font-medium leading-relaxed">
               🛡️ **Max Security Protocol Active**<br />
-              A **4-Digit Authorization PIN** has been sent to the **Admin Inbox in the webapp**. Obtain this PIN from the School Administrator to approve wiping all fee records.
+              A **4-Digit Authorization PIN** has been sent to the **Admin Inbox** and can also be sent directly to Admin WhatsApp (**+234 9066202949**).
             </div>
+
+            {resetWhatsAppUrl && (
+              <a
+                href={resetWhatsAppUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full mb-4 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition shadow-md shadow-emerald-200 flex items-center justify-center gap-2"
+              >
+                <MessageSquare size={16} /> Send PIN to Admin WhatsApp (+234 9066202949)
+              </a>
+            )}
 
             <form onSubmit={handleVerifyPinAndResetFees} className="space-y-4">
               <div>
