@@ -72,32 +72,33 @@ export const useOnlineUsers = (user) => {
 
     const startPresence = async () => {
       try {
-        await ensureFirebaseAuth();
-        if (!isMounted) return;
-
-        // 1. Send immediate heartbeat on mount
+        // Start heartbeat immediately
         await updateHeartbeat(true);
 
-        // 2. Balanced 30-second heartbeat loop (avoids QUIC write timeouts)
-        interval = setInterval(() => updateHeartbeat(true), 30000);
+        // Balanced 25-second heartbeat loop
+        interval = setInterval(() => updateHeartbeat(true), 25000);
 
-        // 3. Realtime Snapshot Listener for live updates across all network clients
+        // Realtime Snapshot Listener for live updates across all network clients
         const presenceCol = collection(db, 'presence');
         unsubscribe = onSnapshot(presenceCol, (snapshot) => {
           if (!isMounted) return;
           const now = Date.now();
-          const cutoff = now - 150 * 1000; // Active within last 2.5 minutes
+          const cutoff = 180 * 1000; // 3 minutes active threshold
 
-          let count = 0;
+          const activeUsers = new Set();
           snapshot.docs.forEach(docSnap => {
             const data = docSnap.data();
-            if (data.lastSeen && data.lastSeen > cutoff) {
-              count++;
+            if (data && data.lastSeen && (now - data.lastSeen) < cutoff) {
+              activeUsers.add(data.userId || docSnap.id);
             }
           });
 
-          const finalCount = Math.max(1, count);
+          // Always ensure current user/session is counted
+          activeUsers.add(userId);
+
+          const finalCount = Math.max(1, activeUsers.size);
           setOnlineCount(finalCount);
+
           try {
             sessionStorage.setItem('sms_cached_online_count', String(finalCount));
             localStorage.setItem('sms_cached_online_count', String(finalCount));
@@ -105,10 +106,13 @@ export const useOnlineUsers = (user) => {
               broadcastChannel.postMessage({ type: 'COUNT_UPDATE', count: finalCount });
             }
           } catch (e) {}
-        }, () => {
-          // Fallback
-          setOnlineCount(1);
+        }, (err) => {
+          // If network error, keep current count
+          console.warn('Presence snapshot warning:', err?.message);
         });
+
+        // Ensure background auth state in parallel
+        ensureFirebaseAuth().catch(() => {});
       } catch (e) {
         // Fallback
       }

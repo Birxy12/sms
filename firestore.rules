@@ -196,6 +196,12 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
+    // ========== PRESENCE / REALTIME ONLINE USERS ==========
+    match /presence/{id} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // ========== FALLBACK ==========
     match /{document=**} {
       allow read, write: if false;
