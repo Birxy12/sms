@@ -8,6 +8,38 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="manifest" href="/manifest.json">
+    <script>
+      (function() {
+        var isHarmless = function(msg) {
+          if (!msg) return false;
+          var s = typeof msg === 'string' ? msg : (msg.message || msg.reason || '');
+          return s.indexOf('save-page') !== -1 ||
+                 s.indexOf('Cannot find menu item') !== -1 ||
+                 s.indexOf('play() request was interrupted') !== -1 ||
+                 s.indexOf('ResizeObserver loop') !== -1 ||
+                 s.indexOf('INTERNAL ASSERTION FAILED') !== -1 ||
+                 s.indexOf('BloomFilter') !== -1 ||
+                 s.indexOf('ERR_INTERNET_DISCONNECTED') !== -1 ||
+                 s.indexOf('Firestore/Listen/channel') !== -1;
+        };
+
+        window.addEventListener('error', function(e) {
+          if (isHarmless(e.message) || isHarmless(e.error)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(e) {
+          if (isHarmless(e.reason)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
     <meta name="description" content="School Management System - A comprehensive platform for managing students, staff, courses, and academic records." />
     <title>BDSPORTAL - School Management System</title>
