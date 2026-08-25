@@ -8,10 +8,12 @@ import ResultPublisher from '../../components/ResultPublisher';
 import Marksheet from '../../components/Marksheet';
 import BulkUpload from '../../components/BulkUpload';
 import ScoreEntry from '../../components/ScoreEntry';
+import AssignmentManager from '../../components/AssignmentManager';
+import NoteManager from '../../components/NoteManager';
 import StaffDashboard from './StaffDashboard';
 import StudentDashboard from './StudentDashboard';
 import { expandStudent } from '../../utils/firestoreSchema';
-import { Users, User, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw, BarChart3 } from 'lucide-react';
+import { Users, User, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw, BarChart3, FileText, BookMarked } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useGlobalClasses } from '../../utils/classUtils';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -31,6 +33,7 @@ const AdminDashboard = () => {
   const [viewMode, setViewMode] = useState('admin'); // admin, staff, student
   const [selectedClass, setSelectedClass] = useState('JSS1');
   const [activeTab, setActiveTab] = useState('Overview');
+  const [academicSubTab, setAcademicSubTab] = useState('marksheet'); // marksheet, assignments, materials
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordStatus, setPasswordStatus] = useState({ type: '', message: '' });
@@ -995,15 +998,65 @@ const AdminDashboard = () => {
       {/* Academics Tab */}
       {activeTab === 'Academics' && (
         <div className="animate-in fade-in space-y-6">
-          <div className="card-premium">
-            <div className="mb-6">
-              <h3 className="text-xl font-bold text-slate-800 m-0">Comprehensive Class Marksheet</h3>
+          {/* Sub-tab Navigation */}
+          <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100/90 backdrop-blur-md rounded-2xl w-fit border border-slate-200/60 shadow-sm">
+            <button
+              onClick={() => setAcademicSubTab('marksheet')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs transition-all ${
+                academicSubTab === 'marksheet'
+                  ? 'bg-white text-indigo-600 shadow-md scale-[1.02]'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              }`}
+            >
+              <BarChart3 size={15} /> Marksheet & Scores
+            </button>
+            <button
+              onClick={() => setAcademicSubTab('assignments')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs transition-all ${
+                academicSubTab === 'assignments'
+                  ? 'bg-white text-indigo-600 shadow-md scale-[1.02]'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              }`}
+            >
+              <FileText size={15} /> Class Assignments
+            </button>
+            <button
+              onClick={() => setAcademicSubTab('materials')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs transition-all ${
+                academicSubTab === 'materials'
+                  ? 'bg-white text-indigo-600 shadow-md scale-[1.02]'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              }`}
+            >
+              <BookOpen size={15} /> Learning Materials & Notes
+            </button>
+          </div>
+
+          {academicSubTab === 'marksheet' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="card-premium">
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold text-slate-800 m-0">Comprehensive Class Marksheet</h3>
+                </div>
+                <Marksheet />
+              </div>
+              <div className="card-premium">
+                <ScoreEntry />
+              </div>
             </div>
-            <Marksheet />
-          </div>
-          <div className="card-premium">
-            <ScoreEntry />
-          </div>
+          )}
+
+          {academicSubTab === 'assignments' && (
+            <div className="animate-in fade-in duration-300">
+              <AssignmentManager />
+            </div>
+          )}
+
+          {academicSubTab === 'materials' && (
+            <div className="animate-in fade-in duration-300">
+              <NoteManager />
+            </div>
+          )}
         </div>
       )}
 
@@ -1068,6 +1121,36 @@ const AdminDashboard = () => {
               <div>
                 <h4 className="font-black text-slate-800">Class Management</h4>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Assign Class Teachers</p>
+              </div>
+            </button>
+            <button 
+              onClick={() => { setActiveTab('Academics'); setAcademicSubTab('assignments'); }}
+              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+            >
+              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><FileText size={24} /></div>
+              <div>
+                <h4 className="font-black text-slate-800">Publish Assignments</h4>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tasks & Worksheets</p>
+              </div>
+            </button>
+            <button 
+              onClick={() => { setActiveTab('Academics'); setAcademicSubTab('materials'); }}
+              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+            >
+              <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><BookOpen size={24} /></div>
+              <div>
+                <h4 className="font-black text-slate-800">Study Materials & Notes</h4>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lecture Notes & Guides</p>
+              </div>
+            </button>
+            <button 
+              onClick={() => navigate('/courses')}
+              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+            >
+              <div className="p-3 bg-teal-50 text-teal-600 rounded-xl"><BookMarked size={24} /></div>
+              <div>
+                <h4 className="font-black text-slate-800">Course & Subject Directory</h4>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Curriculum & Teachers</p>
               </div>
             </button>
           </div>
