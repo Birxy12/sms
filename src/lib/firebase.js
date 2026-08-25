@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getFirestore } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
@@ -30,24 +30,18 @@ if (typeof window !== 'undefined') {
   }
 }
 
-// Initialize Firestore with settings to support multi-tab persistence and offline access
-// If persistence initialization fails (stale lease, unsupported IndexedDB environment, private mode),
-// fall back to a plain Firestore instance so the app continues working without repeated console errors.
+// Initialize Firestore with clean localCache persistence
 const initFirestore = () => {
   if (typeof window !== 'undefined' && typeof indexedDB !== 'undefined') {
     try {
       return initializeFirestore(app, {
-        localCache: persistentLocalCache({
-          tabManager: persistentMultipleTabManager()
-        }),
+        localCache: persistentLocalCache({}),
         experimentalForceLongPolling: true,
         useFetchStreams: false
       });
     } catch (error) {
-      console.warn('Firestore local cache initialization failed; falling back to network-only Firestore.', error?.message || error);
+      console.warn('Firestore local cache initialization failed; falling back to default Firestore.', error?.message || error);
     }
-  } else {
-    console.warn('Firestore local cache disabled: not running in a browser environment.');
   }
 
   return getFirestore(app);

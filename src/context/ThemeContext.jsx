@@ -82,73 +82,53 @@ export const ThemeProvider = ({ children }) => {
 
   // 1. Initial Load from Firestore — wait for Firebase auth before reading
   useEffect(() => {
-    let unsubscribeAuth = null;
+    let isMounted = true;
 
     const initBranding = async () => {
       try {
-        const { auth } = await import('../lib/firebase');
-        const { onAuthStateChanged, signInAnonymously } = await import('firebase/auth');
+        const { ensureFirebaseAuth } = await import('../lib/ensureAuth');
+        await ensureFirebaseAuth();
 
-        // Ensure we have an authenticated session before hitting Firestore
-        if (!auth.currentUser) {
-          await signInAnonymously(auth).catch(() => {});
+        const docSnap = await getDoc(doc(db, 'settings', 'branding'));
+        if (docSnap.exists() && isMounted) {
+          const data = docSnap.data();
+          if (data.schoolName) setSchoolName(data.schoolName);
+          if (data.primaryColor) setPrimaryColor(data.primaryColor);
+          if (data.secondaryColor) setSecondaryColor(data.secondaryColor);
+          if (data.schoolLogo) setSchoolLogo(data.schoolLogo);
+          if (data.navbarBg) setNavbarBg(data.navbarBg);
+          if (data.footerBg) setFooterBg(data.footerBg);
+          if (data.navbarTextColor) setNavbarTextColor(data.navbarTextColor);
+          if (data.footerTextColor) setFooterTextColor(data.footerTextColor);
+          if (data.principalSignature) setPrincipalSignature(data.principalSignature);
+          if (data.principalStamp) setPrincipalStamp(data.principalStamp);
+          if (data.bursarSignature) setBursarSignature(data.bursarSignature);
+          if (data.bursarStamp) setBursarStamp(data.bursarStamp);
+          if (data.currentSession) setCurrentSession(data.currentSession);
+          if (data.cat1Limit !== undefined) setCat1Limit(Number(data.cat1Limit));
+          if (data.cat2Limit !== undefined) setCat2Limit(Number(data.cat2Limit));
+          if (data.examLimit !== undefined) setExamLimit(Number(data.examLimit));
+          if (data.currentTerm) setCurrentTerm(data.currentTerm);
+          if (data.termStartDate) setTermStartDate(data.termStartDate);
+          if (data.termEndDate) setTermEndDate(data.termEndDate);
+          if (data.nextTermBeginsDate) setNextTermBeginsDate(data.nextTermBeginsDate);
+          if (data.promotionPassMark !== undefined) setPromotionPassMark(Number(data.promotionPassMark));
+          if (data.autoCommentsEnabled !== undefined) setAutoCommentsEnabled(data.autoCommentsEnabled);
+          if (data.commentTemplates) setCommentTemplates(data.commentTemplates);
+          if (data.averageDivisors) setAverageDivisors(data.averageDivisors);
         }
-
-        if (!auth.currentUser) {
-          console.warn('Firebase auth not available; using local theme defaults.');
-          setLoading(false);
-          return;
-        }
-
-        // Subscribe and load once confirmed
-        unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-          if (!user) return; // still waiting
-          try {
-            const docSnap = await getDoc(doc(db, 'settings', 'branding'));
-            if (docSnap.exists()) {
-              const data = docSnap.data();
-              if (data.schoolName) setSchoolName(data.schoolName);
-              if (data.primaryColor) setPrimaryColor(data.primaryColor);
-              if (data.secondaryColor) setSecondaryColor(data.secondaryColor);
-              if (data.schoolLogo) setSchoolLogo(data.schoolLogo);
-              if (data.navbarBg) setNavbarBg(data.navbarBg);
-              if (data.footerBg) setFooterBg(data.footerBg);
-              if (data.navbarTextColor) setNavbarTextColor(data.navbarTextColor);
-              if (data.footerTextColor) setFooterTextColor(data.footerTextColor);
-              if (data.principalSignature) setPrincipalSignature(data.principalSignature);
-              if (data.principalStamp) setPrincipalStamp(data.principalStamp);
-              if (data.bursarSignature) setBursarSignature(data.bursarSignature);
-              if (data.bursarStamp) setBursarStamp(data.bursarStamp);
-              if (data.currentSession) setCurrentSession(data.currentSession);
-              if (data.cat1Limit !== undefined) setCat1Limit(Number(data.cat1Limit));
-              if (data.cat2Limit !== undefined) setCat2Limit(Number(data.cat2Limit));
-              if (data.examLimit !== undefined) setExamLimit(Number(data.examLimit));
-              if (data.currentTerm) setCurrentTerm(data.currentTerm);
-              if (data.termStartDate) setTermStartDate(data.termStartDate);
-              if (data.termEndDate) setTermEndDate(data.termEndDate);
-              if (data.nextTermBeginsDate) setNextTermBeginsDate(data.nextTermBeginsDate);
-              if (data.promotionPassMark !== undefined) setPromotionPassMark(Number(data.promotionPassMark));
-              if (data.autoCommentsEnabled !== undefined) setAutoCommentsEnabled(data.autoCommentsEnabled);
-              if (data.commentTemplates) setCommentTemplates(data.commentTemplates);
-              if (data.averageDivisors) setAverageDivisors(data.averageDivisors);
-            }
-          } catch (e) {
-            console.warn('Could not load branding from Firestore. Using local defaults.', e.code || e.message);
-          } finally {
-            setLoading(false);
-            // Only need the first confirmed auth event
-            if (unsubscribeAuth) { unsubscribeAuth(); unsubscribeAuth = null; }
-          }
-        });
       } catch (e) {
-        console.warn('ThemeContext auth init failed:', e.message);
-        setLoading(false);
+        console.warn('Could not load branding from Firestore. Using local defaults.', e.code || e.message);
+      } finally {
+        if (isMounted) setLoading(false);
       }
     };
 
     initBranding();
 
-    return () => { if (unsubscribeAuth) unsubscribeAuth(); };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // 2. Apply CSS Variables whenever colors change (no Firestore call here)
