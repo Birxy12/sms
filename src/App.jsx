@@ -45,6 +45,7 @@ import NotificationCenter from './pages/dashboard/NotificationCenter';
 import AnalysisPage from './pages/dashboard/AnalysisPage';
 import { useStudentAuth } from './context/StudentAuthContext';
 import { useAdminAuth } from './context/AdminAuthContext';
+import { useOnlineUsers } from './utils/presence';
 import BonusAI from './components/BonusAI';
 import UpdateModal from './components/UpdateModal';
 import { useAppUpdate } from './hooks/useAppUpdate';
@@ -86,6 +87,10 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const { updateAvailable, latestVersion } = useAppUpdate();
+  const { currentAdmin } = useAdminAuth();
+  const { currentStudent } = useStudentAuth();
+  const activeUser = currentAdmin || currentStudent;
+  useOnlineUsers(activeUser);
 
   useEffect(() => {
     const setupAppListeners = async () => {

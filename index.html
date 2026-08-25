@@ -12,7 +12,12 @@
       (function() {
         var isHarmless = function(msg) {
           if (!msg) return false;
-          var s = typeof msg === 'string' ? msg : (msg.message || msg.reason || msg.stack || '');
+          var s = '';
+          if (typeof msg === 'string') {
+            s = msg;
+          } else {
+            s = (msg.message || '') + ' ' + (msg.reason ? (msg.reason.message || msg.reason.stack || msg.reason) : '') + ' ' + (msg.stack || '') + ' ' + String(msg);
+          }
           try {
             if (typeof msg === 'object') s += ' ' + JSON.stringify(msg);
           } catch (err) {}
@@ -26,7 +31,7 @@
                  s.indexOf('Firestore/Listen/channel') !== -1;
         };
 
-        // Suppress at event listener level
+        // Suppress standard error event
         window.addEventListener('error', function(e) {
           if (isHarmless(e.message) || isHarmless(e.error)) {
             e.preventDefault();
@@ -35,13 +40,28 @@
           }
         }, true);
 
+        // Suppress unhandled promise rejection
         window.addEventListener('unhandledrejection', function(e) {
-          if (isHarmless(e.reason)) {
+          if (isHarmless(e.reason) || isHarmless(e)) {
             e.preventDefault();
             e.stopImmediatePropagation();
             return true;
           }
         }, true);
+
+        // Standard browser handler fallback
+        window.onunhandledrejection = function(e) {
+          if (isHarmless(e.reason) || isHarmless(e)) {
+            if (e && e.preventDefault) e.preventDefault();
+            return true;
+          }
+        };
+
+        window.onerror = function(message, source, lineno, colno, error) {
+          if (isHarmless(message) || isHarmless(error)) {
+            return true;
+          }
+        };
 
         // Suppress at console level
         if (typeof console !== 'undefined') {
