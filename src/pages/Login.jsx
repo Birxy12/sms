@@ -184,6 +184,12 @@ const Login = () => {
           const sData = snap.docs[0].data();
           const expanded = expandStudent(sData);
           setLookupName(expanded.name);
+          if (expanded.className) {
+            setFormData(prev => ({
+              ...prev,
+              className: prev.className || expanded.className
+            }));
+          }
         }
       } catch (err) {
         console.warn("Error looking up student name:", err);

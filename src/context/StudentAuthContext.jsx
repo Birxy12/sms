@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { ensureFirebaseAuth } from '../lib/ensureAuth';
-
 import { STUDENT_KEYS, expandStudent } from '../utils/firestoreSchema';
+import { normalizeClassName } from '../utils/classUtils';
 
 const StudentAuthContext = createContext();
 
@@ -28,28 +28,36 @@ const ensureStudentFirebaseAuth = async () => {
     return { success: true };
   }
 
-  if (!anonymousAuthPromise) {
-    anonymousAuthPromise = (async () => {
-      try {
-        const { signInAnonymously } = await import('firebase/auth');
-        await signInAnonymously(auth);
-        return { success: true };
-      } catch (error) {
-        if (error?.code === 'auth/admin-restricted-operation') {
-          if (!hasLoggedAnonymousAuthDisabled) {
-            console.error(STUDENT_AUTH_UNAVAILABLE_MESSAGE);
-            hasLoggedAnonymousAuthDisabled = true;
-          }
-        } else {
-          console.error('Anonymous student auth failed:', error);
-        }
-
-        return { success: false, message: getStudentAuthErrorMessage(error) };
-      } finally {
-        anonymousAuthPromise = null;
-      }
-    })();
+  if (anonymousAuthPromise) {
+    return anonymousAuthPromise;
   }
+
+  anonymousAuthPromise = (async () => {
+    try {
+      const { signInAnonymously } = await import('firebase/auth');
+      await signInAnonymously(auth);
+      return { success: true };
+    } catch (error) {
+      if (
+        error?.code === 'auth/admin-restricted-operation' &&
+        !hasLoggedAnonymousAuthDisabled
+      ) {
+        hasLoggedAnonymousAuthDisabled = true;
+        console.warn(
+          'Anonymous authentication is disabled in Firebase Console. Please enable it under Authentication > Sign-in method.'
+        );
+      } else if (error?.code !== 'auth/admin-restricted-operation') {
+        console.error('Anonymous auth error:', error);
+      }
+
+      return {
+        success: false,
+        message: getStudentAuthErrorMessage(error)
+      };
+    } finally {
+      anonymousAuthPromise = null;
+    }
+  })();
 
   return anonymousAuthPromise;
 };
@@ -57,10 +65,9 @@ const ensureStudentFirebaseAuth = async () => {
 export const StudentAuthProvider = ({ children }) => {
   const [currentStudent, setCurrentStudent] = useState(null);
   const [pendingStudent, setPendingStudent] = useState(null);
-  const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(true);
-  // authReady = true only after Firebase confirms a real Auth user is present
   const [authReady, setAuthReady] = useState(false);
+  const [authError, setAuthError] = useState('');
 
   // Load student on mount and establish Firebase Auth
   useEffect(() => {
@@ -77,6 +84,7 @@ export const StudentAuthProvider = ({ children }) => {
       unsubscribeAuth = onAuthStateChanged(auth, (user) => {
         if (user) {
           setAuthReady(true);
+          setAuthError('');
         } else {
           setAuthReady(false);
         }
@@ -116,29 +124,92 @@ export const StudentAuthProvider = ({ children }) => {
 
   const login = async (regNo, className) => {
     try {
-      const studentsRef = collection(db, 'students');
-      // Query using compressed keys - try both compressed and legacy format
-      let q = query(
-        studentsRef,
-        where(STUDENT_KEYS.regNo, '==', regNo.trim().toUpperCase()),
-        where(STUDENT_KEYS.className, '==', className.trim())
-      );
-      
-      let querySnapshot = await getDocs(q);
+      const cleanReg = (regNo || '').trim().toUpperCase();
+      const cleanClass = normalizeClassName(className || '');
 
-      // Fallback: try legacy uncompressed keys if no results
-      if (querySnapshot.empty) {
-        q = query(
-          studentsRef,
-          where('regNo', '==', regNo.trim().toUpperCase()),
-          where('className', '==', className.trim())
-        );
-        querySnapshot = await getDocs(q);
+      if (!cleanReg) {
+        return { success: false, message: 'Please enter your Registration Number.' };
       }
-      
-      if (!querySnapshot.empty) {
-        const rawData = querySnapshot.docs[0].data();
-        const studentData = { id: querySnapshot.docs[0].id, ...expandStudent(rawData) };
+
+      await ensureStudentFirebaseAuth();
+      const studentsRef = collection(db, 'students');
+      let matchedDoc = null;
+
+      // 1. Direct query by exact regNo (both compressed 'r' and uncompressed 'regNo')
+      try {
+        const qCompressed = query(studentsRef, where(STUDENT_KEYS.regNo, '==', cleanReg));
+        let snap = await getDocs(qCompressed);
+        
+        if (snap.empty) {
+          const qUncompressed = query(studentsRef, where('regNo', '==', cleanReg));
+          snap = await getDocs(qUncompressed);
+        }
+
+        if (!snap.empty) {
+          if (cleanClass) {
+            matchedDoc = snap.docs.find(d => {
+              const exp = expandStudent(d.data()) || {};
+              const docClass = normalizeClassName(exp.className || d.data().className || d.data().c || d.data().CLASS || '');
+              return docClass === cleanClass;
+            }) || snap.docs[0];
+          } else {
+            matchedDoc = snap.docs[0];
+          }
+        }
+      } catch (qErr) {
+        console.warn("Direct query error:", qErr);
+      }
+
+      // 2. Direct document ID lookup
+      if (!matchedDoc) {
+        try {
+          const directDoc = await getDoc(doc(db, 'students', cleanReg));
+          if (directDoc.exists()) {
+            matchedDoc = directDoc;
+          }
+        } catch (dErr) {
+          // suppress
+        }
+      }
+
+      // 3. Fallback: Fuzzy/smart lookup across all student docs
+      if (!matchedDoc) {
+        const allSnap = await getDocs(studentsRef);
+        const targetClean = cleanReg.replace(/[^A-Z0-9]/g, '');
+        
+        matchedDoc = allSnap.docs.find(d => {
+          const raw = d.data();
+          const exp = expandStudent(raw) || {};
+          const r = (exp.regNo || raw.regNo || raw.r || raw['REG NO'] || raw.REGNO || d.id || '').toString().trim().toUpperCase();
+          const rClean = r.replace(/[^A-Z0-9]/g, '');
+          
+          if (r === cleanReg || (targetClean && rClean === targetClean)) {
+            if (cleanClass) {
+              const docClass = normalizeClassName(exp.className || raw.className || raw.c || raw.CLASS || '');
+              return docClass === cleanClass || !docClass;
+            }
+            return true;
+          }
+          
+          // Match numeric suffix
+          if (targetClean.length >= 3 && (rClean.endsWith(targetClean) || targetClean.endsWith(rClean))) {
+            if (cleanClass) {
+              const docClass = normalizeClassName(exp.className || raw.className || raw.c || raw.CLASS || '');
+              return docClass === cleanClass || !docClass;
+            }
+            return true;
+          }
+
+          return false;
+        });
+      }
+
+      if (matchedDoc) {
+        const rawData = matchedDoc.data();
+        const studentData = { id: matchedDoc.id, ...expandStudent(rawData) };
+
+        // Normalize student class
+        studentData.className = normalizeClassName(studentData.className || cleanClass);
 
         const isPendingActivation = studentData.status === 'pending_activation' || studentData.requiresAdminConfirmation || studentData.admissionConfirmed === false || studentData.paymentConfirmed === false;
         if (isPendingActivation && studentData.status !== 'active') {
@@ -167,7 +238,7 @@ export const StudentAuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Login error:', error);
-      return { success: false, message: 'Server error during login.' };
+      return { success: false, message: 'Server error during login. Please try again.' };
     }
   };
 
