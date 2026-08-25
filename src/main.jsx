@@ -7,6 +7,19 @@ import { AdminAuthProvider } from './context/AdminAuthContext'
 import './index.css'
 import App from './App.jsx'
 
+// Gracefully handle harmless browser/extension media play interruption errors
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    if (
+      event?.reason?.name === 'AbortError' &&
+      typeof event?.reason?.message === 'string' &&
+      event.reason.message.includes('play() request was interrupted')
+    ) {
+      event.preventDefault(); // Suppress noisy harmless browser autoplay/extension interruption
+    }
+  });
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ThemeProvider>
