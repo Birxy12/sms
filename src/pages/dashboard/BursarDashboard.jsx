@@ -18,10 +18,7 @@ import Papa from 'papaparse';
 const OldFeesAnalytics = ({ currentCollected, currentExpected }) => {
   const [oldFees, setOldFees] = useState(() => {
     const saved = localStorage.getItem('historical_fees');
-    return saved ? JSON.parse(saved) : [
-      { session: '2023/2024', expected: 12000000, collected: 11500000 },
-      { session: '2024/2025', expected: 15000000, collected: 14200000 }
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
   const [newSession, setNewSession] = useState('');
   const [newExpected, setNewExpected] = useState('');

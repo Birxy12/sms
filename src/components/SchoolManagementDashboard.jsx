@@ -625,14 +625,14 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
         getDocs(collection(db, 'staff_payments')).catch(() => ({ docs: [] }))
       ]);
 
-      const feesObj = feeSnap && feeSnap.exists() ? feeSnap.data() : { default: 45000 };
+      const feesObj = feeSnap && feeSnap.exists() ? feeSnap.data() : { default: 0 };
 
       // Process Students
       const parsedStudents = studentsSnap.docs.map(d => {
         const raw = d.data();
         const expanded = expandStudent(raw) || {};
         const cls = expanded.className || raw.className || raw.classId || raw.CLASS || 'Unassigned';
-        const expected = parseFloat(raw.expectedFee) || feesObj[cls] || feesObj['default'] || 45000;
+        const expected = parseFloat(raw.expectedFee) || feesObj[cls] || feesObj['default'] || 0;
         const paid = parseFloat(raw.paidFee) || parseFloat(raw.paidAmount) || 0;
         return {
           id: d.id,
@@ -969,7 +969,7 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
     }
 
     const myAvg = studentCount > 0 ? (studentSum / studentCount).toFixed(1) : '85.0';
-    const myBalance = currentStudent?.balance !== undefined ? currentStudent.balance : (currentStudent?.expectedFee || 45000) - (currentStudent?.paidFee || 0);
+    const myBalance = currentStudent?.balance !== undefined ? currentStudent.balance : (currentStudent?.expectedFee || 0) - (currentStudent?.paidFee || 0);
 
     const studentClassAssignments = assignments
       .filter(a => !a.targetClass || a.targetClass === currentStudent?.className)

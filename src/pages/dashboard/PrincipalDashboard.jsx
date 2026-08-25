@@ -29,7 +29,7 @@ const PrincipalDashboard = () => {
       try {
         // 1. Get Fee Settings for expected fees
         const feeSnap = await getDoc(doc(db, 'settings', 'fees'));
-        const fees = feeSnap.exists() ? feeSnap.data() : { default: 45000 };
+        const fees = feeSnap.exists() ? feeSnap.data() : { default: 0 };
 
         // 2. Get Students and Staff
         const [studentSnap, staffSnap] = await Promise.all([
@@ -52,9 +52,9 @@ const PrincipalDashboard = () => {
           classesMap[cls] = (classesMap[cls] || 0) + 1;
 
           // Financials
-          const expected = fees[cls] || fees['default'] || 45000;
+          const expected = parseFloat(s.expectedFee) || fees[cls] || fees['default'] || 0;
           totalExpected += expected;
-          totalPaid += (s.paidFee || 0);
+          totalPaid += (parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0);
         });
 
         const classArray = Object.keys(classesMap)
