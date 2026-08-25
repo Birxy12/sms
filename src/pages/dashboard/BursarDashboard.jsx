@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../lib/firebase';
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
-import { collection, query, getDocs, orderBy, where, doc, updateDoc, writeBatch, addDoc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, where, doc, updateDoc, writeBatch, addDoc, serverTimestamp, setDoc, getDoc, limit } from 'firebase/firestore';
 import { 
   Wallet, DollarSign, TrendingUp, TrendingDown, Users, 
   Search, Download, Plus, ArrowUpRight, 
@@ -172,14 +172,17 @@ const BursarDashboard = () => {
       await ensureFirebaseAuth();
       let history = [];
 
+      // 1. Prioritize reading from settings/bursar_resets_history (guaranteed allowed under Firestore security rules)
       try {
-        const q = query(collection(db, 'payment_resets'), orderBy('createdAt', 'desc'), limit(25));
-        const snap = await getDocs(q);
-        history = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      } catch (collErr) {
-        console.warn("Could not load from payment_resets collection, attempting settings doc fallback:", collErr.message);
+        const auditSnap = await getDoc(doc(db, 'settings', 'bursar_resets_history'));
+        if (auditSnap.exists() && Array.isArray(auditSnap.data().history) && auditSnap.data().history.length > 0) {
+          history = auditSnap.data().history.map((item, idx) => ({ id: item.id || `audit-${idx}`, ...item }));
+        }
+      } catch (docErr) {
+        console.warn("Could not load from settings/bursar_resets_history:", docErr.message);
       }
 
+      // 2. Fallback to settings/bursar_last_reset
       if (history.length === 0) {
         try {
           const docSnap = await getDoc(doc(db, 'settings', 'bursar_last_reset'));
@@ -191,6 +194,20 @@ const BursarDashboard = () => {
         }
       }
 
+      // 3. Fallback to payment_resets collection
+      if (history.length === 0) {
+        try {
+          const q = query(collection(db, 'payment_resets'), orderBy('createdAt', 'desc'), limit(25));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            history = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          }
+        } catch (collErr) {
+          // Suppress permission error
+        }
+      }
+
+      // 4. Fallback to localStorage
       if (history.length === 0) {
         const saved = localStorage.getItem('payment_resets_history');
         if (saved) {
@@ -420,11 +437,37 @@ const BursarDashboard = () => {
         wipedCollected: stats.totalCollected,
         authorizedByPin: true,
         authorizedPinCode: enteredPin,
-        createdAt: serverTimestamp()
       };
 
-      await addDoc(collection(db, 'payment_resets'), resetRecord);
-      await setDoc(doc(db, 'settings', 'bursar_last_reset'), resetRecord, { merge: true });
+      // 1. Save to settings/bursar_last_reset & settings/bursar_resets_history (guaranteed allowed under rules)
+      try {
+        await setDoc(doc(db, 'settings', 'bursar_last_reset'), { ...resetRecord, createdAt: serverTimestamp() }, { merge: true });
+        const auditSnap = await getDoc(doc(db, 'settings', 'bursar_resets_history'));
+        const existingAudits = (auditSnap.exists() && Array.isArray(auditSnap.data().history)) ? auditSnap.data().history : [];
+        const cleanItem = { id: `reset-${Date.now()}`, ...resetRecord, timestamp: Date.now() };
+        await setDoc(doc(db, 'settings', 'bursar_resets_history'), {
+          history: [cleanItem, ...existingAudits].slice(0, 50)
+        }, { merge: true });
+      } catch (auditErr) {
+        console.warn("Could not save to settings audit doc:", auditErr);
+      }
+
+      // 2. Save to payment_resets collection
+      try {
+        await addDoc(collection(db, 'payment_resets'), { ...resetRecord, createdAt: serverTimestamp() });
+      } catch (collErr) {
+        console.warn("payment_resets collection write ignored:", collErr.message);
+      }
+
+      // 3. Save to localStorage
+      try {
+        const currentSaved = localStorage.getItem('payment_resets_history');
+        const prevList = currentSaved ? JSON.parse(currentSaved) : [];
+        const updatedList = [{ id: `reset-${Date.now()}`, ...resetRecord, timestamp: Date.now() }, ...(Array.isArray(prevList) ? prevList : [])];
+        localStorage.setItem('payment_resets_history', JSON.stringify(updatedList));
+      } catch (lsErr) {
+        console.warn("Could not save reset history to localStorage:", lsErr);
+      }
 
       await fetchFinancialData();
       await fetchResetHistory();
