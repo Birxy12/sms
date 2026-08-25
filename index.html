@@ -28,6 +28,10 @@
                  s.indexOf('INTERNAL ASSERTION FAILED') !== -1 ||
                  s.indexOf('BloomFilter') !== -1 ||
                  s.indexOf('ERR_INTERNET_DISCONNECTED') !== -1 ||
+                 s.indexOf('ERR_CONNECTION_CLOSED') !== -1 ||
+                 s.indexOf('QUIC_NETWORK_IDLE_TIMEOUT') !== -1 ||
+                 s.indexOf('ERR_QUIC_PROTOCOL_ERROR') !== -1 ||
+                 s.indexOf('Firestore/Write/channel') !== -1 ||
                  s.indexOf('Firestore/Listen/channel') !== -1;
         };
 

@@ -24,6 +24,10 @@ if (typeof window !== 'undefined') {
       msg.includes('ve":-1') ||
       msg.includes('ERR_INTERNET_DISCONNECTED') ||
       msg.includes('net::ERR_INTERNET_DISCONNECTED') ||
+      msg.includes('ERR_CONNECTION_CLOSED') ||
+      msg.includes('QUIC_NETWORK_IDLE_TIMEOUT') ||
+      msg.includes('ERR_QUIC_PROTOCOL_ERROR') ||
+      msg.includes('Firestore/Write/channel') ||
       msg.includes('Firestore/Listen/channel') ||
       msg.includes('network-request-failed')
     ) {
@@ -42,6 +46,10 @@ if (typeof window !== 'undefined') {
       msg.includes('ve":-1') ||
       msg.includes('ERR_INTERNET_DISCONNECTED') ||
       msg.includes('net::ERR_INTERNET_DISCONNECTED') ||
+      msg.includes('ERR_CONNECTION_CLOSED') ||
+      msg.includes('QUIC_NETWORK_IDLE_TIMEOUT') ||
+      msg.includes('ERR_QUIC_PROTOCOL_ERROR') ||
+      msg.includes('Firestore/Write/channel') ||
       msg.includes('Firestore/Listen/channel') ||
       msg.includes('network-request-failed')
     ) {
@@ -60,7 +68,12 @@ if (typeof window !== 'undefined') {
       msg.includes('INTERNAL ASSERTION FAILED') ||
       msg.includes('BloomFilter') ||
       msg.includes('ve":-1') ||
-      msg.includes('ERR_INTERNET_DISCONNECTED')
+      msg.includes('ERR_INTERNET_DISCONNECTED') ||
+      msg.includes('ERR_CONNECTION_CLOSED') ||
+      msg.includes('QUIC_NETWORK_IDLE_TIMEOUT') ||
+      msg.includes('ERR_QUIC_PROTOCOL_ERROR') ||
+      msg.includes('Firestore/Write/channel') ||
+      msg.includes('Firestore/Listen/channel')
     ) {
       return;
     }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { db } from '../lib/firebase';
 import { ensureFirebaseAuth } from '../lib/ensureAuth';
-import { doc, setDoc, onSnapshot, collection, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, collection, deleteDoc } from 'firebase/firestore';
 
 /**
  * Hook to track and return the live number of online / logged in users across the webapp at light speed.
@@ -50,11 +50,11 @@ export const useOnlineUsers = (user) => {
 
     const presenceRef = doc(db, 'presence', sessionId);
 
-    // Light-speed heartbeat function
+    // Light-speed primitive heartbeat function (no serverTimestamp transform transforms)
     const updateHeartbeat = async (force = false) => {
       const now = Date.now();
-      if (!force && now - lastHeartbeatTime.current < 5000) {
-        return; // Debounce rapid activity bursts to 5s
+      if (!force && now - lastHeartbeatTime.current < 15000) {
+        return; // Debounce user activity bursts to 15s
       }
       lastHeartbeatTime.current = now;
 
@@ -63,8 +63,7 @@ export const useOnlineUsers = (user) => {
           userId,
           userName,
           userRole,
-          lastSeen: Date.now(),
-          updatedAt: serverTimestamp()
+          lastSeen: Date.now()
         }, { merge: true });
       } catch (err) {
         // Silent catch
@@ -79,15 +78,15 @@ export const useOnlineUsers = (user) => {
         // 1. Send immediate heartbeat on mount
         await updateHeartbeat(true);
 
-        // 2. Ultra-responsive 10-second heartbeat loop
-        interval = setInterval(() => updateHeartbeat(true), 10000);
+        // 2. Balanced 30-second heartbeat loop (avoids QUIC write timeouts)
+        interval = setInterval(() => updateHeartbeat(true), 30000);
 
         // 3. Realtime Snapshot Listener for live updates across all network clients
         const presenceCol = collection(db, 'presence');
         unsubscribe = onSnapshot(presenceCol, (snapshot) => {
           if (!isMounted) return;
           const now = Date.now();
-          const cutoff = now - 90 * 1000; // Active within last 90 seconds
+          const cutoff = now - 150 * 1000; // Active within last 2.5 minutes
 
           let count = 0;
           snapshot.docs.forEach(docSnap => {
@@ -117,12 +116,10 @@ export const useOnlineUsers = (user) => {
 
     startPresence();
 
-    // Trigger instant heartbeat when user becomes active (focus, tab switch, interaction)
+    // Trigger instant heartbeat when user becomes active (focus, tab switch)
     const handleUserActivity = () => updateHeartbeat(false);
     window.addEventListener('focus', handleUserActivity);
     window.addEventListener('pointerdown', handleUserActivity);
-    window.addEventListener('keydown', handleUserActivity);
-    window.addEventListener('scroll', handleUserActivity, { passive: true });
     document.addEventListener('visibilitychange', handleUserActivity);
 
     // Instant cleanup on window unload
