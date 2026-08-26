@@ -664,6 +664,7 @@ const AdminDashboard = () => {
               students: studentSnap.size,
               teachers: staffSize,
               subjects: subjectSize,
+              classes: Object.keys(classMap).length || prev.classes || 0,
               demographics: { male, female, others }
             }));
 

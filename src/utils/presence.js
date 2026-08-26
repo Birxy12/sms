@@ -53,8 +53,8 @@ export const useOnlineUsers = (user) => {
     // Light-speed primitive heartbeat function (no serverTimestamp transform transforms)
     const updateHeartbeat = async (force = false) => {
       const now = Date.now();
-      if (!force && now - lastHeartbeatTime.current < 15000) {
-        return; // Debounce user activity bursts to 15s
+      if (!force && now - lastHeartbeatTime.current < 10000) {
+        return; // Debounce user activity bursts to 10s
       }
       lastHeartbeatTime.current = now;
 
@@ -63,7 +63,8 @@ export const useOnlineUsers = (user) => {
           userId,
           userName,
           userRole,
-          lastSeen: Date.now()
+          lastSeen: now,
+          updatedAt: new Date().toISOString()
         }, { merge: true });
       } catch (err) {
         // Silent catch
@@ -79,8 +80,8 @@ export const useOnlineUsers = (user) => {
         // 1. Send immediate heartbeat on mount
         await updateHeartbeat(true);
 
-        // 2. Balanced 25-second heartbeat loop
-        interval = setInterval(() => updateHeartbeat(true), 25000);
+        // 2. Balanced 20-second heartbeat loop
+        interval = setInterval(() => updateHeartbeat(true), 20000);
 
         // 3. Attach snapshot listener with safe retry mechanism
         const attachListener = () => {
@@ -99,18 +100,31 @@ export const useOnlineUsers = (user) => {
             unsubscribe = onSnapshot(presenceCol, (snapshot) => {
               if (!isMounted) return;
               const now = Date.now();
-              const cutoff = 180 * 1000; // 3 minutes active threshold
+              const cutoff = 15 * 60 * 1000; // 15 minutes active threshold for online users
 
               const activeUsers = new Set();
               snapshot.docs.forEach(docSnap => {
                 const data = docSnap.data();
-                if (data && data.lastSeen && (now - data.lastSeen) < cutoff) {
+                if (!data) return;
+
+                let lastSeenMs = 0;
+                if (typeof data.lastSeen === 'number') {
+                  lastSeenMs = data.lastSeen;
+                } else if (data.lastSeen?.toMillis) {
+                  lastSeenMs = data.lastSeen.toMillis();
+                } else if (data.lastSeen?.seconds) {
+                  lastSeenMs = data.lastSeen.seconds * 1000;
+                } else if (data.updatedAt) {
+                  lastSeenMs = new Date(data.updatedAt).getTime() || 0;
+                }
+
+                if (lastSeenMs && (now - lastSeenMs) < cutoff) {
                   activeUsers.add(data.userId || docSnap.id);
                 }
               });
 
               // Always ensure current user/session is counted
-              activeUsers.add(userId);
+              if (userId) activeUsers.add(userId);
 
               const finalCount = Math.max(1, activeUsers.size);
               setOnlineCount(finalCount);

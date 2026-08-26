@@ -747,13 +747,13 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
         ...d.data()
       }));
 
-      // Combine all classes dynamically from database and student records without duplicates
+      // Combine all real classes dynamically from database 'classes' and student records without artificial defaults
       const studentClassNames = parsedStudents.map(s => s.className).filter(Boolean);
-      const combinedClasses = getUniqueClasses([
+      const realDiscoveredClasses = getUniqueClasses([
         ...classesList,
-        ...studentClassNames,
-        ...DEFAULT_CLASSES
+        ...studentClassNames
       ]);
+      const combinedClasses = realDiscoveredClasses.length > 0 ? realDiscoveredClasses : classesList;
 
       setDbData({
         students: parsedStudents,
@@ -857,11 +857,11 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
       }
     });
 
-    const dynamicClassList = getUniqueClasses([
+    const realActiveClasses = getUniqueClasses([
       ...classes,
-      ...students.map(s => s.className).filter(Boolean),
-      ...DEFAULT_CLASSES
+      ...students.map(s => s.className).filter(Boolean)
     ]);
+    const dynamicClassList = realActiveClasses.length > 0 ? realActiveClasses : classes;
 
     // 1. Enrollment & Class Population for Principal & Admin - INCLUDE ALL REAL CLASSES FROM DATABASE
     const enrollmentTrend = dynamicClassList.map(cls => ({
