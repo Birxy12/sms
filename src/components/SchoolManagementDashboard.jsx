@@ -1179,7 +1179,7 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
 
     const student = {
       kpis: [
-        { title: 'Academic Average', value: `${overallAcademicAverage}%`, change: avgDeltaText, isPositive: true, icon: Award, subText: totalTermsWithExams > 1 ? `${totalTermsWithExams} Terms Combined` : `${studentCount} Subjects Graded` },
+        { title: 'Academic Average', value: `${overallAcademicAverage}%`, change: avgDeltaText, isPositive: true, icon: Award, subText: (hasSecondTerm || hasThirdTerm) ? '2nd Term + 3rd Term (÷2)' : (termProgression.length > 1 ? `${termProgression.length} Terms Combined` : `${studentCount} Subjects Graded`) },
         { title: 'Attendance Record', value: `${attendanceRate}%`, change: totalDaysRecorded > 0 ? 'Recorded' : 'Good Standing', isPositive: parseFloat(attendanceRate) >= 75, icon: UserCheck, subText: attendanceSubText },
         { title: 'Coursework Tasks', value: `${studentClassAssignments.length} Due`, change: 'Active', isPositive: studentClassAssignments.length <= 2, icon: ClipboardList, subText: 'Assignments' },
         { title: 'School Fee Status', value: feeStatusText, change: feeChangeText, isPositive: isFeePositive, icon: CreditCard, subText: feeSubText },
