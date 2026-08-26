@@ -34,6 +34,8 @@ const StudentDashboard = () => {
   const [inboxCount, setInboxCount]     = useState(0);
   const [resultsCount, setResultsCount] = useState(0);
   const [avgScore, setAvgScore]         = useState(0);
+  const [latestTermAvg, setLatestTermAvg] = useState('0.0');
+  const [latestTermTitle, setLatestTermTitle] = useState('Latest Term');
   const [currentSessionExamsCount, setCurrentSessionExamsCount] = useState(0);
   const [totalExamsCount, setTotalExamsCount] = useState(0);
   const [loading, setLoading]           = useState(true);
@@ -201,13 +203,32 @@ const StudentDashboard = () => {
             // Formula: (Second Term + Third Term) / 2
             const sum2ndAnd3rd = secondTermAvg + thirdTermAvg;
             setAvgScore((sum2ndAnd3rd / 2).toFixed(1));
+
+            // Set Last/Latest Term Average percentage
+            if (hasThirdTerm && thirdTermAvg > 0) {
+              setLatestTermAvg(thirdTermAvg.toFixed(1));
+              setLatestTermTitle('Third Term');
+            } else if (hasSecondTerm && secondTermAvg > 0) {
+              setLatestTermAvg(secondTermAvg.toFixed(1));
+              setLatestTermTitle('Second Term');
+            } else {
+              setLatestTermAvg((sum2ndAnd3rd / 2).toFixed(1));
+              setLatestTermTitle('Latest Term');
+            }
           } else if (otherTermsCount > 0) {
-            setAvgScore((otherTermsSum / otherTermsCount).toFixed(1));
+            const calculated = (otherTermsSum / otherTermsCount).toFixed(1);
+            setAvgScore(calculated);
+            setLatestTermAvg(calculated);
+            setLatestTermTitle('Latest Term');
           } else {
             setAvgScore('0.0');
+            setLatestTermAvg('0.0');
+            setLatestTermTitle('Current Term');
           }
         } else {
           setAvgScore('0.0');
+          setLatestTermAvg('0.0');
+          setLatestTermTitle('Current Term');
         }
 
         // 3. Fetch Fees Info
@@ -478,7 +499,12 @@ const StudentDashboard = () => {
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-6">
                       <div className="bg-white p-8 rounded-[2rem] border border-slate-100">
-                        <h3 className="text-xl font-black text-slate-800 mb-6">Recent Academic Performance</h3>
+                        <div className="flex items-center justify-between mb-6">
+                          <h3 className="text-xl font-black text-slate-800">Recent Academic Performance</h3>
+                          <span className="px-3 py-1 bg-indigo-50 text-indigo-600 font-bold text-xs rounded-lg">
+                            {latestTermTitle}
+                          </span>
+                        </div>
                         <div className="space-y-6">
                           <div className="p-6 bg-slate-50 rounded-2xl flex items-center justify-between">
                             <div className="flex items-center gap-4">
@@ -486,17 +512,17 @@ const StudentDashboard = () => {
                                 <Award size={24} />
                               </div>
                               <div>
-                                <p className="font-black text-slate-800">Current Term Progress</p>
-                                <p className="text-xs text-slate-400 font-bold uppercase">Based on latest assessment</p>
+                                <p className="font-black text-slate-800">Last Term Average</p>
+                                <p className="text-xs text-slate-400 font-bold uppercase">Evaluated across subjects</p>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-2xl font-black text-indigo-600">{gpaValue} <span className="text-xs font-bold text-slate-400">/ 5.0</span></p>
-                              <p className="text-[10px] font-black text-slate-400 uppercase">{avgScore}% Academic Avg</p>
+                              <p className="text-3xl font-black text-indigo-600">{latestTermAvg || avgScore}%</p>
+                              <p className="text-[10px] font-black text-slate-400 uppercase">Term Score Average</p>
                             </div>
                           </div>
                           <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${avgScore}%` }} className="h-full bg-indigo-500" />
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${latestTermAvg || avgScore}%` }} className="h-full bg-indigo-500" />
                           </div>
                         </div>
                       </div>
