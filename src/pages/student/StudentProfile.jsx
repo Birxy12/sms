@@ -13,11 +13,13 @@ import { useNavigate } from 'react-router-dom';
 import ImageCropperModal from '../../components/ImageCropperModal';
 import AvatarSelector from '../../components/AvatarSelector';
 import StudentAvatar from '../../components/StudentAvatar';
+import { useGlobalClubsAndHouses } from '../../utils/schoolClubsAndHouses';
 
 const StudentProfile = () => {
   const navigate = useNavigate();
   const { currentStudent, updateProfile } = useStudentAuth();
   const { primaryColor } = useTheme();
+  const { clubs, houses } = useGlobalClubsAndHouses();
   
   // -- State Management --
   const [isEditing, setIsEditing] = useState(false);
@@ -26,7 +28,7 @@ const StudentProfile = () => {
   const [status, setStatus] = useState({ type: '', message: '' });
   
   // -- Form State --
-  const [formData, setFormData] = useState({ name: '', phone: '', dob: '', email: '', gender: '', house: '' });
+  const [formData, setFormData] = useState({ name: '', phone: '', dob: '', email: '', gender: 'Male', house: '', club: '' });
   const [selectedAvatarId, setSelectedAvatarId] = useState('');
   const [avatarFile, setAvatarFile] = useState(null);
   
@@ -422,10 +424,10 @@ const StudentProfile = () => {
              <SectionHeader title="Personal Information" icon={User} />
              
              {isEditing && (
-               <div id="avatar-selector-section" className="space-y-3 mb-8 bg-slate-50 p-5 rounded-3xl border border-slate-100">
+               <div id="avatar-selector-section" className="space-y-3 mb-6 bg-slate-50 p-5 rounded-3xl border border-slate-100">
                  <label className="text-sm font-black text-slate-800 ml-1 block mb-3">Select 3D Avatar (Optional)</label>
                  <AvatarSelector 
-                   genderFilter={currentStudent?.gender} 
+                   genderFilter={formData.gender || currentStudent?.gender} 
                    selected={selectedAvatarId} 
                    onSelect={setSelectedAvatarId} 
                  />
@@ -439,19 +441,68 @@ const StudentProfile = () => {
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   disabled={!isEditing}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-slate-400 focus:bg-white outline-none transition-all font-bold text-slate-800 disabled:opacity-70 disabled:bg-slate-100"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-800 disabled:opacity-70 disabled:bg-slate-100"
                 />
              </div>
-             
-             <div className="space-y-1.5">
-               <label className="text-xs font-bold text-slate-500 ml-1">Date of Birth</label>
-               <input
-                  type="date"
-                  value={formData.dob}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dob: e.target.value }))}
-                  disabled={!isEditing}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-slate-400 focus:bg-white outline-none transition-all font-bold text-slate-800 disabled:opacity-70 disabled:bg-slate-100"
-                />
+
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               <div className="space-y-1.5">
+                 <label className="text-xs font-bold text-slate-500 ml-1">Gender</label>
+                 <select
+                   value={formData.gender || 'Male'}
+                   onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                   disabled={!isEditing}
+                   className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-800 disabled:opacity-70 disabled:bg-slate-100 cursor-pointer"
+                 >
+                   <option value="Male">Male</option>
+                   <option value="Female">Female</option>
+                 </select>
+               </div>
+
+               <div className="space-y-1.5">
+                 <label className="text-xs font-bold text-slate-500 ml-1">Date of Birth</label>
+                 <input
+                    type="date"
+                    value={formData.dob}
+                    onChange={(e) => setFormData(prev => ({ ...prev, dob: e.target.value }))}
+                    disabled={!isEditing}
+                    className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-800 disabled:opacity-70 disabled:bg-slate-100"
+                  />
+               </div>
+             </div>
+
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               <div className="space-y-1.5">
+                 <label className="text-xs font-bold text-slate-500 ml-1">School House</label>
+                 <select
+                   value={formData.house || ''}
+                   onChange={(e) => setFormData(prev => ({ ...prev, house: e.target.value }))}
+                   disabled={!isEditing}
+                   className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-800 disabled:opacity-70 disabled:bg-slate-100 cursor-pointer"
+                 >
+                   <option value="">-- Select House --</option>
+                   {houses.map(h => <option key={h} value={h}>{h}</option>)}
+                   {formData.house && !houses.includes(formData.house) && (
+                     <option value={formData.house}>{formData.house}</option>
+                   )}
+                 </select>
+               </div>
+
+               <div className="space-y-1.5">
+                 <label className="text-xs font-bold text-slate-500 ml-1">School Club / Society</label>
+                 <select
+                   value={formData.club || ''}
+                   onChange={(e) => setFormData(prev => ({ ...prev, club: e.target.value }))}
+                   disabled={!isEditing}
+                   className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-800 disabled:opacity-70 disabled:bg-slate-100 cursor-pointer"
+                 >
+                   <option value="">-- Select Club --</option>
+                   {clubs.map(c => <option key={c} value={c}>{c}</option>)}
+                   {formData.club && !clubs.includes(formData.club) && (
+                     <option value={formData.club}>{formData.club}</option>
+                   )}
+                 </select>
+               </div>
              </div>
 
              <div className="space-y-1.5">
@@ -461,7 +512,7 @@ const StudentProfile = () => {
                   value={formData.phone}
                   onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                   disabled={!isEditing}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-slate-400 focus:bg-white outline-none transition-all font-bold text-slate-800 disabled:opacity-70 disabled:bg-slate-100"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-800 disabled:opacity-70 disabled:bg-slate-100"
                 />
              </div>
 
@@ -472,43 +523,21 @@ const StudentProfile = () => {
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   disabled={!isEditing}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-slate-400 focus:bg-white outline-none transition-all font-bold text-slate-800 disabled:opacity-70 disabled:bg-slate-100"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white outline-none transition-all font-bold text-slate-800 disabled:opacity-70 disabled:bg-slate-100"
                 />
-             </div>
-             
-             <div className="grid grid-cols-2 gap-4">
-                 <div className="space-y-1.5">
-                   <label className="text-xs font-bold text-slate-500 ml-1">Gender</label>
-                   <input
-                      type="text"
-                      value={currentStudent?.gender || 'N/A'}
-                      disabled
-                      className="w-full px-4 py-3 rounded-xl bg-slate-100 border border-transparent font-bold text-slate-500 opacity-70 cursor-not-allowed"
-                    />
-                 </div>
-                 <div className="space-y-1.5">
-                   <label className="text-xs font-bold text-slate-500 ml-1">House</label>
-                   <input
-                      type="text"
-                      value={currentStudent?.house || 'N/A'}
-                      disabled
-                      className="w-full px-4 py-3 rounded-xl bg-slate-100 border border-transparent font-bold text-slate-500 opacity-70 cursor-not-allowed"
-                    />
-                 </div>
              </div>
 
              {!isEditing && canEdit && (
                <button 
                  type="button" 
                  onClick={() => setIsEditing(true)}
-                 className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold mt-4 transition-colors"
+                 className="w-full py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold mt-4 transition-colors"
                >
                  Tap to edit information
                </button>
              )}
            </div>
         )}
-
         {activeTab === 'academics' && (
           <div className="space-y-6 max-w-md mx-auto">
              {/* Verification Banner */}

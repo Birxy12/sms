@@ -11,8 +11,9 @@ import { db } from '../lib/firebase';
 import { collection, doc, writeBatch, getDocs, query, where } from 'firebase/firestore';
 import { ensureFirebaseAuth } from '../lib/ensureAuth';
 import { useGlobalClasses } from '../utils/classUtils';
-import { compressStudent, expandStudent } from '../utils/firestoreSchema';
+import { compressStudent, expandStudent, normalizeGender } from '../utils/firestoreSchema';
 import { generateUniqueRegNoSync } from '../utils/regNoGenerator';
+import { useGlobalClubsAndHouses } from '../utils/schoolClubsAndHouses';
 
 const BulkStudentEnrollModal = ({
   isOpen,
@@ -21,6 +22,7 @@ const BulkStudentEnrollModal = ({
   onEnrolled
 }) => {
   const classes = useGlobalClasses();
+  const { clubs, houses } = useGlobalClubsAndHouses();
   const [selectedClass, setSelectedClass] = useState(initialClass || 'JSS1');
   const [existingRegNos, setExistingRegNos] = useState(new Set());
   const [file, setFile] = useState(null);

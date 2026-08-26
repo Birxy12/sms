@@ -3,6 +3,7 @@ import { X, Loader2, Camera, Upload, UserCircle, KeyRound, Sparkles } from 'luci
 import { motion, AnimatePresence } from 'framer-motion';
 import StudentAvatar from './StudentAvatar';
 import AvatarSelector from './AvatarSelector';
+import { useGlobalClubsAndHouses } from '../utils/schoolClubsAndHouses';
 
 const FieldError = ({ message }) => (
   <span style={{ display: 'block', marginTop: '4px', fontSize: '11px', fontWeight: 600, color: '#ef4444' }}>
@@ -24,6 +25,7 @@ const StudentFormModal = ({
   formatDateForInput
 }) => {
   const modalRef = useRef(null);
+  const { clubs, houses } = useGlobalClubsAndHouses();
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
@@ -179,14 +181,41 @@ const StudentFormModal = ({
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Date of Birth</label>
-            <input type="date" value={formatDateForInput(currentStudent.dob)} onChange={(e) => setCurrentStudent({...currentStudent, dob: e.target.value})} style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '13px', fontWeight: 500, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="space-y-1.5">
+              <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>School House</label>
+              <select
+                value={currentStudent.house || ''}
+                onChange={(e) => setCurrentStudent({...currentStudent, house: e.target.value})}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '13px', fontWeight: 500, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }}
+              >
+                <option value="">-- Select House --</option>
+                {houses.map(h => <option key={h} value={h}>{h}</option>)}
+                {currentStudent.house && !houses.includes(currentStudent.house) && (
+                  <option value={currentStudent.house}>{currentStudent.house}</option>
+                )}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>School Club</label>
+              <select
+                value={currentStudent.club || ''}
+                onChange={(e) => setCurrentStudent({...currentStudent, club: e.target.value})}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '13px', fontWeight: 500, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }}
+              >
+                <option value="">-- Select Club --</option>
+                {clubs.map(c => <option key={c} value={c}>{c}</option>)}
+                {currentStudent.club && !clubs.includes(currentStudent.club) && (
+                  <option value={currentStudent.club}>{currentStudent.club}</option>
+                )}
+              </select>
+            </div>
           </div>
 
           <div className="space-y-1.5">
-            <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>House / Wing</label>
-            <input type="text" placeholder="e.g. Blue House" value={currentStudent.house || ''} onChange={(e) => setCurrentStudent({...currentStudent, house: e.target.value})} style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '13px', fontWeight: 500, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }} />
+            <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Date of Birth</label>
+            <input type="date" value={formatDateForInput(currentStudent.dob)} onChange={(e) => setCurrentStudent({...currentStudent, dob: e.target.value})} style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '13px', fontWeight: 500, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }} />
           </div>
           
           <div className="space-y-1.5">

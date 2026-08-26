@@ -7,8 +7,10 @@ import { uploadFileToSupabase } from '../lib/supabase';
 import { runAutoPromotion, fetchStudentsForClass, promoteOneSS1Student } from '../utils/promotion';
 import { SS1_SUBJECTS } from '../utils/subjectConfig';
 import { DEFAULT_COMMENT_TEMPLATES } from '../utils/commentGenerator';
+import ManageClubsAndHousesModal from '../components/ManageClubsAndHousesModal';
 
 const BrandingSettings = () => {
+  const [showClubsModal, setShowClubsModal] = useState(false);
   const { 
     schoolName, setSchoolName, 
     primaryColor, setPrimaryColor, 
@@ -638,6 +640,37 @@ const BrandingSettings = () => {
               />
             </div>
           </div>
+        </div>
+
+        {/* School Clubs & Houses Card */}
+        <div className="card-white branding-card">
+          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <Users color="var(--primary)" />
+            <h3>Clubs & Houses</h3>
+          </div>
+          <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '20px', lineHeight: '1.6' }}>
+            Configure official school clubs and houses available for student self-selection, profiles, and registration records.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowClubsModal(true)}
+            style={{
+              padding: '12px 24px',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+              color: 'white',
+              fontWeight: 800,
+              fontSize: '13px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 4px 14px rgba(79, 70, 229, 0.25)'
+            }}
+          >
+            <Users size={16} /> Configure Clubs & Houses
+          </button>
         </div>
 
         {/* Credentials Card */}
@@ -1726,6 +1759,10 @@ const BrandingSettings = () => {
         </div>
       )}
 
+      <ManageClubsAndHousesModal
+        isOpen={showClubsModal}
+        onClose={() => setShowClubsModal(false)}
+      />
     </div>
   );
 };

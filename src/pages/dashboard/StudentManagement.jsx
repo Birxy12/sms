@@ -11,6 +11,7 @@ import StudentAvatar from '../../components/StudentAvatar';
 import GlobalPhotoUploader from '../../components/GlobalPhotoUploader';
 import StudentFormModal from '../../components/StudentFormModal';
 import BulkStudentEnrollModal from '../../components/BulkStudentEnrollModal';
+import ManageClubsAndHousesModal from '../../components/ManageClubsAndHousesModal';
 import { formatDateForInput } from '../../utils/dateFormatter';
 import { useGlobalClasses } from '../../utils/classUtils';
 import { generateUniqueRegNoSync } from '../../utils/regNoGenerator';
@@ -25,6 +26,7 @@ const StudentManagement = () => {
   const [selectedClass, setSelectedClass] = useState('All');
   const [showModal, setShowModal] = useState(false);
   const [showBulkEnrollModal, setShowBulkEnrollModal] = useState(false);
+  const [showClubsModal, setShowClubsModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentStudent, setCurrentStudent] = useState({ 
     name: '', regNo: '', className: 'JSS1', gender: 'Male', email: '', 
@@ -517,6 +519,14 @@ const StudentManagement = () => {
           <p className="text-slate-500">Manage enrollment, class assignments, and individual student profiles.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+          <button
+            onClick={() => setShowClubsModal(true)}
+            className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-5 py-3 rounded-xl text-sm font-bold transition-all shadow-lg shadow-purple-100"
+          >
+            <Users size={18} />
+            <span>Clubs & Houses</span>
+          </button>
+
           <button
             onClick={() => setShowBulkEnrollModal(true)}
             className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-5 py-3 rounded-xl text-sm font-bold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg shadow-emerald-100"
@@ -1148,6 +1158,11 @@ const StudentManagement = () => {
         initialClass={selectedClass === 'All' ? 'JSS1' : selectedClass}
         onClose={() => setShowBulkEnrollModal(false)}
         onEnrolled={() => fetchStudents()}
+      />
+
+      <ManageClubsAndHousesModal
+        isOpen={showClubsModal}
+        onClose={() => setShowClubsModal(false)}
       />
     </div>
   );

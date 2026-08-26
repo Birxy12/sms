@@ -8,6 +8,7 @@ import ResultPublisher from '../../components/ResultPublisher';
 import Marksheet from '../../components/Marksheet';
 import BulkUpload from '../../components/BulkUpload';
 import BulkStudentEnrollModal from '../../components/BulkStudentEnrollModal';
+import ManageClubsAndHousesModal from '../../components/ManageClubsAndHousesModal';
 import ScoreEntry from '../../components/ScoreEntry';
 import AssignmentManager from '../../components/AssignmentManager';
 import NoteManager from '../../components/NoteManager';
@@ -120,6 +121,7 @@ const AdminDashboard = () => {
   
   const classes = useGlobalClasses();
   const [showBulkEnrollModal, setShowBulkEnrollModal] = useState(false);
+  const [showClubsModal, setShowClubsModal] = useState(false);
   const adminTabs = [
     { id: 'Overview', label: 'Overview', icon: TrendingUp },
     { id: 'Academics', label: 'Academics', icon: BookOpen },
@@ -1182,6 +1184,19 @@ const AdminDashboard = () => {
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Messages & OTP PINs</p>
               </div>
             </button>
+            <button 
+              onClick={() => setShowClubsModal(true)}
+              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left group"
+            >
+              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all"><Users size={24} /></div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-black text-slate-800">Clubs & Houses</h4>
+                  <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 rounded-full">Configure</span>
+                </div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">School Societies & Wings</p>
+              </div>
+            </button>
           </div>
           <BulkUpload />
           <ResultPublisher />
@@ -1192,6 +1207,11 @@ const AdminDashboard = () => {
             onEnrolled={() => {
               // Optionally trigger any live refresh
             }}
+          />
+
+          <ManageClubsAndHousesModal
+            isOpen={showClubsModal}
+            onClose={() => setShowClubsModal(false)}
           />
 
           {/* System Controls Card */}
