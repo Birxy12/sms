@@ -368,13 +368,90 @@ const StudentDashboard = () => {
   ];
 
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard, color: '#6366f1' },
-    { id: 'analysis', label: 'Analysis & Metrics', icon: BarChart3, color: '#ec4899' },
-    { id: 'wallet', label: 'Student Wallet', icon: Wallet, color: '#10b981' },
-    { id: 'academic', label: 'Academic', icon: GraduationCap, color: '#3b82f6' },
-    { id: 'notices', label: 'Notices', icon: Bell, color: '#f59e0b' },
-    { id: 'finance', label: 'Finance', icon: CreditCard, color: '#ec4899' },
-    { id: 'profile', label: 'My Profile', icon: User, color: '#8b5cf6' },
+    { 
+      id: 'overview', 
+      label: 'Overview', 
+      icon: LayoutDashboard, 
+      activeGradient: 'from-indigo-600 via-indigo-600 to-indigo-700',
+      activeShadow: 'shadow-indigo-500/30',
+      activeBorder: 'border-indigo-400/40',
+      iconActiveBg: 'bg-indigo-400/25 text-white',
+      iconInactiveBg: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100',
+      color: '#6366f1',
+      badge: null
+    },
+    { 
+      id: 'analysis', 
+      label: 'Analysis & Metrics', 
+      icon: BarChart3, 
+      activeGradient: 'from-purple-600 via-purple-600 to-indigo-700',
+      activeShadow: 'shadow-purple-500/30',
+      activeBorder: 'border-purple-400/40',
+      iconActiveBg: 'bg-purple-400/25 text-white',
+      iconInactiveBg: 'bg-purple-50 text-purple-600 group-hover:bg-purple-100',
+      color: '#8b5cf6',
+      badge: 'Live'
+    },
+    { 
+      id: 'wallet', 
+      label: 'Student Wallet', 
+      icon: Wallet, 
+      activeGradient: 'from-emerald-600 via-emerald-600 to-teal-700',
+      activeShadow: 'shadow-emerald-500/30',
+      activeBorder: 'border-emerald-400/40',
+      iconActiveBg: 'bg-emerald-400/25 text-white',
+      iconInactiveBg: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100',
+      color: '#10b981',
+      badge: walletData?.balance > 0 ? `₦${walletData.balance.toLocaleString()}` : null
+    },
+    { 
+      id: 'academic', 
+      label: 'Academic & Results', 
+      icon: GraduationCap, 
+      activeGradient: 'from-blue-600 via-blue-600 to-sky-700',
+      activeShadow: 'shadow-blue-500/30',
+      activeBorder: 'border-blue-400/40',
+      iconActiveBg: 'bg-blue-400/25 text-white',
+      iconInactiveBg: 'bg-blue-50 text-blue-600 group-hover:bg-blue-100',
+      color: '#0ea5e9',
+      badge: null
+    },
+    { 
+      id: 'notices', 
+      label: 'Notices', 
+      icon: Bell, 
+      activeGradient: 'from-amber-500 via-amber-600 to-orange-600',
+      activeShadow: 'shadow-amber-500/30',
+      activeBorder: 'border-amber-400/40',
+      iconActiveBg: 'bg-amber-400/25 text-white',
+      iconInactiveBg: 'bg-amber-50 text-amber-600 group-hover:bg-amber-100',
+      color: '#f59e0b',
+      badge: inboxCount > 0 ? `${inboxCount} New` : null
+    },
+    { 
+      id: 'finance', 
+      label: 'Finance & Fees', 
+      icon: CreditCard, 
+      activeGradient: 'from-rose-600 via-rose-600 to-pink-700',
+      activeShadow: 'shadow-rose-500/30',
+      activeBorder: 'border-rose-400/40',
+      iconActiveBg: 'bg-rose-400/25 text-white',
+      iconInactiveBg: 'bg-rose-50 text-rose-600 group-hover:bg-rose-100',
+      color: '#f43f5e',
+      badge: feeIsCleared ? 'Cleared' : (feeData?.balance > 0 ? 'Due' : null)
+    },
+    { 
+      id: 'profile', 
+      label: 'My Profile', 
+      icon: User, 
+      activeGradient: 'from-slate-800 via-slate-800 to-slate-900',
+      activeShadow: 'shadow-slate-800/30',
+      activeBorder: 'border-slate-700/50',
+      iconActiveBg: 'bg-slate-700/50 text-white',
+      iconInactiveBg: 'bg-slate-100 text-slate-700 group-hover:bg-slate-200',
+      color: '#64748b',
+      badge: null
+    },
   ];
 
   const container = {
@@ -450,22 +527,44 @@ const StudentDashboard = () => {
               </div>
             </motion.div>
 
-            {/* Premium Tab Bar */}
-            <motion.div variants={item} className="flex bg-white p-2 rounded-2xl border border-slate-100 shadow-sm overflow-x-auto no-scrollbar">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-sm transition-all whitespace-nowrap ${
-                    activeTab === tab.id 
-                    ? 'bg-slate-900 text-white shadow-lg' 
-                    : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <tab.icon size={18} style={{ color: activeTab === tab.id ? 'white' : tab.color }} />
-                  {tab.label}
-                </button>
-              ))}
+            {/* Premium Tab Bar with Vibrant Icons & Badges */}
+            <motion.div 
+              variants={item} 
+              className="flex bg-white/95 backdrop-blur-xl p-2 rounded-2xl border border-slate-200/80 shadow-lg shadow-slate-200/40 overflow-x-auto no-scrollbar gap-2"
+            >
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`relative flex items-center gap-2.5 px-4 md:px-5 py-3 rounded-xl font-black text-xs md:text-sm transition-all duration-300 whitespace-nowrap group ${
+                      isActive 
+                        ? `bg-gradient-to-r ${tab.activeGradient} text-white shadow-lg ${tab.activeShadow} border ${tab.activeBorder} scale-[1.02]` 
+                        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80'
+                    }`}
+                  >
+                    <div className={`p-1.5 rounded-lg transition-all duration-300 ${isActive ? tab.iconActiveBg : tab.iconInactiveBg}`}>
+                      <Icon size={17} className={isActive ? 'text-white' : ''} />
+                    </div>
+                    <span className="tracking-tight">{tab.label}</span>
+                    {tab.badge && (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        isActive
+                          ? 'bg-white/20 text-white border border-white/25 backdrop-blur-sm'
+                          : tab.badge === 'Live' || tab.badge === 'Cleared'
+                          ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                          : tab.badge === 'Due'
+                          ? 'bg-rose-50 text-rose-600 border border-rose-200 animate-pulse'
+                          : 'bg-indigo-50 text-indigo-600 border border-indigo-200'
+                      }`}>
+                        {tab.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </motion.div>
 
             {/* Tab Content */}
@@ -646,18 +745,29 @@ const StudentDashboard = () => {
                         </div>
 
                         {/* Filter Buttons */}
-                        <div className="flex bg-slate-100 p-1 rounded-xl">
-                          {['ALL', 'CREDIT', 'DEBIT'].map(type => (
-                            <button
-                              key={type}
-                              onClick={() => setWalletFilter(type)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
-                                walletFilter === type ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                              }`}
-                            >
-                              {type}
-                            </button>
-                          ))}
+                        <div className="flex bg-slate-100/90 p-1 rounded-2xl gap-1 border border-slate-200/60">
+                          {[
+                            { type: 'ALL', label: 'All', icon: LayoutDashboard, color: 'text-indigo-600' },
+                            { type: 'CREDIT', label: 'Credits (+)', icon: ArrowDownRight, color: 'text-emerald-600' },
+                            { type: 'DEBIT', label: 'Debits (-)', icon: ArrowUpRight, color: 'text-rose-600' }
+                          ].map(btn => {
+                            const isFilterActive = walletFilter === btn.type;
+                            const FilterIcon = btn.icon;
+                            return (
+                              <button
+                                key={btn.type}
+                                onClick={() => setWalletFilter(btn.type)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+                                  isFilterActive 
+                                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80 scale-[1.02]' 
+                                    : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
+                                }`}
+                              >
+                                <FilterIcon size={14} className={isFilterActive ? btn.color : 'text-slate-400'} />
+                                <span>{btn.label}</span>
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>

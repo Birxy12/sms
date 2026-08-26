@@ -1156,10 +1156,10 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
     <div className="w-full text-white">
       {/* Role Switcher Toolbar (if enabled for admins / previews) */}
       {showRoleSwitcher && (
-        <div className="mb-6 p-2.5 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-wrap items-center justify-between gap-3 shadow-lg shadow-black/20">
+        <div className="mb-6 p-2.5 rounded-[1.75rem] bg-slate-900/95 border border-slate-800/80 backdrop-blur-xl flex flex-wrap items-center justify-between gap-3 shadow-2xl shadow-black/30">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 py-1 flex items-center gap-1.5">
-              <Sparkles size={14} className="text-indigo-400" /> Switch Perspective:
+            <span className="text-xs font-black text-slate-400 uppercase tracking-wider px-3 py-1.5 flex items-center gap-1.5 bg-slate-800/60 rounded-xl border border-slate-700/50">
+              <Sparkles size={14} className="text-indigo-400 animate-pulse" /> Switch Perspective:
             </span>
             {Object.keys(ROLE_CONFIG).map((rKey) => {
               const rCfg = ROLE_CONFIG[rKey];
@@ -1169,13 +1169,24 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
                 <button
                   key={rKey}
                   onClick={() => handleRoleSelect(rKey)}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all duration-300 ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                      ? 'text-white shadow-lg scale-105 border'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/80 border border-transparent'
                   }`}
+                  style={
+                    isActive
+                      ? {
+                          background: `linear-gradient(135deg, ${rCfg.color}, ${rCfg.color}cc)`,
+                          boxShadow: `0 8px 20px -4px ${rCfg.color}50`,
+                          borderColor: `${rCfg.color}80`
+                        }
+                      : {}
+                  }
                 >
-                  <Icon size={14} />
+                  <div className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-slate-800 text-slate-400'}`}>
+                    <Icon size={14} />
+                  </div>
                   <span>{rCfg.label}</span>
                 </button>
               );
@@ -1185,7 +1196,7 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
           <button
             onClick={fetchAllData}
             disabled={refreshing}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all border border-slate-700 shadow-sm disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-black transition-all border border-slate-700 shadow-sm disabled:opacity-50 hover:scale-105 active:scale-95"
             title="Reload live database data"
           >
             <RefreshCw size={13} className={refreshing ? 'animate-spin text-indigo-400' : ''} />
