@@ -541,61 +541,6 @@ export const StudentAnalysisView = ({ data }) => (
         </div>
       </SectionCard>
     </div>
-
-    {/* Continuous Assessment vs Examination & Coursework */}
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <SectionCard title="Assessment Component Split (CA Tests vs Examination)">
-        <div style={{ width: '100%', height: 260 }}>
-          {data.assessmentBreakdown && data.assessmentBreakdown.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.assessmentBreakdown} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" vertical={false} />
-                <XAxis dataKey="subject" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} />
-                <Tooltip content={<CustomTooltip suffix=" pts" />} />
-                <Bar dataKey="ca" name="Continuous Assessment (CA)" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="exam" name="Term Examination" stackId="a" fill="#10b981" radius={[8, 8, 0, 0]} />
-                <Legend verticalAlign="top" height={30} formatter={(val) => <span className="text-slate-300 text-xs font-bold">{val}</span>} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-slate-500 text-xs">
-              <span>Assessment component breakdown will show when CA marks are entered.</span>
-            </div>
-          )}
-        </div>
-      </SectionCard>
-
-      <SectionCard title="My Coursework & Assignments Due">
-        <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
-          {data.upcomingDeadlines && data.upcomingDeadlines.length > 0 ? (
-            data.upcomingDeadlines.map((item) => (
-              <div key={item.id} className="flex items-center justify-between p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/50 hover:bg-slate-800/90 hover:border-slate-600 transition-all cursor-pointer group">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform shrink-0">
-                    <BookOpen size={18} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs md:text-sm text-white font-bold group-hover:text-blue-400 transition-colors truncate">{item.title}</p>
-                    <p className="text-[11px] text-slate-400 font-medium">{item.subject}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-[11px] text-slate-400 flex items-center gap-1 font-medium">
-                    <Clock size={12} /> {item.due}
-                  </span>
-                  <ChevronRight size={16} className="text-slate-500 group-hover:text-slate-300 transition-colors" />
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-8 text-slate-500 text-xs italic">
-              No pending assignments for your class. Great job!
-            </div>
-          )}
-        </div>
-      </SectionCard>
-    </div>
   </motion.div>
 );
 
