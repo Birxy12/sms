@@ -170,16 +170,38 @@ export const expandMarks = (compressed) => {
 };
 
 export const compressStudent = (data = {}) => {
+  const regNo = data.regNo || data.REGNO || data.r || "";
+  const name = data.name || data['STUDENT NAME'] || data.n || "";
+  const gender = normalizeGender(data.gender || data.GENDER || data.g);
+  const className = data.className || data.CLASS || data.class_name || data.class || data.c || "";
+  const dob = data.dob || data.DOB || data.d || "";
+  const club = data.club || data.cl || "";
+  const house = data.house || data.h || "";
+  const updatedAt = data.updatedAt || data.u || new Date().toISOString();
+  const photo = data.photo || data.p || "";
+
   const result = {
-    [STUDENT_KEYS.regNo]: data.regNo || data.r || "",
-    [STUDENT_KEYS.name]: data.name || data.n || "",
-    [STUDENT_KEYS.gender]: normalizeGender(data.gender || data.g),
-    [STUDENT_KEYS.className]: data.className || data.c || "",
-    [STUDENT_KEYS.dob]: data.dob || data.d || "",
-    [STUDENT_KEYS.club]: data.club || data.cl || "",
-    [STUDENT_KEYS.house]: data.house || data.h || "",
-    [STUDENT_KEYS.updatedAt]: data.updatedAt || data.u || new Date().toISOString(),
-    [STUDENT_KEYS.photo]: data.photo || data.p || ""
+    // Compressed keys
+    [STUDENT_KEYS.regNo]: regNo,
+    [STUDENT_KEYS.name]: name,
+    [STUDENT_KEYS.gender]: gender,
+    [STUDENT_KEYS.className]: className,
+    [STUDENT_KEYS.dob]: dob,
+    [STUDENT_KEYS.club]: club,
+    [STUDENT_KEYS.house]: house,
+    [STUDENT_KEYS.updatedAt]: updatedAt,
+    [STUDENT_KEYS.photo]: photo,
+
+    // Uncompressed standard keys for multi-index Firestore queries
+    regNo,
+    name,
+    gender,
+    className,
+    dob,
+    club,
+    house,
+    updatedAt,
+    photo
   };
 
   if (data.phone !== undefined && data.phone !== null) result.phone = String(data.phone);

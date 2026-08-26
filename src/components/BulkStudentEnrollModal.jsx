@@ -8,7 +8,7 @@ import {
   ShieldCheck, FileText, Search, Sparkles
 } from 'lucide-react';
 import { db } from '../lib/firebase';
-import { collection, doc, writeBatch, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, writeBatch, getDocs, query, where, setDoc } from 'firebase/firestore';
 import { ensureFirebaseAuth } from '../lib/ensureAuth';
 import { useGlobalClasses } from '../utils/classUtils';
 import { compressStudent, expandStudent, normalizeGender } from '../utils/firestoreSchema';
@@ -281,6 +281,15 @@ const BulkStudentEnrollModal = ({
 
     try {
       await ensureFirebaseAuth();
+
+      // Ensure target class is registered in the dynamic classes collection
+      const classId = selectedClass.trim();
+      const classRef = doc(collection(db, 'classes'), classId);
+      await setDoc(classRef, {
+        name: classId,
+        active: true,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
 
       let batch = writeBatch(db);
       let count = 0;

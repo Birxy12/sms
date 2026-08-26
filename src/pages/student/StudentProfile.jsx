@@ -15,6 +15,13 @@ import AvatarSelector from '../../components/AvatarSelector';
 import StudentAvatar from '../../components/StudentAvatar';
 import { useGlobalClubsAndHouses } from '../../utils/schoolClubsAndHouses';
 
+const SectionHeader = ({ title, icon: Icon }) => (
+  <div className="flex items-center gap-2 pb-2 border-b border-slate-100 mb-4">
+    {Icon && <Icon size={16} className="text-indigo-600" />}
+    <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">{title}</h3>
+  </div>
+);
+
 const StudentProfile = () => {
   const navigate = useNavigate();
   const { currentStudent, updateProfile } = useStudentAuth();

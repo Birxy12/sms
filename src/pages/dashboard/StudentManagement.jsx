@@ -13,7 +13,8 @@ import StudentFormModal from '../../components/StudentFormModal';
 import BulkStudentEnrollModal from '../../components/BulkStudentEnrollModal';
 import ManageClubsAndHousesModal from '../../components/ManageClubsAndHousesModal';
 import { formatDateForInput } from '../../utils/dateFormatter';
-import { useGlobalClasses } from '../../utils/classUtils';
+import { useGlobalClasses, normalizeClassName } from '../../utils/classUtils';
+import { expandStudent, compressStudent } from '../../utils/firestoreSchema';
 import { generateUniqueRegNoSync } from '../../utils/regNoGenerator';
 import { generateWhatsAppPinReset } from '../../utils/whatsapp';
 
@@ -266,9 +267,21 @@ const StudentManagement = () => {
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      const q = query(collection(db, 'students'), orderBy('regNo', 'asc'));
-      const querySnapshot = await getDocs(q);
-      const studentList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const querySnapshot = await getDocs(collection(db, 'students'));
+      const studentList = querySnapshot.docs.map(doc => {
+        const rawData = doc.data();
+        const expanded = expandStudent(rawData) || {};
+        return {
+          id: doc.id,
+          ...rawData,
+          ...expanded,
+          gender: expanded.gender || rawData.gender || 'Male',
+          className: expanded.className || rawData.className || ''
+        };
+      });
+
+      // Sort alphabetically by name or regNo
+      studentList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       setStudents(studentList);
     } catch (error) {
       console.error('Error fetching students:', error);
@@ -506,10 +519,16 @@ const StudentManagement = () => {
     }
   };
 
-  const filteredStudents = students.filter(s => 
-    (s.name?.toLowerCase().includes(searchTerm.toLowerCase()) || s.regNo?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (selectedClass === 'All' || s.className === selectedClass)
-  );
+  const filteredStudents = students.filter(s => {
+    const matchesSearch = !searchTerm || 
+      (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (s.regNo || '').toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesClass = selectedClass === 'All' || 
+      normalizeClassName(s.className) === normalizeClassName(selectedClass);
+
+    return matchesSearch && matchesClass;
+  });
 
   return (
     <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500">

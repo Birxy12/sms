@@ -4,6 +4,8 @@ import { collection, query, getDocs, where, doc, setDoc, getDoc, deleteDoc } fro
 import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info, UserCheck, X, Calendar, CheckSquare, Square, ChevronDown, Save, Check, Download, Plus, Trash2, UserPlus } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import BulkStudentEnrollModal from '../../components/BulkStudentEnrollModal';
+import { expandStudent } from '../../utils/firestoreSchema';
+import { normalizeClassName } from '../../utils/classUtils';
 
 const ClassManagement = () => {
   const { currentSession } = useTheme();
@@ -24,14 +26,14 @@ const ClassManagement = () => {
 
   // Modal State
   const [selectedClass, setSelectedClass] = useState(null);
-  const [openDropdownId, setOpenDropdownId] = useState(null);
   const [classStudents, setClassStudents] = useState([]);
-  const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [presentStudents, setPresentStudents] = useState([]);
+  const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [activeTab, setActiveTab] = useState('attendance'); 
+  const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
-  const [attendanceSaving, setAttendanceSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('attendance');
-  const [performanceData, setPerformanceData] = useState({ maleAvg: 0, femaleAvg: 0, overallAvg: 0 });
+  const [attendanceRecords, setAttendanceRecords] = useState({});
+  const [savingAttendance, setSavingAttendance] = useState(false);
+  const [performanceData, setPerformanceData] = useState([]);
   const [performanceLoading, setPerformanceLoading] = useState(false);
 
   const DEFAULT_CLASSES = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'];
@@ -40,13 +42,14 @@ const ClassManagement = () => {
   const fetchClassStats = async () => {
     setLoading(true);
     try {
+      // 1. Fetch Staff
       const staffSnap = await getDocs(collection(db, 'staff'));
       const staffList = staffSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       setStaff(staffList);
 
+      // 2. Fetch Classes from Firestore
       const classesSnap = await getDocs(collection(db, 'classes'));
       const classesData = {};
-      // Collect any custom classes stored in Firestore
       const customClassNames = [];
       classesSnap.docs.forEach(d => {
         classesData[d.id] = d.data();
@@ -55,39 +58,67 @@ const ClassManagement = () => {
         }
       });
 
-      // Merge defaults + custom, deduplicating
-      const allClasses = [...DEFAULT_CLASSES, ...customClassNames.filter(c => !DEFAULT_CLASSES.includes(c))];
+      // 3. Fetch All Students Once (Fast, 1 read request)
+      const studentsSnap = await getDocs(collection(db, 'students'));
+      const studentsByClass = {};
+
+      studentsSnap.docs.forEach(doc => {
+        const student = expandStudent(doc.data());
+        if (!student) return;
+        const normClass = normalizeClassName(student.className || '');
+        if (!normClass) return;
+
+        if (!studentsByClass[normClass]) {
+          studentsByClass[normClass] = [];
+        }
+        studentsByClass[normClass].push(student);
+
+        // Discover any student classes not yet in classes list (e.g. NURSERY 3)
+        if (!DEFAULT_CLASSES.includes(normClass) && !customClassNames.includes(normClass)) {
+          customClassNames.push(normClass);
+        }
+      });
+
+      // 4. Fetch Subjects
+      const subjectsSnap = await getDocs(collection(db, 'subjects'));
+      const subjectsByClass = {};
+      subjectsSnap.docs.forEach(d => {
+        const subData = d.data();
+        const c = normalizeClassName(subData.class || subData.className || '');
+        if (c) {
+          subjectsByClass[c] = (subjectsByClass[c] || 0) + 1;
+        }
+      });
+
+      // Merge defaults + custom classes
+      const allClasses = Array.from(new Set([...DEFAULT_CLASSES, ...customClassNames]));
       setClasses(allClasses);
 
-      const stats = await Promise.all(allClasses.map(async (className) => {
-        // Fetch students in this class
-        const studentsQuery = query(collection(db, 'students'), where('className', '==', className));
-        const studentsSnap = await getDocs(studentsQuery);
+      // 5. Build Stats
+      const stats = allClasses.map((className) => {
+        const norm = normalizeClassName(className);
+        const enrolled = studentsByClass[norm] || [];
         
         let maleCount = 0;
         let femaleCount = 0;
-        studentsSnap.docs.forEach(doc => {
-          const data = doc.data();
-          const g = (data.gender || data.GENDER || '').toLowerCase();
-          if (g === 'm' || g === 'male') maleCount++;
-          else if (g === 'f' || g === 'female' || g === 'girl') femaleCount++;
+        enrolled.forEach(s => {
+          const g = (s.gender || '').toLowerCase();
+          if (g === 'f' || g === 'female') femaleCount++;
+          else maleCount++;
         });
-
-        // Count subjects for this class
-        const subjectsQuery = query(collection(db, 'subjects'), where('class', '==', className));
-        const subjectsSnap = await getDocs(subjectsQuery);
 
         return {
           name: className,
-          studentCount: studentsSnap.size,
+          studentCount: enrolled.length,
           maleCount,
           femaleCount,
-          subjectCount: subjectsSnap.size,
+          subjectCount: subjectsByClass[norm] || 0,
           formTeacherId: classesData[className]?.formTeacherId || '',
           id: className,
           isCustom: !DEFAULT_CLASSES.includes(className)
         };
-      }));
+      });
+
       setClassStats(stats);
     } catch (error) {
       console.error('Error fetching class stats:', error);
@@ -169,9 +200,17 @@ const ClassManagement = () => {
     setAttendanceLoading(true);
     setActiveTab(tab);
     try {
-      const q = query(collection(db, 'students'), where('className', '==', className));
-      const snap = await getDocs(q);
-      const studentsList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const snap = await getDocs(collection(db, 'students'));
+      const normTarget = normalizeClassName(className);
+      const studentsList = [];
+      snap.docs.forEach(d => {
+        const rawData = d.data();
+        const expanded = expandStudent(rawData) || {};
+        const merged = { id: d.id, ...rawData, ...expanded };
+        if (normalizeClassName(merged.className) === normTarget) {
+          studentsList.push(merged);
+        }
+      });
       setClassStudents(studentsList);
       
       await fetchAttendance(className, attendanceDate);
