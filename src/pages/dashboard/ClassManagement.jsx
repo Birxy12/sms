@@ -1,7 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, query, getDocs, where, doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
-import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info, UserCheck, X, Calendar, CheckSquare, Square, ChevronDown, Save, Check, Download, Plus, Trash2, UserPlus } from 'lucide-react';
+import { 
+  Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, 
+  Info, UserCheck, X, Calendar, CheckSquare, Square, ChevronDown, Save, Check, 
+  Download, Plus, Trash2, UserPlus, DollarSign, AlertCircle, CheckCircle2, 
+  Search, Filter, CreditCard, ArrowRight, Eye, ShieldCheck, Mail, Phone, RefreshCw,
+  Sparkles, Award, FileSpreadsheet
+} from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import BulkStudentEnrollModal from '../../components/BulkStudentEnrollModal';
 import { expandStudent } from '../../utils/firestoreSchema';
@@ -13,6 +19,7 @@ const ClassManagement = () => {
   const [loading, setLoading] = useState(true);
   const [staff, setStaff] = useState([]);
   const [savingTeacher, setSavingTeacher] = useState('');
+  const [feesConfig, setFeesConfig] = useState({});
 
   // Bulk Enroll modal state
   const [showBulkEnroll, setShowBulkEnroll] = useState(false);
@@ -28,26 +35,44 @@ const ClassManagement = () => {
   const [selectedClass, setSelectedClass] = useState(null);
   const [classStudents, setClassStudents] = useState([]);
   const [openDropdownId, setOpenDropdownId] = useState(null);
-  const [activeTab, setActiveTab] = useState('attendance'); 
-  const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [activeTab, setActiveTab] = useState('students'); // 'students', 'attendance', 'fees', 'demographics'
+  const [studentSearch, setStudentSearch] = useState('');
+  const [feeFilter, setFeeFilter] = useState('all'); // 'all', 'owing', 'cleared'
+  
+  // Attendance State
+  const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [presentStudents, setPresentStudents] = useState([]);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
-  const [attendanceRecords, setAttendanceRecords] = useState({});
-  const [savingAttendance, setSavingAttendance] = useState(false);
-  const [performanceData, setPerformanceData] = useState([]);
+  const [attendanceSaving, setAttendanceSaving] = useState(false);
+  const [attendanceSavedToast, setAttendanceSavedToast] = useState(false);
+
+  // Analytics State
+  const [performanceData, setPerformanceData] = useState({ maleAvg: 0, femaleAvg: 0, overallAvg: 0 });
   const [performanceLoading, setPerformanceLoading] = useState(false);
 
   const DEFAULT_CLASSES = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2 ART', 'SS2 SCIENCE', 'SS3 ART', 'SS3 SCIENCE'];
   const [classes, setClasses] = useState(DEFAULT_CLASSES);
 
+  // 1. Fetch Class Stats and Global Info
   const fetchClassStats = async () => {
     setLoading(true);
     try {
-      // 1. Fetch Staff
+      // Fetch Staff
       const staffSnap = await getDocs(collection(db, 'staff'));
       const staffList = staffSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       setStaff(staffList);
 
-      // 2. Fetch Classes from Firestore
+      // Fetch Global Fees Settings
+      try {
+        const feeSnap = await getDoc(doc(db, 'settings', 'fees'));
+        if (feeSnap.exists()) {
+          setFeesConfig(feeSnap.data() || {});
+        }
+      } catch (err) {
+        console.warn('Could not load fees settings:', err);
+      }
+
+      // Fetch Classes from Firestore
       const classesSnap = await getDocs(collection(db, 'classes'));
       const classesData = {};
       const customClassNames = [];
@@ -58,7 +83,7 @@ const ClassManagement = () => {
         }
       });
 
-      // 3. Fetch All Students Once (Fast, 1 read request)
+      // Fetch All Students Once (Fast, 1 read request)
       const studentsSnap = await getDocs(collection(db, 'students'));
       const studentsByClass = {};
 
@@ -79,7 +104,7 @@ const ClassManagement = () => {
         }
       });
 
-      // 4. Fetch Subjects
+      // Fetch Subjects
       const subjectsSnap = await getDocs(collection(db, 'subjects'));
       const subjectsByClass = {};
       subjectsSnap.docs.forEach(d => {
@@ -94,7 +119,7 @@ const ClassManagement = () => {
       const allClasses = Array.from(new Set([...DEFAULT_CLASSES, ...customClassNames]));
       setClasses(allClasses);
 
-      // 5. Build Stats
+      // Build Stats
       const stats = allClasses.map((className) => {
         const norm = normalizeClassName(className);
         const enrolled = studentsByClass[norm] || [];
@@ -127,6 +152,10 @@ const ClassManagement = () => {
     }
   };
 
+  useEffect(() => {
+    fetchClassStats();
+  }, []);
+
   const handleAddClass = async () => {
     const name = newClassName.trim().toUpperCase();
     if (!name) return;
@@ -156,7 +185,6 @@ const ClassManagement = () => {
     if (!window.confirm(`Delete class "${className}"? This will not remove any students already assigned to it.`)) return;
     setDeletingClass(className);
     try {
-      // Soft-delete by marking deleted=true in Firestore
       await setDoc(doc(db, 'classes', className), { deleted: true }, { merge: true });
       setClasses(prev => prev.filter(c => c !== className));
       setClassStats(prev => prev.filter(c => c.id !== className));
@@ -190,15 +218,14 @@ const ClassManagement = () => {
     }
   };
 
-  useEffect(() => {
-    fetchClassStats();
-  }, []);
-
-  const openManageDetails = async (className, tab = 'attendance') => {
+  // Open Class Modal with target tab
+  const openManageDetails = async (className, tab = 'students') => {
     setSelectedClass(className);
     setOpenDropdownId(null);
     setAttendanceLoading(true);
     setActiveTab(tab);
+    setStudentSearch('');
+    setFeeFilter('all');
     try {
       const snap = await getDocs(collection(db, 'students'));
       const normTarget = normalizeClassName(className);
@@ -211,12 +238,14 @@ const ClassManagement = () => {
           studentsList.push(merged);
         }
       });
+      // Sort alphabetically by name
+      studentsList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       setClassStudents(studentsList);
       
       await fetchAttendance(className, attendanceDate);
       await fetchPerformance(className, studentsList);
     } catch (error) {
-      console.error(error);
+      console.error('Error opening class details:', error);
     } finally {
       setAttendanceLoading(false);
     }
@@ -317,7 +346,8 @@ const ClassManagement = () => {
         presentStudents,
         updatedAt: new Date().toISOString()
       }, { merge: true });
-      alert('Attendance saved successfully!');
+      setAttendanceSavedToast(true);
+      setTimeout(() => setAttendanceSavedToast(false), 3000);
     } catch (error) {
       console.error(error);
       alert('Failed to save attendance.');
@@ -326,12 +356,133 @@ const ClassManagement = () => {
     }
   };
 
+  // Fee computations for students in selectedClass
+  const feeAnalysis = useMemo(() => {
+    let totalExpected = 0;
+    let totalCollected = 0;
+    let totalDebt = 0;
+    let owingCount = 0;
+    let clearedCount = 0;
+
+    const studentFees = classStudents.map(s => {
+      const fallbackFee = feesConfig[selectedClass] || feesConfig['default'] || 0;
+      const expected = parseFloat(s.expectedFee) || parseFloat(fallbackFee) || 0;
+      const paid = parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0;
+      const balance = Math.max(0, expected - paid);
+      
+      let status = 'no_fee';
+      if (expected > 0) {
+        if (balance === 0) {
+          status = 'cleared';
+          clearedCount++;
+        } else if (paid > 0) {
+          status = 'partial';
+          owingCount++;
+        } else {
+          status = 'owing';
+          owingCount++;
+        }
+      }
+
+      totalExpected += expected;
+      totalCollected += paid;
+      totalDebt += balance;
+
+      return {
+        ...s,
+        expected,
+        paid,
+        balance,
+        status
+      };
+    });
+
+    return {
+      studentFees,
+      totalExpected,
+      totalCollected,
+      totalDebt,
+      owingCount,
+      clearedCount
+    };
+  }, [classStudents, feesConfig, selectedClass]);
+
+  // Filtered Students for Roster & Fees tab
+  const displayedStudents = useMemo(() => {
+    const term = studentSearch.trim().toLowerCase();
+    return feeAnalysis.studentFees.filter(s => {
+      const matchesSearch = !term || 
+        (s.name || '').toLowerCase().includes(term) || 
+        (s.regNo || '').toLowerCase().includes(term);
+
+      if (!matchesSearch) return false;
+
+      if (activeTab === 'fees') {
+        if (feeFilter === 'owing') return s.balance > 0;
+        if (feeFilter === 'cleared') return s.expected > 0 && s.balance === 0;
+      }
+
+      return true;
+    });
+  }, [feeAnalysis.studentFees, studentSearch, feeFilter, activeTab]);
+
+  // Download Class Roster CSV
+  const downloadClassRoster = () => {
+    const rows = [
+      ['Reg No', 'Student Name', 'Gender', 'Class', 'House', 'Club', 'Phone', 'Email', 'Date of Birth'],
+      ...classStudents.map(s => [
+        s.regNo || '',
+        s.name || '',
+        s.gender || 'Male',
+        selectedClass,
+        s.house || '',
+        s.club || '',
+        s.phone || '',
+        s.email || '',
+        s.dob || ''
+      ])
+    ];
+    const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedClass}_Students_Roster.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Download Debtors / Fee Report CSV
+  const downloadDebtorsReport = () => {
+    const rows = [
+      ['Reg No', 'Student Name', 'Class', 'Expected Fee (NGN)', 'Paid Amount (NGN)', 'Balance Owing (NGN)', 'Status', 'Phone'],
+      ...feeAnalysis.studentFees.map(s => [
+        s.regNo || '',
+        s.name || '',
+        selectedClass,
+        s.expected,
+        s.paid,
+        s.balance,
+        s.status.toUpperCase(),
+        s.phone || ''
+      ])
+    ];
+    const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedClass}_Fee_Debtors_Report.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight text-left">Class Management</h2>
-          <p className="text-slate-500 text-left">Overview of school structure, student distribution, and academic capacity.</p>
+          <p className="text-slate-500 text-left">Overview of school structure, student distribution, attendance, and fee tracking.</p>
         </div>
         <div className="flex flex-wrap gap-3">
           <div className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 border border-emerald-100">
@@ -356,166 +507,667 @@ const ClassManagement = () => {
         </div>
       </div>
 
+      {/* Class Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {loading ? (
           [1,2,3,4].map(i => <div key={i} className="h-48 bg-slate-100 animate-pulse rounded-3xl"></div>)
         ) : classStats.map((cls) => (
-          <div key={cls.id} className="group relative bg-white p-8 rounded-3xl shadow-sm border border-slate-200 hover:border-indigo-500 transition-all hover:shadow-xl hover:shadow-indigo-50 hover:-translate-y-1">
-            <div className="flex justify-between items-start mb-6 text-left">
-              <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                <Layers size={24} />
+          <div key={cls.id} className="group relative bg-white p-7 rounded-3xl shadow-sm border border-slate-200 hover:border-indigo-500 transition-all hover:shadow-xl hover:shadow-indigo-50 flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-start mb-5 text-left">
+                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                  <Layers size={24} />
+                </div>
+                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 uppercase tracking-widest">
+                  {cls.name.includes('SS') ? 'Senior' : (cls.name.includes('NURSERY') || cls.name.includes('PRY') || cls.name.includes('BASIC') ? 'Primary' : 'Junior')}
+                </span>
               </div>
-              <span className="text-xs font-black text-slate-300 uppercase tracking-widest">{cls.name.includes('SS') ? 'Senior' : 'Junior'}</span>
-            </div>
-            
-            <div className="space-y-4 text-left">
-              <h3 className="text-2xl font-black text-slate-900">{cls.name}</h3>
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <Users size={16} className="text-slate-400" />
-                  <span className="text-sm font-bold text-slate-700">{cls.studentCount} Students</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <BookOpen size={16} className="text-slate-400" />
-                  <span className="text-sm font-bold text-slate-700">{cls.subjectCount} Subjects</span>
-                </div>
-              </div>
-
-              {/* Class Demographics Analysis (Visual Pro Style) */}
-              {cls.studentCount > 0 && (
-                <div className="pt-2">
-                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1.5">
-                    <span className="text-blue-600">Male {Math.round((cls.maleCount / cls.studentCount) * 100)}%</span>
-                    <span className="text-pink-600">{Math.round((cls.femaleCount / cls.studentCount) * 100)}% Female</span>
-                  </div>
-                  <div className="flex h-1.5 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                    <div style={{ width: `${(cls.maleCount / cls.studentCount) * 100}%` }} className="bg-blue-500 transition-all duration-1000"></div>
-                    <div style={{ width: `${(cls.femaleCount / cls.studentCount) * 100}%` }} className="bg-pink-500 transition-all duration-1000"></div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-slate-100 text-left">
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1 mb-2">
-                <UserCheck size={14} /> Class/Form Teacher
-              </label>
-              <select
-                value={cls.formTeacherId}
-                onChange={(e) => handleAssignTeacher(cls.id, e.target.value)}
-                disabled={savingTeacher === cls.id}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"
-              >
-                <option value="">-- Select Teacher --</option>
-                {staff.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-              {savingTeacher === cls.id && <p className="text-xs text-indigo-500 mt-1 font-bold animate-pulse">Saving...</p>}
-            </div>
-
-            <div className="relative mt-6">
-              <button 
-                onClick={() => setOpenDropdownId(openDropdownId === cls.id ? null : cls.id)}
-                className="w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-50 hover:text-indigo-600 transition-all">
-                Manage Details <ChevronDown size={16} className={`transition-transform ${openDropdownId === cls.id ? 'rotate-180' : ''}`} />
-              </button>
               
-              {openDropdownId === cls.id && (
-                <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-20 animate-in fade-in slide-in-from-top-2">
-                  <button onClick={() => openManageDetails(cls.id, 'attendance')} className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors border-b border-slate-50">
-                    <Calendar size={16} /> Take Daily Attendance
-                  </button>
-                  <button onClick={() => openManageDetails(cls.id, 'demographics')} className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors border-b border-slate-50">
-                    <Users size={16} /> Demographics Analysis
-                  </button>
-                  <button onClick={() => openManageDetails(cls.id, 'performance')} className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors">
-                    <TrendingUp size={16} /> Performance Analysis
-                  </button>
+              <div className="space-y-3 text-left">
+                <h3 className="text-2xl font-black text-slate-900">{cls.name}</h3>
+                <div className="flex items-center gap-5">
+                  <div className="flex items-center gap-1.5">
+                    <Users size={15} className="text-indigo-500" />
+                    <span className="text-sm font-black text-slate-800">{cls.studentCount} Students</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <BookOpen size={15} className="text-slate-400" />
+                    <span className="text-xs font-bold text-slate-500">{cls.subjectCount} Subjects</span>
+                  </div>
                 </div>
-              )}
+
+                {/* Demographics bar */}
+                {cls.studentCount > 0 && (
+                  <div className="pt-1">
+                    <div className="flex justify-between text-[10px] font-black uppercase tracking-wider mb-1">
+                      <span className="text-blue-600">Male {Math.round((cls.maleCount / cls.studentCount) * 100)}%</span>
+                      <span className="text-pink-600">{Math.round((cls.femaleCount / cls.studentCount) * 100)}% Female</span>
+                    </div>
+                    <div className="flex h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div style={{ width: `${(cls.maleCount / cls.studentCount) * 100}%` }} className="bg-blue-500 transition-all duration-700"></div>
+                      <div style={{ width: `${(cls.femaleCount / cls.studentCount) * 100}%` }} className="bg-pink-500 transition-all duration-700"></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-5 pt-3 border-t border-slate-100 text-left">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1 mb-1.5">
+                  <UserCheck size={13} /> Form Teacher
+                </label>
+                <select
+                  value={cls.formTeacherId}
+                  onChange={(e) => handleAssignTeacher(cls.id, e.target.value)}
+                  disabled={savingTeacher === cls.id}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                >
+                  <option value="">-- Assign Teacher --</option>
+                  {staff.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+                {savingTeacher === cls.id && <p className="text-[10px] text-indigo-500 mt-1 font-bold animate-pulse">Saving...</p>}
+              </div>
             </div>
 
-            {/* Delete custom class */}
-            {cls.isCustom && (
-              <button
-                onClick={() => handleDeleteClass(cls.id)}
-                disabled={deletingClass === cls.id}
-                className="w-full mt-3 py-2 text-xs font-bold text-rose-500 hover:bg-rose-50 rounded-xl border border-rose-100 flex items-center justify-center gap-1.5 transition-all"
+            {/* Action Buttons */}
+            <div className="mt-5 space-y-2">
+              {/* PRIMARY OPEN CLASS BUTTON */}
+              <button 
+                onClick={() => openManageDetails(cls.id, 'students')}
+                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-100 hover:shadow-lg active:scale-98"
               >
-                {deletingClass === cls.id ? 'Deleting…' : <><Trash2 size={12} /> Delete Class</>}
+                <Eye size={16} /> Open Class
               </button>
-            )}
+
+              <div className="relative">
+                <button 
+                  onClick={() => setOpenDropdownId(openDropdownId === cls.id ? null : cls.id)}
+                  className="w-full py-2 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100"
+                >
+                  Quick Actions <ChevronDown size={14} className={`transition-transform ${openDropdownId === cls.id ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {openDropdownId === cls.id && (
+                  <div className="absolute bottom-full left-0 w-full mb-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-20 animate-in fade-in slide-in-from-bottom-2 text-left">
+                    <button onClick={() => openManageDetails(cls.id, 'students')} className="w-full px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors border-b border-slate-50">
+                      <Users size={15} /> All Students Roster
+                    </button>
+                    <button onClick={() => openManageDetails(cls.id, 'attendance')} className="w-full px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors border-b border-slate-50">
+                      <Calendar size={15} /> Take Attendance
+                    </button>
+                    <button onClick={() => openManageDetails(cls.id, 'fees')} className="w-full px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors border-b border-slate-50">
+                      <DollarSign size={15} /> Fee Status & Debtors
+                    </button>
+                    <button onClick={() => openManageDetails(cls.id, 'demographics')} className="w-full px-4 py-3 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors">
+                      <TrendingUp size={15} /> Analytics & Performance
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Delete custom class */}
+              {cls.isCustom && (
+                <button
+                  onClick={() => handleDeleteClass(cls.id)}
+                  disabled={deletingClass === cls.id}
+                  className="w-full py-1.5 text-[11px] font-bold text-rose-500 hover:bg-rose-50 rounded-lg border border-rose-100 flex items-center justify-center gap-1.5 transition-all"
+                >
+                  {deletingClass === cls.id ? 'Deleting…' : <><Trash2 size={11} /> Delete Class</>}
+                </button>
+              )}
+            </div>
           </div>
         ))}
 
         {/* Add Class placeholder card */}
         <button
           onClick={() => setShowAddClass(true)}
-          className="group h-full min-h-[200px] bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center gap-3 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer"
+          className="group h-full min-h-[260px] bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center gap-3 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer p-6"
         >
           <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-center group-hover:bg-indigo-600 group-hover:border-indigo-600 transition-all">
             <Plus size={22} className="text-slate-400 group-hover:text-white transition-colors" />
           </div>
-          <span className="text-sm font-bold text-slate-400 group-hover:text-indigo-600 transition-colors">Add New Class</span>
+          <span className="text-sm font-black text-slate-500 group-hover:text-indigo-600 transition-colors">Add New Class</span>
+          <p className="text-xs text-slate-400 text-center font-medium">Create a custom class for early years, junior, or senior arms.</p>
         </button>
       </div>
 
-      {/* ── Add Class Modal ─────────────────────────────── */}
+      {/* Add Class Modal */}
       {showAddClass && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: '#fff', borderRadius: '24px', width: '100%', maxWidth: '440px', boxShadow: '0 25px 60px rgba(0,0,0,0.2)', padding: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Layers size={18} color="#fff" />
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-8 animate-in zoom-in-95">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
+                  <Layers size={20} />
                 </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '900', color: '#1e293b' }}>Add New Class</h3>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Custom class will appear in all dropdowns</p>
+                <div className="text-left">
+                  <h3 className="text-lg font-black text-slate-900 m-0">Add New Class</h3>
+                  <p className="text-xs text-slate-400 m-0">Appears immediately in all portal views</p>
                 </div>
               </div>
-              <button onClick={() => { setShowAddClass(false); setNewClassName(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
+              <button onClick={() => { setShowAddClass(false); setNewClassName(''); }} className="text-slate-400 hover:text-slate-600">
                 <X size={20} />
               </button>
             </div>
 
-            <label style={{ fontSize: '13px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '8px' }}>Class Name</label>
-            <input
-              type="text"
-              value={newClassName}
-              onChange={e => setNewClassName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAddClass()}
-              placeholder="e.g. JSS4, SS4 ART…"
-              autoFocus
-              style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '2px solid #e2e8f0', fontSize: '14px', fontWeight: '700', outline: 'none', marginBottom: '8px', boxSizing: 'border-box' }}
-            />
-            <p style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '24px' }}>Class name will be converted to uppercase automatically.</p>
+            <div className="space-y-4 text-left">
+              <div>
+                <label className="text-xs font-bold text-slate-600 block mb-1.5">Class Name</label>
+                <input
+                  type="text"
+                  value={newClassName}
+                  onChange={e => setNewClassName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAddClass()}
+                  placeholder="e.g. NURSERY 3, BASIC 5, SS2 COMMERCE"
+                  autoFocus
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-black text-slate-800 outline-none focus:border-indigo-600"
+                />
+              </div>
+              <p className="text-[11px] text-slate-400">Class names are auto-converted to uppercase for registry consistency.</p>
+            </div>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button onClick={() => { setShowAddClass(false); setNewClassName(''); }} style={{ padding: '10px 20px', borderRadius: '10px', border: '2px solid #e2e8f0', background: '#fff', fontWeight: '700', cursor: 'pointer', color: '#475569', fontSize: '14px' }}>
+            <div className="flex gap-3 justify-end mt-6">
+              <button 
+                onClick={() => { setShowAddClass(false); setNewClassName(''); }} 
+                className="px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-slate-600 text-xs hover:bg-slate-50"
+              >
                 Cancel
               </button>
               <button
                 onClick={handleAddClass}
                 disabled={addingClass || !newClassName.trim()}
-                style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', fontWeight: '800', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', opacity: addingClass || !newClassName.trim() ? 0.6 : 1 }}
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-black text-xs hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1.5"
               >
-                <Plus size={16} />
-                {addingClass ? 'Adding…' : 'Add Class'}
+                <Plus size={14} />
+                {addingClass ? 'Adding…' : 'Create Class'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Capacity Insight — fully dynamic ─────────────────────────────── */}
+      {/* ── OPEN CLASS MODAL (All Students, Attendance, Debtors/Fees, Analytics) ── */}
+      {selectedClass && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-5xl max-h-[92vh] flex flex-col rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 border border-slate-100">
+            {/* Modal Header */}
+            <div className="p-6 bg-slate-900 text-white flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-4 text-left">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                  <Layers size={24} className="text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-2xl font-black m-0">{selectedClass}</h3>
+                    <span className="px-3 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-black text-xs border border-indigo-400/30">
+                      {classStudents.length} Students
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-xs mt-0.5 font-medium">Interactive Class Portal & Management</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedClass(null)} 
+                className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-rose-600 transition-colors text-slate-300 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Navigation Tabs */}
+            <div className="flex border-b border-slate-200 bg-slate-50/80 px-4 sm:px-6 shrink-0 gap-2 overflow-x-auto">
+              {[
+                { id: 'students', label: 'All Students', icon: Users, badge: classStudents.length },
+                { id: 'attendance', label: 'Take Attendance', icon: Calendar, badge: `${presentStudents.length}/${classStudents.length}` },
+                { id: 'fees', label: 'Fees & Debtors', icon: DollarSign, badge: feeAnalysis.owingCount > 0 ? `${feeAnalysis.owingCount} Owing` : 'Cleared', badgeColor: feeAnalysis.owingCount > 0 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700' },
+                { id: 'demographics', label: 'Demographics & Stats', icon: TrendingUp }
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`py-3.5 px-4 text-xs font-black uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${
+                      isActive 
+                        ? 'border-indigo-600 text-indigo-600 bg-white shadow-sm rounded-t-xl' 
+                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <Icon size={16} />
+                    <span>{tab.label}</span>
+                    {tab.badge && (
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${tab.badgeColor || (isActive ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600')}`}>
+                        {tab.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            
+            {/* Modal Body */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-50/50 text-left custom-scrollbar">
+              {attendanceLoading && classStudents.length === 0 ? (
+                <div className="flex justify-center p-16">
+                  <div className="animate-spin h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
+                </div>
+              ) : (
+                <div>
+                  {/* ─────────────────────────────────────────────────────────────
+                      TAB 1: ALL STUDENTS ROSTER
+                  ───────────────────────────────────────────────────────────── */}
+                  {activeTab === 'students' && (
+                    <div className="space-y-4 animate-in fade-in">
+                      {/* Search & Actions Bar */}
+                      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                          <input
+                            type="text"
+                            placeholder={`Search ${classStudents.length} student(s) by name or Reg No...`}
+                            value={studentSearch}
+                            onChange={(e) => setStudentSearch(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={downloadClassRoster}
+                            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black flex items-center gap-2 transition-colors"
+                          >
+                            <FileSpreadsheet size={15} /> Export Roster (CSV)
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Students List Table / Cards */}
+                      {displayedStudents.length === 0 ? (
+                        <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center">
+                          <Users size={36} className="mx-auto text-slate-300 mb-2" />
+                          <h4 className="text-base font-black text-slate-700">No Students Found</h4>
+                          <p className="text-xs text-slate-400 mt-1">
+                            {classStudents.length === 0 
+                              ? `No students have been enrolled in ${selectedClass} yet.`
+                              : `No students matched the query "${studentSearch}".`}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-black uppercase text-slate-400 tracking-wider">
+                                  <th className="py-3 px-4">#</th>
+                                  <th className="py-3 px-4">Student</th>
+                                  <th className="py-3 px-4">Reg No</th>
+                                  <th className="py-3 px-4">Gender</th>
+                                  <th className="py-3 px-4">House</th>
+                                  <th className="py-3 px-4">Club / Society</th>
+                                  <th className="py-3 px-4">Contact</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
+                                {displayedStudents.map((s, idx) => (
+                                  <tr key={s.id || idx} className="hover:bg-indigo-50/30 transition-colors">
+                                    <td className="py-3.5 px-4 text-slate-400 font-mono">{idx + 1}</td>
+                                    <td className="py-3.5 px-4">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-full bg-indigo-50 text-indigo-700 font-black flex items-center justify-center overflow-hidden border border-indigo-100 shrink-0">
+                                          {s.photo ? <img src={s.photo} alt={s.name} className="w-full h-full object-cover" /> : (s.name?.[0] || 'S')}
+                                        </div>
+                                        <div>
+                                          <span className="font-extrabold text-slate-900 block">{s.name}</span>
+                                          <span className="text-[10px] text-slate-400">{s.dob || 'DOB: Not set'}</span>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="py-3.5 px-4 font-mono font-bold text-indigo-600">{s.regNo || 'Pending'}</td>
+                                    <td className="py-3.5 px-4">
+                                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
+                                        s.gender === 'Female' ? 'bg-pink-50 text-pink-700' : 'bg-blue-50 text-blue-700'
+                                      }`}>
+                                        {s.gender || 'Male'}
+                                      </span>
+                                    </td>
+                                    <td className="py-3.5 px-4 text-slate-600">{s.house || '—'}</td>
+                                    <td className="py-3.5 px-4 text-slate-600">{s.club || '—'}</td>
+                                    <td className="py-3.5 px-4 text-slate-500 text-[11px]">
+                                      {s.phone ? <span>{s.phone}</span> : (s.email ? <span>{s.email}</span> : <span className="text-slate-300">No contact</span>)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ─────────────────────────────────────────────────────────────
+                      TAB 2: TAKE ATTENDANCE
+                  ───────────────────────────────────────────────────────────── */}
+                  {activeTab === 'attendance' && (
+                    <div className="space-y-4 animate-in fade-in">
+                      {/* Attendance Banner & Date Selector */}
+                      <div className="bg-gradient-to-r from-indigo-700 via-indigo-800 to-purple-800 rounded-3xl p-6 text-white flex flex-col md:flex-row justify-between items-center gap-4 shadow-xl">
+                        <div>
+                          <div className="flex items-center gap-2 mb-2 bg-white/20 px-3 py-1 rounded-full w-fit backdrop-blur-md">
+                            <Calendar size={13} className="text-indigo-100" />
+                            <span className="text-[10px] font-black uppercase tracking-wider text-white">Daily Register</span>
+                          </div>
+                          <h4 className="text-2xl font-black mb-1">Class Attendance</h4>
+                          <p className="text-indigo-200 text-xs max-w-md">Click student cards to toggle attendance between Present and Absent.</p>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/20 text-left">
+                            <label className="text-[10px] font-black uppercase text-indigo-200 block mb-1">Attendance Date</label>
+                            <input 
+                              type="date" 
+                              value={attendanceDate}
+                              onChange={handleDateChange}
+                              className="bg-transparent border-none outline-none text-base font-black text-white [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Controls Bar */}
+                      <div className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={toggleAllAttendance}
+                            className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold text-xs transition-colors flex items-center gap-1.5"
+                          >
+                            <CheckSquare size={14} /> Toggle All Present
+                          </button>
+                          <button 
+                            onClick={saveAttendance}
+                            disabled={attendanceSaving}
+                            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-xs shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50"
+                          >
+                            <Save size={14} />
+                            {attendanceSaving ? 'Saving…' : 'Save Attendance'}
+                          </button>
+                          {attendanceSavedToast && (
+                            <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg animate-bounce">
+                              ✓ Saved to Firestore!
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                            <span className="text-xs font-bold text-slate-600">Present: <strong>{presentStudents.length}</strong></span>
+                          </div>
+                          <span className="text-slate-300">|</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+                            <span className="text-xs font-bold text-slate-600">Absent: <strong>{Math.max(0, classStudents.length - presentStudents.length)}</strong></span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Student Attendance Grid */}
+                      {classStudents.length === 0 ? (
+                        <div className="text-center p-12 bg-white rounded-2xl border border-slate-200">
+                          <p className="text-slate-400 font-bold text-sm">No students enrolled in {selectedClass} yet.</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {classStudents.map(student => {
+                            const isPresent = presentStudents.includes(student.id);
+                            return (
+                              <div 
+                                key={student.id} 
+                                onClick={() => toggleAttendance(student.id)}
+                                className={`cursor-pointer rounded-2xl p-4 border-2 transition-all flex items-center gap-3 select-none ${
+                                  isPresent 
+                                    ? 'bg-emerald-50/80 border-emerald-400 shadow-sm shadow-emerald-100' 
+                                    : 'bg-white border-slate-200 hover:border-indigo-300'
+                                }`}
+                              >
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm overflow-hidden shrink-0 ${
+                                  isPresent ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-100 text-slate-500'
+                                }`}>
+                                  {student.photo ? <img src={student.photo} alt={student.name} className="w-full h-full object-cover" /> : (student.name?.[0] || 'S')}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h5 className={`font-black text-xs truncate ${isPresent ? 'text-emerald-900' : 'text-slate-800'}`}>{student.name}</h5>
+                                  <p className={`text-[10px] font-bold truncate ${isPresent ? 'text-emerald-600' : 'text-slate-400'}`}>{student.regNo} • {student.gender || 'Male'}</p>
+                                </div>
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                                  isPresent ? 'bg-emerald-500 text-white scale-105 shadow-sm' : 'bg-slate-100 text-slate-300'
+                                }`}>
+                                  {isPresent ? <Check size={14} strokeWidth={3} /> : <div className="w-2 h-2 rounded-full bg-slate-300" />}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ─────────────────────────────────────────────────────────────
+                      TAB 3: FEE STATUS & STUDENTS OWING (DEBTORS)
+                  ───────────────────────────────────────────────────────────── */}
+                  {activeTab === 'fees' && (
+                    <div className="space-y-4 animate-in fade-in">
+                      {/* Financial KPI Cards */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Expected Revenue</span>
+                          <span className="text-2xl font-black text-slate-900">₦{feeAnalysis.totalExpected.toLocaleString()}</span>
+                          <span className="text-[10px] font-bold text-slate-400 block mt-1">{classStudents.length} Students</span>
+                        </div>
+
+                        <div className="bg-emerald-50/70 p-5 rounded-2xl border border-emerald-100 shadow-sm">
+                          <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest block mb-1">Total Collected</span>
+                          <span className="text-2xl font-black text-emerald-700">₦{feeAnalysis.totalCollected.toLocaleString()}</span>
+                          <span className="text-[10px] font-bold text-emerald-600 block mt-1">{feeAnalysis.clearedCount} Fully Cleared</span>
+                        </div>
+
+                        <div className="bg-rose-50/70 p-5 rounded-2xl border border-rose-100 shadow-sm">
+                          <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest block mb-1">Total Outstanding Debt</span>
+                          <span className="text-2xl font-black text-rose-700">₦{feeAnalysis.totalDebt.toLocaleString()}</span>
+                          <span className="text-[10px] font-bold text-rose-600 block mt-1">{feeAnalysis.owingCount} Student(s) Owing</span>
+                        </div>
+
+                        <div className="bg-purple-50/70 p-5 rounded-2xl border border-purple-100 shadow-sm flex flex-col justify-between">
+                          <div>
+                            <span className="text-[10px] font-black text-purple-600 uppercase tracking-widest block mb-1">Collection Rate</span>
+                            <span className="text-2xl font-black text-purple-800">
+                              {feeAnalysis.totalExpected > 0 
+                                ? `${Math.round((feeAnalysis.totalCollected / feeAnalysis.totalExpected) * 100)}%`
+                                : '0%'}
+                            </span>
+                          </div>
+                          <button
+                            onClick={downloadDebtorsReport}
+                            className="mt-2 w-full py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-[11px] font-black transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                          >
+                            <Download size={13} /> Export Debtors CSV
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Filter Bar & Search */}
+                      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <div className="flex gap-2">
+                          {[
+                            { id: 'all', label: 'All Students' },
+                            { id: 'owing', label: `Owing (${feeAnalysis.owingCount})` },
+                            { id: 'cleared', label: `Cleared (${feeAnalysis.clearedCount})` }
+                          ].map(f => (
+                            <button
+                              key={f.id}
+                              onClick={() => setFeeFilter(f.id)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-colors ${
+                                feeFilter === f.id 
+                                  ? 'bg-indigo-600 text-white shadow-sm' 
+                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                              }`}
+                            >
+                              {f.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="relative flex-1 max-w-xs">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
+                          <input
+                            type="text"
+                            placeholder="Find debtor by name/reg..."
+                            value={studentSearch}
+                            onChange={(e) => setStudentSearch(e.target.value)}
+                            className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Fee Table */}
+                      {displayedStudents.length === 0 ? (
+                        <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center">
+                          <CheckCircle2 size={36} className="mx-auto text-emerald-400 mb-2" />
+                          <h4 className="text-base font-black text-slate-800">
+                            {feeFilter === 'owing' ? '🎉 No Debtors in this Filter!' : 'No Student Records Found'}
+                          </h4>
+                          <p className="text-xs text-slate-400 mt-1">All selected students are in good financial standing.</p>
+                        </div>
+                      ) : (
+                        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-black uppercase text-slate-400 tracking-wider">
+                                  <th className="py-3 px-4">Student</th>
+                                  <th className="py-3 px-4">Reg No</th>
+                                  <th className="py-3 px-4">Expected Fee</th>
+                                  <th className="py-3 px-4">Amount Paid</th>
+                                  <th className="py-3 px-4">Balance (Owing)</th>
+                                  <th className="py-3 px-4">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
+                                {displayedStudents.map((s, idx) => (
+                                  <tr key={s.id || idx} className="hover:bg-indigo-50/20 transition-colors">
+                                    <td className="py-3.5 px-4 font-black text-slate-900">
+                                      <div className="flex items-center gap-2.5">
+                                        <div className="w-8 h-8 rounded-full bg-slate-100 font-black text-slate-600 flex items-center justify-center shrink-0 overflow-hidden text-xs">
+                                          {s.photo ? <img src={s.photo} alt={s.name} className="w-full h-full object-cover" /> : (s.name?.[0] || 'S')}
+                                        </div>
+                                        <span>{s.name}</span>
+                                      </div>
+                                    </td>
+                                    <td className="py-3.5 px-4 font-mono font-bold text-slate-500">{s.regNo}</td>
+                                    <td className="py-3.5 px-4 font-mono font-bold">₦{s.expected.toLocaleString()}</td>
+                                    <td className="py-3.5 px-4 font-mono font-bold text-emerald-600">₦{s.paid.toLocaleString()}</td>
+                                    <td className="py-3.5 px-4 font-mono font-extrabold text-rose-600">
+                                      {s.balance > 0 ? `₦${s.balance.toLocaleString()}` : '₦0'}
+                                    </td>
+                                    <td className="py-3.5 px-4">
+                                      {s.status === 'cleared' && (
+                                        <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                          ✓ Cleared
+                                        </span>
+                                      )}
+                                      {s.status === 'partial' && (
+                                        <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-amber-50 text-amber-700 border border-amber-200">
+                                          Partial (₦{s.balance.toLocaleString()})
+                                        </span>
+                                      )}
+                                      {s.status === 'owing' && (
+                                        <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-rose-50 text-rose-700 border border-rose-200">
+                                          Owing
+                                        </span>
+                                      )}
+                                      {s.status === 'no_fee' && (
+                                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold text-slate-400 bg-slate-100">
+                                          No Fee Set
+                                        </span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ─────────────────────────────────────────────────────────────
+                      TAB 4: DEMOGRAPHICS & ANALYTICS
+                  ───────────────────────────────────────────────────────────── */}
+                  {activeTab === 'demographics' && (
+                    <div className="space-y-6 animate-in fade-in">
+                      {/* Demographics Card */}
+                      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Gender Distribution</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 flex flex-col items-center justify-center">
+                            <span className="font-black text-blue-700 uppercase tracking-widest text-[10px]">Male Students</span>
+                            <span className="text-4xl font-black text-blue-900 mt-1">
+                              {classStudents.filter(s => (s.gender || '').toLowerCase() === 'male' || (s.gender || '').toLowerCase() === 'm').length}
+                            </span>
+                          </div>
+                          <div className="bg-pink-50 p-5 rounded-2xl border border-pink-100 flex flex-col items-center justify-center">
+                            <span className="font-black text-pink-700 uppercase tracking-widest text-[10px]">Female Students</span>
+                            <span className="text-4xl font-black text-pink-900 mt-1">
+                              {classStudents.filter(s => (s.gender || '').toLowerCase() === 'female' || (s.gender || '').toLowerCase() === 'f').length}
+                            </span>
+                          </div>
+                          <div className="bg-slate-100 p-5 rounded-2xl border border-slate-200 flex flex-col items-center justify-center">
+                            <span className="font-black text-slate-700 uppercase tracking-widest text-[10px]">Total Enrolled</span>
+                            <span className="text-4xl font-black text-slate-900 mt-1">{classStudents.length}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Performance Card */}
+                      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Academic Performance Overview</h4>
+                        {performanceLoading ? (
+                          <div className="flex justify-center p-6"><div className="animate-spin h-6 w-6 border-4 border-indigo-600 border-t-transparent rounded-full"></div></div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 flex flex-col items-center justify-center">
+                              <span className="font-black text-emerald-700 uppercase tracking-widest text-[10px]">Class Average</span>
+                              <span className="text-4xl font-black text-emerald-800 mt-1">{performanceData.overallAvg}%</span>
+                            </div>
+                            <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 flex flex-col items-center justify-center">
+                              <span className="font-black text-blue-700 uppercase tracking-widest text-[10px]">Male Avg</span>
+                              <span className="text-4xl font-black text-blue-800 mt-1">{performanceData.maleAvg}%</span>
+                            </div>
+                            <div className="bg-pink-50 p-5 rounded-2xl border border-pink-100 flex flex-col items-center justify-center">
+                              <span className="font-black text-pink-700 uppercase tracking-widest text-[10px]">Female Avg</span>
+                              <span className="text-4xl font-black text-pink-800 mt-1">{performanceData.femaleAvg}%</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Capacity Insight Section */}
       {(() => {
         if (loading || classStats.length === 0) return null;
 
         const totalStudents = classStats.reduce((s, c) => s + c.studentCount, 0);
         const avgPerClass   = totalStudents / classStats.length;
-        // Balance: how evenly spread are students? 100% = perfectly even
         const maxCount      = Math.max(...classStats.map(c => c.studentCount));
         const balancePct    = maxCount > 0 ? Math.round((avgPerClass / maxCount) * 100) : 0;
         const largestClass  = classStats.reduce((a, b) => b.studentCount > a.studentCount ? b : a, classStats[0]);
@@ -551,7 +1203,6 @@ const ClassManagement = () => {
                 <span className={`font-black ${balanceColor}`}>{balancePct}%</span>
               </h3>
               <p className="text-indigo-300 max-w-md text-sm leading-relaxed">{statusMsg}</p>
-              {/* Mini class breakdown pills */}
               <div className="flex flex-wrap gap-2 mt-4">
                 {classStats.map(c => (
                   <span
@@ -564,7 +1215,6 @@ const ClassManagement = () => {
               </div>
             </div>
             <div className="relative z-10 flex flex-col items-center gap-3">
-              {/* Big stat */}
               <div className="bg-white/10 backdrop-blur-md rounded-2xl px-8 py-4 text-center border border-white/20">
                 <p className="text-indigo-300 text-xs font-black uppercase tracking-widest mb-1">Total Students</p>
                 <p className="text-5xl font-black text-white">{totalStudents}</p>
@@ -583,218 +1233,7 @@ const ClassManagement = () => {
         );
       })()}
 
-      <div className="card-white p-6 border-l-4 border-l-indigo-500 bg-indigo-50/30 flex items-start gap-4">
-        <Info size={24} className="text-indigo-600 mt-1" />
-        <div className="text-left">
-          <h5 className="font-bold text-indigo-900">System Note</h5>
-          <p className="text-sm text-indigo-700">Class names are standardized across the portal. Any changes to these names will require an administrator to update the global registry in the database settings.</p>
-        </div>
-      </div>
-
-      {/* Manage Details Modal */}
-      {selectedClass && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="p-6 border-b border-slate-100 bg-indigo-900 text-white flex justify-between items-center shrink-0">
-              <div className="text-left">
-                <h3 className="text-2xl font-black m-0">{selectedClass} Management</h3>
-                <p className="text-indigo-200 text-sm mt-1">Class Analysis & Attendance</p>
-              </div>
-              <button onClick={() => setSelectedClass(null)} className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-rose-500 transition-colors">
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex border-b border-slate-200 bg-white px-6 shrink-0">
-              {['attendance', 'demographics', 'performance'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-6 py-4 text-sm font-bold uppercase tracking-widest transition-colors ${
-                    activeTab === tab 
-                      ? 'border-b-2 border-indigo-600 text-indigo-600' 
-                      : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-            
-            <div className="p-6 overflow-y-auto flex-1 bg-slate-50 text-left custom-scrollbar">
-              {attendanceLoading && classStudents.length === 0 ? (
-                 <div className="flex justify-center p-10"><div className="animate-spin h-8 w-8 border-4 border-indigo-600 border-t-transparent rounded-full"></div></div>
-              ) : (
-                <div className="space-y-8">
-                  {/* Demographics Tab */}
-                  {activeTab === 'demographics' && (
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                      <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Demographics Breakdown</h4>
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-8">
-                        <div className="flex-1 bg-blue-50 p-6 rounded-xl border border-blue-100 flex flex-col items-center justify-center gap-2">
-                          <span className="font-bold text-blue-700 uppercase tracking-widest text-xs">Male Students</span>
-                          <span className="text-5xl font-black text-blue-800">
-                            {classStudents.filter(s => {
-                              const g = (s.gender || '').toLowerCase();
-                              return g === 'm' || g === 'male';
-                            }).length}
-                          </span>
-                        </div>
-                        <div className="flex-1 bg-pink-50 p-6 rounded-xl border border-pink-100 flex flex-col items-center justify-center gap-2">
-                          <span className="font-bold text-pink-700 uppercase tracking-widest text-xs">Female Students</span>
-                          <span className="text-5xl font-black text-pink-800">
-                            {classStudents.filter(s => {
-                              const g = (s.gender || '').toLowerCase();
-                              return g === 'f' || g === 'female' || g === 'girl';
-                            }).length}
-                          </span>
-                        </div>
-                        <div className="flex-1 bg-slate-100 p-6 rounded-xl border border-slate-200 flex flex-col items-center justify-center gap-2">
-                          <span className="font-bold text-slate-700 uppercase tracking-widest text-xs">Total</span>
-                          <span className="text-5xl font-black text-slate-800">{classStudents.length}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Performance Tab */}
-                  {activeTab === 'performance' && (
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                      <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Performance by Gender</h4>
-                      {performanceLoading ? (
-                        <div className="flex justify-center p-6"><div className="animate-spin h-6 w-6 border-4 border-indigo-600 border-t-transparent rounded-full"></div></div>
-                      ) : (
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-8">
-                          <div className="flex-1 bg-emerald-50 p-6 rounded-xl border border-emerald-100 flex flex-col items-center justify-center gap-2">
-                            <span className="font-bold text-emerald-700 uppercase tracking-widest text-xs">Class Average</span>
-                            <span className="text-5xl font-black text-emerald-800">{performanceData.overallAvg}%</span>
-                          </div>
-                          <div className="flex-1 bg-blue-50 p-6 rounded-xl border border-blue-100 flex flex-col items-center justify-center gap-2">
-                            <span className="font-bold text-blue-700 uppercase tracking-widest text-xs">Male Average</span>
-                            <span className="text-5xl font-black text-blue-800">{performanceData.maleAvg}%</span>
-                          </div>
-                          <div className="flex-1 bg-pink-50 p-6 rounded-xl border border-pink-100 flex flex-col items-center justify-center gap-2">
-                            <span className="font-bold text-pink-700 uppercase tracking-widest text-xs">Female Average</span>
-                            <span className="text-5xl font-black text-pink-800">{performanceData.femaleAvg}%</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Attendance Tracker Tab */}
-                  {activeTab === 'attendance' && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                      {/* Banner */}
-                      <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 rounded-3xl p-8 text-white mb-6 shadow-xl shadow-indigo-200 flex flex-col md:flex-row justify-between items-center gap-6">
-                        <div>
-                          <div className="flex items-center gap-2 mb-3 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full w-fit">
-                            <Calendar size={14} className="text-indigo-100" />
-                            <span className="text-xs font-black tracking-widest text-indigo-50 uppercase">Attendance Register</span>
-                          </div>
-                          <h3 className="text-3xl font-black mb-2">Mark Attendance</h3>
-                          <p className="text-indigo-100 font-medium max-w-md">Record daily presence for {selectedClass} students. Select the date and toggle attendance below.</p>
-                        </div>
-                        <div className="flex flex-col gap-3 min-w-[200px]">
-                          <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20">
-                            <label className="text-xs font-black text-indigo-200 uppercase tracking-widest mb-2 block">Date</label>
-                            <input 
-                              type="date" 
-                              value={attendanceDate}
-                              onChange={handleDateChange}
-                              className="w-full bg-transparent border-none outline-none text-lg font-black text-white [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* ── Roster Card: standalone card with both scrollbars ── */}
-                      <div className="bg-white rounded-3xl border border-slate-200 shadow-lg shadow-indigo-50/60 overflow-hidden">
-                        {/* Card Header / Controls (pinned, never scrolls) */}
-                        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/80 flex flex-wrap gap-3 items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <button 
-                              onClick={toggleAllAttendance}
-                              className="px-5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-black text-sm transition-colors flex items-center gap-2"
-                            >
-                              <CheckSquare size={15} /> Toggle All
-                            </button>
-                            <button 
-                              onClick={saveAttendance}
-                              disabled={attendanceSaving}
-                              className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl font-black text-sm shadow-md transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95"
-                            >
-                              <Save size={15} />
-                              {attendanceSaving ? 'Saving…' : 'Submit Attendance'}
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
-                            <span className="text-2xl font-black text-indigo-600 leading-none">{presentStudents.length}</span>
-                            <span className="text-slate-300 font-black leading-none">/</span>
-                            <span className="text-2xl font-black text-slate-600 leading-none">{classStudents.length}</span>
-                            <span className="text-xs font-bold text-slate-400 ml-1">Present</span>
-                          </div>
-                        </div>
-
-                        {/* Scrollable roster area — both axes */}
-                        {attendanceLoading ? (
-                          <div className="flex justify-center items-center p-12">
-                            <div className="animate-spin h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
-                          </div>
-                        ) : classStudents.length === 0 ? (
-                          <div className="text-center p-12">
-                            <p className="text-slate-400 font-bold">No students enrolled in this class yet.</p>
-                          </div>
-                        ) : (
-                          <div className="attendance-roster-scroll">
-                            <div className="attendance-roster-grid">
-                              {classStudents.map(student => {
-                                const isPresent = presentStudents.includes(student.id);
-                                return (
-                                  <div 
-                                    key={student.id} 
-                                    onClick={() => toggleAttendance(student.id)}
-                                    className={`cursor-pointer rounded-2xl p-4 border-2 transition-all duration-200 flex items-center gap-3 select-none ${
-                                      isPresent 
-                                        ? 'bg-emerald-50 border-emerald-400 shadow-sm shadow-emerald-100' 
-                                        : 'bg-white border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/40'
-                                    }`}
-                                  >
-                                    <div className={`w-11 h-11 rounded-full flex items-center justify-center font-black text-base overflow-hidden flex-shrink-0 transition-colors ${
-                                      isPresent ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-100 text-slate-500'
-                                    }`}>
-                                      {student.photo ? <img src={student.photo} alt={student.name} className="w-full h-full object-cover" /> : student.name?.[0]}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <h5 className={`font-black text-sm truncate transition-colors ${isPresent ? 'text-emerald-900' : 'text-slate-800'}`}>{student.name}</h5>
-                                      <p className={`text-xs font-bold truncate transition-colors ${isPresent ? 'text-emerald-600/80' : 'text-slate-400'}`}>{student.regNo} • {student.gender?.[0]}</p>
-                                    </div>
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
-                                      isPresent ? 'bg-emerald-500 text-white scale-110 shadow-md shadow-emerald-300' : 'bg-slate-100 text-slate-300'
-                                    }`}>
-                                      {isPresent ? <Check size={15} strokeWidth={3} /> : <div className="w-2.5 h-2.5 rounded-full bg-slate-300" />}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-
-
-          </div>
-        </div>
-      )}
-
+      {/* Bulk Enroll Modal */}
       <BulkStudentEnrollModal 
         isOpen={showBulkEnroll}
         initialClass={bulkEnrollTargetClass}
@@ -802,7 +1241,7 @@ const ClassManagement = () => {
         onEnrolled={() => {
           fetchClassStats();
           if (selectedClass) {
-            fetchClassStudents(selectedClass);
+            openManageDetails(selectedClass, activeTab);
           }
         }}
       />
