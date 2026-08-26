@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { initializeFirestore, persistentLocalCache, getFirestore, setLogLevel } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getFirestore, setLogLevel } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
@@ -37,12 +37,14 @@ try {
   // Ignore
 }
 
-// Initialize Firestore with standard reliable persistent local cache
+// Initialize Firestore with standard reliable persistent local cache and multi-tab manager
 const initFirestore = () => {
   if (typeof window !== 'undefined' && typeof indexedDB !== 'undefined') {
     try {
       return initializeFirestore(app, {
-        localCache: persistentLocalCache({})
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager()
+        })
       });
     } catch (error) {
       console.warn('Firestore local cache initialization fallback to default Firestore.', error?.message || error);
