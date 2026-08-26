@@ -1083,12 +1083,27 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
       });
     }
 
+    // Academic Average: Sum of (previous term averages + current term average if exams taken) / total terms with exams
+    let cumulativeTermSum = 0;
+    let totalTermsWithExams = 0;
+
+    termProgression.forEach(t => {
+      if (t.average > 0) {
+        cumulativeTermSum += t.average;
+        totalTermsWithExams++;
+      }
+    });
+
     const currentAvg = latestTermRecord ? latestTermRecord.average : (studentCount > 0 ? (studentSum / studentCount).toFixed(1) : '0.0');
     const prevAvg = previousTermRecord ? previousTermRecord.average : null;
-    const avgDelta = (prevAvg !== null && currentAvg > 0) ? (Number(currentAvg) - Number(prevAvg)).toFixed(1) : null;
-    const avgDeltaText = avgDelta !== null 
-      ? (Number(avgDelta) >= 0 ? `+${avgDelta}% vs Prev Term` : `${avgDelta}% vs Prev Term`)
-      : (latestTermRecord ? `${latestTermRecord.term}` : 'No Exam Record');
+    
+    const overallAcademicAverage = totalTermsWithExams > 0 
+      ? (cumulativeTermSum / totalTermsWithExams).toFixed(1)
+      : (latestTermRecord ? latestTermRecord.average.toFixed(1) : (studentCount > 0 ? (studentSum / studentCount).toFixed(1) : '0.0'));
+
+    const avgDeltaText = (totalTermsWithExams > 1 && prevAvg !== null)
+      ? (Number(currentAvg) - Number(prevAvg) >= 0 ? `+${(Number(currentAvg) - Number(prevAvg)).toFixed(1)}% vs Prev Term` : `${(Number(currentAvg) - Number(prevAvg)).toFixed(1)}% vs Prev Term`)
+      : (totalTermsWithExams > 0 ? `${totalTermsWithExams} Term(s) Recorded` : 'No Exam Record');
 
     // Real Attendance
     const studentNormClass = normalizeClassName(currentStudent?.className || '');
@@ -1148,7 +1163,7 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
 
     const student = {
       kpis: [
-        { title: 'Academic Average', value: `${currentAvg}%`, change: avgDeltaText, isPositive: Number(avgDelta || 0) >= 0, icon: Award, subText: `${studentCount} Subjects Graded` },
+        { title: 'Academic Average', value: `${overallAcademicAverage}%`, change: avgDeltaText, isPositive: true, icon: Award, subText: totalTermsWithExams > 1 ? `${totalTermsWithExams} Terms Combined` : `${studentCount} Subjects Graded` },
         { title: 'Attendance Record', value: `${attendanceRate}%`, change: totalDaysRecorded > 0 ? 'Recorded' : 'Good Standing', isPositive: parseFloat(attendanceRate) >= 75, icon: UserCheck, subText: attendanceSubText },
         { title: 'Coursework Tasks', value: `${studentClassAssignments.length} Due`, change: 'Active', isPositive: studentClassAssignments.length <= 2, icon: ClipboardList, subText: 'Assignments' },
         { title: 'School Fee Status', value: feeStatusText, change: feeChangeText, isPositive: isFeePositive, icon: CreditCard, subText: feeSubText },

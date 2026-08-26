@@ -87,44 +87,55 @@ export const useOnlineUsers = (user) => {
           if (!isMounted) return;
           if (typeof unsubscribe === 'function') {
             try { unsubscribe(); } catch(e){}
+            unsubscribe = null;
           }
 
-          const presenceCol = collection(db, 'presence');
-          unsubscribe = onSnapshot(presenceCol, (snapshot) => {
-            if (!isMounted) return;
-            const now = Date.now();
-            const cutoff = 180 * 1000; // 3 minutes active threshold
+          if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            return;
+          }
 
-            const activeUsers = new Set();
-            snapshot.docs.forEach(docSnap => {
-              const data = docSnap.data();
-              if (data && data.lastSeen && (now - data.lastSeen) < cutoff) {
-                activeUsers.add(data.userId || docSnap.id);
+          try {
+            const presenceCol = collection(db, 'presence');
+            unsubscribe = onSnapshot(presenceCol, (snapshot) => {
+              if (!isMounted) return;
+              const now = Date.now();
+              const cutoff = 180 * 1000; // 3 minutes active threshold
+
+              const activeUsers = new Set();
+              snapshot.docs.forEach(docSnap => {
+                const data = docSnap.data();
+                if (data && data.lastSeen && (now - data.lastSeen) < cutoff) {
+                  activeUsers.add(data.userId || docSnap.id);
+                }
+              });
+
+              // Always ensure current user/session is counted
+              activeUsers.add(userId);
+
+              const finalCount = Math.max(1, activeUsers.size);
+              setOnlineCount(finalCount);
+
+              try {
+                sessionStorage.setItem('sms_cached_online_count', String(finalCount));
+                localStorage.setItem('sms_cached_online_count', String(finalCount));
+                if (broadcastChannel) {
+                  broadcastChannel.postMessage({ type: 'COUNT_UPDATE', count: finalCount });
+                }
+              } catch (e) {}
+            }, (err) => {
+              // Throttled reconnect if online
+              if (isMounted && typeof navigator !== 'undefined' && navigator.onLine) {
+                setTimeout(async () => {
+                  if (isMounted && navigator.onLine) {
+                    await ensureFirebaseAuth().catch(() => {});
+                    attachListener();
+                  }
+                }, 10000);
               }
             });
-
-            // Always ensure current user/session is counted
-            activeUsers.add(userId);
-
-            const finalCount = Math.max(1, activeUsers.size);
-            setOnlineCount(finalCount);
-
-            try {
-              sessionStorage.setItem('sms_cached_online_count', String(finalCount));
-              localStorage.setItem('sms_cached_online_count', String(finalCount));
-              if (broadcastChannel) {
-                broadcastChannel.postMessage({ type: 'COUNT_UPDATE', count: finalCount });
-              }
-            } catch (e) {}
-          }, (err) => {
-            // Auto-reconnect cleanly if token refreshed or temporary network interruption
-            if (isMounted) {
-              setTimeout(async () => {
-                await ensureFirebaseAuth().catch(() => {});
-                attachListener();
-              }, 3000);
-            }
-          });
+          } catch (e) {
+            // Suppress setup exceptions
+          }
         };
 
         attachListener();

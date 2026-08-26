@@ -144,40 +144,50 @@ const StudentDashboard = () => {
           });
         });
 
-        const currentSessionPublishedMarks = publishedMarks.filter(d => d.session === (currentSession || '2025/2026'));
+        // Filter results with published terms if publications exist, or use all recorded term exams
+        const resultsToAnalyze = (publishedMarks.length > 0) ? publishedMarks : allResults.filter(d => d.marks && Object.keys(d.marks).length > 0);
         
-        setResultsCount(publishedMarks.length);
-        setCurrentSessionExamsCount(currentSessionPublishedMarks.length);
-        setTotalExamsCount(publishedMarks.length);
+        setResultsCount(resultsToAnalyze.length);
+        const currentSessionResults = resultsToAnalyze.filter(d => d.session === (currentSession || '2025/2026'));
+        setCurrentSessionExamsCount(currentSessionResults.length);
+        setTotalExamsCount(resultsToAnalyze.length);
 
-        if (publishedMarks.length > 0) {
-          // GPA Average calculation (average for each term divided by number of exams taken)
-          let grandTotal = 0;
-          let grandCount = 0;
+        if (resultsToAnalyze.length > 0) {
+          // Academic Average: Sum of each term's average (previous terms + current term) / total terms with exams taken
+          let sumOfTermAverages = 0;
+          let termsWithExamsCount = 0;
 
-          publishedMarks.forEach(result => {
+          resultsToAnalyze.forEach(result => {
             const marks = result.marks || {};
-            if (marks._meta && marks._meta.average !== undefined) {
-              grandTotal += parseFloat(marks._meta.average);
-              grandCount++;
+            let termAvg = 0;
+            if (marks._meta && marks._meta.average !== undefined && parseFloat(marks._meta.average) > 0) {
+              termAvg = parseFloat(marks._meta.average);
+            } else if (marks._meta && marks._meta.avg !== undefined && parseFloat(marks._meta.avg) > 0) {
+              termAvg = parseFloat(marks._meta.avg);
             } else {
-              let termTotal = 0;
-              let termCount = 0;
-              Object.keys(marks).forEach(k => {
-                if (k !== '_meta' && marks[k].total !== undefined) {
-                  termTotal += parseFloat(marks[k].total);
-                  termCount++;
+              let tSum = 0;
+              let tCount = 0;
+              Object.entries(marks).forEach(([subj, sObj]) => {
+                if (subj === '_meta' || !sObj) return;
+                const sc = parseFloat(sObj.total) || parseFloat(sObj.percent) || parseFloat(sObj.exam) || 0;
+                if (sc > 0) {
+                  tSum += sc;
+                  tCount++;
                 }
               });
-              if (termCount > 0) {
-                grandTotal += termTotal / termCount;
-                grandCount++;
+              if (tCount > 0) {
+                termAvg = tSum / tCount;
               }
+            }
+
+            if (termAvg > 0) {
+              sumOfTermAverages += termAvg;
+              termsWithExamsCount++;
             }
           });
 
-          if (grandCount > 0) {
-            setAvgScore((grandTotal / grandCount).toFixed(1));
+          if (termsWithExamsCount > 0) {
+            setAvgScore((sumOfTermAverages / termsWithExamsCount).toFixed(1));
           } else {
             setAvgScore('0.0');
           }
