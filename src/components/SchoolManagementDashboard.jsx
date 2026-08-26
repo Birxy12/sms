@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, PieChart, Pie, Legend
@@ -8,7 +9,7 @@ import {
   CalendarDays, Bell, Settings, Shield, School, TrendingUp, TrendingDown,
   ArrowUpRight, ArrowDownRight, FileText, ClipboardList, Award,
   CreditCard, Wallet, Receipt, AlertCircle, CheckCircle2, Clock,
-  ChevronRight, BarChart3, Activity, UserCheck, Sparkles, RefreshCw, Loader2, Database
+  ChevronRight, BarChart3, Activity, UserCheck, Sparkles, RefreshCw, Loader2, Database, Zap, Star
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { ensureFirebaseAuth } from '../lib/ensureAuth';
@@ -22,54 +23,89 @@ import { useOnlineUsers } from '../utils/presence';
 import AnalyticsReportModal from './AnalyticsReportModal';
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// ANIMATION VARIANTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.05 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1.0] }
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // REUSABLE UI COMPONENTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const KPICard = ({ title, value, change, isPositive, icon: Icon, subText }) => {
   const isOnline = title?.toLowerCase().includes('online');
   return (
-    <div className="bg-slate-900/90 border border-slate-700/60 rounded-2xl p-5 backdrop-blur-md hover:border-slate-500/50 transition-all duration-300 shadow-lg shadow-black/20 hover:translate-y-[-2px] flex flex-col justify-between group">
-      <div>
+    <motion.div
+      variants={itemVariants}
+      whileHover={{ y: -4, scale: 1.015, transition: { duration: 0.2 } }}
+      className="relative overflow-hidden bg-gradient-to-br from-slate-900/95 via-slate-900/90 to-slate-950/95 border border-slate-800/80 hover:border-indigo-500/50 rounded-2xl p-5 backdrop-blur-xl shadow-xl shadow-black/25 transition-all duration-300 flex flex-col justify-between group"
+    >
+      {/* Subtle ambient light glow */}
+      <div className="absolute top-0 right-0 -mr-8 -mt-8 w-28 h-28 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all duration-500 pointer-events-none" />
+
+      <div className="relative z-10">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">{title}</span>
+            <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">{title}</span>
             {isOnline && (
               <span className="relative flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>
               </span>
             )}
           </div>
-          <div className={`p-2.5 rounded-xl ${isPositive ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/15 text-rose-400 border border-rose-500/20'}`}>
+          <div className={`p-2.5 rounded-xl transition-transform duration-300 group-hover:scale-110 shadow-sm ${
+            isPositive
+              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-emerald-500/10'
+              : 'bg-rose-500/15 text-rose-400 border border-rose-500/30 shadow-rose-500/10'
+          }`}>
             <Icon size={18} className={isOnline ? 'animate-pulse' : ''} />
           </div>
         </div>
         <div className="text-2xl lg:text-3xl font-black text-white mb-1 tracking-tight truncate flex items-baseline gap-2" title={String(value)}>
           <span>{value}</span>
-          {isOnline && <span className="text-xs font-bold text-emerald-400 tracking-normal">Online</span>}
+          {isOnline && <span className="text-xs font-bold text-emerald-400 tracking-normal px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">Online</span>}
         </div>
       </div>
-      <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between">
-        <div className={`flex items-center gap-1 text-xs font-semibold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
-          {isPositive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+      <div className="relative z-10 mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between">
+        <div className={`flex items-center gap-1 text-xs font-bold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+          {isPositive ? <ArrowUpRight size={14} className="stroke-[2.5]" /> : <ArrowDownRight size={14} className="stroke-[2.5]" />}
           <span>{change}</span>
         </div>
-        {subText && <span className="text-[10px] text-slate-500 font-medium truncate">{subText}</span>}
+        {subText && <span className="text-[10px] text-slate-400 font-semibold truncate bg-slate-800/60 px-2 py-0.5 rounded-md">{subText}</span>}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
 export const SectionCard = ({ title, children, className = '', rightAction }) => (
-  <div className={`bg-slate-900/90 border border-slate-700/60 rounded-2xl p-5 md:p-6 backdrop-blur-md shadow-lg shadow-black/20 ${className}`}>
+  <motion.div
+    variants={itemVariants}
+    className={`bg-slate-900/90 border border-slate-800/80 hover:border-slate-700/80 rounded-[1.5rem] p-5 md:p-6 backdrop-blur-xl shadow-2xl shadow-black/30 transition-all duration-300 ${className}`}
+  >
     <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
-      <h3 className="text-base md:text-lg font-bold text-white tracking-tight flex items-center gap-2">
+      <h3 className="text-base md:text-lg font-black text-white tracking-tight flex items-center gap-2">
         {title}
       </h3>
       {rightAction && <div>{rightAction}</div>}
     </div>
     {children}
-  </div>
+  </motion.div>
 );
 
 export const CustomTooltip = ({ active, payload, label, prefix = '', suffix = '' }) => {
@@ -119,7 +155,7 @@ export const StatusBadge = ({ status }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const PrincipalAnalysisView = ({ data }) => (
-  <div className="space-y-6">
+  <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {data.kpis.map((kpi) => <KPICard key={kpi.title} {...kpi} />)}
     </div>
@@ -131,11 +167,11 @@ export const PrincipalAnalysisView = ({ data }) => (
             <AreaChart data={data.enrollmentTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="studentGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35}/>
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.45}/>
                   <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="teacherGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.35}/>
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.45}/>
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                 </linearGradient>
               </defs>
@@ -143,9 +179,9 @@ export const PrincipalAnalysisView = ({ data }) => (
               <XAxis dataKey="period" interval={0} angle={-30} textAnchor="end" height={55} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
               <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="students" name="Students" stroke="#3b82f6" strokeWidth={2.5} fill="url(#studentGrad)" dot={{ r: 3, fill: '#3b82f6' }} />
-              <Area type="monotone" dataKey="teachers" name="Teachers / Staff" stroke="#10b981" strokeWidth={2.5} fill="url(#teacherGrad)" dot={{ r: 3, fill: '#10b981' }} />
-              <Legend verticalAlign="top" height={28} iconType="circle" formatter={(v) => <span className="text-slate-300 text-xs">{v}</span>} />
+              <Area type="monotone" dataKey="students" name="Students" stroke="#3b82f6" strokeWidth={3} fill="url(#studentGrad)" dot={{ r: 3.5, fill: '#3b82f6', stroke: '#fff', strokeWidth: 1.5 }} activeDot={{ r: 6, fill: '#60a5fa' }} />
+              <Area type="monotone" dataKey="teachers" name="Teachers / Staff" stroke="#10b981" strokeWidth={3} fill="url(#teacherGrad)" dot={{ r: 3.5, fill: '#10b981', stroke: '#fff', strokeWidth: 1.5 }} activeDot={{ r: 6, fill: '#34d399' }} />
+              <Legend verticalAlign="top" height={28} iconType="circle" formatter={(v) => <span className="text-slate-300 text-xs font-semibold">{v}</span>} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -161,7 +197,7 @@ export const PrincipalAnalysisView = ({ data }) => (
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip suffix=" grades" />} />
-              <Legend verticalAlign="bottom" height={36} iconType="circle" formatter={(value) => <span className="text-slate-300 text-xs font-medium">Grade {value}</span>} />
+              <Legend verticalAlign="bottom" height={36} iconType="circle" formatter={(value) => <span className="text-slate-300 text-xs font-bold">Grade {value}</span>} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -177,9 +213,9 @@ export const PrincipalAnalysisView = ({ data }) => (
               <XAxis dataKey="dept" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} />
               <Tooltip content={<CustomTooltip suffix="%" />} />
-              <Bar dataKey="score" name="Average Score" radius={[6, 6, 0, 0]}>
+              <Bar dataKey="score" name="Average Score" radius={[8, 8, 0, 0]}>
                 {data.departmentPerformance.map((_, i) => (
-                  <Cell key={i} fill={i === 0 ? '#3b82f6' : `rgba(59,130,246,${0.85 - i * 0.08})`} />
+                  <Cell key={i} fill={i === 0 ? '#6366f1' : `rgba(99,102,241,${0.9 - i * 0.1})`} />
                 ))}
               </Bar>
             </BarChart>
@@ -191,7 +227,7 @@ export const PrincipalAnalysisView = ({ data }) => (
         <div className="space-y-3 max-h-[240px] overflow-y-auto pr-1">
           {data.recentAlerts && data.recentAlerts.length > 0 ? (
             data.recentAlerts.map((alert) => (
-              <div key={alert.id} className="flex items-start gap-3 p-3 rounded-xl bg-slate-800/50 border border-slate-700/40 hover:bg-slate-800/80 transition-colors">
+              <div key={alert.id} className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/50 hover:bg-slate-800/90 transition-all hover:border-slate-600">
                 <div className="mt-0.5 shrink-0">
                   {alert.type === 'urgent' && <AlertCircle size={16} className="text-rose-400" />}
                   {alert.type === 'warning' && <AlertCircle size={16} className="text-amber-400" />}
@@ -215,11 +251,11 @@ export const PrincipalAnalysisView = ({ data }) => (
         </div>
       </SectionCard>
     </div>
-  </div>
+  </motion.div>
 );
 
 export const AdminAnalysisView = ({ data }) => (
-  <div className="space-y-6">
+  <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {data.kpis.map((kpi) => <KPICard key={kpi.title} {...kpi} />)}
     </div>
@@ -231,7 +267,7 @@ export const AdminAnalysisView = ({ data }) => (
             <AreaChart data={data.userGrowth} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="userGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4}/>
+                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.45}/>
                   <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
                 </linearGradient>
               </defs>
@@ -239,7 +275,7 @@ export const AdminAnalysisView = ({ data }) => (
               <XAxis dataKey="period" interval={0} angle={-30} textAnchor="end" height={55} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
               <Tooltip content={<CustomTooltip suffix=" students" />} />
-              <Area type="monotone" dataKey="users" name="Students in Class" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#userGrad)" dot={{ r: 3, fill: '#8b5cf6' }} activeDot={{ r: 6, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2 }} />
+              <Area type="monotone" dataKey="users" name="Students in Class" stroke="#8b5cf6" strokeWidth={3} fill="url(#userGrad)" dot={{ r: 3.5, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 1.5 }} activeDot={{ r: 6, fill: '#a855f7' }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -255,7 +291,7 @@ export const AdminAnalysisView = ({ data }) => (
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip suffix=" accounts" />} />
-              <Legend verticalAlign="bottom" height={36} iconType="circle" formatter={(value) => <span className="text-slate-300 text-xs font-medium">{value}</span>} />
+              <Legend verticalAlign="bottom" height={36} iconType="circle" formatter={(value) => <span className="text-slate-300 text-xs font-bold">{value}</span>} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -266,21 +302,21 @@ export const AdminAnalysisView = ({ data }) => (
       <div className="overflow-x-auto">
         <table className="w-full text-xs md:text-sm">
           <thead>
-            <tr className="border-b border-slate-700/60">
-              <th className="text-left py-3 px-3 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">Event</th>
-              <th className="text-left py-3 px-3 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">Target / Category</th>
-              <th className="text-left py-3 px-3 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">Timestamp</th>
-              <th className="text-left py-3 px-3 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">Status</th>
+            <tr className="border-b border-slate-750 bg-slate-800/40">
+              <th className="text-left py-3 px-3.5 text-slate-400 font-bold uppercase tracking-wider text-[11px] rounded-l-xl">Event</th>
+              <th className="text-left py-3 px-3.5 text-slate-400 font-bold uppercase tracking-wider text-[11px]">Target / Category</th>
+              <th className="text-left py-3 px-3.5 text-slate-400 font-bold uppercase tracking-wider text-[11px]">Timestamp</th>
+              <th className="text-left py-3 px-3.5 text-slate-400 font-bold uppercase tracking-wider text-[11px] rounded-r-xl">Status</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-800/60">
             {data.systemLogs && data.systemLogs.length > 0 ? (
               data.systemLogs.map((log) => (
-                <tr key={log.id} className="border-b border-slate-800/40 hover:bg-slate-800/40 transition-colors">
-                  <td className="py-3 px-3 text-white font-medium">{log.action}</td>
-                  <td className="py-3 px-3 text-slate-300 font-mono text-xs">{log.user}</td>
-                  <td className="py-3 px-3 text-slate-400">{log.time}</td>
-                  <td className="py-3 px-3"><StatusBadge status={log.status} /></td>
+                <tr key={log.id} className="hover:bg-slate-800/50 transition-colors">
+                  <td className="py-3 px-3.5 text-white font-medium">{log.action}</td>
+                  <td className="py-3 px-3.5 text-slate-300 font-mono text-xs">{log.user}</td>
+                  <td className="py-3 px-3.5 text-slate-400">{log.time}</td>
+                  <td className="py-3 px-3.5"><StatusBadge status={log.status} /></td>
                 </tr>
               ))
             ) : (
@@ -294,11 +330,11 @@ export const AdminAnalysisView = ({ data }) => (
         </table>
       </div>
     </SectionCard>
-  </div>
+  </motion.div>
 );
 
 export const BursarAnalysisView = ({ data }) => (
-  <div className="space-y-6">
+  <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {data.kpis.map((kpi) => <KPICard key={kpi.title} {...kpi} />)}
     </div>
@@ -314,7 +350,7 @@ export const BursarAnalysisView = ({ data }) => (
               <Tooltip content={<CustomTooltip prefix="₦" />} />
               <Bar dataKey="collected" name="Collected (₦)" fill="#10b981" radius={[6, 6, 0, 0]} />
               <Bar dataKey="target" name="Target (₦)" fill="rgba(148,163,184,0.25)" radius={[6, 6, 0, 0]} />
-              <Legend verticalAlign="top" height={30} formatter={(val) => <span className="text-slate-300 text-xs font-semibold">{val}</span>} />
+              <Legend verticalAlign="top" height={30} formatter={(val) => <span className="text-slate-300 text-xs font-bold">{val}</span>} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -330,7 +366,7 @@ export const BursarAnalysisView = ({ data }) => (
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip prefix="₦" />} />
-              <Legend verticalAlign="bottom" height={36} iconType="circle" formatter={(value) => <span className="text-slate-300 text-xs font-medium">{value}</span>} />
+              <Legend verticalAlign="bottom" height={36} iconType="circle" formatter={(value) => <span className="text-slate-300 text-xs font-bold">{value}</span>} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -341,21 +377,21 @@ export const BursarAnalysisView = ({ data }) => (
       <div className="overflow-x-auto">
         <table className="w-full text-xs md:text-sm">
           <thead>
-            <tr className="border-b border-slate-700/60">
-              <th className="text-left py-3 px-3 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">Student</th>
-              <th className="text-left py-3 px-3 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">Class</th>
-              <th className="text-left py-3 px-3 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">Balance Due</th>
-              <th className="text-left py-3 px-3 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">Status</th>
+            <tr className="border-b border-slate-750 bg-slate-800/40">
+              <th className="text-left py-3 px-3.5 text-slate-400 font-bold uppercase tracking-wider text-[11px] rounded-l-xl">Student</th>
+              <th className="text-left py-3 px-3.5 text-slate-400 font-bold uppercase tracking-wider text-[11px]">Class</th>
+              <th className="text-left py-3 px-3.5 text-slate-400 font-bold uppercase tracking-wider text-[11px]">Balance Due</th>
+              <th className="text-left py-3 px-3.5 text-slate-400 font-bold uppercase tracking-wider text-[11px] rounded-r-xl">Status</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-800/60">
             {data.pendingPayments && data.pendingPayments.length > 0 ? (
               data.pendingPayments.map((p) => (
-                <tr key={p.id} className="border-b border-slate-800/40 hover:bg-slate-800/40 transition-colors">
-                  <td className="py-3 px-3 text-white font-semibold">{p.student}</td>
-                  <td className="py-3 px-3 text-slate-300">{p.grade}</td>
-                  <td className="py-3 px-3 text-rose-400 font-mono font-bold">₦{p.amount.toLocaleString()}</td>
-                  <td className="py-3 px-3"><StatusBadge status={p.status} /></td>
+                <tr key={p.id} className="hover:bg-slate-800/50 transition-colors">
+                  <td className="py-3 px-3.5 text-white font-bold">{p.student}</td>
+                  <td className="py-3 px-3.5 text-slate-300">{p.grade}</td>
+                  <td className="py-3 px-3.5 text-rose-400 font-mono font-black">₦{p.amount.toLocaleString()}</td>
+                  <td className="py-3 px-3.5"><StatusBadge status={p.status} /></td>
                 </tr>
               ))
             ) : (
@@ -369,11 +405,11 @@ export const BursarAnalysisView = ({ data }) => (
         </table>
       </div>
     </SectionCard>
-  </div>
+  </motion.div>
 );
 
 export const TeacherAnalysisView = ({ data }) => (
-  <div className="space-y-6">
+  <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {data.kpis.map((kpi) => <KPICard key={kpi.title} {...kpi} />)}
     </div>
@@ -389,7 +425,7 @@ export const TeacherAnalysisView = ({ data }) => (
               <Tooltip content={<CustomTooltip suffix="%" />} />
               <Bar dataKey="classAvg" name="Class Average" fill="#3b82f6" radius={[6, 6, 0, 0]} />
               <Bar dataKey="schoolAvg" name="School Benchmark" fill="rgba(148,163,184,0.3)" radius={[6, 6, 0, 0]} />
-              <Legend verticalAlign="top" height={30} formatter={(val) => <span className="text-slate-300 text-xs font-semibold">{val}</span>} />
+              <Legend verticalAlign="top" height={30} formatter={(val) => <span className="text-slate-300 text-xs font-bold">{val}</span>} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -401,7 +437,7 @@ export const TeacherAnalysisView = ({ data }) => (
             <AreaChart data={data.studentProgress} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="completedGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.45}/>
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                 </linearGradient>
               </defs>
@@ -409,9 +445,9 @@ export const TeacherAnalysisView = ({ data }) => (
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
               <Tooltip content={<CustomTooltip suffix=" students" />} />
-              <Area type="monotone" dataKey="completed" name="Passing (>=50%)" stroke="#10b981" strokeWidth={2.5} fill="url(#completedGrad)" />
+              <Area type="monotone" dataKey="completed" name="Passing (>=50%)" stroke="#10b981" strokeWidth={3} fill="url(#completedGrad)" />
               <Area type="monotone" dataKey="pending" name="Needs Review (<50%)" stroke="#f59e0b" strokeWidth={2} fill="none" strokeDasharray="4 4" />
-              <Legend verticalAlign="top" height={30} formatter={(val) => <span className="text-slate-300 text-xs font-semibold">{val}</span>} />
+              <Legend verticalAlign="top" height={30} formatter={(val) => <span className="text-slate-300 text-xs font-bold">{val}</span>} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -422,12 +458,12 @@ export const TeacherAnalysisView = ({ data }) => (
       <div className="space-y-3">
         {data.upcomingTasks && data.upcomingTasks.length > 0 ? (
           data.upcomingTasks.map((task) => (
-            <div key={task.id} className="flex items-center justify-between p-3.5 rounded-xl bg-slate-800/50 border border-slate-700/40 hover:bg-slate-800/80 transition-colors">
+            <div key={task.id} className="flex items-center justify-between p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/50 hover:bg-slate-800/90 transition-all hover:border-slate-600">
               <div className="flex items-center gap-3">
-                <div className={`w-2.5 h-2.5 rounded-full ${task.priority === 'high' ? 'bg-rose-400' : task.priority === 'medium' ? 'bg-amber-400' : 'bg-blue-400'}`} />
+                <div className={`w-2.5 h-2.5 rounded-full ${task.priority === 'high' ? 'bg-rose-400 animate-ping' : task.priority === 'medium' ? 'bg-amber-400' : 'bg-blue-400'}`} />
                 <div>
-                  <p className="text-xs md:text-sm text-white font-semibold">{task.task}</p>
-                  <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                  <p className="text-xs md:text-sm text-white font-bold">{task.task}</p>
+                  <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5 font-medium">
                     <Clock size={12} /> Target: {task.deadline}
                   </p>
                 </div>
@@ -442,11 +478,11 @@ export const TeacherAnalysisView = ({ data }) => (
         )}
       </div>
     </SectionCard>
-  </div>
+  </motion.div>
 );
 
 export const StudentAnalysisView = ({ data }) => (
-  <div className="space-y-6">
+  <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {data.kpis.map((kpi) => <KPICard key={kpi.title} {...kpi} />)}
     </div>
@@ -460,7 +496,7 @@ export const StudentAnalysisView = ({ data }) => (
               <AreaChart data={data.termProgression} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="termGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4}/>
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.5}/>
                     <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
@@ -468,7 +504,7 @@ export const StudentAnalysisView = ({ data }) => (
                 <XAxis dataKey="termLabel" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} />
                 <Tooltip content={<CustomTooltip suffix="%" />} />
-                <Area type="monotone" dataKey="average" name="Term Average" stroke="#8b5cf6" strokeWidth={3} fill="url(#termGrad)" dot={{ r: 4, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 6, fill: '#a855f7' }} />
+                <Area type="monotone" dataKey="average" name="Term Average" stroke="#8b5cf6" strokeWidth={3.5} fill="url(#termGrad)" dot={{ r: 4.5, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 7, fill: '#a855f7', stroke: '#fff', strokeWidth: 2 }} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
@@ -489,7 +525,7 @@ export const StudentAnalysisView = ({ data }) => (
                 <XAxis dataKey="subject" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} />
                 <Tooltip content={<CustomTooltip suffix="%" />} />
-                <Bar dataKey="score" name="My Score" radius={[6, 6, 0, 0]}>
+                <Bar dataKey="score" name="My Score" radius={[8, 8, 0, 0]}>
                   {data.gradeTrend.map((entry, index) => (
                     <Cell key={index} fill={entry.score >= 75 ? '#10b981' : entry.score >= 50 ? '#3b82f6' : '#f59e0b'} />
                   ))}
@@ -518,8 +554,8 @@ export const StudentAnalysisView = ({ data }) => (
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} />
                 <Tooltip content={<CustomTooltip suffix=" pts" />} />
                 <Bar dataKey="ca" name="Continuous Assessment (CA)" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="exam" name="Term Examination" stackId="a" fill="#10b981" radius={[6, 6, 0, 0]} />
-                <Legend verticalAlign="top" height={30} formatter={(val) => <span className="text-slate-300 text-xs font-medium">{val}</span>} />
+                <Bar dataKey="exam" name="Term Examination" stackId="a" fill="#10b981" radius={[8, 8, 0, 0]} />
+                <Legend verticalAlign="top" height={30} formatter={(val) => <span className="text-slate-300 text-xs font-bold">{val}</span>} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -534,14 +570,14 @@ export const StudentAnalysisView = ({ data }) => (
         <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
           {data.upcomingDeadlines && data.upcomingDeadlines.length > 0 ? (
             data.upcomingDeadlines.map((item) => (
-              <div key={item.id} className="flex items-center justify-between p-3.5 rounded-xl bg-slate-800/50 border border-slate-700/40 hover:bg-slate-800/80 transition-all cursor-pointer group">
+              <div key={item.id} className="flex items-center justify-between p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/50 hover:bg-slate-800/90 hover:border-slate-600 transition-all cursor-pointer group">
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-105 transition-transform shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform shrink-0">
                     <BookOpen size={18} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs md:text-sm text-white font-semibold group-hover:text-blue-400 transition-colors truncate">{item.title}</p>
-                    <p className="text-[11px] text-slate-400">{item.subject}</p>
+                    <p className="text-xs md:text-sm text-white font-bold group-hover:text-blue-400 transition-colors truncate">{item.title}</p>
+                    <p className="text-[11px] text-slate-400 font-medium">{item.subject}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
@@ -560,7 +596,7 @@ export const StudentAnalysisView = ({ data }) => (
         </div>
       </SectionCard>
     </div>
-  </div>
+  </motion.div>
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1268,7 +1304,17 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
           </p>
         </div>
       ) : (
-        <RoleView data={activeData} />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeRoleKey}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.25 }}
+          >
+            <RoleView data={activeData} />
+          </motion.div>
+        </AnimatePresence>
       )}
 
       {/* Analytics & Executive Insights PDF Modal */}

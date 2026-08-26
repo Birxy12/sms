@@ -481,62 +481,92 @@ const StudentDashboard = () => {
                   {/* Metrics Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {mainStats.map((stat, idx) => (
-                      <div key={idx} className="bg-white p-6 rounded-[1.5rem] border border-slate-100 shadow-sm">
+                      <motion.div
+                        key={idx}
+                        whileHover={{ y: -5, scale: 1.02, transition: { duration: 0.2 } }}
+                        className="relative overflow-hidden bg-white p-6 rounded-[1.75rem] border border-slate-100/80 shadow-md shadow-slate-200/50 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 flex flex-col justify-between group"
+                      >
                         <div className="flex justify-between items-start mb-4">
-                          <div className="p-3 rounded-2xl" style={{ backgroundColor: `${stat.color}15` }}>
+                          <div className="p-3.5 rounded-2xl transition-transform duration-300 group-hover:scale-110 shadow-sm" style={{ backgroundColor: `${stat.color}15`, border: `1px solid ${stat.color}30` }}>
                             <stat.icon size={24} style={{ color: stat.color }} />
                           </div>
-                          <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${stat.trend.includes('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-500'}`}>
+                          <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg border ${
+                            stat.trend.includes('+') || stat.trend.includes('Verified') || stat.trend.includes('Excellent')
+                              ? 'bg-emerald-50 text-emerald-600 border-emerald-200/60'
+                              : stat.trend.includes('Pending') || stat.trend.includes('Awaiting')
+                              ? 'bg-rose-50 text-rose-600 border-rose-200/60 animate-pulse'
+                              : 'bg-slate-50 text-slate-600 border-slate-200/60'
+                          }`}>
                             {stat.trend}
                           </span>
                         </div>
-                        <h3 className="text-3xl font-black text-slate-800 mb-1">{stat.value}</h3>
-                        <p className="text-sm font-bold text-slate-400 uppercase tracking-wide">{stat.label}</p>
-                      </div>
+                        <div>
+                          <h3 className="text-3xl font-black text-slate-800 mb-1 tracking-tight">{stat.value}</h3>
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{stat.label}</p>
+                        </div>
+                      </motion.div>
                     ))}
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-6">
-                      <div className="bg-white p-8 rounded-[2rem] border border-slate-100">
+                      <motion.div
+                        whileHover={{ y: -3 }}
+                        className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300"
+                      >
                         <div className="flex items-center justify-between mb-6">
-                          <h3 className="text-xl font-black text-slate-800">Recent Academic Performance</h3>
-                          <span className="px-3 py-1 bg-indigo-50 text-indigo-600 font-bold text-xs rounded-lg">
+                          <h3 className="text-xl font-black text-slate-800 tracking-tight">Recent Academic Performance</h3>
+                          <span className="px-3 py-1 bg-indigo-50 text-indigo-600 font-bold text-xs rounded-full border border-indigo-100 flex items-center gap-1.5">
+                            <Sparkles size={13} className="text-indigo-500" />
                             {latestTermTitle}
                           </span>
                         </div>
                         <div className="space-y-6">
-                          <div className="p-6 bg-slate-50 rounded-2xl flex items-center justify-between">
+                          <div className="p-6 bg-gradient-to-r from-slate-50 to-indigo-50/30 rounded-2xl border border-slate-100 flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600">
+                              <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm shadow-indigo-200">
                                 <Award size={24} />
                               </div>
                               <div>
-                                <p className="font-black text-slate-800">Last Term Average</p>
-                                <p className="text-xs text-slate-400 font-bold uppercase">Evaluated across subjects</p>
+                                <p className="font-black text-slate-800 text-base">Last Term Average</p>
+                                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Evaluated across subjects</p>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-3xl font-black text-indigo-600">{latestTermAvg || avgScore}%</p>
-                              <p className="text-[10px] font-black text-slate-400 uppercase">Term Score Average</p>
+                              <p className="text-3xl font-black text-indigo-600 tracking-tight">{latestTermAvg || avgScore}%</p>
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Term Score Average</p>
                             </div>
                           </div>
-                          <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${latestTermAvg || avgScore}%` }} className="h-full bg-indigo-500" />
+                          <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden p-0.5">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${latestTermAvg || avgScore}%` }}
+                              transition={{ duration: 1, ease: 'easeOut' }}
+                              className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"
+                            />
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
                     </div>
-                    <div className="bg-indigo-600 p-8 rounded-[2rem] text-white flex flex-col justify-between">
-                      <div>
-                        <Star className="mb-4 text-indigo-200" />
-                        <h3 className="text-xl font-black mb-2">Student Excellence</h3>
-                        <p className="text-indigo-100 text-sm leading-relaxed">Keep maintaining high scores to unlock advanced school honors and awards.</p>
+                    <motion.div
+                      whileHover={{ y: -3 }}
+                      className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 p-8 rounded-[2rem] text-white flex flex-col justify-between shadow-xl shadow-indigo-600/25"
+                    >
+                      <div className="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+                      <div className="relative z-10">
+                        <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center mb-6 border border-white/20">
+                          <Star size={24} className="text-amber-300 fill-amber-300" />
+                        </div>
+                        <h3 className="text-2xl font-black mb-2 tracking-tight">Student Excellence</h3>
+                        <p className="text-indigo-100 text-sm leading-relaxed font-medium">Keep maintaining high scores to unlock advanced school honors, certificates, and leaderboard rankings.</p>
                       </div>
-                      <button onClick={() => navigate('/students/results')} className="mt-8 w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-sm shadow-xl">
-                        View Honors
+                      <button
+                        onClick={() => navigate('/students/results')}
+                        className="relative z-10 mt-8 w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-emerald-500/30 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+                      >
+                        <Award size={18} /> View Honors & Results
                       </button>
-                    </div>
+                    </motion.div>
                   </div>
                 </>
               )}
