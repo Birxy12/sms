@@ -128,13 +128,76 @@ const AdminDashboard = () => {
   const [showBulkEnrollModal, setShowBulkEnrollModal] = useState(false);
   const [showClubsModal, setShowClubsModal] = useState(false);
   const adminTabs = [
-    { id: 'Overview', label: 'Overview', icon: TrendingUp },
-    { id: 'Academics', label: 'Academics', icon: BookOpen },
-    { id: 'Finance', label: 'Finance', icon: DollarSign },
-    { id: 'Inbox', label: 'Inbox', icon: Mail },
-    { id: 'Management', label: 'Management', icon: Briefcase },
-    { id: 'Biometrics', label: 'Biometrics', icon: Fingerprint },
-    ...(currentAdmin?.isSuperAdmin ? [{ id: 'Security', label: 'System Security', icon: Shield }] : []),
+    { 
+      id: 'Overview', 
+      label: 'Overview', 
+      icon: TrendingUp,
+      activeGradient: 'from-indigo-600 via-indigo-600 to-indigo-700',
+      activeShadow: 'shadow-indigo-500/30',
+      activeBorder: 'border-indigo-400/50',
+      iconBg: 'bg-indigo-100/80 text-indigo-700',
+      inactiveStyle: 'bg-indigo-50/80 text-indigo-700 hover:bg-indigo-100 border-indigo-200/60 shadow-sm shadow-indigo-100/30'
+    },
+    { 
+      id: 'Academics', 
+      label: 'Academics', 
+      icon: BookOpen,
+      activeGradient: 'from-blue-600 via-blue-600 to-sky-700',
+      activeShadow: 'shadow-blue-500/30',
+      activeBorder: 'border-blue-400/50',
+      iconBg: 'bg-blue-100/80 text-blue-700',
+      inactiveStyle: 'bg-blue-50/80 text-blue-700 hover:bg-blue-100 border-blue-200/60 shadow-sm shadow-blue-100/30'
+    },
+    { 
+      id: 'Finance', 
+      label: 'Finance', 
+      icon: DollarSign,
+      activeGradient: 'from-emerald-600 via-emerald-600 to-teal-700',
+      activeShadow: 'shadow-emerald-500/30',
+      activeBorder: 'border-emerald-400/50',
+      iconBg: 'bg-emerald-100/80 text-emerald-700',
+      inactiveStyle: 'bg-emerald-50/80 text-emerald-700 hover:bg-emerald-100 border-emerald-200/60 shadow-sm shadow-emerald-100/30'
+    },
+    { 
+      id: 'Inbox', 
+      label: 'Inbox', 
+      icon: Mail,
+      activeGradient: 'from-purple-600 via-purple-600 to-pink-700',
+      activeShadow: 'shadow-purple-500/30',
+      activeBorder: 'border-purple-400/50',
+      iconBg: 'bg-purple-100/80 text-purple-700',
+      inactiveStyle: 'bg-purple-50/80 text-purple-700 hover:bg-purple-100 border-purple-200/60 shadow-sm shadow-purple-100/30'
+    },
+    { 
+      id: 'Management', 
+      label: 'Management', 
+      icon: Briefcase,
+      activeGradient: 'from-amber-500 via-amber-600 to-orange-600',
+      activeShadow: 'shadow-amber-500/30',
+      activeBorder: 'border-amber-400/50',
+      iconBg: 'bg-amber-100/80 text-amber-800',
+      inactiveStyle: 'bg-amber-50/80 text-amber-800 hover:bg-amber-100 border-amber-200/60 shadow-sm shadow-amber-100/30'
+    },
+    { 
+      id: 'Biometrics', 
+      label: 'Biometrics', 
+      icon: Fingerprint,
+      activeGradient: 'from-teal-600 via-teal-600 to-cyan-700',
+      activeShadow: 'shadow-teal-500/30',
+      activeBorder: 'border-teal-400/50',
+      iconBg: 'bg-teal-100/80 text-teal-700',
+      inactiveStyle: 'bg-teal-50/80 text-teal-700 hover:bg-teal-100 border-teal-200/60 shadow-sm shadow-teal-100/30'
+    },
+    ...(currentAdmin?.isSuperAdmin ? [{ 
+      id: 'Security', 
+      label: 'System Security', 
+      icon: Shield,
+      activeGradient: 'from-rose-600 via-rose-600 to-red-700',
+      activeShadow: 'shadow-rose-500/30',
+      activeBorder: 'border-rose-400/50',
+      iconBg: 'bg-rose-100/80 text-rose-700',
+      inactiveStyle: 'bg-rose-50/80 text-rose-700 hover:bg-rose-100 border-rose-200/60 shadow-sm shadow-rose-100/30'
+    }] : []),
   ];
 
   // ── Fingerprint Manager (inline) ──────────────────────────────────────
@@ -797,19 +860,29 @@ const AdminDashboard = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="modern-tabs-container hide-scrollbar overflow-x-auto max-w-full flex flex-wrap gap-2">
-        {adminTabs.map((tab, idx) => (
-          <React.Fragment key={tab.id}>
-            <button
-              onClick={() => setActiveTab(tab.id)}
-              className={`modern-tab-item ${activeTab === tab.id ? 'active' : ''}`}
-            >
-              <tab.icon size={18} />
-              {tab.label}
-            </button>
-            {idx === 7 && <div className="w-full h-0 basis-full" />}
-          </React.Fragment>
-        ))}
+      <div className="p-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-lg shadow-slate-200/40 hide-scrollbar overflow-x-auto max-w-full flex flex-wrap gap-2.5 mb-6">
+        {adminTabs.map((tab, idx) => {
+          const isActive = activeTab === tab.id;
+          const Icon = tab.icon;
+          return (
+            <React.Fragment key={tab.id}>
+              <button
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2.5 px-4 md:px-5 py-2.5 rounded-xl font-black text-xs md:text-sm transition-all duration-300 whitespace-nowrap group hover:scale-[1.02] active:scale-95 border ${
+                  isActive 
+                    ? `bg-gradient-to-r ${tab.activeGradient} text-white shadow-lg ${tab.activeShadow} ${tab.activeBorder}` 
+                    : `${tab.inactiveStyle}`
+                }`}
+              >
+                <div className={`p-1.5 rounded-lg transition-all duration-300 ${isActive ? 'bg-white/20 text-white' : tab.iconBg}`}>
+                  <Icon size={16} />
+                </div>
+                <span>{tab.label}</span>
+              </button>
+              {idx === 7 && <div className="w-full h-0 basis-full" />}
+            </React.Fragment>
+          );
+        })}
       </div>
 
 

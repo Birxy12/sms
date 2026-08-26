@@ -374,9 +374,10 @@ const StudentDashboard = () => {
       icon: LayoutDashboard, 
       activeGradient: 'from-indigo-600 via-indigo-600 to-indigo-700',
       activeShadow: 'shadow-indigo-500/30',
-      activeBorder: 'border-indigo-400/40',
+      activeBorder: 'border-indigo-400/50',
       iconActiveBg: 'bg-indigo-400/25 text-white',
-      iconInactiveBg: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100',
+      iconInactiveBg: 'bg-indigo-100/80 text-indigo-700',
+      inactiveStyle: 'bg-indigo-50/80 text-indigo-700 hover:bg-indigo-100 border-indigo-200/60 shadow-sm shadow-indigo-100/30',
       color: '#6366f1',
       badge: null
     },
@@ -386,9 +387,10 @@ const StudentDashboard = () => {
       icon: BarChart3, 
       activeGradient: 'from-purple-600 via-purple-600 to-indigo-700',
       activeShadow: 'shadow-purple-500/30',
-      activeBorder: 'border-purple-400/40',
+      activeBorder: 'border-purple-400/50',
       iconActiveBg: 'bg-purple-400/25 text-white',
-      iconInactiveBg: 'bg-purple-50 text-purple-600 group-hover:bg-purple-100',
+      iconInactiveBg: 'bg-purple-100/80 text-purple-700',
+      inactiveStyle: 'bg-purple-50/80 text-purple-700 hover:bg-purple-100 border-purple-200/60 shadow-sm shadow-purple-100/30',
       color: '#8b5cf6',
       badge: 'Live'
     },
@@ -398,9 +400,10 @@ const StudentDashboard = () => {
       icon: Wallet, 
       activeGradient: 'from-emerald-600 via-emerald-600 to-teal-700',
       activeShadow: 'shadow-emerald-500/30',
-      activeBorder: 'border-emerald-400/40',
+      activeBorder: 'border-emerald-400/50',
       iconActiveBg: 'bg-emerald-400/25 text-white',
-      iconInactiveBg: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100',
+      iconInactiveBg: 'bg-emerald-100/80 text-emerald-700',
+      inactiveStyle: 'bg-emerald-50/80 text-emerald-700 hover:bg-emerald-100 border-emerald-200/60 shadow-sm shadow-emerald-100/30',
       color: '#10b981',
       badge: walletData?.balance > 0 ? `₦${walletData.balance.toLocaleString()}` : null
     },
@@ -410,9 +413,10 @@ const StudentDashboard = () => {
       icon: GraduationCap, 
       activeGradient: 'from-blue-600 via-blue-600 to-sky-700',
       activeShadow: 'shadow-blue-500/30',
-      activeBorder: 'border-blue-400/40',
+      activeBorder: 'border-blue-400/50',
       iconActiveBg: 'bg-blue-400/25 text-white',
-      iconInactiveBg: 'bg-blue-50 text-blue-600 group-hover:bg-blue-100',
+      iconInactiveBg: 'bg-blue-100/80 text-blue-700',
+      inactiveStyle: 'bg-blue-50/80 text-blue-700 hover:bg-blue-100 border-blue-200/60 shadow-sm shadow-blue-100/30',
       color: '#0ea5e9',
       badge: null
     },
@@ -422,9 +426,10 @@ const StudentDashboard = () => {
       icon: Bell, 
       activeGradient: 'from-amber-500 via-amber-600 to-orange-600',
       activeShadow: 'shadow-amber-500/30',
-      activeBorder: 'border-amber-400/40',
+      activeBorder: 'border-amber-400/50',
       iconActiveBg: 'bg-amber-400/25 text-white',
-      iconInactiveBg: 'bg-amber-50 text-amber-600 group-hover:bg-amber-100',
+      iconInactiveBg: 'bg-amber-100/80 text-amber-800',
+      inactiveStyle: 'bg-amber-50/80 text-amber-800 hover:bg-amber-100 border-amber-200/60 shadow-sm shadow-amber-100/30',
       color: '#f59e0b',
       badge: inboxCount > 0 ? `${inboxCount} New` : null
     },
@@ -434,9 +439,10 @@ const StudentDashboard = () => {
       icon: CreditCard, 
       activeGradient: 'from-rose-600 via-rose-600 to-pink-700',
       activeShadow: 'shadow-rose-500/30',
-      activeBorder: 'border-rose-400/40',
+      activeBorder: 'border-rose-400/50',
       iconActiveBg: 'bg-rose-400/25 text-white',
-      iconInactiveBg: 'bg-rose-50 text-rose-600 group-hover:bg-rose-100',
+      iconInactiveBg: 'bg-rose-100/80 text-rose-700',
+      inactiveStyle: 'bg-rose-50/80 text-rose-700 hover:bg-rose-100 border-rose-200/60 shadow-sm shadow-rose-100/30',
       color: '#f43f5e',
       badge: feeIsCleared ? 'Cleared' : (feeData?.balance > 0 ? 'Due' : null)
     },
@@ -446,9 +452,10 @@ const StudentDashboard = () => {
       icon: User, 
       activeGradient: 'from-slate-800 via-slate-800 to-slate-900',
       activeShadow: 'shadow-slate-800/30',
-      activeBorder: 'border-slate-700/50',
+      activeBorder: 'border-slate-700/60',
       iconActiveBg: 'bg-slate-700/50 text-white',
-      iconInactiveBg: 'bg-slate-100 text-slate-700 group-hover:bg-slate-200',
+      iconInactiveBg: 'bg-slate-200 text-slate-800',
+      inactiveStyle: 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200 shadow-sm',
       color: '#64748b',
       badge: null
     },
@@ -540,10 +547,10 @@ const StudentDashboard = () => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`relative flex items-center gap-2.5 px-4 md:px-5 py-3 rounded-xl font-black text-xs md:text-sm transition-all duration-300 whitespace-nowrap group ${
+                    className={`relative flex items-center gap-2.5 px-4 md:px-5 py-3 rounded-xl font-black text-xs md:text-sm transition-all duration-300 whitespace-nowrap group hover:scale-[1.02] active:scale-95 border ${
                       isActive 
-                        ? `bg-gradient-to-r ${tab.activeGradient} text-white shadow-lg ${tab.activeShadow} border ${tab.activeBorder} scale-[1.02]` 
-                        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80'
+                        ? `bg-gradient-to-r ${tab.activeGradient} text-white shadow-lg ${tab.activeShadow} ${tab.activeBorder}` 
+                        : `${tab.inactiveStyle}`
                     }`}
                   >
                     <div className={`p-1.5 rounded-lg transition-all duration-300 ${isActive ? tab.iconActiveBg : tab.iconInactiveBg}`}>
