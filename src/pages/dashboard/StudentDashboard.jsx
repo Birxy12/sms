@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Award, CreditCard, Calendar, Bell, ChevronRight, 
   Inbox as InboxIcon, Trophy, Wallet, BookOpen, Library, MonitorCheck, 
   AlertCircle, Star, ArrowUpRight, ArrowDownRight, Clock, User, Zap, GraduationCap, ChevronDown,
-  Eye, EyeOff, PlusCircle, Search, CheckCircle2, X, RefreshCw, BarChart3
+  Eye, EyeOff, PlusCircle, Search, CheckCircle2, X, RefreshCw, BarChart3, Sparkles
 } from 'lucide-react';
 import { getStudentWallet, fundStudentWallet, debitStudentWallet } from '../../utils/wallet';
 import { MARKS_KEYS, expandMarks } from '../../utils/firestoreSchema';
