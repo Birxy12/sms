@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { Save, RefreshCcw, Palette, School, BookOpen, CheckCircle, Loader2, Calendar, GraduationCap, Users, ChevronDown, AlertTriangle, ArrowRight, X, CheckSquare, Image as ImageIcon, Upload, Search, Zap, Check, Square, Filter, UserCheck } from 'lucide-react';
+import { 
+  Save, RefreshCcw, Palette, School, BookOpen, CheckCircle, Loader2, Calendar, 
+  GraduationCap, Users, ChevronDown, AlertTriangle, ArrowRight, X, CheckSquare, 
+  Image as ImageIcon, Upload, Search, Zap, Check, Square, Filter, UserCheck, 
+  Globe, Phone, Mail, Clock, Lock, ShieldCheck, CreditCard, Building, Building2, 
+  Share2, FileCheck, Layers, Award, Sparkles, Sliders, ExternalLink, Plus, Trash2
+} from 'lucide-react';
 import { db } from '../lib/firebase';
 import { doc, getDoc, setDoc, collection, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import { uploadFileToSupabase } from '../lib/supabase';
@@ -8,11 +14,32 @@ import { runAutoPromotion, fetchStudentsForClass, promoteOneSS1Student } from '.
 import { SS1_SUBJECTS } from '../utils/subjectConfig';
 import { DEFAULT_COMMENT_TEMPLATES } from '../utils/commentGenerator';
 import ManageClubsAndHousesModal from '../components/ManageClubsAndHousesModal';
+import { formatNaira } from '../utils/prospectusFees';
+
+const COLOR_PRESETS = [
+  { name: 'Bonus Dominus Amber', primary: '#ff6b00', secondary: '#111111', navBg: '#0f172a', footBg: '#0f172a', navText: '#ffffff', footText: '#ffffff' },
+  { name: 'Royal Indigo & Navy', primary: '#4f46e5', secondary: '#0f172a', navBg: '#0f172a', footBg: '#020617', navText: '#ffffff', footText: '#ffffff' },
+  { name: 'Emerald Prestige', primary: '#059669', secondary: '#064e3b', navBg: '#064e3b', footBg: '#022c22', navText: '#ffffff', footText: '#ffffff' },
+  { name: 'Crimson Executive', primary: '#e11d48', secondary: '#1e1b4b', navBg: '#1e1b4b', footBg: '#0f172a', navText: '#ffffff', footText: '#ffffff' },
+  { name: 'Ocean Cyan & Slate', primary: '#0284c7', secondary: '#0f172a', navBg: '#0f172a', footBg: '#0f172a', navText: '#ffffff', footText: '#ffffff' },
+];
 
 const BrandingSettings = () => {
+  const [activeTab, setActiveTab] = useState('identity'); // 'identity' | 'appearance' | 'academic' | 'permissions' | 'signatures' | 'bank_accounts' | 'media' | 'promotion'
   const [showClubsModal, setShowClubsModal] = useState(false);
+  const [saveStatus, setSaveStatus] = useState({ state: 'idle', message: '' }); // 'idle' | 'saving' | 'saved' | 'error'
+
   const { 
     schoolName, setSchoolName, 
+    motto, setMotto,
+    schoolAddress, setSchoolAddress,
+    schoolPhone, setSchoolPhone,
+    schoolEmail, setSchoolEmail,
+    principalName, setPrincipalName,
+    examinationOfficerName, setExaminationOfficerName,
+    socialLinks, setSocialLinks,
+    bankAccounts, setBankAccounts,
+    portalPermissions, setPortalPermissions,
     primaryColor, setPrimaryColor, 
     secondaryColor, setSecondaryColor,
     schoolLogo, setSchoolLogo,
@@ -35,33 +62,58 @@ const BrandingSettings = () => {
     promotionPassMark, setPromotionPassMark,
     autoCommentsEnabled, setAutoCommentsEnabled,
     commentTemplates, setCommentTemplates,
-    averageDivisors, setAverageDivisors
+    averageDivisors, setAverageDivisors,
+    darkMode, toggleDarkMode
   } = useTheme();
 
   // Local state for form buffers
-  const [name, setName] = useState(schoolName);
-  const [primary, setPrimary] = useState(primaryColor);
-  const [secondary, setSecondary] = useState(secondaryColor);
+  const [name, setName] = useState(schoolName || 'BONUS DOMINUS SECONDARY SCHOOL');
+  const [schoolMotto, setSchoolMotto] = useState(motto || 'Nurturing Leaders of Tomorrow with Knowledge, Discipline, and Excellence');
+  const [address, setAddress] = useState(schoolAddress || '123 Education Lane, Digital City, Nigeria');
+  const [phone, setPhone] = useState(schoolPhone || '+234 800 123 4567');
+  const [email, setEmail] = useState(schoolEmail || 'info@bonusdominus.edu.ng');
+  const [officeHours, setOfficeHours] = useState('Mon - Fri: 8:00 AM - 4:00 PM');
+  const [pName, setPName] = useState(principalName || 'Mrs. Anita Etuzu');
+  const [examOfficer, setExamOfficer] = useState(examinationOfficerName || 'Exam Officer');
+  
+  const [socials, setSocials] = useState({
+    facebook: 'https://facebook.com',
+    twitter: 'https://twitter.com',
+    instagram: 'https://instagram.com',
+    linkedin: '',
+    youtube: '',
+    whatsapp: '+2348001234567',
+    ...(socialLinks || {})
+  });
+
+  const [primary, setPrimary] = useState(primaryColor || '#ff6b00');
+  const [secondary, setSecondary] = useState(secondaryColor || '#111111');
   const [logoPreview, setLogoPreview] = useState(schoolLogo);
-  const [heroImages, setHeroImages] = useState([]);
-  const [slideDuration, setSlideDuration] = useState(4);
-  const [heroImagesUploading, setHeroImagesUploading] = useState(false);
-  const [campusLifeImages, setCampusLifeImages] = useState([]);
-  const [campusLifeUploading, setCampusLifeUploading] = useState(false);
-  const [homeAdImage, setHomeAdImage] = useState(null);
-  const [homeAdLink, setHomeAdLink] = useState('');
-  const [homeAdEnabled, setHomeAdEnabled] = useState(false);
-  const [homeAdUploading, setHomeAdUploading] = useState(false);
-  const [navBg, setNavBg] = useState(navbarBg);
-  const [footBg, setFootBg] = useState(footerBg);
-  const [navText, setNavText] = useState(navbarTextColor);
-  const [footText, setFootText] = useState(footerTextColor);
+  const [navBg, setNavBg] = useState(navbarBg || '#000000');
+  const [footBg, setFootBg] = useState(footerBg || '#000000');
+  const [navText, setNavText] = useState(navbarTextColor || '#ffffff');
+  const [footText, setFootText] = useState(footerTextColor || '#ffffff');
+
   const [pSig, setPSig] = useState(principalSignature);
   const [pStamp, setPStamp] = useState(principalStamp);
   const [bSig, setBSig] = useState(bursarSignature);
   const [bStamp, setBStamp] = useState(bursarStamp);
+  const [examSig, setExamSig] = useState(null);
 
-  // New Academic Settings Buffers
+  // Bank Accounts state
+  const [accountsList, setAccountsList] = useState(
+    bankAccounts && bankAccounts.length > 0 ? bankAccounts : [
+      { bankName: 'First Bank of Nigeria', accountName: 'Bonus Dominus College / School Fees', accountNumber: '2022829027', type: 'Tuition & Prospectus', isDefault: true },
+      { bankName: 'Moniepoint Microfinance Bank', accountName: 'Bonus Dominus School Portal', accountNumber: '8223190412', type: 'Online Instant Collections', isDefault: false },
+      { bankName: 'OPay Digital Services', accountName: 'Bonus Dominus Secondary School', accountNumber: '9017588338', type: 'Direct Bursary Transfer', isDefault: false }
+    ]
+  );
+  const [newBankName, setNewBankName] = useState('');
+  const [newAccName, setNewAccName] = useState('');
+  const [newAccNo, setNewAccNo] = useState('');
+  const [newAccType, setNewAccType] = useState('General Bursary');
+
+  // Academic Settings Buffers
   const [cat1Val, setCat1Val] = useState(cat1Limit ?? 20);
   const [cat2Val, setCat2Val] = useState(cat2Limit ?? 20);
   const [examVal, setExamVal] = useState(examLimit ?? 60);
@@ -86,17 +138,32 @@ const BrandingSettings = () => {
     'SS3 ART': 9,
   });
 
-  // Academic Configuration State
-  const [subjectRegistrationEnabled, setSubjectRegistrationEnabled] = useState(false);
-  const [admissionEnabled, setAdmissionEnabled] = useState(false);
-  const [configLoading, setConfigLoading] = useState(true);
-  const [statusMsg, setStatusMsg] = useState({ type: '', message: '' });
+  // Portal Permissions & Toggles
+  const [permissions, setPermissions] = useState({
+    admissionOpen: true,
+    subjectRegistrationEnabled: false,
+    resultCheckingEnabled: true,
+    cbtEnabled: true,
+    onlinePaymentEnabled: true,
+    walletPaymentEnabled: true,
+    allowProfileEdit: false,
+    ...(portalPermissions || {})
+  });
+
+  // Media & Landing Page CMS
+  const [heroImages, setHeroImages] = useState([]);
+  const [slideDuration, setSlideDuration] = useState(4);
+  const [heroImagesUploading, setHeroImagesUploading] = useState(false);
+  const [campusLifeImages, setCampusLifeImages] = useState([]);
+  const [campusLifeUploading, setCampusLifeUploading] = useState(false);
+  const [homeAdImage, setHomeAdImage] = useState(null);
+  const [homeAdLink, setHomeAdLink] = useState('');
+  const [homeAdEnabled, setHomeAdEnabled] = useState(false);
+  const [homeAdUploading, setHomeAdUploading] = useState(false);
 
   // Session Configuration
-  const SESSION_LIST = ['2023/2024', '2024/2025', '2025/2026', '2026/2027', '2027/2028'];
+  const SESSION_LIST = ['2023/2024', '2024/2025', '2025/2026', '2026/2027', '2027/2028', '2028/2029'];
   const [sessionInput, setSessionInput] = useState(currentSession || '2025/2026');
-  const [sessionSaving, setSessionSaving] = useState(false);
-  const [sessionSaved, setSessionSaved] = useState(false);
 
   // Move Students Modal
   const [showMoveModal, setShowMoveModal] = useState(false);
@@ -106,10 +173,10 @@ const BrandingSettings = () => {
   const [manualToClass, setManualToClass] = useState('JSS2');
   const [promotionResult, setPromotionResult] = useState(null);
   const [ss1Students, setSs1Students] = useState([]);
-  const [ss1Assignments, setSs1Assignments] = useState({}); // { [studentId]: 'SS2 ART' | 'SS2 SCIENCE' }
+  const [ss1Assignments, setSs1Assignments] = useState({});
   const [ss1Saving, setSs1Saving] = useState(false);
 
-  // Selective Move States (Option 3: Select Students from Class to Move)
+  // Selective Move States
   const [selectiveFromClass, setSelectiveFromClass] = useState('JSS 2');
   const [selectiveToClass, setSelectiveToClass] = useState('JSS 3');
   const [selectiveStudents, setSelectiveStudents] = useState([]);
@@ -117,16 +184,25 @@ const BrandingSettings = () => {
   const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
   const [selectiveSearch, setSelectiveSearch] = useState('');
 
-  // Sync with context once loaded
-  React.useEffect(() => {
-    setName(schoolName);
-    setPrimary(primaryColor);
-    setSecondary(secondaryColor);
+  // Sync from context once ready
+  useEffect(() => {
+    setName(schoolName || 'BONUS DOMINUS SECONDARY SCHOOL');
+    setSchoolMotto(motto || 'Nurturing Leaders of Tomorrow with Knowledge, Discipline, and Excellence');
+    setAddress(schoolAddress || '123 Education Lane, Digital City, Nigeria');
+    setPhone(schoolPhone || '+234 800 123 4567');
+    setEmail(schoolEmail || 'info@bonusdominus.edu.ng');
+    setPName(principalName || 'Mrs. Anita Etuzu');
+    setExamOfficer(examinationOfficerName || 'Exam Officer');
+    if (socialLinks) setSocials(prev => ({ ...prev, ...socialLinks }));
+    if (bankAccounts && bankAccounts.length > 0) setAccountsList(bankAccounts);
+    if (portalPermissions) setPermissions(prev => ({ ...prev, ...portalPermissions }));
+    setPrimary(primaryColor || '#ff6b00');
+    setSecondary(secondaryColor || '#111111');
     setLogoPreview(schoolLogo);
-    setNavBg(navbarBg);
-    setFootBg(footerBg);
-    setNavText(navbarTextColor);
-    setFootText(footerTextColor);
+    setNavBg(navbarBg || '#000000');
+    setFootBg(footerBg || '#000000');
+    setNavText(navbarTextColor || '#ffffff');
+    setFootText(footerTextColor || '#ffffff');
     setPSig(principalSignature);
     setPStamp(principalStamp);
     setBSig(bursarSignature);
@@ -141,155 +217,351 @@ const BrandingSettings = () => {
     setPassMarkInput(promotionPassMark ?? 45);
     setCommentsEnabled(autoCommentsEnabled ?? true);
     setTpls(commentTemplates || DEFAULT_COMMENT_TEMPLATES);
-    setDivisorInputs(averageDivisors || {
-      JSS1: 16,
-      JSS2: 16,
-      JSS3: 16,
-      SS1: 16,
-      'SS2 SCIENCE': 9,
-      'SS2 ART': 9,
-      'SS3 SCIENCE': 9,
-      'SS3 ART': 9,
-    });
-  }, [schoolName, primaryColor, secondaryColor, schoolLogo, navbarBg, footerBg, navbarTextColor, footerTextColor, principalSignature, principalStamp, bursarSignature, bursarStamp, cat1Limit, cat2Limit, examLimit, currentTerm, termStartDate, termEndDate, nextTermBeginsDate, promotionPassMark, autoCommentsEnabled, commentTemplates, averageDivisors]);
+    if (averageDivisors) setDivisorInputs(averageDivisors);
+  }, [schoolName, motto, schoolAddress, schoolPhone, schoolEmail, principalName, examinationOfficerName, socialLinks, bankAccounts, portalPermissions, primaryColor, secondaryColor, schoolLogo, navbarBg, footerBg, navbarTextColor, footerTextColor, principalSignature, principalStamp, bursarSignature, bursarStamp, currentSession, cat1Limit, cat2Limit, examLimit, currentTerm, termStartDate, termEndDate, nextTermBeginsDate, promotionPassMark, autoCommentsEnabled, commentTemplates, averageDivisors]);
 
-  React.useEffect(() => {
-    setSessionInput(currentSession || '2025/2026');
-  }, [currentSession]);
-
-  React.useEffect(() => {
-    const fetchPublicContent = async () => {
+  // Load public_content & permissions from Firestore on mount
+  useEffect(() => {
+    const fetchRemoteSettings = async () => {
       try {
-        const snap = await getDoc(doc(db, 'settings', 'public_content'));
-        if (snap.exists() && snap.data().landingPage) {
-          const lp = snap.data().landingPage;
-          if (lp.heroImages) {
-            setHeroImages(lp.heroImages.map(img => typeof img === 'string' ? { url: img, caption: '' } : img));
+        const publicSnap = await getDoc(doc(db, 'settings', 'public_content'));
+        if (publicSnap.exists()) {
+          const pData = publicSnap.data();
+          if (pData.contactDetails) {
+            if (pData.contactDetails.address) setAddress(pData.contactDetails.address);
+            if (pData.contactDetails.phone) setPhone(pData.contactDetails.phone);
+            if (pData.contactDetails.email) setEmail(pData.contactDetails.email);
+            if (pData.contactDetails.hours) setOfficeHours(pData.contactDetails.hours);
           }
-          if (lp.campusLifeImages) {
-            setCampusLifeImages(lp.campusLifeImages.map(img => typeof img === 'string' ? { url: img, caption: '' } : img));
+          if (pData.socialLinks) {
+            setSocials(prev => ({ ...prev, ...pData.socialLinks }));
           }
-          if (lp.homeSlideDuration !== undefined) setSlideDuration(lp.homeSlideDuration);
-          if (lp.homeAdImage) setHomeAdImage(lp.homeAdImage);
-          if (lp.homeAdLink) setHomeAdLink(lp.homeAdLink);
-          if (lp.homeAdEnabled !== undefined) setHomeAdEnabled(lp.homeAdEnabled);
+          if (pData.landingPage) {
+            const lp = pData.landingPage;
+            if (Array.isArray(lp.heroImages)) setHeroImages(lp.heroImages);
+            if (Array.isArray(lp.campusLifeImages)) setCampusLifeImages(lp.campusLifeImages);
+            if (lp.homeSlideDuration) setSlideDuration(lp.homeSlideDuration);
+            if (lp.homeAdImage) setHomeAdImage(lp.homeAdImage);
+            if (lp.homeAdLink) setHomeAdLink(lp.homeAdLink);
+            if (lp.homeAdEnabled !== undefined) setHomeAdEnabled(lp.homeAdEnabled);
+          }
         }
-      } catch (e) {
-        console.error('Failed to load public content', e);
-      }
-    };
-    fetchPublicContent();
-  }, []);
 
-  const handleSave = async () => {
-    setSchoolName(name);
-    setPrimaryColor(primary);
-    setSecondaryColor(secondary);
-    setSchoolLogo(logoPreview);
-    setNavbarBg(navBg);
-    setFooterBg(footBg);
-    setNavbarTextColor(navText);
-    setFooterTextColor(footText);
-    setPrincipalSignature(pSig);
-    setPrincipalStamp(pStamp);
-    setBursarSignature(bSig);
-    setBursarStamp(bStamp);
-    setCat1Limit(Number(cat1Val));
-    setCat2Limit(Number(cat2Val));
-    setExamLimit(Number(examVal));
-    setCurrentTerm(termInput);
-    setTermStartDate(termStart);
-    setTermEndDate(termEnd);
-    setNextTermBeginsDate(nextTerm);
-    setPromotionPassMark(Number(passMarkInput));
-    setAutoCommentsEnabled(commentsEnabled);
-    setCommentTemplates(tpls);
-    setAverageDivisors(divisorInputs);
-
-    try {
-      await setDoc(doc(db, 'settings', 'public_content'), {
-        landingPage: {
-          heroImages: heroImages,
-          campusLifeImages: campusLifeImages,
-          homeSlideDuration: Number(slideDuration),
-          homeAdImage: homeAdImage,
-          homeAdLink: homeAdLink,
-          homeAdEnabled: homeAdEnabled
+        // Student permissions
+        const permSnap = await getDoc(doc(db, 'settings', 'student_permissions'));
+        if (permSnap.exists()) {
+          const permData = permSnap.data();
+          setPermissions(prev => ({
+            ...prev,
+            admissionOpen: permData.admissionOpen !== false,
+            resultCheckingEnabled: permData.resultCheckingEnabled !== false,
+            cbtEnabled: permData.cbtEnabled !== false,
+            allowProfileEdit: !!permData.allowProfileEdit,
+            onlinePaymentEnabled: permData.onlinePaymentEnabled !== false,
+            walletPaymentEnabled: permData.walletPaymentEnabled !== false
+          }));
         }
-      }, { merge: true });
-    } catch (e) {
-      console.error('Failed to save public content', e);
-    }
 
-    alert('Branding and Academic Settings updated successfully!');
-  };
-
-  // Fetch Academic Config
-  React.useEffect(() => {
-    const fetchConfig = async () => {
-      try {
-        const snap = await getDoc(doc(db, 'settings', 'academic_permissions'));
-        if (snap.exists()) {
-          setSubjectRegistrationEnabled(snap.data().subjectRegistrationEnabled ?? false);
-          setAdmissionEnabled(snap.data().admissionEnabled ?? false);
+        // Academic permissions
+        const acadSnap = await getDoc(doc(db, 'settings', 'academic_permissions'));
+        if (acadSnap.exists()) {
+          const aData = acadSnap.data();
+          setPermissions(prev => ({
+            ...prev,
+            subjectRegistrationEnabled: !!aData.subjectRegistrationEnabled,
+            admissionOpen: aData.admissionEnabled !== undefined ? aData.admissionEnabled : prev.admissionOpen
+          }));
         }
       } catch (err) {
-        console.error('Error fetching academic config:', err);
-      } finally {
-        setConfigLoading(false);
+        console.warn('Could not fetch extra remote settings:', err);
       }
     };
-    fetchConfig();
+    fetchRemoteSettings();
   }, []);
 
-  const toggleSubjectRegistration = async () => {
-    const newValue = !subjectRegistrationEnabled;
-    setSubjectRegistrationEnabled(newValue);
-    try {
-      await setDoc(doc(db, 'settings', 'academic_permissions'), {
-        subjectRegistrationEnabled: newValue,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-      setStatusMsg({ type: 'success', message: `Subject Registration ${newValue ? 'Opened' : 'Closed'}.` });
-      setTimeout(() => setStatusMsg({ type: '', message: '' }), 3000);
-    } catch (err) {
-      console.error('Error toggling subject registration:', err);
-      setSubjectRegistrationEnabled(!newValue);
-      setStatusMsg({ type: 'error', message: 'Failed to update setting.' });
+  // Bank account handlers
+  const handleAddBankAccount = () => {
+    if (!newBankName.trim() || !newAccNo.trim() || !newAccName.trim()) {
+      alert('Please fill Bank Name, Account Name, and Account Number.');
+      return;
+    }
+    const newAcc = {
+      bankName: newBankName.trim(),
+      accountName: newAccName.trim(),
+      accountNumber: newAccNo.trim(),
+      type: newAccType.trim() || 'Tuition & Fees',
+      isDefault: accountsList.length === 0
+    };
+    setAccountsList(prev => [...prev, newAcc]);
+    setNewBankName('');
+    setNewAccName('');
+    setNewAccNo('');
+  };
+
+  const handleRemoveBankAccount = (index) => {
+    setAccountsList(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSetDefaultAccount = (index) => {
+    setAccountsList(prev => prev.map((acc, i) => ({ ...acc, isDefault: i === index })));
+  };
+
+  // Image Upload helper
+  const handleImageUpload = (e, setter) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("File is too large. Please upload an image under 2MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setter(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const toggleAdmission = async () => {
-    const newValue = !admissionEnabled;
-    setAdmissionEnabled(newValue);
-    try {
-      await setDoc(doc(db, 'settings', 'academic_permissions'), {
-        admissionEnabled: newValue,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-      setStatusMsg({ type: 'success', message: `Admission Portal (Advance Pro) ${newValue ? 'Enabled' : 'Disabled'}.` });
-      setTimeout(() => setStatusMsg({ type: '', message: '' }), 3000);
-    } catch (err) {
-      console.error('Error toggling admission:', err);
-      setAdmissionEnabled(!newValue);
-      setStatusMsg({ type: 'error', message: 'Failed to update setting.' });
+  // Hero Upload
+  const handleHeroUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("File is too large. Please upload an image under 2MB.");
+        return;
+      }
+      setHeroImagesUploading(true);
+      try {
+        const url = await uploadFileToSupabase(file, 'images', 'hero');
+        setHeroImages(prev => [...prev, { url, caption: '' }]);
+      } catch (err) {
+        alert("Failed to upload hero image.");
+      } finally {
+        setHeroImagesUploading(false);
+      }
     }
   };
 
-  const handleSaveSession = async () => {
-    setSessionSaving(true);
+  const removeHeroImage = (index) => {
+    setHeroImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleHeroCaptionChange = (index, newCaption) => {
+    const newImgs = [...heroImages];
+    if (typeof newImgs[index] === 'string') {
+      newImgs[index] = { url: newImgs[index], caption: newCaption };
+    } else {
+      newImgs[index].caption = newCaption;
+    }
+    setHeroImages(newImgs);
+  };
+
+  // Campus Life Upload
+  const handleCampusLifeUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("File is too large. Please upload an image under 2MB.");
+        return;
+      }
+      setCampusLifeUploading(true);
+      try {
+        const url = await uploadFileToSupabase(file, 'images', 'campus');
+        setCampusLifeImages(prev => [...prev, { url, caption: '' }]);
+      } catch (err) {
+        alert("Failed to upload campus life image.");
+      } finally {
+        setCampusLifeUploading(false);
+      }
+    }
+  };
+
+  const removeCampusLifeImage = (index) => {
+    setCampusLifeImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCampusLifeCaptionChange = (index, newCaption) => {
+    const newImgs = [...campusLifeImages];
+    if (typeof newImgs[index] === 'string') {
+      newImgs[index] = { url: newImgs[index], caption: newCaption };
+    } else {
+      newImgs[index].caption = newCaption;
+    }
+    setCampusLifeImages(newImgs);
+  };
+
+  // Ad Banner Upload
+  const handleAdUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("File is too large. Please upload an image under 2MB.");
+        return;
+      }
+      setHomeAdUploading(true);
+      try {
+        const url = await uploadFileToSupabase(file, 'images', 'ads');
+        setHomeAdImage(url);
+      } catch (err) {
+        alert("Failed to upload ad image.");
+      } finally {
+        setHomeAdUploading(false);
+      }
+    }
+  };
+
+  // Apply color preset
+  const applyPreset = (preset) => {
+    setPrimary(preset.primary);
+    setSecondary(preset.secondary);
+    setNavBg(preset.navBg);
+    setFootBg(preset.footBg);
+    setNavText(preset.navText);
+    setFootText(preset.footText);
+  };
+
+  // MASTER SAVE HANDLER: Synchronizes all branding, academic, contact, permissions, and CMS across Firestore
+  const handleSaveAll = async () => {
+    setSaveStatus({ state: 'saving', message: 'Saving master branding & settings across all modules...' });
+
     try {
+      // 1. Update Theme Context in memory
+      setSchoolName(name);
+      setMotto(schoolMotto);
+      setSchoolAddress(address);
+      setSchoolPhone(phone);
+      setSchoolEmail(email);
+      setPName(pName);
+      setExamOfficer(examOfficer);
+      setSocialLinks(socials);
+      setBankAccounts(accountsList);
+      setPortalPermissions(permissions);
+      setPrimaryColor(primary);
+      setSecondaryColor(secondary);
+      setSchoolLogo(logoPreview);
+      setNavbarBg(navBg);
+      setFooterBg(footBg);
+      setNavbarTextColor(navText);
+      setFooterTextColor(footText);
+      setPrincipalSignature(pSig);
+      setPrincipalStamp(pStamp);
+      setBursarSignature(bSig);
+      setBursarStamp(bStamp);
       setCurrentSession(sessionInput);
-      await setDoc(doc(db, 'settings', 'branding'), { currentSession: sessionInput }, { merge: true });
-      setSessionSaved(true);
-      setTimeout(() => setSessionSaved(false), 3000);
+      setCat1Limit(Number(cat1Val));
+      setCat2Limit(Number(cat2Val));
+      setExamLimit(Number(examVal));
+      setCurrentTerm(termInput);
+      setTermStartDate(termStart);
+      setTermEndDate(termEnd);
+      setNextTermBeginsDate(nextTerm);
+      setPromotionPassMark(Number(passMarkInput));
+      setAutoCommentsEnabled(commentsEnabled);
+      setCommentTemplates(tpls);
+      setAverageDivisors(divisorInputs);
+
+      // 2. Persist to settings/branding
+      await setDoc(doc(db, 'settings', 'branding'), {
+        schoolName: name,
+        motto: schoolMotto,
+        schoolAddress: address,
+        schoolPhone: phone,
+        schoolEmail: email,
+        principalName: pName,
+        examinationOfficerName: examOfficer,
+        socialLinks: socials,
+        bankAccounts: accountsList,
+        portalPermissions: permissions,
+        primaryColor: primary,
+        secondaryColor: secondary,
+        schoolLogo: logoPreview,
+        navbarBg: navBg,
+        footerBg: footBg,
+        navbarTextColor: navText,
+        footerTextColor: footText,
+        principalSignature: pSig,
+        principalStamp: pStamp,
+        bursarSignature: bSig,
+        bursarStamp: bStamp,
+        currentSession: sessionInput,
+        cat1Limit: Number(cat1Val),
+        cat2Limit: Number(cat2Val),
+        examLimit: Number(examVal),
+        currentTerm: termInput,
+        termStartDate: termStart,
+        termEndDate: termEnd,
+        nextTermBeginsDate: nextTerm,
+        promotionPassMark: Number(passMarkInput),
+        autoCommentsEnabled: commentsEnabled,
+        commentTemplates: tpls,
+        averageDivisors: divisorInputs,
+        lastUpdated: new Date().toISOString()
+      }, { merge: true });
+
+      // 3. Persist to settings/public_content (Contact, Socials & CMS)
+      await setDoc(doc(db, 'settings', 'public_content'), {
+        contactDetails: {
+          address,
+          phone,
+          email,
+          hours: officeHours
+        },
+        socialLinks: socials,
+        landingPage: {
+          heroImages,
+          campusLifeImages,
+          homeSlideDuration: Number(slideDuration),
+          homeAdImage,
+          homeAdLink,
+          homeAdEnabled
+        },
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      // 4. Persist to settings/student_permissions (Admission, Results, CBT, Payments)
+      await setDoc(doc(db, 'settings', 'student_permissions'), {
+        admissionOpen: permissions.admissionOpen,
+        resultCheckingEnabled: permissions.resultCheckingEnabled,
+        cbtEnabled: permissions.cbtEnabled,
+        onlinePaymentEnabled: permissions.onlinePaymentEnabled,
+        walletPaymentEnabled: permissions.walletPaymentEnabled,
+        allowProfileEdit: permissions.allowProfileEdit,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      // 5. Persist to settings/academic_permissions (Subject Registration)
+      await setDoc(doc(db, 'settings', 'academic_permissions'), {
+        subjectRegistrationEnabled: permissions.subjectRegistrationEnabled,
+        admissionEnabled: permissions.admissionOpen,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      setSaveStatus({ state: 'saved', message: 'All Master Settings and Branding updated successfully!' });
+      setTimeout(() => setSaveStatus({ state: 'idle', message: '' }), 4000);
     } catch (err) {
-      console.error('Error saving session:', err);
-    } finally {
-      setSessionSaving(false);
+      console.error('Error saving branding settings:', err);
+      setSaveStatus({ state: 'error', message: 'Failed to save settings. Check console for details.' });
     }
   };
 
+  const handleResetDefaults = () => {
+    if (!window.confirm('Reset all branding settings to factory defaults?')) return;
+    setName('BONUS DOMINUS SECONDARY SCHOOL');
+    setSchoolMotto('Nurturing Leaders of Tomorrow with Knowledge, Discipline, and Excellence');
+    setPrimary('#ff6b00');
+    setSecondary('#111111');
+    setNavBg('#000000');
+    setFootBg('#000000');
+    setNavText('#ffffff');
+    setFootText('#ffffff');
+    setLogoPreview(null);
+    setPSig(null);
+    setPStamp(null);
+    setBSig(null);
+    setBStamp(null);
+  };
+
+  // Selective Student Move Loader
   const loadSelectiveStudents = async (className) => {
     if (!className) return;
     setLoadingSelective(true);
@@ -326,12 +598,6 @@ const BrandingSettings = () => {
     }
   };
 
-  React.useEffect(() => {
-    if (showMoveModal && promotionMode === 'selective') {
-      loadSelectiveStudents(selectiveFromClass);
-    }
-  }, [showMoveModal, promotionMode, selectiveFromClass]);
-
   const toggleStudentSelection = (id) => {
     setSelectedStudentIds(prev => {
       const next = new Set(prev);
@@ -359,18 +625,9 @@ const BrandingSettings = () => {
   };
 
   const handleSelectiveMove = async () => {
-    if (selectedStudentIds.size === 0) {
-      alert('Please select at least one student to move.');
-      return;
-    }
-    if (!selectiveToClass) {
-      alert('Please select a target class.');
-      return;
-    }
-    if (selectiveFromClass === selectiveToClass) {
-      alert('Source and target classes are identical.');
-      return;
-    }
+    if (selectedStudentIds.size === 0) return alert('Please select at least one student to move.');
+    if (!selectiveToClass) return alert('Please select a target class.');
+    if (selectiveFromClass === selectiveToClass) return alert('Source and target classes are identical.');
 
     setPromotionStep('loading');
     try {
@@ -403,21 +660,14 @@ const BrandingSettings = () => {
       setPromotionStep('done');
     } catch (err) {
       console.error('Selective move error:', err);
-      alert('An error occurred during selective student move. Check console.');
+      alert('An error occurred during selective student move.');
       setPromotionStep('idle');
     }
   };
 
   const handleRunPromotion = async () => {
-    if (promotionMode === 'selective') {
-      handleSelectiveMove();
-      return;
-    }
-
-    if (promotionMode === 'manual') {
-      handleManualMove();
-      return;
-    }
+    if (promotionMode === 'selective') return handleSelectiveMove();
+    if (promotionMode === 'manual') return handleManualMove();
 
     setPromotionStep('loading');
     setPromotionResult(null);
@@ -432,7 +682,7 @@ const BrandingSettings = () => {
       setPromotionStep(ss1.length > 0 ? 'ss1_placement' : 'done');
     } catch (err) {
       console.error('Promotion error:', err);
-      alert('An error occurred running promotion. Check console.');
+      alert('An error occurred running promotion.');
       setPromotionStep('idle');
     }
   };
@@ -441,7 +691,6 @@ const BrandingSettings = () => {
     setPromotionStep('loading');
     try {
       const studentsRef = collection(db, 'students');
-      
       let snap = await getDocs(query(studentsRef, where('c', '==', manualFromClass)));
       if (snap.empty) {
         snap = await getDocs(query(studentsRef, where('className', '==', manualFromClass)));
@@ -482,1287 +731,1538 @@ const BrandingSettings = () => {
     }
   };
 
-  const handleImageUpload = (e, setter) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert("File is too large. Please upload an image under 2MB.");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setter(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  const TABS = [
+    { id: 'identity', label: 'School Identity & Contact', icon: School, count: null },
+    { id: 'appearance', label: 'Colors & Styling', icon: Palette, count: null },
+    { id: 'academic', label: 'Academic Calendar & Limits', icon: Calendar, count: null },
+    { id: 'permissions', label: 'Portal Permissions', icon: Lock, count: null },
+    { id: 'signatures', label: 'Credentials & Signatures', icon: FileCheck, count: null },
+    { id: 'bank_accounts', label: 'Official Bank Accounts', icon: Building2, count: accountsList.length },
+    { id: 'media', label: 'Website CMS & Media', icon: ImageIcon, count: null },
+    { id: 'promotion', label: 'Promotion & Class Move', icon: GraduationCap, count: null },
+  ];
 
-  const handleHeroUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert("File is too large. Please upload an image under 2MB.");
-        return;
-      }
-      setHeroImagesUploading(true);
-      try {
-        const url = await uploadFileToSupabase(file, 'images', 'hero');
-        setHeroImages(prev => [...prev, { url, caption: '' }]);
-      } catch (err) {
-        alert("Failed to upload image. Please try again.");
-      } finally {
-        setHeroImagesUploading(false);
-      }
-    }
-  };
-
-  const removeHeroImage = (index) => {
-    setHeroImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleHeroCaptionChange = (index, newCaption) => {
-    const newImgs = [...heroImages];
-    if (typeof newImgs[index] === 'string') {
-      newImgs[index] = { url: newImgs[index], caption: newCaption };
-    } else {
-      newImgs[index].caption = newCaption;
-    }
-    setHeroImages(newImgs);
-  };
-
-  const handleCampusLifeUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert("File is too large. Please upload an image under 2MB.");
-        return;
-      }
-      setCampusLifeUploading(true);
-      try {
-        const url = await uploadFileToSupabase(file, 'images', 'campus');
-        setCampusLifeImages(prev => [...prev, { url, caption: '' }]);
-      } catch (err) {
-        alert("Failed to upload image.");
-      } finally {
-        setCampusLifeUploading(false);
-      }
-    }
-  };
-
-  const removeCampusLifeImage = (index) => {
-    setCampusLifeImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleCampusLifeCaptionChange = (index, newCaption) => {
-    const newImgs = [...campusLifeImages];
-    if (typeof newImgs[index] === 'string') {
-      newImgs[index] = { url: newImgs[index], caption: newCaption };
-    } else {
-      newImgs[index].caption = newCaption;
-    }
-    setCampusLifeImages(newImgs);
-  };
-
-  const handleAdUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert("File is too large. Please upload an image under 2MB.");
-        return;
-      }
-      setHomeAdUploading(true);
-      try {
-        const url = await uploadFileToSupabase(file, 'images', 'ads');
-        setHomeAdImage(url);
-      } catch (err) {
-        alert("Failed to upload ad image. Please try again.");
-      } finally {
-        setHomeAdUploading(false);
-      }
-    }
-  };
-
-  const handleReset = () => {
-    setName('BONUS DOMINUS SECONDARY SCHOOL');
-    setPrimary('#ff6b00');
-    setSecondary('#111111');
-    setLogoPreview(null);
-    setSchoolLogo(null);
-    setPSig(null);
-    setPStamp(null);
-    setBSig(null);
-    setBStamp(null);
-    setPrincipalSignature(null);
-    setPrincipalStamp(null);
-    setBursarSignature(null);
-    setBursarStamp(null);
-  };
+  const totalAssessmentScore = Number(cat1Val || 0) + Number(cat2Val || 0) + Number(examVal || 0);
 
   return (
-    <div className="branding-settings">
-      <div className="dashboard-title">
-        <h1>Branding & Settings</h1>
-        <p>Customize your secondary school identity across the platform.</p>
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-300">
+      
+      {/* Top Banner Header */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-slate-900/20 mb-8 border border-slate-700/50">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+          <div className="flex items-center gap-5">
+            {logoPreview ? (
+              <img 
+                src={logoPreview} 
+                alt="Logo" 
+                className="w-16 h-16 rounded-2xl object-cover bg-white p-1 border-2 border-white/20 shadow-md" 
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-2xl bg-indigo-600/30 border-2 border-indigo-400/30 flex items-center justify-center text-indigo-300 shadow-md">
+                <School size={32} />
+              </div>
+            )}
+            <div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight m-0">{name || 'School Branding & Settings'}</h1>
+                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                  Master Control
+                </span>
+              </div>
+              <p className="text-slate-300 text-xs sm:text-sm mt-1 max-w-2xl font-medium">
+                Unified administrative control center for institution identity, themes, portal security, and academic policies.
+              </p>
+            </div>
+          </div>
+
+          {/* Action Header Buttons */}
+          <div className="flex items-center gap-3 w-full lg:w-auto justify-end flex-wrap">
+            <button
+              onClick={handleResetDefaults}
+              type="button"
+              className="px-4 py-2.5 rounded-xl border border-slate-600 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all flex items-center gap-2"
+            >
+              <RefreshCcw size={14} /> Reset Defaults
+            </button>
+            <button
+              onClick={handleSaveAll}
+              disabled={saveStatus.state === 'saving'}
+              type="button"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-emerald-900/30 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
+            >
+              {saveStatus.state === 'saving' ? (
+                <><Loader2 size={16} className="animate-spin" /> Saving Changes...</>
+              ) : (
+                <><Save size={16} /> Save All Settings</>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Global Save Alert Banner */}
+        {saveStatus.message && (
+          <div className={`mt-5 p-3.5 rounded-2xl flex items-center gap-3 text-xs sm:text-sm font-bold animate-in zoom-in-95 duration-200 ${
+            saveStatus.state === 'saved' ? 'bg-emerald-950/80 text-emerald-200 border border-emerald-500/40' :
+            saveStatus.state === 'error' ? 'bg-rose-950/80 text-rose-200 border border-rose-500/40' :
+            'bg-indigo-950/80 text-indigo-200 border border-indigo-500/40'
+          }`}>
+            {saveStatus.state === 'saved' && <CheckCircle size={18} className="text-emerald-400 shrink-0" />}
+            {saveStatus.state === 'error' && <AlertTriangle size={18} className="text-rose-400 shrink-0" />}
+            {saveStatus.state === 'saving' && <Loader2 size={18} className="animate-spin text-indigo-400 shrink-0" />}
+            <span>{saveStatus.message}</span>
+          </div>
+        )}
       </div>
 
-      <div className="settings-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px', marginTop: '32px' }}>
-        {/* School Name Card */}
-        <div className="card-white branding-card">
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-            <School color="var(--primary)" />
-            <h3>General Identity</h3>
-          </div>
-          <div className="input-group">
-            <label>School Name</label>
-            <input 
-              type="text" 
-              value={name} 
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter school name"
-              className="settings-input"
-            />
-          </div>
-          <div className="input-group" style={{ marginTop: '20px' }}>
-            <label>School Logo (Max 2MB)</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '8px' }}>
-              {logoPreview ? (
-                <img src={logoPreview} alt="School Logo" style={{ width: '48px', height: '48px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
-              ) : (
-                <div style={{ width: '48px', height: '48px', backgroundColor: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <School size={20} color="#94a3b8" />
-                </div>
+      {/* Tabs Navigation Bar */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-6 no-scrollbar">
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl text-xs sm:text-sm font-black whitespace-nowrap transition-all ${
+                isActive
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 scale-[1.02]'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <Icon size={16} className={isActive ? 'text-white' : 'text-indigo-500'} />
+              <span>{tab.label}</span>
+              {tab.count !== null && (
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                  isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                }`}>
+                  {tab.count}
+                </span>
               )}
-              <input 
-                type="file" 
-                accept="image/png, image/jpeg, image/svg+xml"
-                onChange={(e) => handleImageUpload(e, setLogoPreview)}
-                style={{ fontSize: '14px' }}
-              />
-            </div>
-          </div>
-        </div>
+            </button>
+          );
+        })}
+      </div>
 
-        {/* School Clubs & Houses Card */}
-        <div className="card-white branding-card">
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-            <Users color="var(--primary)" />
-            <h3>Clubs & Houses</h3>
-          </div>
-          <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '20px', lineHeight: '1.6' }}>
-            Configure official school clubs and houses available for student self-selection, profiles, and registration records.
-          </p>
-          <button
-            type="button"
-            onClick={() => setShowClubsModal(true)}
-            style={{
-              padding: '12px 24px',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-              color: 'white',
-              fontWeight: 800,
-              fontSize: '13px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 14px rgba(79, 70, 229, 0.25)'
-            }}
-          >
-            <Users size={16} /> Configure Clubs & Houses
-          </button>
-        </div>
-
-        {/* Credentials Card */}
-        <div className="card-white branding-card">
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-            <RefreshCcw color="var(--primary)" />
-            <h3>Official Credentials</h3>
-          </div>
+      {/* ========================================================================= */}
+      {/* TAB 1: SCHOOL IDENTITY & CONTACT */}
+      {/* ========================================================================= */}
+      {activeTab === 'identity' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-200">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Principal Section */}
-            <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '16px' }}>
-              <p style={{ fontWeight: '900', fontSize: '12px', color: '#1e293b', marginBottom: '12px', textTransform: 'uppercase' }}>Principal</p>
-              <div style={{ spaceY: '12px' }}>
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ fontSize: '11px', color: '#64748b' }}>Signature</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                    <div style={{ width: '40px', height: '40px', border: '1px dashed #cbd5e1', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#fff' }}>
-                      {pSig && <img src={pSig} alt="Sig" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />}
-                    </div>
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, setPSig)} style={{ fontSize: '10px', width: '100px' }} />
-                  </div>
-                </div>
-                <div>
-                  <label style={{ fontSize: '11px', color: '#64748b' }}>Stamp</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                    <div style={{ width: '40px', height: '40px', border: '1px dashed #cbd5e1', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#fff' }}>
-                      {pStamp && <img src={pStamp} alt="Stamp" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />}
-                    </div>
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, setPStamp)} style={{ fontSize: '10px', width: '100px' }} />
-                  </div>
-                </div>
+          {/* Main Identity */}
+          <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
+            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-700 pb-4">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 flex items-center justify-center">
+                <School size={20} />
               </div>
-            </div>
-
-            {/* Bursar Section */}
-            <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '16px' }}>
-              <p style={{ fontWeight: '900', fontSize: '12px', color: '#1e293b', marginBottom: '12px', textTransform: 'uppercase' }}>Bursar</p>
-              <div style={{ spaceY: '12px' }}>
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ fontSize: '11px', color: '#64748b' }}>Signature</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                    <div style={{ width: '40px', height: '40px', border: '1px dashed #cbd5e1', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#fff' }}>
-                      {bSig && <img src={bSig} alt="Sig" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />}
-                    </div>
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, setBSig)} style={{ fontSize: '10px', width: '100px' }} />
-                  </div>
-                </div>
-                <div>
-                  <label style={{ fontSize: '11px', color: '#64748b' }}>Stamp</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                    <div style={{ width: '40px', height: '40px', border: '1px dashed #cbd5e1', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#fff' }}>
-                      {bStamp && <img src={bStamp} alt="Stamp" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />}
-                    </div>
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, setBStamp)} style={{ fontSize: '10px', width: '100px' }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Move Students Card */}
-        <div className="card-white branding-card" style={{ borderLeft: '4px solid #f59e0b' }}>
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-            <GraduationCap color="#f59e0b" />
-            <div>
-              <h3 style={{ margin: 0 }}>Move Students</h3>
-              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>End-of-year class promotion (Third Term)</p>
-            </div>
-          </div>
-          <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-              <AlertTriangle size={16} style={{ color: '#d97706', flexShrink: 0, marginTop: '2px' }} />
               <div>
-                <p style={{ fontSize: '13px', fontWeight: '700', color: '#92400e', margin: '0 0 4px' }}>Use only after Third Term results are published</p>
-                <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '12px', color: '#78350f', lineHeight: '1.8' }}>
-                  <li>JSS1 → JSS2, JSS2 → JSS3, JSS3 → SS1 (auto, avg ≥ 45%)</li>
-                  <li>SS2 Art → SS3 Art, SS2 Science → SS3 Science (auto, avg ≥ 45%)</li>
-                  <li>SS1 → SS2 Art or SS2 Science (manual — you pick per student based on 9 subjects)</li>
-                </ul>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white m-0">Institution Identity</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 m-0">Official name, motto, and leadership profiles</p>
               </div>
             </div>
-          </div>
-          <button
-            onClick={() => { setShowMoveModal(true); setPromotionStep('idle'); setPromotionResult(null); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '12px 24px', borderRadius: '12px', fontWeight: '800',
-              fontSize: '14px', cursor: 'pointer', border: 'none',
-              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-              color: '#fff', boxShadow: '0 4px 14px #fde68a'
-            }}
-          >
-            <Users size={18} /> Move Students to Next Class
-          </button>
-        </div>
-        <div className="card-white branding-card">
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-            <BookOpen color="var(--primary)" />
-            <h3>Academic Configuration</h3>
-          </div>
-          
-          <div className="input-group">
-            <div className="academic-config-row">
+
+            <div className="space-y-4">
               <div>
-                <label className="academic-config-label">Subject Registration Portal</label>
-                <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>Allow SS2 and SS3 students to register their 9 subjects.</p>
-              </div>
-              
-              {configLoading ? (
-                <Loader2 size={24} className="animate-spin text-slate-400" />
-              ) : (
-                <button 
-                  onClick={toggleSubjectRegistration}
-                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all focus:outline-none shadow-sm ${subjectRegistrationEnabled ? 'bg-blue-600' : 'bg-red-600'}`}
-                >
-                  <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform ${subjectRegistrationEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
-                </button>
-              )}
-            </div>
-
-            <div className="academic-config-row" style={{ marginTop: '16px' }}>
-              <div>
-                <label className="academic-config-label">
-                  Admission Portal 
-                  <span style={{ fontSize: '10px', backgroundColor: '#8b5cf6', color: 'white', padding: '2px 8px', borderRadius: '12px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Advance Pro</span>
-                </label>
-                <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>Enable or disable the public Admission page.</p>
-              </div>
-              
-              {configLoading ? (
-                <Loader2 size={24} className="animate-spin text-slate-400" />
-              ) : (
-                <button 
-                  onClick={toggleAdmission}
-                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all focus:outline-none shadow-sm ${admissionEnabled ? 'bg-blue-600' : 'bg-red-600'}`}
-                >
-                  <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform ${admissionEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
-                </button>
-              )}
-            </div>
-            {statusMsg.message && (
-              <p style={{ marginTop: '12px', fontSize: '12px', fontWeight: 'bold', color: statusMsg.type === 'success' ? '#10b981' : '#f43f5e', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <CheckCircle size={14} /> {statusMsg.message}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Assessment Limit Card (CAT1, CAT2, Exam) */}
-        <div className="card-white branding-card">
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-            <BookOpen color="var(--primary)" />
-            <div>
-              <h3 style={{ margin: 0 }}>Continuous Assessment & Exam Limits</h3>
-              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Configure maximum score limit per subject test component.</p>
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>1st Test (CAT 1)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={cat1Val}
-                onChange={(e) => setCat1Val(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e2e8f0', fontWeight: '700', fontSize: '14px' }}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>2nd Test (CAT 2)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={cat2Val}
-                onChange={(e) => setCat2Val(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e2e8f0', fontWeight: '700', fontSize: '14px' }}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>Exam Max</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={examVal}
-                onChange={(e) => setExamVal(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e2e8f0', fontWeight: '700', fontSize: '14px' }}
-              />
-            </div>
-          </div>
-          <div style={{ padding: '10px 14px', borderRadius: '10px', background: Number(cat1Val) + Number(cat2Val) + Number(examVal) === 100 ? '#f0fdf4' : '#fff1f2', border: `1px solid ${Number(cat1Val) + Number(cat2Val) + Number(examVal) === 100 ? '#bbf7d0' : '#fecdd3'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: '700', color: Number(cat1Val) + Number(cat2Val) + Number(examVal) === 100 ? '#166534' : '#991b1b' }}>
-              Total Max Marks: <strong>{Number(cat1Val) + Number(cat2Val) + Number(examVal)} Marks</strong>
-            </span>
-            {Number(cat1Val) + Number(cat2Val) + Number(examVal) !== 100 && (
-              <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: '700' }}>Warning: Sum should equal 100</span>
-            )}
-          </div>
-        </div>
-
-        {/* Hero Section Images Card */}
-        <div className="card-white branding-card">
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-            <ImageIcon color="var(--primary)" />
-            <div>
-              <h3 style={{ margin: 0 }}>Home Page Hero Images</h3>
-              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Set the slideshow pictures for the public landing page.</p>
-            </div>
-          </div>
-          
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
-            {heroImages.map((img, idx) => (
-              <div key={idx} style={{ position: 'relative', width: '150px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ position: 'relative', width: '100%', height: '100px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-                  <img src={typeof img === 'string' ? img : img.url} alt="Hero" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <button 
-                    onClick={() => removeHeroImage(idx)}
-                    style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-                <input 
-                  type="text" 
-                  placeholder="Caption..." 
-                  value={typeof img === 'string' ? '' : img.caption || ''}
-                  onChange={(e) => handleHeroCaptionChange(idx, e.target.value)}
-                  style={{ width: '100%', fontSize: '11px', padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">Official School Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. BONUS DOMINUS SECONDARY SCHOOL"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-            ))}
-            {heroImages.length < 5 && (
-              <div style={{ width: '150px', height: '100px', borderRadius: '10px', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: 'pointer', background: '#f8fafc' }}>
-                {heroImagesUploading ? (
-                  <Loader2 size={24} className="animate-spin text-slate-400" />
-                ) : (
-                  <>
-                    <input type="file" accept="image/*" onChange={handleHeroUpload} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 10 }} />
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#64748b' }}>
-                      <Upload size={20} style={{ marginBottom: '4px' }} />
-                      <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Add Image</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
 
-          <div style={{ marginTop: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
-            <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>Slideshow Interval (Seconds)</label>
-            <input
-              type="number"
-              min="1"
-              max="20"
-              value={slideDuration}
-              onChange={(e) => setSlideDuration(e.target.value)}
-              style={{ width: '100%', maxWidth: '200px', padding: '10px', borderRadius: '10px', border: '2px solid #e2e8f0', fontSize: '14px' }}
-            />
-          </div>
-        </div>
-
-        {/* Campus Life Images Card */}
-        <div className="card-white branding-card">
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-            <ImageIcon color="var(--primary)" />
-            <div>
-              <h3 style={{ margin: 0 }}>Campus Life Images</h3>
-              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Experience Our World - max 3 images.</p>
-            </div>
-          </div>
-          
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
-            {campusLifeImages.map((img, idx) => (
-              <div key={idx} style={{ position: 'relative', width: '150px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ position: 'relative', width: '100%', height: '100px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-                  <img src={typeof img === 'string' ? img : img.url} alt="Campus" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <button 
-                    onClick={() => removeCampusLifeImage(idx)}
-                    style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-                <input 
-                  type="text" 
-                  placeholder="Label..." 
-                  value={typeof img === 'string' ? '' : img.caption || ''}
-                  onChange={(e) => handleCampusLifeCaptionChange(idx, e.target.value)}
-                  style={{ width: '100%', fontSize: '11px', padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">School Motto / Slogan</label>
+                <input
+                  type="text"
+                  value={schoolMotto}
+                  onChange={(e) => setSchoolMotto(e.target.value)}
+                  placeholder="e.g. Knowledge, Discipline, and Excellence"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-            ))}
-            {campusLifeImages.length < 3 && (
-              <div style={{ width: '150px', height: '100px', borderRadius: '10px', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: 'pointer', background: '#f8fafc' }}>
-                {campusLifeUploading ? (
-                  <Loader2 size={24} className="animate-spin text-slate-400" />
-                ) : (
-                  <>
-                    <input type="file" accept="image/*" onChange={handleCampusLifeUpload} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 10 }} />
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#64748b' }}>
-                      <Upload size={20} style={{ marginBottom: '4px' }} />
-                      <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Add Image</span>
-                    </div>
-                  </>
-                )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">Principal Full Name</label>
+                  <input
+                    type="text"
+                    value={pName}
+                    onChange={(e) => setPName(e.target.value)}
+                    placeholder="e.g. Mrs. Anita Etuzu"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">Examination Officer Name</label>
+                  <input
+                    type="text"
+                    value={examOfficer}
+                    onChange={(e) => setExamOfficer(e.target.value)}
+                    placeholder="e.g. Mr. Kenneth O."
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
               </div>
-            )}
-          </div>
-        </div>
+            </div>
 
-        {/* Home Page Ad Section */}
-        <div className="card-white branding-card">
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-            <AlertTriangle color="var(--primary)" />
-            <div>
-              <h3 style={{ margin: 0 }}>Public Announcement / Ad Banner</h3>
-              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Display a dismissible pop-up banner on the home page.</p>
+            {/* Contact Details Section */}
+            <div className="border-t border-slate-100 dark:border-slate-700 pt-6 space-y-4">
+              <h4 className="text-sm font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                <Phone size={16} className="text-emerald-500" /> Official Campus Contact & Hours
+              </h4>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Campus Physical Address</label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="e.g. 123 Education Lane, Digital City, Nigeria"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Phone Number(s)</label>
+                  <input
+                    type="text"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+234 800 123 4567"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Official Inquiry Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="info@school.edu.ng"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Working / Office Hours</label>
+                  <input
+                    type="text"
+                    value={officeHours}
+                    onChange={(e) => setOfficeHours(e.target.value)}
+                    placeholder="Mon - Fri: 8:00 AM - 4:00 PM"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Social Media Links */}
+            <div className="border-t border-slate-100 dark:border-slate-700 pt-6 space-y-4">
+              <h4 className="text-sm font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                <Share2 size={16} className="text-indigo-500" /> Social Media & WhatsApp Links
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="block font-bold text-slate-600 dark:text-slate-400 mb-1">WhatsApp Support Line</label>
+                  <input
+                    type="text"
+                    value={socials.whatsapp || ''}
+                    onChange={(e) => setSocials(prev => ({ ...prev, whatsapp: e.target.value }))}
+                    placeholder="+2348001234567"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 font-semibold text-slate-800 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-600 dark:text-slate-400 mb-1">Facebook Page URL</label>
+                  <input
+                    type="url"
+                    value={socials.facebook || ''}
+                    onChange={(e) => setSocials(prev => ({ ...prev, facebook: e.target.value }))}
+                    placeholder="https://facebook.com/..."
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 font-semibold text-slate-800 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-600 dark:text-slate-400 mb-1">Twitter / X Handle URL</label>
+                  <input
+                    type="url"
+                    value={socials.twitter || ''}
+                    onChange={(e) => setSocials(prev => ({ ...prev, twitter: e.target.value }))}
+                    placeholder="https://x.com/..."
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 font-semibold text-slate-800 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-600 dark:text-slate-400 mb-1">Instagram URL</label>
+                  <input
+                    type="url"
+                    value={socials.instagram || ''}
+                    onChange={(e) => setSocials(prev => ({ ...prev, instagram: e.target.value }))}
+                    placeholder="https://instagram.com/..."
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 font-semibold text-slate-800 dark:text-white"
+                  />
+                </div>
+              </div>
             </div>
           </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#475569' }}>Enable Ad:</label>
-              <button 
-                onClick={() => setHomeAdEnabled(!homeAdEnabled)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none shadow-sm ${homeAdEnabled ? 'bg-blue-600' : 'bg-slate-300'}`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${homeAdEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-              </button>
-            </div>
 
+          {/* Logo & Emblem Upload */}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
             <div>
-              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>Ad Target Link (Optional)</label>
-              <input
-                type="url"
-                placeholder="https://example.com"
-                value={homeAdLink}
-                onChange={(e) => setHomeAdLink(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e2e8f0', fontSize: '14px' }}
-              />
-            </div>
+              <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-700 pb-4 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 flex items-center justify-center">
+                  <ImageIcon size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white m-0">Logo & Crest</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 m-0">Used on Report Cards, Receipts, Navbar</p>
+                </div>
+              </div>
 
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>Ad Banner Image (Optional, max 2MB)</label>
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                {homeAdImage && (
-                  <div style={{ position: 'relative', width: '200px', height: '100px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-                    <img src={homeAdImage} alt="Ad Banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <button 
-                      onClick={() => setHomeAdImage(null)}
-                      style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl bg-slate-50/50 dark:bg-slate-900/50 mb-6 text-center">
+                {logoPreview ? (
+                  <div className="relative group mb-3">
+                    <img 
+                      src={logoPreview} 
+                      alt="Logo" 
+                      className="w-28 h-28 object-contain rounded-2xl bg-white p-2 border border-slate-200 shadow-md" 
+                    />
+                    <button
+                      onClick={() => setLogoPreview(null)}
+                      className="absolute -top-2 -right-2 bg-rose-600 text-white rounded-full p-1 shadow hover:bg-rose-700"
                     >
                       <X size={14} />
                     </button>
                   </div>
-                )}
-                {!homeAdImage && (
-                  <div style={{ width: '200px', height: '100px', borderRadius: '10px', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: 'pointer', background: '#f8fafc' }}>
-                    {homeAdUploading ? (
-                      <Loader2 size={24} className="animate-spin text-slate-400" />
-                    ) : (
-                      <>
-                        <input type="file" accept="image/*" onChange={handleAdUpload} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 10 }} />
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#64748b' }}>
-                          <Upload size={20} style={{ marginBottom: '4px' }} />
-                          <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Upload Banner</span>
-                        </div>
-                      </>
-                    )}
+                ) : (
+                  <div className="w-24 h-24 rounded-2xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-400 mb-3">
+                    <School size={36} />
                   </div>
                 )}
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Official Crest (Max 2MB)</p>
+                <p className="text-[11px] text-slate-400 mb-4">PNG, JPG, or SVG with transparent background recommended</p>
+                <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black px-4 py-2 rounded-xl transition-all shadow-md">
+                  Upload New Crest
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload(e, setLogoPreview)}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="p-4 bg-indigo-50/60 dark:bg-indigo-950/40 rounded-2xl border border-indigo-100 dark:border-indigo-900 text-xs text-indigo-900 dark:text-indigo-200">
+              <p className="font-bold mb-1">💡 Branding Tip:</p>
+              Your uploaded crest automatically reflects on official Terminal Report Cards, Bursary Payment Receipts, and Student ID cards.
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 2: APPEARANCE & COLORS */}
+      {/* ========================================================================= */}
+      {activeTab === 'appearance' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          
+          {/* Quick Presets */}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm">
+            <h3 className="text-base font-black text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+              <Sparkles size={18} className="text-amber-500" /> Curated School Theme Presets
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {COLOR_PRESETS.map(preset => (
+                <button
+                  key={preset.name}
+                  onClick={() => applyPreset(preset)}
+                  className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 bg-slate-50 dark:bg-slate-900/50 text-left transition-all group"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 rounded-full border border-white/40 shadow-sm" style={{ backgroundColor: preset.primary }} />
+                    <div className="w-5 h-5 rounded-full border border-white/40 shadow-sm" style={{ backgroundColor: preset.secondary }} />
+                  </div>
+                  <p className="text-xs font-black text-slate-800 dark:text-white m-0 group-hover:text-indigo-500">{preset.name}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Color Palettes Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            {/* Primary Accent */}
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Primary Accent Color</label>
+                <p className="text-xs text-slate-500 mb-4">Buttons, links, highlights, and active elements.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <input 
+                  type="color" 
+                  value={primary} 
+                  onChange={(e) => setPrimary(e.target.value)}
+                  className="w-12 h-12 rounded-xl cursor-pointer border-none bg-transparent"
+                />
+                <input
+                  type="text"
+                  value={primary}
+                  onChange={(e) => setPrimary(e.target.value)}
+                  className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 dark:text-white w-28"
+                />
+              </div>
+            </div>
+
+            {/* Sidebar & Secondary */}
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Sidebar / Secondary Color</label>
+                <p className="text-xs text-slate-500 mb-4">Administrative dashboard sidebar and secondary navigation.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <input 
+                  type="color" 
+                  value={secondary} 
+                  onChange={(e) => setSecondary(e.target.value)}
+                  className="w-12 h-12 rounded-xl cursor-pointer border-none bg-transparent"
+                />
+                <input
+                  type="text"
+                  value={secondary}
+                  onChange={(e) => setSecondary(e.target.value)}
+                  className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 dark:text-white w-28"
+                />
+              </div>
+            </div>
+
+            {/* Navbar Background */}
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Navbar Background & Text</label>
+                <p className="text-xs text-slate-500 mb-4">Public homepage and top navigation bar.</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <input type="color" value={navBg} onChange={(e) => setNavBg(e.target.value)} className="w-10 h-10 rounded-xl cursor-pointer" />
+                  <span className="text-[10px] font-bold text-slate-500">Bg</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={navText} onChange={(e) => setNavText(e.target.value)} className="w-10 h-10 rounded-xl cursor-pointer" />
+                  <span className="text-[10px] font-bold text-slate-500">Text</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Background */}
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Footer Background & Text</label>
+                <p className="text-xs text-slate-500 mb-4">Bottom public footer background color.</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <input type="color" value={footBg} onChange={(e) => setFootBg(e.target.value)} className="w-10 h-10 rounded-xl cursor-pointer" />
+                  <span className="text-[10px] font-bold text-slate-500">Bg</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={footText} onChange={(e) => setFootText(e.target.value)} className="w-10 h-10 rounded-xl cursor-pointer" />
+                  <span className="text-[10px] font-bold text-slate-500">Text</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Global Dark Mode Switch */}
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Global Dark Theme Mode</label>
+                <p className="text-xs text-slate-500 mb-4">Switch between sleek dark interface or daylight high-contrast.</p>
+              </div>
+              <button
+                onClick={toggleDarkMode}
+                type="button"
+                className="inline-flex items-center gap-3 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-900 text-xs font-black text-slate-800 dark:text-white"
+              >
+                <span className={`w-3 h-3 rounded-full ${darkMode ? 'bg-indigo-500' : 'bg-amber-500'}`} />
+                {darkMode ? 'Dark Mode Active' : 'Light Mode Active'}
+              </button>
+            </div>
+
+          </div>
+
+          {/* Real-time Component Preview Mockup */}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm">
+            <h4 className="text-sm font-black uppercase tracking-wider text-slate-800 dark:text-white mb-4">
+              Real-time Component Preview
+            </h4>
+            <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between flex-wrap gap-4" style={{ backgroundColor: navBg, color: navText }}>
+              <div className="flex items-center gap-3">
+                {logoPreview ? (
+                  <img src={logoPreview} alt="" className="w-8 h-8 rounded-lg object-contain bg-white p-0.5" />
+                ) : (
+                  <School size={24} />
+                )}
+                <span className="font-black text-sm tracking-tight">{name}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button className="text-xs font-bold px-3 py-1.5 rounded-lg" style={{ backgroundColor: primary, color: '#fff' }}>
+                  Primary Action
+                </button>
+                <span className="text-xs font-semibold opacity-80">Link Hover</span>
               </div>
             </div>
           </div>
+
         </div>
+      )}
 
-        {/* Term Schedule & Dates Card */}
-        <div className="card-white branding-card">
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-            <Calendar color="var(--primary)" />
-            <div>
-              <h3 style={{ margin: 0 }}>Term Schedule & Dates</h3>
-              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Specify current term and key academic calendar dates.</p>
+      {/* ========================================================================= */}
+      {/* TAB 3: ACADEMIC CALENDAR & LIMITS */}
+      {/* ========================================================================= */}
+      {activeTab === 'academic' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          
+          {/* Active Session & Term Card */}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm">
+            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-700 pb-4 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 flex items-center justify-center">
+                <Calendar size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white m-0">Academic Session & Term Dates</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 m-0">Sets the active school academic year and calendar milestones</p>
+              </div>
             </div>
-          </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>Active Academic Term</label>
-            <select
-              value={termInput}
-              onChange={(e) => setTermInput(e.target.value)}
-              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #e2e8f0', fontWeight: '700', fontSize: '14px', background: '#f8fafc' }}
-            >
-              <option value="1st Term">1st Term</option>
-              <option value="2nd Term">2nd Term</option>
-              <option value="3rd Term">3rd Term</option>
-            </select>
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">Academic Session</label>
+                <select
+                  value={sessionInput}
+                  onChange={(e) => setSessionInput(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-black text-slate-800 dark:text-white"
+                >
+                  {SESSION_LIST.map(s => (
+                    <option key={s} value={s}>{s} Academic Year</option>
+                  ))}
+                </select>
+              </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
-            <div>
-              <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '4px' }}>Term Start Date</label>
-              <input
-                type="date"
-                value={termStart}
-                onChange={(e) => setTermStart(e.target.value)}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '2px solid #e2e8f0', fontSize: '13px', fontWeight: '600' }}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '4px' }}>Term End Date</label>
-              <input
-                type="date"
-                value={termEnd}
-                onChange={(e) => setTermEnd(e.target.value)}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '2px solid #e2e8f0', fontSize: '13px', fontWeight: '600' }}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '4px' }}>Next Resumption</label>
-              <input
-                type="date"
-                value={nextTerm}
-                onChange={(e) => setNextTerm(e.target.value)}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '2px solid #e2e8f0', fontSize: '13px', fontWeight: '600' }}
-              />
-            </div>
-          </div>
-        </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">Active Academic Term</label>
+                <select
+                  value={termInput}
+                  onChange={(e) => setTermInput(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-black text-slate-800 dark:text-white"
+                >
+                  <option value="1st Term">1st Term (First)</option>
+                  <option value="2nd Term">2nd Term (Second)</option>
+                  <option value="3rd Term">3rd Term (Third / Promotional)</option>
+                </select>
+              </div>
 
-        {/* Promotion Pass Mark Threshold Card */}
-        <div className="card-white branding-card">
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-            <GraduationCap color="var(--primary)" />
-            <div>
-              <h3 style={{ margin: 0 }}>Student Promotion Pass Mark</h3>
-              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Minimum overall average score required for promotion to next class.</p>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>Pass Mark Threshold (%)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={passMarkInput}
-                onChange={(e) => setPassMarkInput(e.target.value)}
-                placeholder="e.g. 45"
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #e2e8f0', fontWeight: '800', fontSize: '16px' }}
-              />
-            </div>
-            <div style={{ padding: '12px 16px', background: '#e0f2fe', borderRadius: '12px', border: '1px solid #bae6fd', flex: 1.5 }}>
-              <p style={{ margin: 0, fontSize: '12px', color: '#0369a1', fontWeight: '700' }}>
-                Students with Third Term average ≥ <strong>{passMarkInput}%</strong> will automatically qualify for auto-promotion.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Average Divisor Configuration Card */}
-        <div className="card-white branding-card" style={{ gridColumn: '1 / -1' }}>
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-            <BookOpen color="var(--primary)" />
-            <div>
-              <h3 style={{ margin: 0 }}>Average Divisor Settings</h3>
-              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Set the subject divisor used to calculate class averages. Example: JSS1 uses 16 subjects.</p>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-            {Object.entries(divisorInputs).map(([className, value]) => (
-              <div key={className} style={{ padding: '12px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>{className}</label>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">Term Start Date</label>
                 <input
-                  type="number"
-                  min="1"
-                  value={value}
-                  onChange={(e) => setDivisorInputs(prev => ({ ...prev, [className]: Number(e.target.value || 1) }))}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '2px solid #e2e8f0', fontWeight: '800', fontSize: '14px' }}
+                  type="date"
+                  value={termStart}
+                  onChange={(e) => setTermStart(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">Term End Date</label>
+                <input
+                  type="date"
+                  value={termEnd}
+                  onChange={(e) => setTermEnd(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">Next Term Resumption</label>
+                <input
+                  type="date"
+                  value={nextTerm}
+                  onChange={(e) => setNextTerm(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Continuous Assessment Limits & Pass Mark */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+              <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <BookOpen size={18} className="text-indigo-500" /> Continuous Assessment & Exam Limits
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Score limit weights for continuous assessment tests and terminal examination.
+              </p>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">1st Test (CAT 1)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={cat1Val}
+                    onChange={(e) => setCat1Val(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-black text-slate-800 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">2nd Test (CAT 2)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={cat2Val}
+                    onChange={(e) => setCat2Val(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-black text-slate-800 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Exam Max Score</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={examVal}
+                    onChange={(e) => setExamVal(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-black text-slate-800 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className={`p-3.5 rounded-xl border flex items-center justify-between text-xs font-black ${
+                totalAssessmentScore === 100 
+                  ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' 
+                  : 'bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+              }`}>
+                <span>Total Assessment Weight: {totalAssessmentScore} / 100 Marks</span>
+                {totalAssessmentScore !== 100 && (
+                  <span className="text-[11px] font-bold text-rose-600">Warning: Total should equal 100</span>
+                )}
+              </div>
+            </div>
+
+            {/* Promotion Pass Mark Threshold */}
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4 flex flex-col justify-between">
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <GraduationCap size={18} className="text-amber-500" /> Promotion Pass Mark Threshold
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                  Minimum cumulative average percentage required to qualify for auto-promotion to the next class.
+                </p>
+
+                <div className="flex items-center gap-4">
+                  <div className="w-32">
+                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Pass Mark (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={passMarkInput}
+                      onChange={(e) => setPassMarkInput(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-lg font-black text-slate-800 dark:text-white"
+                    />
+                  </div>
+                  <div className="flex-1 p-3.5 bg-blue-50 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-800 text-xs text-blue-900 dark:text-blue-200 font-medium">
+                    Students with average ≥ <strong>{passMarkInput}%</strong> will automatically be promoted to next class during Third Term processing.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Average Divisor Configuration */}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+            <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <Layers size={18} className="text-indigo-500" /> Class Subject Divisors (for Average Calculation)
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Total subject count divisor used to calculate overall percentage on terminal report cards.
+            </p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+              {Object.entries(divisorInputs).map(([className, value]) => (
+                <div key={className} className="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 text-center">
+                  <span className="block text-[11px] font-black text-slate-600 dark:text-slate-400 mb-1">{className}</span>
+                  <input
+                    type="number"
+                    min="1"
+                    value={value}
+                    onChange={(e) => setDivisorInputs(prev => ({ ...prev, [className]: Number(e.target.value || 1) }))}
+                    className="w-full text-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl p-2 text-sm font-black text-slate-800 dark:text-white"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Auto Comments Templates */}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3 border-b border-slate-100 dark:border-slate-700 pb-4">
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white m-0">Auto-Generated Result Remarks</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 m-0">Customizable Principal & Form Teacher comments based on student performance tiers</p>
+              </div>
+              <button
+                onClick={() => setCommentsEnabled(!commentsEnabled)}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all ${commentsEnabled ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${commentsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            {commentsEnabled && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.keys(tpls).map((key) => (
+                  <div key={key} className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
+                    <p className="text-xs font-black text-slate-900 dark:text-white m-0">{tpls[key].label}</p>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1">Form Teacher Remark</label>
+                      <textarea
+                        rows={2}
+                        value={tpls[key].teacher}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setTpls(prev => ({ ...prev, [key]: { ...prev[key], teacher: val } }));
+                        }}
+                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs text-slate-800 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1">Principal Remark</label>
+                      <textarea
+                        rows={2}
+                        value={tpls[key].principal}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setTpls(prev => ({ ...prev, [key]: { ...prev[key], principal: val } }));
+                        }}
+                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs text-slate-800 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 4: PORTAL PERMISSIONS & SECURITY */}
+      {/* ========================================================================= */}
+      {activeTab === 'permissions' && (
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-6 animate-in fade-in duration-200">
+          <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-700 pb-4">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 flex items-center justify-center">
+              <Lock size={20} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-slate-900 dark:text-white m-0">Portal Access & Security Controls</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 m-0">Enable or lock specific public and student portals across the web application</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              {
+                id: 'admissionOpen',
+                title: 'Public Admission Portal',
+                description: 'Allow new applicant candidate registrations and entrance applications.',
+                badge: 'Public'
+              },
+              {
+                id: 'cbtEnabled',
+                title: 'CBT Entrance Examination',
+                description: 'Require candidates to complete the timed online assessment before prospectus payment.',
+                badge: 'Admission'
+              },
+              {
+                id: 'subjectRegistrationEnabled',
+                title: 'Subject Registration Portal',
+                description: 'Allow SS2 and SS3 students to self-register their 9 subjects on the student dashboard.',
+                badge: 'Senior Secondary'
+              },
+              {
+                id: 'resultCheckingEnabled',
+                title: 'Terminal Result Checking Portal',
+                description: 'Allow students to view and download their academic report cards for published terms.',
+                badge: 'Results'
+              },
+              {
+                id: 'onlinePaymentEnabled',
+                title: 'Online Payment Gateways (First Bank & Moniepoint)',
+                description: 'Allow direct online fee settlement with instant automated credit verification.',
+                badge: 'Bursary'
+              },
+              {
+                id: 'walletPaymentEnabled',
+                title: 'Student E-Wallet Payments',
+                description: 'Enable pre-loaded student e-wallet debiting for fee payments without card charges.',
+                badge: 'Wallet'
+              },
+              {
+                id: 'allowProfileEdit',
+                title: 'Student Profile Self-Editing',
+                description: 'Allow registered students to update their personal info, phone numbers, and passport photos.',
+                badge: 'Security'
+              }
+            ].map(perm => {
+              const isEnabled = !!permissions[perm.id];
+              return (
+                <div 
+                  key={perm.id}
+                  className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-4"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white m-0">{perm.title}</h4>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                        {perm.badge}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 m-0 leading-relaxed">{perm.description}</p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setPermissions(prev => ({ ...prev, [perm.id]: !isEnabled }))}
+                    className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-all focus:outline-none ${
+                      isEnabled ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'
+                    }`}
+                  >
+                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${
+                      isEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 5: OFFICIAL CREDENTIALS & SIGNATURES */}
+      {/* ========================================================================= */}
+      {activeTab === 'signatures' && (
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-6 animate-in fade-in duration-200">
+          <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-700 pb-4">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 flex items-center justify-center">
+              <FileCheck size={20} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-slate-900 dark:text-white m-0">Official Signatures & Institutional Stamps</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 m-0">Embedded on Report Cards, Payment Receipts, Clearance, and Admission Letters</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            {/* Principal Signature */}
+            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex flex-col justify-between text-center">
+              <div>
+                <p className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 mb-1">Principal Signature</p>
+                <p className="text-[11px] text-slate-400 mb-4">{pName || 'Mrs. Anita Etuzu'}</p>
+                <div className="w-full h-24 bg-white dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center overflow-hidden mb-3">
+                  {pSig ? (
+                    <img src={pSig} alt="Principal Signature" className="max-h-full max-w-full object-contain p-2" />
+                  ) : (
+                    <span className="text-xs text-slate-400 font-bold">No Signature</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-2">
+                <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-black px-3 py-1.5 rounded-lg">
+                  Upload
+                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, setPSig)} className="hidden" />
+                </label>
+                {pSig && (
+                  <button onClick={() => setPSig(null)} className="text-[11px] font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/40 px-2 py-1.5 rounded-lg">
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Principal Stamp */}
+            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex flex-col justify-between text-center">
+              <div>
+                <p className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 mb-1">Official School Stamp</p>
+                <p className="text-[11px] text-slate-400 mb-4">Embossed on report cards</p>
+                <div className="w-full h-24 bg-white dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center overflow-hidden mb-3">
+                  {pStamp ? (
+                    <img src={pStamp} alt="Principal Stamp" className="max-h-full max-w-full object-contain p-2" />
+                  ) : (
+                    <span className="text-xs text-slate-400 font-bold">No Stamp</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-2">
+                <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-black px-3 py-1.5 rounded-lg">
+                  Upload
+                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, setPStamp)} className="hidden" />
+                </label>
+                {pStamp && (
+                  <button onClick={() => setPStamp(null)} className="text-[11px] font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/40 px-2 py-1.5 rounded-lg">
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Bursar Signature */}
+            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex flex-col justify-between text-center">
+              <div>
+                <p className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 mb-1">Bursar Signature</p>
+                <p className="text-[11px] text-slate-400 mb-4">Official Payment Receipts</p>
+                <div className="w-full h-24 bg-white dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center overflow-hidden mb-3">
+                  {bSig ? (
+                    <img src={bSig} alt="Bursar Signature" className="max-h-full max-w-full object-contain p-2" />
+                  ) : (
+                    <span className="text-xs text-slate-400 font-bold">No Signature</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-2">
+                <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-black px-3 py-1.5 rounded-lg">
+                  Upload
+                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, setBSig)} className="hidden" />
+                </label>
+                {bSig && (
+                  <button onClick={() => setBSig(null)} className="text-[11px] font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/40 px-2 py-1.5 rounded-lg">
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Bursar Stamp */}
+            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex flex-col justify-between text-center">
+              <div>
+                <p className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 mb-1">Bursary Clearance Stamp</p>
+                <p className="text-[11px] text-slate-400 mb-4">Payment Verification Stamp</p>
+                <div className="w-full h-24 bg-white dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center overflow-hidden mb-3">
+                  {bStamp ? (
+                    <img src={bStamp} alt="Bursar Stamp" className="max-h-full max-w-full object-contain p-2" />
+                  ) : (
+                    <span className="text-xs text-slate-400 font-bold">No Stamp</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-2">
+                <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-black px-3 py-1.5 rounded-lg">
+                  Upload
+                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, setBStamp)} className="hidden" />
+                </label>
+                {bStamp && (
+                  <button onClick={() => setBStamp(null)} className="text-[11px] font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/40 px-2 py-1.5 rounded-lg">
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 6: OFFICIAL BANK COLLECTION ACCOUNTS */}
+      {/* ========================================================================= */}
+      {activeTab === 'bank_accounts' && (
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-6 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-100 dark:border-slate-700 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 flex items-center justify-center">
+                <Building2 size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white m-0">Official School Collection Accounts</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 m-0">Direct manual transfer accounts displayed to parents and students</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Add New Bank Account Form */}
+          <div className="p-5 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              <Plus size={16} className="text-indigo-600" /> Add New School Bank Account
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">Bank Name</label>
+                <input
+                  type="text"
+                  value={newBankName}
+                  onChange={(e) => setNewBankName(e.target.value)}
+                  placeholder="e.g. First Bank of Nigeria"
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs font-bold text-slate-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">Account Name</label>
+                <input
+                  type="text"
+                  value={newAccName}
+                  onChange={(e) => setNewAccName(e.target.value)}
+                  placeholder="e.g. Bonus Dominus College"
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs font-bold text-slate-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">Account Number (10 Digits)</label>
+                <input
+                  type="text"
+                  value={newAccNo}
+                  onChange={(e) => setNewAccNo(e.target.value)}
+                  placeholder="e.g. 2022829027"
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">Collection Purpose</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newAccType}
+                    onChange={(e) => setNewAccType(e.target.value)}
+                    placeholder="Tuition & Prospectus"
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs font-bold text-slate-800 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddBankAccount}
+                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black shrink-0 transition-all shadow-md"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* List of Configured Accounts */}
+          <div className="space-y-3">
+            {accountsList.map((acc, index) => (
+              <div 
+                key={index} 
+                className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between flex-wrap gap-4 shadow-sm"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center font-black text-sm">
+                    {index + 1}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-sm text-slate-900 dark:text-white">{acc.bankName}</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300">
+                        {acc.type}
+                      </span>
+                      {acc.isDefault && (
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+                          Primary
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 m-0">{acc.accountName}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-base font-black text-slate-800 dark:text-white tracking-wider">{acc.accountNumber}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(acc.accountNumber);
+                      alert(`Copied ${acc.accountNumber} to clipboard!`);
+                    }}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-700 dark:text-slate-300 transition-colors"
+                  >
+                    Copy
+                  </button>
+                  {!acc.isDefault && (
+                    <button
+                      type="button"
+                      onClick={() => handleSetDefaultAccount(index)}
+                      className="text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                      Make Default
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveBankAccount(index)}
+                    className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Auto Generation of Result Comments Card */}
-        <div className="card-white branding-card" style={{ gridColumn: '1 / -1' }}>
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <CheckSquare color="var(--primary)" />
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 7: WEBSITE CMS & MEDIA */}
+      {/* ========================================================================= */}
+      {activeTab === 'media' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          
+          {/* Hero Carousel Section */}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 dark:border-slate-700 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 flex items-center justify-center">
+                  <ImageIcon size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white m-0">Homepage Hero Carousel Slides</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 m-0">Upload up to 5 pictures that cycle on the public landing page hero</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-500">Interval:</span>
+                <input
+                  type="number"
+                  min="2"
+                  max="15"
+                  value={slideDuration}
+                  onChange={(e) => setSlideDuration(e.target.value)}
+                  className="w-16 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-center text-xs font-black text-slate-800 dark:text-white"
+                />
+                <span className="text-xs font-bold text-slate-500">sec</span>
+              </div>
+            </div>
+
+            <div className="flex gap-4 flex-wrap">
+              {heroImages.map((img, idx) => (
+                <div key={idx} className="relative w-44 space-y-2">
+                  <div className="w-full h-28 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 relative group">
+                    <img src={typeof img === 'string' ? img : img.url} alt="Hero" className="w-full h-full object-cover" />
+                    <button 
+                      onClick={() => removeHeroImage(idx)}
+                      className="absolute top-2 right-2 bg-rose-600 text-white rounded-full p-1 shadow hover:bg-rose-700"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="Caption..." 
+                    value={typeof img === 'string' ? '' : img.caption || ''}
+                    onChange={(e) => handleHeroCaptionChange(idx, e.target.value)}
+                    className="w-full text-xs p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white"
+                  />
+                </div>
+              ))}
+
+              {heroImages.length < 5 && (
+                <div className="w-44 h-28 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 flex flex-col items-center justify-center cursor-pointer bg-slate-50 dark:bg-slate-900/40 relative">
+                  {heroImagesUploading ? (
+                    <Loader2 size={24} className="animate-spin text-indigo-500" />
+                  ) : (
+                    <>
+                      <input type="file" accept="image/*" onChange={handleHeroUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                      <Upload size={20} className="text-slate-400 mb-1" />
+                      <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Add Hero Slide</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Campus Life Gallery */}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-700 pb-4">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 flex items-center justify-center">
+                <Sparkles size={20} />
+              </div>
               <div>
-                <h3 style={{ margin: 0 }}>Auto-Generation of Result Comments</h3>
-                <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Automatically populate Principal & Teacher remarks on report cards based on student average score.</p>
+                <h3 className="text-base font-black text-slate-900 dark:text-white m-0">Campus Life Gallery</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 m-0">Spotlight photos of sports, sciences, arts, and classrooms</p>
+              </div>
+            </div>
+
+            <div className="flex gap-4 flex-wrap">
+              {campusLifeImages.map((img, idx) => (
+                <div key={idx} className="relative w-44 space-y-2">
+                  <div className="w-full h-28 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 relative group">
+                    <img src={typeof img === 'string' ? img : img.url} alt="Campus" className="w-full h-full object-cover" />
+                    <button 
+                      onClick={() => removeCampusLifeImage(idx)}
+                      className="absolute top-2 right-2 bg-rose-600 text-white rounded-full p-1 shadow hover:bg-rose-700"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="Activity label..." 
+                    value={typeof img === 'string' ? '' : img.caption || ''}
+                    onChange={(e) => handleCampusLifeCaptionChange(idx, e.target.value)}
+                    className="w-full text-xs p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white"
+                  />
+                </div>
+              ))}
+
+              {campusLifeImages.length < 6 && (
+                <div className="w-44 h-28 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 flex flex-col items-center justify-center cursor-pointer bg-slate-50 dark:bg-slate-900/40 relative">
+                  {campusLifeUploading ? (
+                    <Loader2 size={24} className="animate-spin text-indigo-500" />
+                  ) : (
+                    <>
+                      <input type="file" accept="image/*" onChange={handleCampusLifeUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                      <Upload size={20} className="text-slate-400 mb-1" />
+                      <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Add Campus Photo</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Home Page Announcement Popup Banner */}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 dark:border-slate-700 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center">
+                  <AlertTriangle size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white m-0">Public Announcement / Modal Ad Banner</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 m-0">Show a dismissible floating promo banner to visitors on the landing page</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setHomeAdEnabled(!homeAdEnabled)}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all ${homeAdEnabled ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${homeAdEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            {homeAdEnabled && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Target Link URL (Optional)</label>
+                  <input
+                    type="url"
+                    value={homeAdLink}
+                    onChange={(e) => setHomeAdLink(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs font-bold text-slate-800 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Banner Graphic Image</label>
+                  <div className="flex items-center gap-3">
+                    {homeAdImage ? (
+                      <div className="relative w-32 h-16 rounded-xl overflow-hidden border border-slate-200">
+                        <img src={homeAdImage} alt="Ad" className="w-full h-full object-cover" />
+                        <button onClick={() => setHomeAdImage(null)} className="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-0.5">
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2">
+                        <Upload size={14} /> Upload Banner
+                        <input type="file" accept="image/*" onChange={handleAdUpload} className="hidden" />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 8: PROMOTION, CLASSES & CLUBS */}
+      {/* ========================================================================= */}
+      {activeTab === 'promotion' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-200">
+          
+          {/* Move Students Card */}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border-l-4 border-l-amber-500 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-700 pb-4 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center">
+                  <GraduationCap size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white m-0">Student Promotion & Class Movement</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 m-0">Auto-promote or shift students across classes for the new session</p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-2xl border border-amber-200 dark:border-amber-900 text-xs text-amber-900 dark:text-amber-200 space-y-2 mb-4">
+                <p className="font-black flex items-center gap-1.5">
+                  <AlertTriangle size={14} className="text-amber-600" /> Use after Third Term results are published
+                </p>
+                <ul className="list-disc pl-4 space-y-1 opacity-90">
+                  <li>JSS1 → JSS2, JSS2 → JSS3, JSS3 → SS1 (Auto: avg ≥ {passMarkInput}%)</li>
+                  <li>SS1 → SS2 Science or Art stream (Manual / Stream placement)</li>
+                  <li>Move individual selected students or entire classes</li>
+                </ul>
               </div>
             </div>
 
             <button
-              onClick={() => setCommentsEnabled(!commentsEnabled)}
-              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all focus:outline-none ${commentsEnabled ? 'bg-emerald-600' : 'bg-slate-300'}`}
+              onClick={() => { setShowMoveModal(true); setPromotionStep('idle'); setPromotionResult(null); }}
+              type="button"
+              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-black text-xs sm:text-sm shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2"
             >
-              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${commentsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              <Users size={16} /> Open Student Promotion & Movement Studio
             </button>
           </div>
 
-          {commentsEnabled && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginTop: '16px' }}>
-              {Object.keys(tpls).map((key) => (
-                <div key={key} style={{ padding: '14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '800', color: '#1e293b' }}>
-                    {tpls[key].label}
-                  </p>
-
-                  <div style={{ marginBottom: '10px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '4px' }}>Form Teacher Remark</label>
-                    <textarea
-                      rows={2}
-                      value={tpls[key].teacher}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setTpls(prev => ({ ...prev, [key]: { ...prev[key], teacher: val } }));
-                      }}
-                      style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', resize: 'vertical' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '4px' }}>Principal Remark</label>
-                    <textarea
-                      rows={2}
-                      value={tpls[key].principal}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setTpls(prev => ({ ...prev, [key]: { ...prev[key], principal: val } }));
-                      }}
-                      style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', resize: 'vertical' }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Theme Card */}
-        <div className="card-white branding-card">
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-            <Palette color="var(--primary)" />
-            <h3>Theme Colors</h3>
-          </div>
-          
-          <div className="color-section" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div className="color-input-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <label style={{ display: 'block', fontWeight: '600', marginBottom: '4px' }}>Primary Accent</label>
-                <p style={{ fontSize: '12px', color: '#888' }}>Used for buttons, icons, and highlights.</p>
-              </div>
-              <input 
-                type="color" 
-                value={primary} 
-                onChange={(e) => setPrimary(e.target.value)}
-                style={{ width: '40px', height: '40px', border: 'none', cursor: 'pointer' }}
-              />
-            </div>
-
-            <div className="color-input-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <label style={{ display: 'block', fontWeight: '600', marginBottom: '4px' }}>Sidebar & Secondary</label>
-                <p style={{ fontSize: '12px', color: '#888' }}>Used for dashboard navigation background.</p>
-              </div>
-              <input 
-                type="color" 
-                value={secondary} 
-                onChange={(e) => setSecondary(e.target.value)}
-                style={{ width: '40px', height: '40px', border: 'none', cursor: 'pointer' }}
-              />
-            </div>
-
-            <div style={{ borderTop: '1px solid #eee', margin: '10px 0' }}></div>
-
-            <div className="color-input-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <label style={{ display: 'block', fontWeight: '600', marginBottom: '4px' }}>Navbar Background</label>
-                <p style={{ fontSize: '12px', color: '#888' }}>Background color of the public navigation bar.</p>
-              </div>
-              <input 
-                type="color" 
-                value={navBg} 
-                onChange={(e) => setNavBg(e.target.value)}
-                style={{ width: '40px', height: '40px', border: 'none', cursor: 'pointer' }}
-              />
-            </div>
-
-            <div className="color-input-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <label style={{ display: 'block', fontWeight: '600', marginBottom: '4px' }}>Navbar Text Color</label>
-                <p style={{ fontSize: '12px', color: '#888' }}>Color of links and text in the navbar.</p>
-              </div>
-              <input 
-                type="color" 
-                value={navText} 
-                onChange={(e) => setNavText(e.target.value)}
-                style={{ width: '40px', height: '40px', border: 'none', cursor: 'pointer' }}
-              />
-            </div>
-
-            <div className="color-input-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <label style={{ display: 'block', fontWeight: '600', marginBottom: '4px' }}>Footer Background</label>
-                <p style={{ fontSize: '12px', color: '#888' }}>Background color of the bottom footer section.</p>
-              </div>
-              <input 
-                type="color" 
-                value={footBg} 
-                onChange={(e) => setFootBg(e.target.value)}
-                style={{ width: '40px', height: '40px', border: 'none', cursor: 'pointer' }}
-              />
-            </div>
-
-            <div className="color-input-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <label style={{ display: 'block', fontWeight: '600', marginBottom: '4px' }}>Footer Text Color</label>
-                <p style={{ fontSize: '12px', color: '#888' }}>Color of links and text in the footer.</p>
-              </div>
-              <input 
-                type="color" 
-                value={footText} 
-                onChange={(e) => setFootText(e.target.value)}
-                style={{ width: '40px', height: '40px', border: 'none', cursor: 'pointer' }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Action Bar */}
-      <div className="settings-actions" style={{ marginTop: '40px', display: 'flex', gap: '16px', justifyContent: 'flex-end' }}>
-        <button className="btn-outline" onClick={handleReset} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <RefreshCcw size={18} /> Reset to Default
-        </button>
-        <button className="btn-primary" onClick={handleSave} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 32px' }}>
-          <Save size={18} /> Save Changes
-        </button>
-      </div>
-
-      {/* Preview Section */}
-      <div className="card-white" style={{ marginTop: '40px' }}>
-        <h3>Real-time Preview</h3>
-        <p style={{ marginBottom: '20px' }}>This is how your current palette looks in action.</p>
-          <div style={{ display: 'flex', gap: '12px' }}>
-          <button style={{ backgroundColor: primary, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '6px' }}>Button Style</button>
-          <div style={{ backgroundColor: secondary, color: '#fff', padding: '10px 20px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {logoPreview && <img src={logoPreview} alt="" style={{ height: '24px' }} />}
-            Sidebar Mockup
-          </div>
-          <div style={{ color: primary, fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>Link Hover State</div>
-        </div>
-      </div>
-
-      {/* ===== MOVE STUDENTS MODAL ===== */}
-      {showMoveModal && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(6px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-        }}>
-          <div style={{
-            background: '#fff', borderRadius: '24px', width: '100%', maxWidth: '680px',
-            maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.3)'
-          }}>
-            {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 28px', borderBottom: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '42px', height: '42px', background: 'linear-gradient(135deg,#f59e0b,#d97706)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <GraduationCap size={20} color="#fff" />
+          {/* School Clubs & Houses */}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border-l-4 border-l-indigo-500 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-700 pb-4 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 flex items-center justify-center">
+                  <Users size={20} />
                 </div>
                 <div>
-                  <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#1e293b' }}>Move Students</h2>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Session: {sessionInput || currentSession}</p>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white m-0">School Clubs & Houses</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 m-0">Manage extracurricular societies and sports houses</p>
                 </div>
               </div>
-              <button onClick={() => setShowMoveModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px' }}>
-                <X size={22} />
+
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Configure official school houses (e.g. Red, Blue, Green, Yellow) and academic/extracurricular clubs (e.g. JET Club, Press Club, Drama Club, ICT Society) available for student profile registration.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowClubsModal(true)}
+              type="button"
+              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-xs sm:text-sm shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2"
+            >
+              <Users size={16} /> Configure Clubs & Houses
+            </button>
+          </div>
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MOVE STUDENTS MODAL */}
+      {/* ========================================================================= */}
+      {showMoveModal && (
+        <div className="fixed inset-0 z-[9999] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-700 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center">
+                  <GraduationCap size={20} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-slate-900 dark:text-white m-0">Student Promotion & Movement</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 m-0">Active Session: {sessionInput || currentSession}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowMoveModal(false)} className="text-slate-400 hover:text-slate-600 p-1">
+                <X size={20} />
               </button>
             </div>
 
-            <div style={{ padding: '28px' }}>
-
-              {/* STEP: idle */}
+            <div className="p-6">
               {promotionStep === 'idle' && (
-                <div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '20px' }}>
-                    <button 
-                      type="button"
-                      onClick={() => setPromotionMode('auto')}
-                      style={{ padding: '12px 14px', borderRadius: '12px', border: promotionMode === 'auto' ? '2px solid #3b82f6' : '2px solid #e2e8f0', background: promotionMode === 'auto' ? '#eff6ff' : '#fff', fontWeight: '700', color: promotionMode === 'auto' ? '#1d4ed8' : '#64748b', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                    >
-                      <Zap size={16} /> End of Year Auto
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={() => setPromotionMode('manual')}
-                      style={{ padding: '12px 14px', borderRadius: '12px', border: promotionMode === 'manual' ? '2px solid #3b82f6' : '2px solid #e2e8f0', background: promotionMode === 'manual' ? '#eff6ff' : '#fff', fontWeight: '700', color: promotionMode === 'manual' ? '#1d4ed8' : '#64748b', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                    >
-                      <Users size={16} /> Entire Class Move
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={() => { 
-                        setPromotionMode('selective'); 
-                        loadSelectiveStudents(selectiveFromClass); 
-                      }}
-                      style={{ padding: '12px 14px', borderRadius: '12px', border: promotionMode === 'selective' ? '2px solid #3b82f6' : '2px solid #e2e8f0', background: promotionMode === 'selective' ? '#eff6ff' : '#fff', fontWeight: '800', color: promotionMode === 'selective' ? '#1d4ed8' : '#64748b', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: promotionMode === 'selective' ? '0 4px 12px rgba(59,130,246,0.15)' : 'none' }}
-                    >
-                      <CheckSquare size={16} /> Select Students to Move
-                    </button>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'auto', label: 'End of Year Auto', icon: Zap },
+                      { id: 'manual', label: 'Entire Class Move', icon: Users },
+                      { id: 'selective', label: 'Select Students', icon: CheckSquare },
+                    ].map(m => {
+                      const Icon = m.icon;
+                      const isSel = promotionMode === m.id;
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => {
+                            setPromotionMode(m.id);
+                            if (m.id === 'selective') loadSelectiveStudents(selectiveFromClass);
+                          }}
+                          className={`p-3 rounded-xl border text-xs font-black flex items-center justify-center gap-2 transition-all ${
+                            isSel ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                          }`}
+                        >
+                          <Icon size={14} /> {m.label}
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {promotionMode === 'auto' && (
-                    <div style={{ background: '#f8fafc', borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
-                      <p style={{ fontWeight: '700', color: '#1e293b', marginBottom: '12px', fontSize: '15px' }}>What will happen:</p>
-                      {[
-                        { from: 'JSS1', to: 'JSS2', type: 'auto' },
-                        { from: 'JSS2', to: 'JSS3', type: 'auto' },
-                        { from: 'JSS3', to: 'SS1', type: 'auto' },
-                        { from: 'SS2 ART', to: 'SS3 ART', type: 'auto' },
-                        { from: 'SS2 SCIENCE', to: 'SS3 SCIENCE', type: 'auto' },
-                        { from: 'SS1', to: 'SS2 ART / SS2 SCIENCE', type: 'manual' },
-                      ].map((row, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                          <span style={{ background: row.type === 'auto' ? '#dbeafe' : '#fef3c7', color: row.type === 'auto' ? '#1d4ed8' : '#92400e', fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '6px', minWidth: '48px', textAlign: 'center', textTransform: 'uppercase' }}>{row.type}</span>
-                          <span style={{ fontWeight: '700', color: '#475569', fontSize: '14px' }}>{row.from}</span>
-                          <ArrowRight size={14} color="#94a3b8" />
-                          <span style={{ fontWeight: '700', color: '#1e293b', fontSize: '14px' }}>{row.to}</span>
-                          {row.type === 'auto' && <span style={{ fontSize: '11px', color: '#94a3b8' }}>(avg ≥ 45%)</span>}
-                          {row.type === 'manual' && <span style={{ fontSize: '11px', color: '#d97706' }}>(you choose stream)</span>}
-                        </div>
-                      ))}
+                    <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 space-y-2">
+                      <p className="font-bold text-slate-900 dark:text-white">Auto Promotion Rule:</p>
+                      <p>Students with 3rd term average ≥ {passMarkInput}% will be promoted to the immediate next class level.</p>
                     </div>
                   )}
 
                   {promotionMode === 'manual' && (
-                    <div style={{ background: '#f8fafc', borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
-                      <p style={{ fontWeight: '700', color: '#1e293b', marginBottom: '12px', fontSize: '15px' }}>Manual Move Configuration:</p>
-                      <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
-                        <div style={{ flex: 1 }}>
-                          <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '6px' }}>Move From Class</label>
-                          <select 
-                            value={manualFromClass} 
-                            onChange={(e) => setManualFromClass(e.target.value)}
-                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                          >
-                            {['JSS 1', 'JSS 2', 'JSS 3', 'SS 1', 'SS 2 SCIENCE', 'SS 2 ART', 'SS 3 SCIENCE', 'SS 3 ART', 'JSS1', 'JSS2', 'JSS3', 'SS1'].map(c => <option key={c} value={c}>{c}</option>)}
-                          </select>
-                        </div>
-                        <ArrowRight size={24} color="#94a3b8" style={{ marginBottom: '10px' }} />
-                        <div style={{ flex: 1 }}>
-                          <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '6px' }}>Move To Class</label>
-                          <select 
-                            value={manualToClass} 
-                            onChange={(e) => setManualToClass(e.target.value)}
-                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                          >
-                            {['JSS 1', 'JSS 2', 'JSS 3', 'SS 1', 'SS 2 SCIENCE', 'SS 2 ART', 'SS 3 SCIENCE', 'SS 3 ART', 'GRADUATED'].map(c => <option key={c} value={c}>{c}</option>)}
-                          </select>
-                        </div>
+                    <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">From Class</label>
+                        <select value={manualFromClass} onChange={(e) => setManualFromClass(e.target.value)} className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold">
+                          {['JSS1','JSS2','JSS3','SS1','SS2 SCIENCE','SS2 ART','SS3 SCIENCE','SS3 ART'].map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
                       </div>
-                      <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '12px', fontWeight: 'bold' }}>
-                        Warning: This will forcibly update ALL students in the 'From' class to the 'To' class, ignoring grades.
-                      </p>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">To Target Class</label>
+                        <select value={manualToClass} onChange={(e) => setManualToClass(e.target.value)} className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold">
+                          {['JSS1','JSS2','JSS3','SS1','SS2 SCIENCE','SS2 ART','SS3 SCIENCE','SS3 ART','Graduated'].map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
                     </div>
                   )}
 
-                  {promotionMode === 'selective' && (() => {
-                    const filtered = selectiveStudents.filter(s => {
-                      if (!selectiveSearch.trim()) return true;
-                      const q = selectiveSearch.toLowerCase();
-                      return s.name.toLowerCase().includes(q) || (s.regNo && s.regNo.toLowerCase().includes(q));
-                    });
-
-                    const allFilteredSelected = filtered.length > 0 && filtered.every(s => selectedStudentIds.has(s.id));
-                    const CLASS_OPTIONS = ['JSS 1', 'JSS 2', 'JSS 3', 'SS 1', 'SS 2 SCIENCE', 'SS 2 ART', 'SS 3 SCIENCE', 'SS 3 ART', 'GRADUATED'];
-
-                    return (
-                      <div style={{ background: '#f8fafc', borderRadius: '18px', padding: '20px', marginBottom: '24px', border: '1px solid #e2e8f0' }}>
-                        <p style={{ fontWeight: '800', color: '#1e293b', marginBottom: '14px', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <CheckSquare size={18} style={{ color: '#3b82f6' }} /> Select Students from Class to Move
-                        </p>
-
-                        {/* Class Selectors */}
-                        <div style={{ display: 'flex', gap: '14px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
-                          <div style={{ flex: 1, minWidth: '160px' }}>
-                            <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px' }}>Source Class</label>
-                            <select 
-                              value={selectiveFromClass} 
-                              onChange={(e) => {
-                                setSelectiveFromClass(e.target.value);
-                                loadSelectiveStudents(e.target.value);
-                              }}
-                              style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontWeight: '700', color: '#1e293b', background: '#fff' }}
-                            >
-                              {CLASS_OPTIONS.filter(c => c !== 'GRADUATED').map(c => <option key={c} value={c}>{c}</option>)}
-                            </select>
-                          </div>
-
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '20px' }}>
-                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <ArrowRight size={16} color="#64748b" />
-                            </div>
-                          </div>
-
-                          <div style={{ flex: 1, minWidth: '160px' }}>
-                            <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px' }}>Target New Class</label>
-                            <select 
-                              value={selectiveToClass} 
-                              onChange={(e) => setSelectiveToClass(e.target.value)}
-                              style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontWeight: '700', color: '#1e293b', background: '#fff' }}
-                            >
-                              {CLASS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
-                            </select>
-                          </div>
+                  {promotionMode === 'selective' && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 mb-1">From Class</label>
+                          <select 
+                            value={selectiveFromClass} 
+                            onChange={(e) => { setSelectiveFromClass(e.target.value); loadSelectiveStudents(e.target.value); }} 
+                            className="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold"
+                          >
+                            {['JSS 1','JSS 2','JSS 3','SS 1','SS 2 Science','SS 2 Art','SS 3 Science','SS 3 Art'].map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
                         </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 mb-1">Move To Target Class</label>
+                          <select 
+                            value={selectiveToClass} 
+                            onChange={(e) => setSelectiveToClass(e.target.value)} 
+                            className="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold"
+                          >
+                            {['JSS 1','JSS 2','JSS 3','SS 1','SS 2 Science','SS 2 Art','SS 3 Science','SS 3 Art','Graduated'].map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                      </div>
 
-                        {/* Search & Bulk Selector Bar */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                          <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-                            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                            <input 
-                              type="text"
-                              placeholder="Search students in class..."
-                              value={selectiveSearch}
-                              onChange={(e) => setSelectiveSearch(e.target.value)}
-                              style={{ width: '100%', padding: '8px 12px 8px 34px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
-                            />
-                          </div>
-
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <button
-                              type="button"
-                              onClick={() => handleSelectAllVisible(filtered)}
-                              disabled={filtered.length === 0}
-                              style={{
-                                padding: '7px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700',
-                                border: '1px solid #cbd5e1', background: allFilteredSelected ? '#eff6ff' : '#fff',
-                                color: allFilteredSelected ? '#1d4ed8' : '#475569', cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', gap: '6px'
-                              }}
+                      <div className="max-h-56 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl p-2 space-y-1">
+                        {loadingSelective ? (
+                          <div className="p-8 text-center text-xs text-slate-400"><Loader2 className="animate-spin inline mr-2" /> Loading students...</div>
+                        ) : selectiveStudents.length === 0 ? (
+                          <div className="p-8 text-center text-xs text-slate-400">No students found in {selectiveFromClass}</div>
+                        ) : (
+                          selectiveStudents.map(s => (
+                            <div 
+                              key={s.id} 
+                              onClick={() => toggleStudentSelection(s.id)}
+                              className={`p-2.5 rounded-xl border flex items-center justify-between text-xs cursor-pointer ${
+                                selectedStudentIds.has(s.id) ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-500 font-bold' : 'border-slate-100 dark:border-slate-700'
+                              }`}
                             >
-                              {allFilteredSelected ? <CheckSquare size={14} /> : <Square size={14} />}
-                              {allFilteredSelected ? 'Deselect All' : `Select All (${filtered.length})`}
-                            </button>
-                            <span style={{ fontSize: '12px', fontWeight: '800', color: '#3b82f6', background: '#dbeafe', padding: '4px 10px', borderRadius: '100px' }}>
-                              {selectedStudentIds.size} Selected
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Student Roster List Card */}
-                        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
-                          {loadingSelective ? (
-                            <div style={{ padding: '36px', textAlign: 'center' }}>
-                              <Loader2 size={28} className="animate-spin" style={{ color: '#3b82f6', margin: '0 auto 8px' }} />
-                              <p style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', margin: 0 }}>Loading students in {selectiveFromClass}...</p>
+                              <span>{s.name} ({s.regNo})</span>
+                              {selectedStudentIds.has(s.id) ? <CheckSquare size={14} className="text-indigo-600" /> : <Square size={14} className="text-slate-300" />}
                             </div>
-                          ) : filtered.length === 0 ? (
-                            <div style={{ padding: '36px', textAlign: 'center' }}>
-                              <Users size={32} style={{ color: '#cbd5e1', margin: '0 auto 8px' }} />
-                              <p style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', margin: 0 }}>
-                                {selectiveStudents.length === 0 ? `No students currently found in ${selectiveFromClass}.` : 'No students match your search filter.'}
-                              </p>
-                            </div>
-                          ) : (
-                            <div style={{ maxHeight: '280px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-                              {filtered.map(student => {
-                                const isSelected = selectedStudentIds.has(student.id);
-                                return (
-                                  <div 
-                                    key={student.id}
-                                    onClick={() => toggleStudentSelection(student.id)}
-                                    style={{
-                                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                      padding: '10px 14px', borderBottom: '1px solid #f1f5f9',
-                                      background: isSelected ? '#f0f7ff' : 'transparent',
-                                      cursor: 'pointer', transition: 'background 0.15s',
-                                      gap: '12px'
-                                    }}
-                                  >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                                      <div style={{ color: isSelected ? '#2563eb' : '#94a3b8', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                                        {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
-                                      </div>
-                                      <div style={{ minWidth: 0 }}>
-                                        <p style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                          {student.name}
-                                        </p>
-                                        <p style={{ margin: 0, fontSize: '11px', color: '#64748b', fontFamily: 'monospace', fontWeight: '700' }}>
-                                          {student.regNo || 'No Reg No'}
-                                        </p>
-                                      </div>
-                                    </div>
-
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                                      <span style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', padding: '2px 8px', borderRadius: '6px', background: '#f1f5f9', color: '#475569' }}>
-                                        {student.className}
-                                      </span>
-                                      <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 6px', borderRadius: '6px', background: student.gender === 'Female' ? '#fdf2f8' : '#f0f9ff', color: student.gender === 'Female' ? '#db2777' : '#0284c7' }}>
-                                        {student.gender?.[0] || 'M'}
-                                      </span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-
-                        {selectedStudentIds.size > 0 && (
-                          <div style={{ marginTop: '12px', padding: '10px 14px', borderRadius: '10px', background: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: '12px', fontWeight: '700', color: '#1e40af' }}>
-                              Ready to move <strong>{selectedStudentIds.size}</strong> student(s) from <strong>{selectiveFromClass}</strong> to <strong>{selectiveToClass}</strong>.
-                            </span>
-                          </div>
+                          ))
                         )}
                       </div>
-                    );
-                  })()}
+                    </div>
+                  )}
 
-                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                    <button onClick={() => setShowMoveModal(false)} style={{ padding: '11px 22px', borderRadius: '10px', border: '2px solid #e2e8f0', background: '#fff', fontWeight: '700', cursor: 'pointer', color: '#475569' }}>
-                      Cancel
-                    </button>
-                    <button 
-                      onClick={handleRunPromotion} 
-                      disabled={promotionMode === 'selective' && selectedStudentIds.size === 0}
-                      style={{ 
-                        padding: '11px 28px', borderRadius: '10px', border: 'none', 
-                        background: promotionMode === 'selective' && selectedStudentIds.size === 0 ? '#cbd5e1' : 'linear-gradient(135deg,#f59e0b,#d97706)', 
-                        color: '#fff', fontWeight: '800', cursor: promotionMode === 'selective' && selectedStudentIds.size === 0 ? 'not-allowed' : 'pointer', 
-                        display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' 
-                      }}
-                    >
-                      {promotionMode === 'selective' ? (
-                        <><CheckSquare size={16} /> Move {selectedStudentIds.size} Selected Students</>
-                      ) : promotionMode === 'manual' ? (
-                        <><Users size={16} /> Move Entire Class</>
-                      ) : (
-                        <><Zap size={16} /> Run Auto Promotion</>
-                      )}
+                  <div className="flex justify-end gap-2 pt-4">
+                    <button onClick={() => setShowMoveModal(false)} className="px-4 py-2 rounded-xl border text-xs font-bold">Cancel</button>
+                    <button onClick={handleRunPromotion} className="px-6 py-2 rounded-xl bg-amber-500 text-white text-xs font-black shadow-md">
+                      Execute Class Movement
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* STEP: loading */}
               {promotionStep === 'loading' && (
-                <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                  <Loader2 size={48} style={{ color: '#f59e0b', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-                  <p style={{ fontWeight: '700', color: '#1e293b', fontSize: '16px' }}>Moving / promoting students…</p>
-                  <p style={{ color: '#64748b', fontSize: '13px' }}>Updating student records in Firestore. Please wait.</p>
+                <div className="p-12 text-center space-y-3">
+                  <Loader2 size={40} className="animate-spin text-amber-500 mx-auto" />
+                  <p className="text-sm font-bold text-slate-800 dark:text-white">Processing Class Promotion & Movement...</p>
                 </div>
               )}
 
-              {/* STEP: ss1_placement (auto done, now handle SS1 manually) */}
               {promotionStep === 'ss1_placement' && (
-                <div>
-                  {/* Auto-promotion summary */}
-                  {promotionResult && (
-                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '14px', padding: '16px', marginBottom: '24px' }}>
-                      <p style={{ fontWeight: '800', color: '#166534', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <CheckCircle size={16} /> Auto-promotion complete
-                      </p>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-                        {[
-                          { label: 'Promoted', value: promotionResult.promoted.length, color: '#16a34a' },
-                          { label: 'Below 45%', value: promotionResult.failed.length, color: '#dc2626' },
-                          { label: 'No Marks', value: promotionResult.skipped.length, color: '#d97706' },
-                        ].map(stat => (
-                          <div key={stat.label} style={{ background: '#fff', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                            <p style={{ fontSize: '22px', fontWeight: '900', color: stat.color, margin: 0 }}>{stat.value}</p>
-                            <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>{stat.label}</p>
-                          </div>
-                        ))}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-black">SS1 Senior Stream Placement</h4>
+                  <div className="max-h-60 overflow-y-auto space-y-2">
+                    {ss1Students.map(s => (
+                      <div key={s.id} className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl flex items-center justify-between text-xs">
+                        <span className="font-bold">{s.name}</span>
+                        <div className="flex gap-2">
+                          {['SS2 ART', 'SS2 SCIENCE'].map(stream => (
+                            <button
+                              key={stream}
+                              type="button"
+                              onClick={() => setSs1Assignments(prev => ({ ...prev, [s.id]: stream }))}
+                              className={`px-3 py-1 rounded-lg font-black text-[11px] ${
+                                ss1Assignments[s.id] === stream ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-700'
+                              }`}
+                            >
+                              {stream === 'SS2 ART' ? 'Art' : 'Science'}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-
-                  {/* SS1 Manual Placement */}
-                  <div style={{ marginBottom: '20px' }}>
-                    <p style={{ fontWeight: '800', color: '#1e293b', fontSize: '15px', marginBottom: '6px' }}>SS1 Stream Placement</p>
-                    <p style={{ color: '#64748b', fontSize: '13px', marginBottom: '16px' }}>
-                      Assign each SS1 student to either <strong>Art</strong> or <strong>Science</strong> stream for SS2, based on their registered subjects.
-                    </p>
-                    {ss1Students.length === 0 ? (
-                      <p style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>No SS1 students found.</p>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '280px', overflowY: 'auto' }}>
-                        {ss1Students.map(student => (
-                          <div key={student.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', borderRadius: '12px', padding: '12px 16px', gap: '16px' }}>
-                            <div>
-                              <p style={{ margin: 0, fontWeight: '700', color: '#1e293b', fontSize: '14px' }}>{student.name}</p>
-                              <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{student.regNo}</p>
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                              {['SS2 ART', 'SS2 SCIENCE'].map(stream => (
-                                <button
-                                  key={stream}
-                                  onClick={() => setSs1Assignments(prev => ({ ...prev, [student.id]: stream }))}
-                                  style={{
-                                    padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: '2px solid',
-                                    borderColor: ss1Assignments[student.id] === stream ? (stream === 'SS2 ART' ? '#8b5cf6' : '#0ea5e9') : '#e2e8f0',
-                                    background: ss1Assignments[student.id] === stream ? (stream === 'SS2 ART' ? '#ede9fe' : '#e0f2fe') : '#fff',
-                                    color: ss1Assignments[student.id] === stream ? (stream === 'SS2 ART' ? '#7c3aed' : '#0369a1') : '#94a3b8',
-                                    transition: 'all 0.15s'
-                                  }}
-                                >
-                                  {stream === 'SS2 ART' ? 'Art' : 'Science'}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    ))}
                   </div>
-
-                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                    <button onClick={() => setShowMoveModal(false)} style={{ padding: '11px 22px', borderRadius: '10px', border: '2px solid #e2e8f0', background: '#fff', fontWeight: '700', cursor: 'pointer', color: '#475569' }}>
-                      Close
-                    </button>
-                    <button onClick={handleSaveSS1Placement} disabled={ss1Saving} style={{ padding: '11px 28px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg,#8b5cf6,#7c3aed)', color: '#fff', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
-                      {ss1Saving ? <Loader2 size={16} className="animate-spin" /> : <CheckSquare size={16} />}
-                      {ss1Saving ? 'Saving...' : 'Save Stream Placement'}
+                  <div className="flex justify-end gap-2">
+                    <button onClick={handleSaveSS1Placement} disabled={ss1Saving} className="px-6 py-2 rounded-xl bg-indigo-600 text-white text-xs font-black">
+                      {ss1Saving ? 'Saving...' : 'Save Stream Assignments'}
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* STEP: done */}
               {promotionStep === 'done' && (
-                <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                  <div style={{ width: '72px', height: '72px', background: 'linear-gradient(135deg,#10b981,#059669)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-                    <CheckCircle size={36} color="#fff" />
-                  </div>
-                  <h3 style={{ fontSize: '22px', fontWeight: '900', color: '#1e293b', marginBottom: '8px' }}>
-                    {promotionResult?.selectiveCount ? 'Students Moved Successfully!' : 'Promotion Complete!'}
-                  </h3>
-                  <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '24px' }}>
-                    {promotionResult?.selectiveCount 
-                      ? `${promotionResult.selectiveCount} selected student(s) have been moved from ${promotionResult.fromClass} to ${promotionResult.toClass}.`
-                      : 'All students have been moved to their new classes. The changes are live in Firestore.'}
-                  </p>
-
-                  {promotionResult?.selectiveCount ? (
-                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '14px', padding: '18px', marginBottom: '24px', textAlign: 'center', maxWidth: '360px', margin: '0 auto 24px' }}>
-                      <p style={{ fontSize: '32px', fontWeight: '900', color: '#16a34a', margin: 0 }}>{promotionResult.selectiveCount}</p>
-                      <p style={{ fontSize: '13px', fontWeight: '700', color: '#166534', margin: '4px 0 0' }}>
-                        Students placed in <strong>{promotionResult.toClass}</strong>
-                      </p>
-                    </div>
-                  ) : promotionResult && (
-                    <div style={{ display: 'inline-grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '24px' }}>
-                      {[
-                        { label: 'Promoted', value: promotionResult.promoted.length, bg: '#f0fdf4', color: '#16a34a' },
-                        { label: 'Held Back', value: promotionResult.failed.length, bg: '#fff1f2', color: '#dc2626' },
-                        { label: 'Skipped', value: promotionResult.skipped.length, bg: '#fffbeb', color: '#d97706' },
-                      ].map(s => (
-                        <div key={s.label} style={{ background: s.bg, borderRadius: '12px', padding: '14px 20px' }}>
-                          <p style={{ fontSize: '28px', fontWeight: '900', color: s.color, margin: 0 }}>{s.value}</p>
-                          <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{s.label}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <button onClick={() => setShowMoveModal(false)} style={{ padding: '12px 32px', borderRadius: '12px', border: 'none', background: '#1e293b', color: '#fff', fontWeight: '800', cursor: 'pointer', fontSize: '14px' }}>
+                <div className="p-8 text-center space-y-4">
+                  <CheckCircle size={48} className="text-emerald-500 mx-auto" />
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white">Class Movement Completed!</h3>
+                  <p className="text-xs text-slate-500">Student records and active class placements have been updated in Firestore.</p>
+                  <button onClick={() => setShowMoveModal(false)} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-xs font-black">
                     Close
                   </button>
                 </div>
               )}
-
             </div>
           </div>
         </div>
       )}
 
+      {/* Clubs & Houses Modal */}
       <ManageClubsAndHousesModal
         isOpen={showClubsModal}
         onClose={() => setShowClubsModal(false)}
       />
+
     </div>
   );
 };

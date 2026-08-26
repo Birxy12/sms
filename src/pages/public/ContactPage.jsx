@@ -10,7 +10,7 @@ import Footer from '../../components/MainFooter';
 import './ContactPage.css';
 
 const ContactPage = () => {
-  const { schoolName, primaryColor } = useTheme();
+  const { schoolName, schoolAddress, schoolPhone, schoolEmail, primaryColor } = useTheme();
   const [contactData, setContactData] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -24,18 +24,18 @@ const ContactPage = () => {
           setContactData(docSnap.data().contactDetails);
         } else {
           setContactData({
-            address: '123 School Avenue, Digital City, ST 12345',
-            phone: '+1 (234) 567-8900',
-            email: 'hello@schoolportal.edu',
+            address: schoolAddress || '123 Education Lane, Digital City, Nigeria',
+            phone: schoolPhone || '+234 800 123 4567',
+            email: schoolEmail || 'info@bonusdominus.edu.ng',
             hours: 'Mon - Fri: 8:00 AM - 4:00 PM'
           });
         }
       } catch (error) {
         console.error("Error fetching contact details:", error);
         setContactData({
-          address: '123 School Avenue, Digital City, ST 12345',
-          phone: '+1 (234) 567-8900',
-          email: 'hello@schoolportal.edu',
+          address: schoolAddress || '123 Education Lane, Digital City, Nigeria',
+          phone: schoolPhone || '+234 800 123 4567',
+          email: schoolEmail || 'info@bonusdominus.edu.ng',
           hours: 'Mon - Fri: 8:00 AM - 4:00 PM'
         });
       } finally {

@@ -17,8 +17,12 @@ import html2pdf from 'html2pdf.js';
 import StudentAvatar from '../../components/StudentAvatar';
 
 const StudentResults = ({ isPublic }) => {
-  const { currentStudent: loggedInStudent, authError, authReady } = useStudentAuth();
-  const { schoolName, schoolLogo, primaryColor, principalSignature, principalStamp, darkMode, averageDivisors, termEndDate, nextTermBeginsDate, autoCommentsEnabled, commentTemplates } = useTheme();
+  const { 
+    schoolName, motto, schoolAddress, schoolPhone, principalName, 
+    schoolLogo, primaryColor, principalSignature, principalStamp, 
+    darkMode, averageDivisors, termEndDate, nextTermBeginsDate, 
+    autoCommentsEnabled, commentTemplates 
+  } = useTheme();
   const printRef = useRef();
 
   const [publishedTerms, setPublishedTerms] = useState([]);
@@ -1118,7 +1122,7 @@ const StudentResults = ({ isPublic }) => {
                 <div className="rc-sig-line">
                   {principalSignature && <img src={principalSignature} alt="Principal" style={{ height: '16px' }} />}
                 </div>
-                <div className="rc-sig-name">Principal (Mrs Etuzu Anita)</div>
+                <div className="rc-sig-name">Principal ({principalName || 'Mrs Etuzu Anita'})</div>
               </div>
             </div>
           </div>
@@ -1130,7 +1134,7 @@ const StudentResults = ({ isPublic }) => {
         <div className="rc-footer-inner">
           <div className="rc-footer-left">
             <div className="rc-footer-line"></div>
-            <div className="rc-footer-name">Mrs Etuzu Anita</div>
+            <div className="rc-footer-name">{principalName || 'Mrs Etuzu Anita'}</div>
             <div className="rc-footer-role">Principal's Signature</div>
           </div>
           <div className="rc-stamp-wrap">

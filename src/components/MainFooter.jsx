@@ -10,7 +10,10 @@ import bdsLogo from '../assets/bdslogo.jpg';
 import '../assets/Footer.css';
 
 const MainFooter = () => {
-  const { schoolName, schoolLogo, footerBg, footerTextColor } = useTheme();
+  const { 
+    schoolName, schoolLogo, schoolAddress, schoolPhone, schoolEmail, 
+    motto, socialLinks: themeSocials, footerBg, footerTextColor 
+  } = useTheme();
   const { currentAdmin } = useAdminAuth();
   const { currentStudent } = useStudentAuth();
   const [contactData, setContactData] = useState(null);
@@ -38,12 +41,12 @@ const MainFooter = () => {
   ];
 
   const getDashboardPath = () => {
-    if (currentStudent) return '/students';
+    if (currentStudent) return '/student/dashboard';
     if (currentAdmin) {
-      const role = currentAdmin.role;
-      if (role === 'admin') return '/admin';
+      const role = (currentAdmin.role || '').toLowerCase();
+      if (role === 'admin' || role === 'superadmin') return '/admin';
+      if (role === 'teacher') return '/staff';
       if (role === 'principal') return '/principal';
-      if (role === 'teacher') return '/teachers';
       if (role === 'bursar') return '/finance';
     }
     return null;
@@ -57,17 +60,17 @@ const MainFooter = () => {
   const socialLinks = [
     { 
       name: 'Facebook', 
-      href: 'https://www.facebook.com/share/1ATYxa8bBS/?mibextid=wwXIfr', 
+      href: themeSocials?.facebook || 'https://www.facebook.com/share/1ATYxa8bBS/?mibextid=wwXIfr', 
       icon: <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
     },
     { 
       name: 'Twitter', 
-      href: 'https://twitter.com', 
+      href: themeSocials?.twitter || 'https://twitter.com', 
       icon: <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z" />
     },
     { 
       name: 'Instagram', 
-      href: 'https://instagram.com', 
+      href: themeSocials?.instagram || 'https://instagram.com', 
       icon: (
         <>
           <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
@@ -78,7 +81,7 @@ const MainFooter = () => {
     },
     { 
       name: 'WhatsApp', 
-      href: 'https://chat.whatsapp.com/JV4gFARWHqU9oYpRSWiZFt', 
+      href: themeSocials?.whatsapp ? `https://wa.me/${themeSocials.whatsapp.replace(/\D/g, '')}` : 'https://chat.whatsapp.com/JV4gFARWHqU9oYpRSWiZFt', 
       icon: (
         <>
           <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
@@ -121,20 +124,20 @@ const MainFooter = () => {
   const contactInfo = [
     { 
       icon: <Globe size={16} />, 
-      text: contactData?.address || '123 Education Lane, Digital City',
+      text: contactData?.address || schoolAddress || '123 Education Lane, Digital City, Nigeria',
       label: 'Address'
     },
     { 
       icon: <Phone size={16} />, 
-      text: contactData?.phone || '+1 (234) 567-890',
+      text: contactData?.phone || schoolPhone || '+234 800 123 4567',
       label: 'Phone',
-      href: `tel:${(contactData?.phone || '+1234567890').replace(/\D/g, '')}`
+      href: `tel:${(contactData?.phone || schoolPhone || '+2348001234567').replace(/\D/g, '')}`
     },
     { 
       icon: <Mail size={16} />, 
-      text: contactData?.email || 'hello@schoolportal.edu',
+      text: contactData?.email || schoolEmail || 'info@bonusdominus.edu.ng',
       label: 'Email',
-      href: `mailto:${contactData?.email || 'hello@schoolportal.edu'}`
+      href: `mailto:${contactData?.email || schoolEmail || 'info@bonusdominus.edu.ng'}`
     },
   ];
 

@@ -4,6 +4,12 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const ThemeContext = createContext({
   schoolName: 'BONUS DOMINUS SECONDARY SCHOOL',
+  motto: 'Nurturing Leaders of Tomorrow with Knowledge, Discipline, and Excellence',
+  schoolAddress: '123 Education Lane, Digital City, Nigeria',
+  schoolPhone: '+234 800 123 4567',
+  schoolEmail: 'info@bonusdominus.edu.ng',
+  principalName: 'Mrs. Anita Etuzu',
+  examinationOfficerName: 'Exam Officer',
   primaryColor: '#ff6b00',
   secondaryColor: '#111111',
   schoolLogo: null,
@@ -21,6 +27,34 @@ const ThemeContext = createContext({
 export const ThemeProvider = ({ children }) => {
   // Initialize with defaults
   const [schoolName, setSchoolName] = useState('BONUS DOMINUS SECONDARY SCHOOL');
+  const [motto, setMotto] = useState('Nurturing Leaders of Tomorrow with Knowledge, Discipline, and Excellence');
+  const [schoolAddress, setSchoolAddress] = useState('123 Education Lane, Digital City, Nigeria');
+  const [schoolPhone, setSchoolPhone] = useState('+234 800 123 4567');
+  const [schoolEmail, setSchoolEmail] = useState('info@bonusdominus.edu.ng');
+  const [principalName, setPrincipalName] = useState('Mrs. Anita Etuzu');
+  const [examinationOfficerName, setExaminationOfficerName] = useState('Exam Officer');
+  const [socialLinks, setSocialLinks] = useState({
+    facebook: 'https://facebook.com',
+    twitter: 'https://twitter.com',
+    instagram: 'https://instagram.com',
+    linkedin: '',
+    youtube: '',
+    whatsapp: '+2348001234567'
+  });
+  const [bankAccounts, setBankAccounts] = useState([
+    { bankName: 'First Bank of Nigeria', accountName: 'Bonus Dominus College / School Fees', accountNumber: '2022829027', type: 'Tuition & Prospectus', isDefault: true },
+    { bankName: 'Moniepoint Microfinance Bank', accountName: 'Bonus Dominus School Portal', accountNumber: '8223190412', type: 'Online Instant Collections', isDefault: false },
+    { bankName: 'OPay Digital Services', accountName: 'Bonus Dominus Secondary School', accountNumber: '9017588338', type: 'Direct Bursary Transfer', isDefault: false }
+  ]);
+  const [portalPermissions, setPortalPermissions] = useState({
+    admissionOpen: true,
+    subjectRegistrationEnabled: false,
+    resultCheckingEnabled: true,
+    cbtEnabled: true,
+    onlinePaymentEnabled: true,
+    walletPaymentEnabled: true,
+    allowProfileEdit: false
+  });
   const [primaryColor, setPrimaryColor] = useState('#ff6b00');
   const [secondaryColor, setSecondaryColor] = useState('#111111');
   const [schoolLogo, setSchoolLogo] = useState(null);
@@ -93,6 +127,15 @@ export const ThemeProvider = ({ children }) => {
         if (docSnap.exists() && isMounted) {
           const data = docSnap.data();
           if (data.schoolName) setSchoolName(data.schoolName);
+          if (data.motto) setMotto(data.motto);
+          if (data.schoolAddress) setSchoolAddress(data.schoolAddress);
+          if (data.schoolPhone) setSchoolPhone(data.schoolPhone);
+          if (data.schoolEmail) setSchoolEmail(data.schoolEmail);
+          if (data.principalName) setPrincipalName(data.principalName);
+          if (data.examinationOfficerName) setExaminationOfficerName(data.examinationOfficerName);
+          if (data.socialLinks) setSocialLinks(prev => ({ ...prev, ...data.socialLinks }));
+          if (data.bankAccounts && Array.isArray(data.bankAccounts)) setBankAccounts(data.bankAccounts);
+          if (data.portalPermissions) setPortalPermissions(prev => ({ ...prev, ...data.portalPermissions }));
           if (data.primaryColor) setPrimaryColor(data.primaryColor);
           if (data.secondaryColor) setSecondaryColor(data.secondaryColor);
           if (data.schoolLogo) setSchoolLogo(data.schoolLogo);
@@ -143,29 +186,37 @@ export const ThemeProvider = ({ children }) => {
   }, [primaryColor, secondaryColor, navbarBg, footerBg]);
 
   // 3. Persist to Firestore — ONLY when the user actively edits a setting
-  //    The hasUserEdited ref is set to true by the wrapped setters below.
   useEffect(() => {
     if (loading || !hasUserEdited.current) return;
 
     const persistBranding = async () => {
       try {
         await setDoc(doc(db, 'settings', 'branding'), {
-          schoolName, primaryColor, secondaryColor, schoolLogo,
+          schoolName, motto, schoolAddress, schoolPhone, schoolEmail,
+          principalName, examinationOfficerName, socialLinks, bankAccounts, portalPermissions,
+          primaryColor, secondaryColor, schoolLogo,
           navbarBg, footerBg, navbarTextColor, footerTextColor,
           principalSignature, principalStamp, bursarSignature, bursarStamp,
           currentSession, cat1Limit, cat2Limit, examLimit,
           currentTerm, termStartDate, termEndDate, nextTermBeginsDate,
           promotionPassMark, autoCommentsEnabled, commentTemplates, averageDivisors,
           lastUpdated: new Date().toISOString()
-        });
+        }, { merge: true });
       } catch (e) {
-        // Offline — settings will persist on next successful connection attempt
         console.warn("Could not persist branding (offline?). Will retry automatically.", e.code || e.message);
       }
     };
 
     persistBranding();
-  }, [schoolName, primaryColor, secondaryColor, schoolLogo, navbarBg, footerBg, navbarTextColor, footerTextColor, principalSignature, principalStamp, bursarSignature, bursarStamp, currentSession, cat1Limit, cat2Limit, examLimit, currentTerm, termStartDate, termEndDate, nextTermBeginsDate, promotionPassMark, autoCommentsEnabled, commentTemplates, loading]);
+  }, [
+    schoolName, motto, schoolAddress, schoolPhone, schoolEmail,
+    principalName, examinationOfficerName, socialLinks, bankAccounts, portalPermissions,
+    primaryColor, secondaryColor, schoolLogo, navbarBg, footerBg, navbarTextColor, footerTextColor,
+    principalSignature, principalStamp, bursarSignature, bursarStamp,
+    currentSession, cat1Limit, cat2Limit, examLimit,
+    currentTerm, termStartDate, termEndDate, nextTermBeginsDate,
+    promotionPassMark, autoCommentsEnabled, commentTemplates, averageDivisors, loading
+  ]);
 
   // Wrapped setters that mark the state as user-edited before updating
   const handleSet = (setter) => (value) => {
@@ -193,7 +244,16 @@ export const ThemeProvider = ({ children }) => {
 
   return (
     <ThemeContext.Provider value={{ 
-      schoolName, setSchoolName: handleSet(setSchoolName), 
+      schoolName, setSchoolName: handleSet(setSchoolName),
+      motto, setMotto: handleSet(setMotto),
+      schoolAddress, setSchoolAddress: handleSet(setSchoolAddress),
+      schoolPhone, setSchoolPhone: handleSet(setSchoolPhone),
+      schoolEmail, setSchoolEmail: handleSet(setSchoolEmail),
+      principalName, setPrincipalName: handleSet(setPrincipalName),
+      examinationOfficerName, setExaminationOfficerName: handleSet(setExaminationOfficerName),
+      socialLinks, setSocialLinks: handleSet(setSocialLinks),
+      bankAccounts, setBankAccounts: handleSet(setBankAccounts),
+      portalPermissions, setPortalPermissions: handleSet(setPortalPermissions),
       primaryColor, setPrimaryColor: handleSet(setPrimaryColor), 
       secondaryColor, setSecondaryColor: handleSet(setSecondaryColor),
       schoolLogo, setSchoolLogo: handleSet(setSchoolLogo),
@@ -231,6 +291,15 @@ export const useTheme = () => {
   if (!context) {
     return {
       schoolName: 'BONUS DOMINUS SECONDARY SCHOOL',
+      motto: 'Nurturing Leaders of Tomorrow with Knowledge, Discipline, and Excellence',
+      schoolAddress: '123 Education Lane, Digital City, Nigeria',
+      schoolPhone: '+234 800 123 4567',
+      schoolEmail: 'info@bonusdominus.edu.ng',
+      principalName: 'Mrs. Anita Etuzu',
+      examinationOfficerName: 'Exam Officer',
+      socialLinks: {},
+      bankAccounts: [],
+      portalPermissions: {},
       primaryColor: '#ff6b00',
       secondaryColor: '#111111',
       schoolLogo: null,
