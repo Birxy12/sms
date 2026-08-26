@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import { 
   Menu, LayoutDashboard, Award, CreditCard, 
   Inbox as InboxIcon, FileText, UserCircle, GraduationCap,
-  Users, DollarSign, MonitorCheck, Mail, Settings
+  Users, DollarSign, MonitorCheck, Mail, Settings, ChevronRight
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -17,6 +17,20 @@ const Layout = ({ children }) => {
   const { primaryColor, schoolLogo, schoolName } = useTheme();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('sms_sidebar_collapsed') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const handleToggleCollapse = (collapsed) => {
+    setSidebarCollapsed(collapsed);
+    try {
+      localStorage.setItem('sms_sidebar_collapsed', String(collapsed));
+    } catch (e) {}
+  };
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -115,16 +129,41 @@ const Layout = ({ children }) => {
         />
       )}
 
+      {/* Return side panel arrow button — appears when panel is collapsed */}
+      {sidebarCollapsed && (
+        <button
+          onClick={() => handleToggleCollapse(false)}
+          className="no-print fixed left-0 top-24 z-40 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-700 text-white py-2.5 px-2.5 rounded-r-2xl shadow-xl shadow-indigo-500/30 flex items-center gap-1.5 transition-all duration-300 hover:pl-3.5 group active:scale-95 border border-l-0 border-indigo-400/40 cursor-pointer animate-in slide-in-from-left duration-300"
+          title="Return side panel (Expand Menu)"
+          aria-label="Return side panel"
+        >
+          <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform text-indigo-100 animate-pulse" />
+          <span className="text-[10px] font-black tracking-widest uppercase pr-1 text-white select-none hidden sm:inline-block">Panel</span>
+        </button>
+      )}
+
       {/* Sidebar — hidden on print */}
       <div className="no-print">
-        <Sidebar sidebarOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <Sidebar 
+          sidebarOpen={sidebarOpen} 
+          sidebarCollapsed={sidebarCollapsed}
+          onClose={() => {
+            setSidebarOpen(false);
+            handleToggleCollapse(true);
+          }} 
+        />
       </div>
 
       <main className="main-content">
         {/* Mobile top strip — hidden on print */}
         <div className="no-print mobile-top-strip">
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            onClick={() => {
+              if (sidebarCollapsed) {
+                handleToggleCollapse(false);
+              }
+              setSidebarOpen(!sidebarOpen);
+            }}
             className="hamburger-btn"
             aria-label="Open menu"
           >

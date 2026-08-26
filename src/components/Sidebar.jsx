@@ -10,7 +10,7 @@ import {
   Inbox as InboxIcon, CreditCard, Home, X, MonitorCheck, UserPlus, Star, Fingerprint, BarChart3
 } from 'lucide-react';
 
-const Sidebar = ({ sidebarOpen, onClose }) => {
+const Sidebar = ({ sidebarOpen, sidebarCollapsed, onClose }) => {
   const { currentAdmin, logout: adminLogout } = useAdminAuth();
   const { currentStudent, logout: studentLogout } = useStudentAuth();
   const { schoolName, primaryColor, schoolLogo } = useTheme();
@@ -86,7 +86,7 @@ const Sidebar = ({ sidebarOpen, onClose }) => {
   const initial = displayName[0]?.toUpperCase() || '?';
 
   return (
-    <div className={`sidebar${sidebarOpen ? ' open' : ''}`}>
+    <div className={`sidebar${sidebarOpen ? ' open' : ''}${sidebarCollapsed ? ' collapsed' : ''}`}>
       {/* Header */}
       <div style={{
         padding: '24px 20px 16px',
@@ -123,12 +123,15 @@ const Sidebar = ({ sidebarOpen, onClose }) => {
         </div>
         <button 
           onClick={onClose}
+          title="Close side panel"
+          aria-label="Close side panel"
           style={{
             background: 'rgba(255,255,255,0.07)', border: 'none',
-            color: '#6e7d96', cursor: 'pointer', borderRadius: '8px',
+            color: '#94a3b8', cursor: 'pointer', borderRadius: '8px',
             padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.2s ease',
           }}
-          className="md:hidden"
+          className="hover:bg-white/20 hover:text-white hover:scale-105 active:scale-95"
         >
           <X size={18} />
         </button>
