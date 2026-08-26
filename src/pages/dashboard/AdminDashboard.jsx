@@ -16,9 +16,9 @@ import StaffDashboard from './StaffDashboard';
 import StudentDashboard from './StudentDashboard';
 import NotificationCenter from './NotificationCenter';
 import { expandStudent } from '../../utils/firestoreSchema';
-import { Users, User, UserPlus, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw, BarChart3, FileText, BookMarked, Globe, Mail, Inbox } from 'lucide-react';
+import { Users, User, UserPlus, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, CheckCircle2, XCircle, Loader2, Search, RefreshCw, BarChart3, FileText, BookMarked, Globe, Mail, Inbox, CreditCard, FileSpreadsheet } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
-import { useGlobalClasses } from '../../utils/classUtils';
+import { useGlobalClasses, normalizeClassName } from '../../utils/classUtils';
 import { useOnlineUsers } from '../../utils/presence';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 // Isolated clock component — ticks every second without re-rendering AdminDashboard
@@ -525,6 +525,24 @@ const AdminDashboard = () => {
     demographics: { male: 0, female: 0, others: 0 }
   });
 
+  const [realFinance, setRealFinance] = useState({
+    loading: true,
+    totalExpected: 0,
+    totalCollected: 0,
+    totalOutstanding: 0,
+    totalStudents: 0,
+    clearedCount: 0,
+    owingCount: 0,
+    collectionRate: 0,
+    classBreakdown: [],
+    debtorsList: [],
+    recentPayments: []
+  });
+
+  const [financeSearch, setFinanceSearch] = useState('');
+  const [financeClassFilter, setFinanceClassFilter] = useState('All');
+  const [financeSubTab, setFinanceSubTab] = useState('debtors'); // 'debtors', 'classes', 'payments'
+
   useEffect(() => {
     let isMounted = true;
     
@@ -534,7 +552,18 @@ const AdminDashboard = () => {
         if (!authReady) return; // Don't query Firestore until auth is confirmed
         
         try {
-          // Fetch students
+          // 1. Fetch fees settings
+          let feeSettings = {};
+          try {
+            const feeSnap = await getDoc(doc(db, 'settings', 'fees'));
+            if (feeSnap.exists()) {
+              feeSettings = feeSnap.data() || {};
+            }
+          } catch (feeErr) {
+            console.warn('Could not fetch fee settings:', feeErr.message);
+          }
+
+          // 2. Fetch students
           const studentSnap = await getDocs(collection(db, 'students'));
           if (!isMounted) return;
 
@@ -542,12 +571,73 @@ const AdminDashboard = () => {
           let female = 0;
           let others = 0;
           
-          studentSnap.forEach(doc => {
-            const data = expandStudent(doc.data());
-            const mGender = (data.gender || '').toLowerCase();
+          let totalExpected = 0;
+          let totalCollected = 0;
+          let totalDebt = 0;
+          let clearedCount = 0;
+          let owingCount = 0;
+          const classMap = {};
+          const debtorsList = [];
+          const recentPayments = [];
+
+          studentSnap.forEach(docSnap => {
+            const rawData = docSnap.data();
+            const data = expandStudent(rawData) || {};
+            const merged = { id: docSnap.id, ...rawData, ...data };
+            const mGender = (merged.gender || '').toLowerCase();
             if (mGender === 'm' || mGender === 'male') male++;
             else if (mGender === 'f' || mGender === 'female' || mGender === 'girl') female++;
             else others++;
+
+            const cls = normalizeClassName(merged.className || 'Unassigned');
+            if (!classMap[cls]) {
+              classMap[cls] = {
+                className: cls,
+                expected: 0,
+                collected: 0,
+                debt: 0,
+                studentCount: 0,
+                clearedCount: 0,
+                owingCount: 0
+              };
+            }
+            classMap[cls].studentCount++;
+
+            const fallbackFee = feeSettings[cls] || feeSettings['default'] || 0;
+            const expected = parseFloat(merged.expectedFee) || parseFloat(fallbackFee) || 0;
+            const paid = parseFloat(merged.paidFee) || parseFloat(merged.paidAmount) || 0;
+            const balance = Math.max(0, expected - paid);
+
+            classMap[cls].expected += expected;
+            classMap[cls].collected += paid;
+            classMap[cls].debt += balance;
+
+            totalExpected += expected;
+            totalCollected += paid;
+            totalDebt += balance;
+
+            const studentFinance = {
+              ...merged,
+              className: cls,
+              expected,
+              paid,
+              balance,
+              isOwing: balance > 0,
+              isCleared: expected > 0 && balance === 0
+            };
+
+            if (balance > 0) {
+              owingCount++;
+              classMap[cls].owingCount++;
+              debtorsList.push(studentFinance);
+            } else if (expected > 0 && balance === 0) {
+              clearedCount++;
+              classMap[cls].clearedCount++;
+            }
+
+            if (paid > 0 || merged.lastPaymentDate) {
+              recentPayments.push(studentFinance);
+            }
           });
 
           // Fetch staff (Requires Auth)
@@ -576,9 +666,36 @@ const AdminDashboard = () => {
               subjects: subjectSize,
               demographics: { male, female, others }
             }));
+
+            const classBreakdown = Object.values(classMap).map(c => ({
+              ...c,
+              collectionRate: c.expected > 0 ? Math.round((c.collected / c.expected) * 100) : 0
+            }));
+            classBreakdown.sort((a, b) => a.className.localeCompare(b.className));
+            debtorsList.sort((a, b) => b.balance - a.balance);
+            recentPayments.sort((a, b) => (b.lastPaymentDate || '').localeCompare(a.lastPaymentDate || ''));
+
+            const collectionRate = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0;
+
+            setRealFinance({
+              loading: false,
+              totalExpected,
+              totalCollected,
+              totalOutstanding: totalDebt,
+              totalStudents: studentSnap.size,
+              clearedCount,
+              owingCount,
+              collectionRate,
+              classBreakdown,
+              debtorsList,
+              recentPayments
+            });
           }
         } catch (error) {
           console.error('Error fetching dashboard stats:', error);
+          if (isMounted) {
+            setRealFinance(prev => ({ ...prev, loading: false }));
+          }
         }
       };
 
@@ -1068,34 +1185,365 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Finance Tab */}
-      {activeTab === 'Finance' && (
-        <div className="animate-in fade-in space-y-6">
-          <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-8 rounded-3xl relative overflow-hidden shadow-2xl">
-            <div className="relative z-10">
-              <h3 className="text-slate-400 text-sm font-bold tracking-widest uppercase mb-2">Total Fee Collection</h3>
-              <div className="flex items-baseline gap-3 mb-8">
-                <span className="text-5xl font-black">₦12.4M</span>
-                <span className="text-emerald-400 font-bold text-sm bg-emerald-400/10 px-2 py-1 rounded-lg">+8.2% vs last term</span>
+      {/* Finance Tab (Real-Time Live Firestore Data) */}
+      {activeTab === 'Finance' && (() => {
+        const filteredDebtors = realFinance.debtorsList.filter(s => {
+          const matchesSearch = !financeSearch || 
+            (s.name || '').toLowerCase().includes(financeSearch.toLowerCase()) || 
+            (s.regNo || '').toLowerCase().includes(financeSearch.toLowerCase());
+          const matchesClass = financeClassFilter === 'All' || 
+            normalizeClassName(s.className) === normalizeClassName(financeClassFilter);
+          return matchesSearch && matchesClass;
+        });
+
+        const filteredPayments = realFinance.recentPayments.filter(s => {
+          const matchesSearch = !financeSearch || 
+            (s.name || '').toLowerCase().includes(financeSearch.toLowerCase()) || 
+            (s.regNo || '').toLowerCase().includes(financeSearch.toLowerCase());
+          const matchesClass = financeClassFilter === 'All' || 
+            normalizeClassName(s.className) === normalizeClassName(financeClassFilter);
+          return matchesSearch && matchesClass;
+        });
+
+        const exportDebtorsCSV = () => {
+          const rows = [
+            ['Reg No', 'Student Name', 'Class', 'Expected Fee (NGN)', 'Amount Paid (NGN)', 'Balance Owing (NGN)', 'Parent Phone', 'Email'],
+            ...realFinance.debtorsList.map(s => [
+              s.regNo || '',
+              s.name || '',
+              s.className || '',
+              s.expected,
+              s.paid,
+              s.balance,
+              s.phone || '',
+              s.email || ''
+            ])
+          ];
+          const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `School_Debtors_Report_${new Date().toISOString().split('T')[0]}.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+
+        return (
+          <div className="animate-in fade-in space-y-6 text-left">
+            {/* Top Real Financial KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="card-premium p-6 flex flex-col justify-between">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Total Fee Collected</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-emerald-600">₦{realFinance.totalCollected.toLocaleString()}</span>
+                  </div>
+                </div>
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-500">
+                  <span>Cleared Students</span>
+                  <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-black">{realFinance.clearedCount} Students</span>
+                </div>
               </div>
-              <div className="space-y-4 max-w-md">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-300 font-medium">Paid Students</span>
-                  <span className="font-bold">842 / 1,284</span>
+
+              <div className="card-premium p-6 flex flex-col justify-between">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Expected Revenue</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-slate-900">₦{realFinance.totalExpected.toLocaleString()}</span>
+                  </div>
                 </div>
-                <div className="h-3 w-full bg-slate-700/50 rounded-full overflow-hidden backdrop-blur-sm border border-slate-600/50">
-                  <div style={{ width: '65%' }} className="h-full bg-gradient-to-r from-emerald-500 to-teal-400"></div>
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-500">
+                  <span>Total Enrolled</span>
+                  <span className="text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md font-black">{realFinance.totalStudents} Students</span>
                 </div>
-                <button className="w-full bg-white/10 hover:bg-white/20 text-white py-3.5 rounded-xl font-bold transition-all mt-6 backdrop-blur-sm">
-                  View Detailed Financial Report
-                </button>
+              </div>
+
+              <div className="card-premium p-6 flex flex-col justify-between">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-rose-500 block mb-1">Total Outstanding Debt</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-rose-600">₦{realFinance.totalOutstanding.toLocaleString()}</span>
+                  </div>
+                </div>
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-500">
+                  <span>Debtors Count</span>
+                  <span className="text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md font-black">{realFinance.owingCount} Owing</span>
+                </div>
+              </div>
+
+              <div className="card-premium p-6 flex flex-col justify-between">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-purple-600 block mb-1">Collection Efficiency</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-purple-700">{realFinance.collectionRate}%</span>
+                  </div>
+                </div>
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-500">
+                  <span>Progress</span>
+                  <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div style={{ width: `${realFinance.collectionRate}%` }} className="h-full bg-purple-600 rounded-full"></div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="absolute -right-20 -top-20 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
-            <div className="absolute right-40 bottom-10 w-40 h-40 bg-teal-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+            {/* Hero Financial Banner */}
+            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-8 rounded-3xl relative overflow-hidden shadow-2xl">
+              <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                  <div className="flex items-center gap-2 mb-2 bg-white/10 px-3.5 py-1 rounded-full w-fit backdrop-blur-md">
+                    <DollarSign size={14} className="text-emerald-400" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Live Database Financials</span>
+                  </div>
+                  <h3 className="text-slate-300 text-xs font-bold tracking-widest uppercase mb-1">Total Fee Collection Rate</h3>
+                  <div className="flex items-baseline gap-3 mb-4">
+                    <span className="text-4xl sm:text-5xl font-black">₦{realFinance.totalCollected.toLocaleString()}</span>
+                    <span className="text-emerald-400 font-bold text-xs bg-emerald-400/10 px-2.5 py-1 rounded-lg border border-emerald-400/20">
+                      {realFinance.collectionRate}% of ₦{realFinance.totalExpected.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-w-md">
+                    <div className="flex justify-between items-center text-xs text-slate-300">
+                      <span>Cleared Students: <strong>{realFinance.clearedCount}</strong> of <strong>{realFinance.totalStudents}</strong></span>
+                      <span className="font-bold text-rose-400">{realFinance.owingCount} Owing</span>
+                    </div>
+                    <div className="h-2.5 w-full bg-white/10 rounded-full overflow-hidden backdrop-blur-sm border border-white/10">
+                      <div style={{ width: `${realFinance.collectionRate}%` }} className="h-full bg-gradient-to-r from-emerald-400 to-teal-300 transition-all duration-1000"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                  <button 
+                    onClick={exportDebtorsCSV}
+                    className="px-5 py-3.5 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 border border-white/10"
+                  >
+                    <FileSpreadsheet size={16} /> Export Debtors CSV
+                  </button>
+                  <button 
+                    onClick={() => navigate('/bursar')}
+                    className="px-6 py-3.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-2xl text-xs font-black shadow-lg shadow-indigo-500/30 transition-all flex items-center justify-center gap-2"
+                  >
+                    <CreditCard size={16} /> Open Bursar Portal →
+                  </button>
+                </div>
+              </div>
+              <div className="absolute -right-20 -top-20 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+              <div className="absolute right-40 bottom-10 w-40 h-40 bg-teal-500/20 rounded-full blur-3xl pointer-events-none"></div>
+            </div>
+
+            {/* Financial Details Tabs */}
+            <div className="card-premium p-6 space-y-6">
+              {/* Header & Sub-Tabs */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100">
+                <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
+                  <button
+                    onClick={() => setFinanceSubTab('debtors')}
+                    className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${
+                      financeSubTab === 'debtors' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Students Owing ({realFinance.owingCount})
+                  </button>
+                  <button
+                    onClick={() => setFinanceSubTab('classes')}
+                    className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${
+                      financeSubTab === 'classes' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Class Breakdown ({realFinance.classBreakdown.length})
+                  </button>
+                  <button
+                    onClick={() => setFinanceSubTab('payments')}
+                    className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${
+                      financeSubTab === 'payments' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Payments Log ({realFinance.recentPayments.length})
+                  </button>
+                </div>
+
+                {/* Search & Filter */}
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-60">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
+                    <input
+                      type="text"
+                      placeholder="Search student or Reg No..."
+                      value={financeSearch}
+                      onChange={e => setFinanceSearch(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <select
+                    value={financeClassFilter}
+                    onChange={e => setFinanceClassFilter(e.target.value)}
+                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-indigo-500 cursor-pointer"
+                  >
+                    <option value="All">All Classes</option>
+                    {realFinance.classBreakdown.map(c => (
+                      <option key={c.className} value={c.className}>{c.className}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Sub-Tab 1: Students Owing (Debtors) */}
+              {financeSubTab === 'debtors' && (
+                <div>
+                  {filteredDebtors.length === 0 ? (
+                    <div className="p-12 text-center bg-slate-50/50 rounded-2xl border border-slate-100">
+                      <CheckCircle2 size={36} className="mx-auto text-emerald-500 mb-2" />
+                      <h4 className="text-base font-black text-slate-800">
+                        {realFinance.debtorsList.length === 0 ? '🎉 All School Fees Are Cleared!' : 'No Debtors Match Filter'}
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-1">No outstanding debt recorded for this selection.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-black uppercase text-slate-400 tracking-wider">
+                            <th className="py-3 px-4">#</th>
+                            <th className="py-3 px-4">Student</th>
+                            <th className="py-3 px-4">Reg No</th>
+                            <th className="py-3 px-4">Class</th>
+                            <th className="py-3 px-4">Expected Fee</th>
+                            <th className="py-3 px-4">Amount Paid</th>
+                            <th className="py-3 px-4">Balance (Owing)</th>
+                            <th className="py-3 px-4">Parent Phone</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
+                          {filteredDebtors.map((s, idx) => (
+                            <tr key={s.id || idx} className="hover:bg-rose-50/20 transition-colors">
+                              <td className="py-3.5 px-4 text-slate-400 font-mono">{idx + 1}</td>
+                              <td className="py-3.5 px-4">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-8 h-8 rounded-full bg-slate-100 font-black text-slate-600 flex items-center justify-center shrink-0 overflow-hidden text-xs">
+                                    {s.photo ? <img src={s.photo} alt={s.name} className="w-full h-full object-cover" /> : (s.name?.[0] || 'S')}
+                                  </div>
+                                  <div>
+                                    <span className="font-black text-slate-900 block">{s.name}</span>
+                                    <span className="text-[10px] text-slate-400">{s.gender || 'Male'}</span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-3.5 px-4 font-mono text-indigo-600">{s.regNo}</td>
+                              <td className="py-3.5 px-4">
+                                <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-[10px] font-black uppercase text-slate-600">
+                                  {s.className}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 font-mono">₦{s.expected.toLocaleString()}</td>
+                              <td className="py-3.5 px-4 font-mono text-emerald-600">₦{s.paid.toLocaleString()}</td>
+                              <td className="py-3.5 px-4 font-mono font-extrabold text-rose-600">₦{s.balance.toLocaleString()}</td>
+                              <td className="py-3.5 px-4 font-mono text-slate-500">{s.phone || '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Sub-Tab 2: Class Financial Breakdown */}
+              {financeSubTab === 'classes' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {realFinance.classBreakdown.map(c => (
+                    <div key={c.className} className="p-5 bg-slate-50/70 rounded-2xl border border-slate-200/80 flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-center mb-3">
+                          <h4 className="font-black text-base text-slate-900">{c.className}</h4>
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                            {c.studentCount} Students
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 text-xs font-bold mb-4">
+                          <div className="flex justify-between text-slate-500">
+                            <span>Expected:</span>
+                            <span className="text-slate-800 font-mono">₦{c.expected.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between text-emerald-600">
+                            <span>Collected:</span>
+                            <span className="font-mono">₦{c.collected.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between text-rose-600">
+                            <span>Outstanding Debt:</span>
+                            <span className="font-mono">₦{c.debt.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 mb-1">
+                          <span>Collection Rate</span>
+                          <span className="text-indigo-600">{c.collectionRate}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                          <div style={{ width: `${c.collectionRate}%` }} className="h-full bg-indigo-600 rounded-full"></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Sub-Tab 3: Payments Log */}
+              {financeSubTab === 'payments' && (
+                <div>
+                  {filteredPayments.length === 0 ? (
+                    <div className="p-12 text-center bg-slate-50 rounded-2xl">
+                      <p className="text-xs font-bold text-slate-400">No payment logs found for this selection.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-black uppercase text-slate-400 tracking-wider">
+                            <th className="py-3 px-4">Student</th>
+                            <th className="py-3 px-4">Reg No</th>
+                            <th className="py-3 px-4">Class</th>
+                            <th className="py-3 px-4">Amount Paid</th>
+                            <th className="py-3 px-4">Last Payment Date</th>
+                            <th className="py-3 px-4">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
+                          {filteredPayments.map((s, idx) => (
+                            <tr key={s.id || idx} className="hover:bg-emerald-50/20 transition-colors">
+                              <td className="py-3.5 px-4 font-black text-slate-900">{s.name}</td>
+                              <td className="py-3.5 px-4 font-mono text-indigo-600">{s.regNo}</td>
+                              <td className="py-3.5 px-4">{s.className}</td>
+                              <td className="py-3.5 px-4 font-mono text-emerald-600 font-extrabold">₦{s.paid.toLocaleString()}</td>
+                              <td className="py-3.5 px-4 text-slate-500">{s.lastPaymentDate || 'Recent'}</td>
+                              <td className="py-3.5 px-4">
+                                {s.balance === 0 ? (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    Fully Cleared
+                                  </span>
+                                ) : (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200">
+                                    Partial (₦{s.balance.toLocaleString()} remaining)
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Management Tab */}
       {activeTab === 'Management' && (
