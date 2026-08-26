@@ -451,75 +451,115 @@ export const StudentAnalysisView = ({ data }) => (
       {data.kpis.map((kpi) => <KPICard key={kpi.title} {...kpi} />)}
     </div>
 
+    {/* Multi-Term Progression & Current Term Subject Mastery */}
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <SectionCard title="My Subject Scores & Performance">
+      <SectionCard title="Multi-Term Academic Progression (Previous to Current Term)">
         <div style={{ width: '100%', height: 260 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data.gradeTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" vertical={false} />
-              <XAxis dataKey="subject" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} />
-              <Tooltip content={<CustomTooltip suffix="%" />} />
-              <Bar dataKey="score" name="My Score" radius={[6, 6, 0, 0]}>
-                {data.gradeTrend.map((entry, index) => (
-                  <Cell key={index} fill={entry.score >= 75 ? '#10b981' : entry.score >= 50 ? '#3b82f6' : '#f59e0b'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          {data.termProgression && data.termProgression.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data.termProgression} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="termGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" vertical={false} />
+                <XAxis dataKey="termLabel" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} />
+                <Tooltip content={<CustomTooltip suffix="%" />} />
+                <Area type="monotone" dataKey="average" name="Term Average" stroke="#8b5cf6" strokeWidth={3} fill="url(#termGrad)" dot={{ r: 4, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 6, fill: '#a855f7' }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-slate-500 text-xs">
+              <Award size={32} className="text-slate-600 mb-2 opacity-60" />
+              <span>Multi-term score records will appear here as terms conclude.</span>
+            </div>
+          )}
         </div>
       </SectionCard>
 
-      <SectionCard title="Assessment Breakdown (CAT 1, CAT 2, Exam)">
+      <SectionCard title="Subject Scores & Performance (Current Term)">
         <div style={{ width: '100%', height: 260 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data.semesterProgress} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="progressGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" vertical={false} />
-              <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} />
-              <Tooltip content={<CustomTooltip suffix="%" />} />
-              <Area type="monotone" dataKey="grade" name="Score Level" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#progressGrad)" dot={{ r: 3, fill: '#8b5cf6' }} activeDot={{ r: 6, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2 }} />
-            </AreaChart>
-          </ResponsiveContainer>
+          {data.gradeTrend && data.gradeTrend.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.gradeTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" vertical={false} />
+                <XAxis dataKey="subject" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} />
+                <Tooltip content={<CustomTooltip suffix="%" />} />
+                <Bar dataKey="score" name="My Score" radius={[6, 6, 0, 0]}>
+                  {data.gradeTrend.map((entry, index) => (
+                    <Cell key={index} fill={entry.score >= 75 ? '#10b981' : entry.score >= 50 ? '#3b82f6' : '#f59e0b'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-slate-500 text-xs">
+              <BookOpen size={32} className="text-slate-600 mb-2 opacity-60" />
+              <span>No marks recorded yet for current term subjects.</span>
+            </div>
+          )}
         </div>
       </SectionCard>
     </div>
 
-    <SectionCard title="My Coursework & Assignments Due">
-      <div className="space-y-3">
-        {data.upcomingDeadlines && data.upcomingDeadlines.length > 0 ? (
-          data.upcomingDeadlines.map((item) => (
-            <div key={item.id} className="flex items-center justify-between p-3.5 rounded-xl bg-slate-800/50 border border-slate-700/40 hover:bg-slate-800/80 transition-all cursor-pointer group">
-              <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-105 transition-transform shrink-0">
-                  <BookOpen size={18} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs md:text-sm text-white font-semibold group-hover:text-blue-400 transition-colors truncate">{item.title}</p>
-                  <p className="text-[11px] text-slate-400">{item.subject}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-[11px] text-slate-400 flex items-center gap-1 font-medium">
-                  <Clock size={12} /> {item.due}
-                </span>
-                <ChevronRight size={16} className="text-slate-500 group-hover:text-slate-300 transition-colors" />
-              </div>
+    {/* Continuous Assessment vs Examination & Coursework */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <SectionCard title="Assessment Component Split (CA Tests vs Examination)">
+        <div style={{ width: '100%', height: 260 }}>
+          {data.assessmentBreakdown && data.assessmentBreakdown.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.assessmentBreakdown} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" vertical={false} />
+                <XAxis dataKey="subject" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 100]} />
+                <Tooltip content={<CustomTooltip suffix=" pts" />} />
+                <Bar dataKey="ca" name="Continuous Assessment (CA)" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="exam" name="Term Examination" stackId="a" fill="#10b981" radius={[6, 6, 0, 0]} />
+                <Legend verticalAlign="top" height={30} formatter={(val) => <span className="text-slate-300 text-xs font-medium">{val}</span>} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-slate-500 text-xs">
+              <span>Assessment component breakdown will show when CA marks are entered.</span>
             </div>
-          ))
-        ) : (
-          <div className="text-center py-6 text-slate-500 text-xs italic">
-            No pending assignments for your class. Great job!
-          </div>
-        )}
-      </div>
-    </SectionCard>
+          )}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="My Coursework & Assignments Due">
+        <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
+          {data.upcomingDeadlines && data.upcomingDeadlines.length > 0 ? (
+            data.upcomingDeadlines.map((item) => (
+              <div key={item.id} className="flex items-center justify-between p-3.5 rounded-xl bg-slate-800/50 border border-slate-700/40 hover:bg-slate-800/80 transition-all cursor-pointer group">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-105 transition-transform shrink-0">
+                    <BookOpen size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs md:text-sm text-white font-semibold group-hover:text-blue-400 transition-colors truncate">{item.title}</p>
+                    <p className="text-[11px] text-slate-400">{item.subject}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[11px] text-slate-400 flex items-center gap-1 font-medium">
+                    <Clock size={12} /> {item.due}
+                  </span>
+                  <ChevronRight size={16} className="text-slate-500 group-hover:text-slate-300 transition-colors" />
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-slate-500 text-xs italic">
+              No pending assignments for your class. Great job!
+            </div>
+          )}
+        </div>
+      </SectionCard>
+    </div>
   </div>
 );
 
@@ -624,7 +664,8 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
         subjectsSnap,
         notifsSnap,
         assignmentsSnap,
-        paymentsSnap
+        paymentsSnap,
+        attendanceSnap
       ] = await Promise.all([
         getDocs(collection(db, 'students')).catch(() => ({ docs: [], size: 0 })),
         getDocs(collection(db, 'staff')).catch(() => ({ docs: [], size: 0 })),
@@ -634,7 +675,8 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
         getDocs(collection(db, 'subjects')).catch(() => ({ docs: [] })),
         getDocs(query(collection(db, 'notifications'), limit(15))).catch(() => ({ docs: [] })),
         getDocs(collection(db, 'assignments')).catch(() => ({ docs: [] })),
-        getDocs(collection(db, 'staff_payments')).catch(() => ({ docs: [] }))
+        getDocs(collection(db, 'staff_payments')).catch(() => ({ docs: [] })),
+        getDocs(collection(db, 'attendance')).catch(() => ({ docs: [] }))
       ]);
 
       const feesObj = feeSnap && feeSnap.exists() ? feeSnap.data() : { default: 0 };
@@ -699,6 +741,12 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
         ...d.data()
       }));
 
+      // Process Attendance
+      const parsedAttendance = attendanceSnap.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
+
       // Combine all classes dynamically from database and student records without duplicates
       const studentClassNames = parsedStudents.map(s => s.className).filter(Boolean);
       const combinedClasses = getUniqueClasses([
@@ -716,7 +764,8 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
         subjects: subjectsSnap.docs.map(d => d.id),
         notifications: parsedNotifs,
         assignments: parsedAssignments,
-        staffPayments: parsedPayments
+        staffPayments: parsedPayments,
+        attendance: parsedAttendance
       });
 
       setLastSync(new Date().toLocaleTimeString());
@@ -947,52 +996,131 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
     };
 
     // --- 5. STUDENT DATA ---
-    const studentRegNo = currentStudent?.regNo || currentStudent?.['REG NO'] || '';
-    const studentMarksDoc = marks.find(m => m.regNo === studentRegNo || m.studentName === currentStudent?.name);
-    
+    const studentRegNo = (currentStudent?.regNo || currentStudent?.['REG NO'] || currentStudent?.['reg_no'] || '').trim().toLowerCase();
+    const studentId = currentStudent?.id || '';
+    const studentName = (currentStudent?.name || '').trim().toLowerCase();
+
+    // Find ALL marks documents matching this student across ALL terms & sessions
+    const studentAllTermsDocs = marks.filter(m => {
+      const reg = (m.r || m.regNo || m.reg_no || '').trim().toLowerCase();
+      const name = (m.n || m.name || m.studentName || '').trim().toLowerCase();
+      return (studentRegNo && reg === studentRegNo) || (studentName && name === studentName);
+    });
+
+    const termWeight = (t = '') => {
+      const norm = t.toLowerCase();
+      if (norm.includes('first') || norm.includes('1st')) return 1;
+      if (norm.includes('second') || norm.includes('2nd')) return 2;
+      if (norm.includes('third') || norm.includes('3rd')) return 3;
+      return 4;
+    };
+
+    const termProgression = studentAllTermsDocs.map(doc => {
+      const session = doc.s || doc.session || currentSession || '2025/2026';
+      const term = doc.t || doc.term || 'Term';
+      const termMarks = doc.m || doc.marks || {};
+      
+      let totalSum = 0;
+      let subjectCount = 0;
+      let avg = 0;
+
+      if (termMarks._meta && termMarks._meta.average !== undefined) {
+        avg = parseFloat(termMarks._meta.average) || 0;
+      } else {
+        Object.entries(termMarks).forEach(([subj, sObj]) => {
+          if (subj === '_meta' || !sObj) return;
+          const sc = parseFloat(sObj.total) || parseFloat(sObj.percent) || parseFloat(sObj.exam) || 0;
+          if (sc > 0) {
+            totalSum += sc;
+            subjectCount++;
+          }
+        });
+        avg = subjectCount > 0 ? totalSum / subjectCount : 0;
+      }
+
+      return {
+        id: doc.id,
+        session,
+        term,
+        termLabel: `${term} (${session})`,
+        average: parseFloat(avg.toFixed(1)),
+        subjectsCount: subjectCount || Object.keys(termMarks).filter(k => k !== '_meta').length,
+        marksObj: termMarks,
+        sessionNum: parseInt(session.split('/')[0]) || 2025,
+        termNum: termWeight(term)
+      };
+    });
+
+    // Sort chronologically from earliest to latest
+    termProgression.sort((a, b) => {
+      if (a.sessionNum !== b.sessionNum) return a.sessionNum - b.sessionNum;
+      return a.termNum - b.termNum;
+    });
+
+    // Most recent / current term record
+    const latestTermRecord = termProgression.length > 0 ? termProgression[termProgression.length - 1] : null;
+    const previousTermRecord = termProgression.length > 1 ? termProgression[termProgression.length - 2] : null;
+
+    // Individual subject scores from latest/current term
     let studentScores = [];
+    let assessmentBreakdown = [];
     let studentSum = 0, studentCount = 0;
-    if (studentMarksDoc && studentMarksDoc.marks) {
-      Object.entries(studentMarksDoc.marks).forEach(([subj, sObj]) => {
+
+    if (latestTermRecord && latestTermRecord.marksObj) {
+      Object.entries(latestTermRecord.marksObj).forEach(([subj, sObj]) => {
         if (subj === '_meta' || !sObj) return;
-        const sc = parseFloat(sObj.total) || parseFloat(sObj.percent) || parseFloat(sObj.exam) || 0;
-        if (sc > 0) {
-          studentScores.push({ subject: subj.length > 12 ? subj.substring(0, 11) + '…' : subj, score: sc });
-          studentSum += sc;
+        const total = parseFloat(sObj.total) || parseFloat(sObj.percent) || parseFloat(sObj.exam) || 0;
+        const ca1 = parseFloat(sObj.ca1) || parseFloat(sObj.test) || 0;
+        const ca2 = parseFloat(sObj.ca2) || parseFloat(sObj.project) || 0;
+        const exam = parseFloat(sObj.exam) || 0;
+        if (total > 0 || ca1 > 0 || exam > 0) {
+          const cleanSubj = subj.length > 14 ? subj.substring(0, 13) + '…' : subj;
+          studentScores.push({ subject: cleanSubj, score: total });
+          assessmentBreakdown.push({ subject: cleanSubj, ca: ca1 + ca2, exam: exam || Math.max(0, total - (ca1 + ca2)), total });
+          studentSum += total;
           studentCount++;
         }
       });
     }
 
-    if (studentScores.length === 0) {
-      studentScores = [
-        { subject: 'Mathematics', score: 85 },
-        { subject: 'English Lang', score: 78 },
-        { subject: 'Basic Science', score: 92 },
-        { subject: 'Agric Science', score: 88 },
-        { subject: 'Igbo Language', score: 95 },
-        { subject: 'Social Studies', score: 80 }
-      ];
-      studentSum = 85 + 78 + 92 + 88 + 95 + 80;
-      studentCount = 6;
-    }
+    const currentAvg = latestTermRecord ? latestTermRecord.average : (studentCount > 0 ? (studentSum / studentCount).toFixed(1) : '0.0');
+    const prevAvg = previousTermRecord ? previousTermRecord.average : null;
+    const avgDelta = (prevAvg !== null && currentAvg > 0) ? (Number(currentAvg) - Number(prevAvg)).toFixed(1) : null;
+    const avgDeltaText = avgDelta !== null 
+      ? (Number(avgDelta) >= 0 ? `+${avgDelta}% vs Prev Term` : `${avgDelta}% vs Prev Term`)
+      : (latestTermRecord ? `${latestTermRecord.term}` : 'No Exam Record');
 
-    const myAvg = studentCount > 0 ? (studentSum / studentCount).toFixed(1) : '85.0';
+    // Real Attendance
+    const studentNormClass = normalizeClassName(currentStudent?.className || '');
+    const classAttendanceDocs = (dbData.attendance || []).filter(a => normalizeClassName(a.className) === studentNormClass);
+    let totalDaysRecorded = classAttendanceDocs.length;
+    let daysPresent = 0;
+    classAttendanceDocs.forEach(a => {
+      const pList = a.presentStudents || [];
+      if (pList.includes(studentId) || (studentRegNo && pList.some(id => (id || '').toLowerCase() === studentRegNo))) {
+        daysPresent++;
+      }
+    });
+    const attendanceRate = totalDaysRecorded > 0 ? ((daysPresent / totalDaysRecorded) * 100).toFixed(1) : '100.0';
+    const attendanceSubText = totalDaysRecorded > 0 ? `Present ${daysPresent}/${totalDaysRecorded} Days` : 'All sessions attended';
+
+    // Real Verified Fees Status
     const myPaid = parseFloat(currentStudent?.paidFee) || parseFloat(currentStudent?.paidAmount) || 0;
     const myExpected = parseFloat(currentStudent?.expectedFee) || 0;
     const myBalance = currentStudent?.balance !== undefined ? currentStudent.balance : Math.max(0, myExpected - myPaid);
+    const isFeeVerified = currentStudent?.feeVerified === true || currentStudent?.isVerified === true;
 
-    const hasPaidFully = myPaid > 0 && (myExpected === 0 || myPaid >= myExpected);
-    const hasPaidPartial = myPaid > 0 && myPaid < myExpected;
+    const hasPaidFully = myPaid > 0 && (isFeeVerified || (myExpected > 0 && myPaid >= myExpected));
+    const hasPaidPartial = myPaid > 0 && !hasPaidFully && myBalance > 0;
     
     let feeStatusText = 'Pending Fee';
     let feeChangeText = 'Awaiting Payment';
-    let feeSubText = myBalance > 0 ? `₦${myBalance.toLocaleString()} Due` : 'No Invoice Set';
+    let feeSubText = myBalance > 0 ? `₦${myBalance.toLocaleString()} Due` : (myExpected > 0 ? `₦${myExpected.toLocaleString()} Due` : 'Pending');
     let isFeePositive = false;
 
     if (hasPaidFully) {
       feeStatusText = 'Cleared ✓';
-      feeChangeText = 'Paid in Full';
+      feeChangeText = 'Verified in Full';
       feeSubText = `₦${myPaid.toLocaleString()} Paid`;
       isFeePositive = true;
     } else if (hasPaidPartial) {
@@ -1000,10 +1128,10 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
       feeChangeText = 'Partial Payment';
       feeSubText = `₦${myBalance.toLocaleString()} Due`;
       isFeePositive = false;
-    } else if (myBalance > 0) {
-      feeStatusText = `₦${myBalance.toLocaleString()} Due`;
-      feeChangeText = 'Payment Overdue';
-      feeSubText = 'Awaiting Payment';
+    } else {
+      feeStatusText = myBalance > 0 ? `₦${myBalance.toLocaleString()} Due` : 'Pending Fee';
+      feeChangeText = 'Awaiting Payment';
+      feeSubText = 'Pending Verification';
       isFeePositive = false;
     }
 
@@ -1020,21 +1148,15 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
 
     const student = {
       kpis: [
-        { title: 'Academic Average', value: `${myAvg}%`, change: '+2.1% Higher', isPositive: true, icon: Award, subText: `${studentCount} Subjects Graded` },
-        { title: 'Attendance Record', value: '96.5%', change: 'Excellent', isPositive: true, icon: UserCheck, subText: 'Present 62/64 Days' },
+        { title: 'Academic Average', value: `${currentAvg}%`, change: avgDeltaText, isPositive: Number(avgDelta || 0) >= 0, icon: Award, subText: `${studentCount} Subjects Graded` },
+        { title: 'Attendance Record', value: `${attendanceRate}%`, change: totalDaysRecorded > 0 ? 'Recorded' : 'Good Standing', isPositive: parseFloat(attendanceRate) >= 75, icon: UserCheck, subText: attendanceSubText },
         { title: 'Coursework Tasks', value: `${studentClassAssignments.length} Due`, change: 'Active', isPositive: studentClassAssignments.length <= 2, icon: ClipboardList, subText: 'Assignments' },
         { title: 'School Fee Status', value: feeStatusText, change: feeChangeText, isPositive: isFeePositive, icon: CreditCard, subText: feeSubText },
       ],
+      termProgression,
       gradeTrend: studentScores,
-      semesterProgress: studentScores.slice(0, 6).map((s, idx) => ({
-        week: s.subject,
-        grade: s.score
-      })),
-      upcomingDeadlines: studentClassAssignments.length > 0 ? studentClassAssignments : [
-        { id: 1, title: 'Mathematics Homework #3', subject: 'Mathematics', due: 'Tomorrow', status: 'pending' },
-        { id: 2, title: 'Basic Science Lab Notes', subject: 'Basic Science', due: 'Friday', status: 'pending' },
-        { id: 3, title: 'English Essay Submission', subject: 'English', due: 'Next Monday', status: 'pending' }
-      ]
+      assessmentBreakdown,
+      upcomingDeadlines: studentClassAssignments
     };
 
     return { principal, admin, bursar, teacher, student };
