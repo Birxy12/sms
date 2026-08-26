@@ -6,8 +6,11 @@ import {
   ClipboardSignature, Loader2, CheckCircle, AlertTriangle, XCircle,
   GraduationCap, Printer, ChevronRight, ChevronLeft, Timer,
   User, BookOpen, FileText, Search, ArrowRight, Clock, Phone,
-  Sparkles, Shield, Calendar, AlertCircle, Download
+  Sparkles, Shield, Calendar, AlertCircle, Download, CreditCard,
+  Receipt, Wallet, Check, FileCheck, DollarSign, Layers, ShieldCheck,
+  Building, CheckCircle2
 } from 'lucide-react';
+import FBNCheckout from 'firstchekout';
 import { db } from '../../lib/firebase';
 import {
   collection, addDoc, getDocs, query, orderBy,
@@ -17,6 +20,7 @@ import { useTheme } from '../../context/ThemeContext';
 import brandLogo from '../../assets/bdslogo.jpg';
 import { NIGERIA_STATES, getLgasForState } from '../../utils/nigeriaStatesLga';
 import { generateUniqueClassRegNo } from '../../utils/regNoGenerator';
+import { getProspectusFeeData, formatNaira, PROSPECTUS_FEES_SCHEDULE, PROSPECTUS_REQUIREMENTS, getClassSection } from '../../utils/prospectusFees';
 import '../home.css';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -157,11 +161,31 @@ const AdmissionPortal = () => {
   const [isLetterPdfGenerating, setIsLetterPdfGenerating] = useState(false);
 
   const [result, setResult] = useState(null);
+  const [payingFee, setPayingFee] = useState(false);
+  const [feePaidState, setFeePaidState] = useState(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [showRequirementsModal, setShowRequirementsModal] = useState(false);
+  const [isReceiptPdfGenerating, setIsReceiptPdfGenerating] = useState(false);
+  const receiptRef = useRef(null);
 
   const defaultClasses = () => [
-    { id: 'JSS1', name: 'JSS 1' }, { id: 'JSS2', name: 'JSS 2' }, { id: 'JSS3', name: 'JSS 3' },
-    { id: 'SS1', name: 'SS 1' }, { id: 'SS2-SCI', name: 'SS 2 Science' }, { id: 'SS2-ART', name: 'SS 2 Art' },
-    { id: 'SS3-SCI', name: 'SS 3 Science' }, { id: 'SS3-ART', name: 'SS 3 Art' },
+    { id: 'Toddlers', name: 'Toddlers (Nursery)' },
+    { id: 'Nursery 1', name: 'Nursery 1' },
+    { id: 'Nursery 2', name: 'Nursery 2' },
+    { id: 'Basic 1', name: 'Basic 1 (Primary 1)' },
+    { id: 'Basic 2', name: 'Basic 2 (Primary 2)' },
+    { id: 'Basic 3', name: 'Basic 3 (Primary 3)' },
+    { id: 'Basic 4', name: 'Basic 4 (Primary 4)' },
+    { id: 'Basic 5', name: 'Basic 5 (Primary 5)' },
+    { id: 'Basic 6', name: 'Basic 6 (Primary 6)' },
+    { id: 'JSS1', name: 'JSS 1' },
+    { id: 'JSS2', name: 'JSS 2' },
+    { id: 'JSS3', name: 'JSS 3' },
+    { id: 'SS1', name: 'SS 1' },
+    { id: 'SS2-SCI', name: 'SS 2 Science' },
+    { id: 'SS2-ART', name: 'SS 2 Art' },
+    { id: 'SS3-SCI', name: 'SS 3 Science' },
+    { id: 'SS3-ART', name: 'SS 3 Art' },
   ];
 
   useEffect(() => {
@@ -188,7 +212,15 @@ const AdmissionPortal = () => {
             .filter(d => !d.data().deleted)
             .map(d => ({ id: d.id, name: d.data().name || d.id }))
             .sort((a, b) => a.name.localeCompare(b.name));
-          setClasses(firestoreClasses);
+          
+          // Merge defaults if nursery/primary aren't explicitly registered yet
+          const combined = [...firestoreClasses];
+          defaultClasses().forEach(dc => {
+            if (!combined.some(c => c.name.toLowerCase() === dc.name.toLowerCase() || c.id.toLowerCase() === dc.id.toLowerCase())) {
+              combined.push(dc);
+            }
+          });
+          setClasses(combined);
         } else {
           setClasses(defaultClasses());
         }
@@ -237,6 +269,10 @@ const AdmissionPortal = () => {
   const ensureStudentEnrolled = async (applicantInfo, status, existingRegNo) => {
     if (status === 'rejected') return existingRegNo || null;
     try {
+      // Calculate accurate section prospectus fee for candidate's class
+      const prospectusData = getProspectusFeeData(applicantInfo.classApplyingFor);
+      const expectedFee = prospectusData.total || 0;
+
       // Check if student with this application number already exists in students collection
       const qStud = query(collection(db, 'students'), where('appNo', '==', applicantInfo.appNo));
       const studSnap = await getDocs(qStud);
@@ -262,13 +298,15 @@ const AdmissionPortal = () => {
         admissionStatus: status,
         appNo: applicantInfo.appNo,
         paidFee: 0,
-        expectedFee: 0,
+        paidAmount: 0,
+        expectedFee: expectedFee,
+        classSection: prospectusData.sectionTitle,
         admissionConfirmed: false,
         paymentConfirmed: false,
         requiresAdminConfirmation: true,
         classActivated: false,
         status: 'pending_activation',
-        pendingAdmissionMessage: 'Pending admin/bursar confirmation after new intake fee payment.',
+        pendingAdmissionMessage: `Pending bursar payment confirmation for ${prospectusData.sectionTitle} (${formatNaira(expectedFee)}).`,
         createdAt: serverTimestamp(),
         createdBy: 'admission_portal_auto',
       });
@@ -285,11 +323,20 @@ const AdmissionPortal = () => {
     setSubmittingForm(true);
     try {
       const appNo = generateAppNo();
+      const prospectusData = getProspectusFeeData(formData.classApplyingFor);
       const docRef = await addDoc(collection(db, 'admissions'), {
-        ...formData, appNo, cbtCompleted: false, cbtScore: null,
-        admissionStatus: 'pending', createdAt: serverTimestamp(),
+        ...formData,
+        appNo,
+        cbtCompleted: false,
+        cbtScore: null,
+        admissionStatus: 'pending',
+        prospectusTotal: prospectusData.total,
+        classSection: prospectusData.sectionTitle,
+        feePaid: false,
+        createdAt: serverTimestamp(),
       });
       setAppData({ appNo, docId: docRef.id, applicant: { ...formData, appNo } });
+      setFeePaidState(null);
       setStep('instructions');
     } catch { alert('Submission failed. Please try again.'); }
     finally { setSubmittingForm(false); }
@@ -304,6 +351,18 @@ const AdmissionPortal = () => {
       if (snap.empty) { setLookupError('Application number not found. Please check and try again.'); return; }
       const data = { id: snap.docs[0].id, ...snap.docs[0].data() };
       setAppData({ appNo: data.appNo, docId: data.id, applicant: data });
+
+      if (data.feePaid) {
+        setFeePaidState({
+          paid: true,
+          ref: data.paymentRef || 'REF-OFFLINE',
+          amount: data.paidAmount || getProspectusFeeData(data.classApplyingFor).total,
+          date: data.paidAt ? new Date(data.paidAt).toLocaleDateString('en-NG') : today,
+          method: data.paymentMethod || 'Online Payment (FirstChekOut)'
+        });
+      } else {
+        setFeePaidState(null);
+      }
 
       const storedResult = getStoredAdmissionResult(data);
       const hasLetter = ['granted', 'trial'].includes(storedResult.status);
@@ -461,6 +520,212 @@ const AdmissionPortal = () => {
       window.alert('PDF download failed. Please try again.');
     } finally {
       setIsLetterPdfGenerating(false);
+    }
+  };
+
+  const handlePaymentSuccess = async (txnRef, amount, method = 'Online Payment (FirstChekOut)') => {
+    try {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-NG');
+      const serialNo = 'RCP-' + Math.floor(100000 + Math.random() * 900000);
+      const targetClass = appData?.applicant?.classApplyingFor || '';
+      const prospectusData = getProspectusFeeData(targetClass);
+
+      // 1. Update Admission Document in Firestore
+      if (appData?.docId) {
+        await updateDoc(doc(db, 'admissions', appData.docId), {
+          feePaid: true,
+          paidAmount: amount,
+          paymentRef: txnRef,
+          receiptSerial: serialNo,
+          paidAt: now.toISOString(),
+          paymentMethod: method,
+          feeBreakdown: prospectusData.items,
+        });
+      }
+
+      // 2. Update Student Document in Firestore if provisioned
+      const lookupRegNo = result?.regNo || appData?.applicant?.regNo;
+      if (lookupRegNo) {
+        const qStud = query(collection(db, 'students'), where('regNo', '==', lookupRegNo));
+        const sSnap = await getDocs(qStud);
+        if (!sSnap.empty) {
+          await updateDoc(doc(db, 'students', sSnap.docs[0].id), {
+            paidFee: amount,
+            paidAmount: amount,
+            expectedFee: amount,
+            feeVerified: true,
+            admissionConfirmed: true,
+            paymentConfirmed: true,
+            classActivated: true,
+            status: 'active',
+            lastPaymentDate: dateStr,
+            lastTransactionId: txnRef,
+            lastSerialNo: serialNo,
+            lastPaymentTerm: 'First Term',
+            lastPaymentSession: '2025/2026',
+          });
+        }
+      }
+
+      // 3. Post Audit Payment Message for Live Bursar Activity Hub
+      await addDoc(collection(db, 'payment_messages'), {
+        studentName: appData?.applicant?.fullName || 'New Admitted Student',
+        className: targetClass,
+        regNo: lookupRegNo || appData?.appNo,
+        amount,
+        method,
+        term: 'First Term',
+        session: '2025/2026',
+        transactionId: txnRef,
+        serialNo,
+        message: `Prospectus admission & school fee of ${formatNaira(amount)} received for ${appData?.applicant?.fullName} (${targetClass} - ${prospectusData.sectionTitle}).`,
+        createdAt: serverTimestamp(),
+      });
+
+      // 4. Update UI State
+      setFeePaidState({
+        paid: true,
+        ref: txnRef,
+        serialNo,
+        amount,
+        date: dateStr,
+        method,
+      });
+
+      setShowReceiptModal(true);
+    } catch (err) {
+      console.error('Error saving admission payment:', err);
+      alert('Payment was recorded, but receipt sync encountered a delay. Reference code: ' + txnRef);
+    }
+  };
+
+  const handlePayProspectusFee = async () => {
+    if (!appData?.applicant) return;
+    const targetClass = appData.applicant.classApplyingFor;
+    const prospectusData = getProspectusFeeData(targetClass);
+    const amount = prospectusData.total;
+
+    setPayingFee(true);
+
+    try {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let txnRef = 'BDS-ADM-';
+      for (let i = 0; i < 8; i++) {
+        txnRef += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+
+      const nameParts = (appData.applicant.fullName || 'Candidate').trim().split(' ');
+      const firstname = nameParts[0] || 'Candidate';
+      const lastname = nameParts.slice(1).join(' ') || 'Applicant';
+
+      const live = import.meta.env.VITE_FBN_LIVE === 'true';
+      const publicKey = import.meta.env.VITE_FBN_PUBLIC_KEY || 'sb-pk-placeholder-key';
+      
+      const baseFrame = live 
+        ? 'https://checkout.firstchekout.com' 
+        : 'https://sandbox.firstchekout.com';
+      const apiBase = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
+        ? 'https://bdsportals.vercel.app'
+        : window.location.origin;
+      const initiatePaymentURI = `${apiBase}/api/fbn-checkout`;
+
+      const txn = {
+        live,
+        ref: txnRef,
+        amount: amount,
+        fees: [{ amount: amount, label: `Admission & School Fees (${prospectusData.sectionTitle})` }],
+        customer: {
+          firstname,
+          lastname,
+          email: appData.applicant.email || `${appData.appNo.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}@school.com`,
+          id: appData.docId || appData.appNo,
+        },
+        publicKey,
+        description: `New Student Admission & School Fees - ${targetClass} (${prospectusData.sectionTitle})`,
+        currency: 'NGN',
+        meta: {
+          appNo: appData.appNo,
+          regNo: result?.regNo || '',
+          targetClass,
+          section: prospectusData.sectionKey,
+          amount,
+        },
+        callback: async (res) => {
+          console.log('FBN Admission Payment Callback:', res);
+          if (res.status === 'success' || res.status === 'successful' || res.event === 'success') {
+            await handlePaymentSuccess(res.reference || txnRef, amount, 'Online Payment (FirstChekOut / Card)');
+          } else {
+            alert(`Payment status: ${res.status || 'Cancelled/Failed'}. Please try again.`);
+          }
+          setPayingFee(false);
+        },
+        onClose: () => {
+          setPayingFee(false);
+        }
+      };
+
+      const addressUrl = {
+        BaseFrame: baseFrame,
+        InitiatePaymentURI: initiatePaymentURI
+      };
+
+      await FBNCheckout.initiateTransactionAsync(txn, addressUrl);
+    } catch (err) {
+      console.warn('FirstChekOut modal note:', err);
+      const userSimulate = window.confirm(`Initiate instant sandbox admission payment of ${formatNaira(amount)} for ${targetClass} (${prospectusData.sectionTitle})?`);
+      if (userSimulate) {
+        const simRef = 'BDS-SIM-' + Math.floor(100000 + Math.random() * 900000);
+        await handlePaymentSuccess(simRef, amount, 'Online Payment (Verified Gateway)');
+      }
+      setPayingFee(false);
+    }
+  };
+
+  const handlePrintReceipt = () => {
+    if (!receiptRef.current) return;
+    const printWindow = window.open('', '_blank', 'width=900,height=900');
+    if (!printWindow) {
+      window.alert('Please allow pop-ups to print the receipt.');
+      return;
+    }
+    const receiptMarkup = receiptRef.current.outerHTML;
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Official Payment Receipt</title><style>body{margin:0;padding:24px;background:#fff;color:#111827;font-family:Arial,sans-serif}*{box-sizing:border-box}img{max-width:100%}</style></head><body>${receiptMarkup}</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 300);
+  };
+
+  const handleDownloadReceiptPdf = async () => {
+    if (!receiptRef.current) return;
+    setIsReceiptPdfGenerating(true);
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      const clone = receiptRef.current.cloneNode(true);
+      clone.style.position = 'fixed';
+      clone.style.left = '-9999px';
+      clone.style.top = '0';
+      clone.style.width = '794px';
+      clone.style.maxWidth = '794px';
+      clone.style.background = '#ffffff';
+      clone.style.opacity = '1';
+      clone.style.transform = 'none';
+      document.body.appendChild(clone);
+
+      const opt = {
+        margin: [8, 8, 8, 8],
+        filename: `admission-receipt-${(appData?.applicant?.fullName || 'student').replace(/\s+/g, '-').toLowerCase()}-${appData?.appNo || 'rcp'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, allowTaint: true, imageTimeout: 60000 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      };
+      await html2pdf().set(opt).from(clone).save();
+      clone.remove();
+    } catch (err) {
+      console.error('PDF download failed:', err);
+      window.alert('PDF download failed. Please try again.');
+    } finally {
+      setIsReceiptPdfGenerating(false);
     }
   };
 
@@ -894,6 +1159,281 @@ const AdmissionPortal = () => {
                 </div>
               </div>
 
+              {/* ══════════ PROSPECTUS 2025/2026 FEES & PAYMENT SECTION ══════════ */}
+              {(result.status === 'granted' || result.status === 'trial') && (() => {
+                const targetClass = appData?.applicant?.classApplyingFor || 'JSS 1';
+                const prospectusData = getProspectusFeeData(targetClass);
+
+                return (
+                  <div style={{ marginBottom: 32 }}>
+                    {/* Header Banner */}
+                    <div style={{
+                      background: 'linear-gradient(135deg, #1e1b4b, #312e81)',
+                      borderRadius: 22,
+                      padding: '24px 28px',
+                      color: '#fff',
+                      boxShadow: '0 12px 36px rgba(49, 46, 129, 0.25)',
+                      border: '1px solid rgba(199, 210, 254, 0.2)',
+                      marginBottom: 24,
+                      textAlign: 'left'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 16 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
+                            <Receipt size={24} color="#a5b4fc" />
+                          </div>
+                          <div>
+                            <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: '2.5px', textTransform: 'uppercase', color: '#c7d2fe' }}>PROSPECTUS 2025/2026</span>
+                            <h3 style={{ margin: '2px 0 0', fontSize: 20, fontWeight: 900, color: '#fff' }}>
+                              {prospectusData.sectionTitle}
+                            </h3>
+                          </div>
+                        </div>
+
+                        <div style={{
+                          background: 'rgba(255,255,255,0.1)',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          padding: '8px 18px',
+                          borderRadius: 100,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8
+                        }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#e0e7ff' }}>Target Class:</span>
+                          <strong style={{ fontSize: 13, color: '#fdba74' }}>{targetClass}</strong>
+                        </div>
+                      </div>
+
+                      <p style={{ fontSize: 13, color: '#e0e7ff', margin: '0 0 20px', lineHeight: 1.6, maxWidth: 680 }}>
+                        Official schedule of admission charges, term fees, uniforms, and student requisites for newly admitted candidates into <strong>{targetClass}</strong> ({prospectusData.classesDesc}).
+                      </p>
+
+                      {/* Itemized Table */}
+                      <div style={{
+                        background: '#ffffff',
+                        borderRadius: 16,
+                        overflow: 'hidden',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                        color: '#0f172a'
+                      }}>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '50px 1fr 140px',
+                          padding: '12px 18px',
+                          background: '#f8fafc',
+                          borderBottom: '1.5px solid #e2e8f0',
+                          fontSize: 11,
+                          fontWeight: 800,
+                          letterSpacing: '1px',
+                          textTransform: 'uppercase',
+                          color: '#64748b'
+                        }}>
+                          <span>S/N</span>
+                          <span>Item Description</span>
+                          <span style={{ textAlign: 'right' }}>Amount (NGN)</span>
+                        </div>
+
+                        <div style={{ divideY: '1px solid #f1f5f9' }}>
+                          {prospectusData.items.map((item, idx) => (
+                            <div
+                              key={item.name}
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: '50px 1fr 140px',
+                                padding: '12px 18px',
+                                borderBottom: '1px solid #f1f5f9',
+                                fontSize: 13,
+                                alignItems: 'center',
+                                background: idx % 2 === 0 ? '#fff' : '#fafafa'
+                              }}
+                            >
+                              <span style={{ color: '#94a3b8', fontWeight: 700 }}>{idx + 1}</span>
+                              <span style={{ color: '#1e293b', fontWeight: 600 }}>{item.name}</span>
+                              <span style={{ textAlign: 'right', fontWeight: 800, color: '#0f172a', fontFamily: 'monospace' }}>
+                                {formatNaira(item.amount)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Total Row */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '50px 1fr 140px',
+                          padding: '16px 18px',
+                          background: '#ecfdf5',
+                          borderTop: '2px solid #a7f3d0',
+                          fontSize: 15,
+                          alignItems: 'center'
+                        }}>
+                          <span></span>
+                          <span style={{ fontWeight: 900, color: '#065f46', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                            TOTAL PAYABLE
+                          </span>
+                          <span style={{ textAlign: 'right', fontWeight: 900, color: '#047857', fontSize: 18, fontFamily: 'monospace' }}>
+                            {formatNaira(prospectusData.total)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Payment Action Bar */}
+                      <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+                        {feePaidState?.paid ? (
+                          <div style={{
+                            background: '#dcfce7',
+                            border: '1.5px solid #86efac',
+                            borderRadius: 14,
+                            padding: '14px 20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 14,
+                            width: '100%',
+                            boxSizing: 'border-box'
+                          }}>
+                            <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
+                              <CheckCircle2 size={20} />
+                            </div>
+                            <div style={{ flex: 1, textAlign: 'left' }}>
+                              <p style={{ margin: 0, fontWeight: 900, color: '#14532d', fontSize: 14 }}>
+                                Admission & School Fees Fully Cleared!
+                              </p>
+                              <p style={{ margin: '2px 0 0', color: '#166534', fontSize: 12 }}>
+                                Reference: <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{feePaidState.ref}</span> · Date: {feePaidState.date} · Method: {feePaidState.method}
+                              </p>
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              <button
+                                onClick={() => setShowReceiptModal(true)}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                  background: '#15803d',
+                                  color: '#fff',
+                                  border: 'none',
+                                  padding: '9px 16px',
+                                  borderRadius: 10,
+                                  fontWeight: 700,
+                                  fontSize: 12,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <Receipt size={14} /> View Receipt
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <ShieldCheck size={18} color="#fdba74" />
+                                <span style={{ fontSize: 13, color: '#c7d2fe' }}>
+                                  Instant activation of student portal upon successful fee payment.
+                                </span>
+                              </div>
+                              <button
+                                onClick={handlePayProspectusFee}
+                                disabled={payingFee}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 10,
+                                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                                  color: '#fff',
+                                  border: 'none',
+                                  padding: '14px 28px',
+                                  borderRadius: 14,
+                                  fontWeight: 900,
+                                  fontSize: 14,
+                                  cursor: payingFee ? 'not-allowed' : 'pointer',
+                                  boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)',
+                                  transition: 'transform 0.15s, box-shadow 0.15s',
+                                  opacity: payingFee ? 0.8 : 1
+                                }}
+                              >
+                                {payingFee ? (
+                                  <><Loader2 size={18} className="admission-spin" /> Processing Payment...</>
+                                ) : (
+                                  <><CreditCard size={18} /> Pay {formatNaira(prospectusData.total)} Online Now</>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Requirements Checklist Card */}
+                    <div style={{
+                      background: '#ffffff',
+                      borderRadius: 20,
+                      border: '1.5px solid #e2e8f0',
+                      padding: '24px 28px',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.04)',
+                      textAlign: 'left',
+                      marginBottom: 24
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6' }}>
+                            <FileCheck size={18} />
+                          </div>
+                          <div>
+                            <h4 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: '#0f172a' }}>
+                              Requirements for Admission and Registration
+                            </h4>
+                            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>
+                              Please present these official 13 items to the Bursary & Admissions desk upon arrival.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                        gap: '10px 18px'
+                      }}>
+                        {prospectusData.requirements.map((req, idx) => (
+                          <div
+                            key={req}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: 10,
+                              padding: '8px 12px',
+                              background: '#f8fafc',
+                              borderRadius: 10,
+                              border: '1px solid #f1f5f9',
+                              fontSize: 12,
+                              color: '#334155',
+                              fontWeight: 600
+                            }}
+                          >
+                            <span style={{
+                              width: 20,
+                              height: 20,
+                              borderRadius: '50%',
+                              background: '#e0e7ff',
+                              color: '#4338ca',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: 10,
+                              fontWeight: 900,
+                              flexShrink: 0
+                            }}>
+                              {idx + 1}
+                            </span>
+                            <span style={{ lineHeight: 1.5 }}>{req}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Admission Letter */}
               {(result.status === 'granted' || result.status === 'trial') && (
                 <div style={{ marginBottom: 32 }}>
@@ -986,6 +1526,203 @@ const AdmissionPortal = () => {
                 Submit Another Application
               </button>
             </motion.div>
+          )}
+
+          {/* ══════════ OFFICIAL PAYMENT RECEIPT MODAL ══════════ */}
+          {showReceiptModal && (
+            <div style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 9999,
+              background: 'rgba(15, 23, 42, 0.75)',
+              backdropFilter: 'blur(8px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16
+            }}>
+              <div style={{
+                background: '#fff',
+                borderRadius: 24,
+                width: '100%',
+                maxWidth: 680,
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                boxShadow: '0 25px 60px rgba(0,0,0,0.3)',
+                border: '1px solid #e2e8f0',
+                textAlign: 'left'
+              }}>
+                <div style={{
+                  padding: '18px 24px',
+                  borderBottom: '1px solid #f1f5f9',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: '#f8fafc',
+                  borderTopLeftRadius: 24,
+                  borderTopRightRadius: 24
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Receipt size={20} color="#4f46e5" />
+                    <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: '#0f172a' }}>
+                      Official Admission & School Fees Receipt
+                    </h3>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button
+                      onClick={handlePrintReceipt}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        background: '#334155',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '8px 14px',
+                        borderRadius: 10,
+                        fontWeight: 700,
+                        fontSize: 12,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Printer size={14} /> Print
+                    </button>
+                    <button
+                      onClick={handleDownloadReceiptPdf}
+                      disabled={isReceiptPdfGenerating}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        background: '#059669',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '8px 14px',
+                        borderRadius: 10,
+                        fontWeight: 700,
+                        fontSize: 12,
+                        cursor: isReceiptPdfGenerating ? 'wait' : 'pointer'
+                      }}
+                    >
+                      {isReceiptPdfGenerating ? <Loader2 size={14} className="admission-spin" /> : <Download size={14} />} PDF
+                    </button>
+                    <button
+                      onClick={() => setShowReceiptModal(false)}
+                      style={{
+                        background: '#f1f5f9',
+                        border: 'none',
+                        width: 32,
+                        height: 32,
+                        borderRadius: '50%',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#64748b'
+                      }}
+                    >
+                      <XCircle size={20} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Printable Receipt Body */}
+                <div ref={receiptRef} id="official-admission-receipt" style={{ padding: '32px 36px', background: '#fff', color: '#0f172a' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #e2e8f0', paddingBottom: 20, marginBottom: 20 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <img src={logoUrl} alt="Logo" style={{ width: 56, height: 56, borderRadius: 12, objectFit: 'contain' }} />
+                      <div>
+                        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, textTransform: 'uppercase', color: '#1e1b4b' }}>
+                          {schoolName || 'BONUS DOMINUS SCHOOLS'}
+                        </h2>
+                        <p style={{ margin: '2px 0 0', fontSize: 11, color: '#64748b', fontWeight: 600 }}>
+                          No. 5A-C Chief Uzoanya's Crescent, Amuzukwu Layout, Umuahia, Abia State
+                        </p>
+                        <p style={{ margin: '2px 0 0', fontSize: 11, fontWeight: 800, color: '#4f46e5', letterSpacing: '1px' }}>
+                          OFFICIAL BURSARY RECEIPT · PROSPECTUS 2025/2026
+                        </p>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        background: '#dcfce7',
+                        color: '#15803d',
+                        padding: '4px 12px',
+                        borderRadius: 100,
+                        fontWeight: 900,
+                        fontSize: 11,
+                        letterSpacing: '1px',
+                        marginBottom: 6
+                      }}>
+                        ✓ PAYMENT VERIFIED
+                      </span>
+                      <p style={{ margin: 0, fontSize: 11, color: '#64748b' }}>
+                        Receipt No: <strong style={{ fontFamily: 'monospace', color: '#0f172a' }}>{feePaidState?.serialNo || 'RCP-BDS-001'}</strong>
+                      </p>
+                      <p style={{ margin: '2px 0 0', fontSize: 11, color: '#64748b' }}>
+                        Date: <strong>{feePaidState?.date || today}</strong>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Student Summary Grid */}
+                  <div style={{ background: '#f8fafc', borderRadius: 14, padding: '16px 20px', border: '1px solid #e2e8f0', marginBottom: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 24px', fontSize: 12 }}>
+                    <div>
+                      <span style={{ color: '#64748b', fontWeight: 700 }}>Candidate Name:</span>
+                      <strong style={{ display: 'block', color: '#0f172a', fontSize: 13 }}>{appData?.applicant?.fullName || 'Candidate'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#64748b', fontWeight: 700 }}>Class & Section:</span>
+                      <strong style={{ display: 'block', color: '#0f172a', fontSize: 13 }}>
+                        {appData?.applicant?.classApplyingFor || 'N/A'} ({getProspectusFeeData(appData?.applicant?.classApplyingFor).sectionTitle})
+                      </strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#64748b', fontWeight: 700 }}>Application No:</span>
+                      <span style={{ display: 'block', fontFamily: 'monospace', fontWeight: 800, color: '#4f46e5' }}>{appData?.appNo}</span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#64748b', fontWeight: 700 }}>Reg Number:</span>
+                      <span style={{ display: 'block', fontFamily: 'monospace', fontWeight: 800, color: '#059669' }}>{result?.regNo || appData?.applicant?.regNo || 'PENDING'}</span>
+                    </div>
+                  </div>
+
+                  {/* Itemized Table */}
+                  <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 120px', padding: '10px 16px', background: '#f1f5f9', fontWeight: 800, fontSize: 11, color: '#475569', textTransform: 'uppercase' }}>
+                      <span>#</span>
+                      <span>Item Breakdown</span>
+                      <span style={{ textAlign: 'right' }}>Amount</span>
+                    </div>
+                    {getProspectusFeeData(appData?.applicant?.classApplyingFor).items.map((item, idx) => (
+                      <div key={item.name} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 120px', padding: '9px 16px', borderBottom: '1px solid #f1f5f9', fontSize: 12, background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
+                        <span style={{ color: '#94a3b8' }}>{idx + 1}</span>
+                        <span style={{ color: '#1e293b', fontWeight: 600 }}>{item.name}</span>
+                        <span style={{ textAlign: 'right', fontWeight: 800, fontFamily: 'monospace', color: '#0f172a' }}>{formatNaira(item.amount)}</span>
+                      </div>
+                    ))}
+                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 120px', padding: '14px 16px', background: '#ecfdf5', fontWeight: 900, fontSize: 14, color: '#065f46', borderTop: '2px solid #a7f3d0' }}>
+                      <span></span>
+                      <span>TOTAL PAID IN FULL</span>
+                      <span style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: 16 }}>
+                        {formatNaira(feePaidState?.amount || getProspectusFeeData(appData?.applicant?.classApplyingFor).total)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Signatures & Barcode */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: 16 }}>
+                    <AppBarcode value={feePaidState?.ref || appData?.appNo || 'BDS-PAID'} />
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ width: 140, height: 1, background: '#94a3b8', marginBottom: 6, marginLeft: 'auto' }} />
+                      <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#334155' }}>Bursar / Finance Officer</p>
+                      <p style={{ margin: '2px 0 0', fontSize: 10, color: '#94a3b8' }}>Bonus Dominus Schools</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </section>

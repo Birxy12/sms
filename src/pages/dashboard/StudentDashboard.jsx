@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { getStudentWallet, fundStudentWallet, debitStudentWallet } from '../../utils/wallet';
 import { MARKS_KEYS, expandMarks } from '../../utils/firestoreSchema';
+import { getProspectusFeeData, formatNaira } from '../../utils/prospectusFees';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import PinSetupModal from '../../components/student/PinSetupModal';
@@ -246,6 +247,10 @@ const StudentDashboard = () => {
           }
         } catch (fErr) {
           console.warn('Could not fetch settings/fees:', fErr);
+        }
+
+        if (!classFallbackFee && className && className !== 'N/A') {
+          classFallbackFee = getProspectusFeeData(className).total || 0;
         }
 
         if (currentStudent?.id) {

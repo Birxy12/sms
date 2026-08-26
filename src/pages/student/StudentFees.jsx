@@ -4,9 +4,10 @@ import { db } from '../../lib/firebase';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import FBNCheckout from 'firstchekout';
 import { useTheme } from '../../context/ThemeContext';
-import { DollarSign, CreditCard, Clock, AlertTriangle, CheckCircle, ArrowRight, Printer, X, Wallet } from 'lucide-react';
+import { DollarSign, CreditCard, Clock, AlertTriangle, CheckCircle, ArrowRight, Printer, X, Wallet, ListChecks, Receipt } from 'lucide-react';
 import ReceiptScanner from '../../components/ReceiptScanner';
 import { getStudentWallet, debitStudentWallet } from '../../utils/wallet';
+import { getProspectusFeeData, formatNaira } from '../../utils/prospectusFees';
 
 const StudentFees = () => {
   const { currentStudent } = useStudentAuth();
@@ -35,6 +36,11 @@ const StudentFees = () => {
             classFallback = parseFloat(fData[currentStudent.className]) || parseFloat(fData['default']) || 0;
           }
         } catch (fErr) {}
+
+        // If no custom admin override in settings/fees, fallback to official Prospectus 2025/2026 fee
+        if (!classFallback && currentStudent.className) {
+          classFallback = getProspectusFeeData(currentStudent.className).total || 0;
+        }
 
         let expected = 0;
         let paid = 0;
@@ -502,6 +508,38 @@ const StudentFees = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Prospectus 2025/2026 Itemized Breakdown */}
+          {currentStudent?.className && (() => {
+            const pData = getProspectusFeeData(currentStudent.className);
+            return (
+              <div className="border-t border-slate-100 dark:border-slate-700/80 p-6 bg-slate-50/50 dark:bg-slate-900/30">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <ListChecks size={18} className="text-indigo-600 dark:text-indigo-400" />
+                    <h4 className="font-black text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                      Official Prospectus Breakdown ({pData.sectionTitle})
+                    </h4>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 rounded-full border border-indigo-100 dark:border-indigo-800">
+                    Class: {currentStudent.className}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {pData.items.map((it) => (
+                    <div key={it.name} className="flex justify-between items-center p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                      <span className="font-semibold text-slate-600 dark:text-slate-400">{it.name}</span>
+                      <strong className="font-mono font-bold text-slate-900 dark:text-slate-100">{formatNaira(it.amount)}</strong>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center px-1">
+                  <span className="text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Total Prospectus Fee:</span>
+                  <strong className="text-sm font-black font-mono text-emerald-600 dark:text-emerald-400">{formatNaira(pData.total)}</strong>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Payment Instructions */}

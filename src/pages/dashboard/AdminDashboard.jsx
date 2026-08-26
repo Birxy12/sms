@@ -25,6 +25,7 @@ import {
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useGlobalClasses, normalizeClassName } from '../../utils/classUtils';
 import { useOnlineUsers } from '../../utils/presence';
+import { getProspectusFeeData, formatNaira, PROSPECTUS_FEES_SCHEDULE } from '../../utils/prospectusFees';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 // Isolated clock component — ticks every second without re-rendering AdminDashboard
 const LiveClock = memo(() => {
@@ -671,7 +672,7 @@ const AdminDashboard = () => {
             }
             classMap[cls].studentCount++;
 
-            const fallbackFee = feeSettings[cls] || feeSettings['default'] || 0;
+            const fallbackFee = feeSettings[cls] || feeSettings['default'] || getProspectusFeeData(cls).total || 0;
             const expected = parseFloat(merged.expectedFee) || parseFloat(fallbackFee) || 0;
             const paid = parseFloat(merged.paidFee) || parseFloat(merged.paidAmount) || 0;
             const balance = Math.max(0, expected - paid);
