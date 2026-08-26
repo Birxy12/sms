@@ -16,7 +16,12 @@ import StaffDashboard from './StaffDashboard';
 import StudentDashboard from './StudentDashboard';
 import NotificationCenter from './NotificationCenter';
 import { expandStudent } from '../../utils/firestoreSchema';
-import { Users, User, UserPlus, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, CheckCircle2, XCircle, Loader2, Search, RefreshCw, BarChart3, FileText, BookMarked, Globe, Mail, Inbox, CreditCard, FileSpreadsheet } from 'lucide-react';
+import { 
+  Users, User, UserPlus, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, 
+  BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, 
+  CheckCircle, CheckCircle2, XCircle, Loader2, Search, RefreshCw, BarChart3, FileText, BookMarked, Globe, 
+  Mail, Inbox, CreditCard, FileSpreadsheet, FolderOpen, UserCheck, School, ClipboardList, Library, Send, Award
+} from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useGlobalClasses, normalizeClassName } from '../../utils/classUtils';
 import { useOnlineUsers } from '../../utils/presence';
@@ -1552,98 +1557,125 @@ const AdminDashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <button 
               onClick={() => setShowBulkEnrollModal(true)}
-              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left bg-gradient-to-br from-indigo-50/60 via-purple-50/40 to-white border-indigo-200 shadow-md shadow-indigo-100/50 hover:-translate-y-1"
+              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left bg-gradient-to-br from-indigo-50/70 via-purple-50/50 to-white border-indigo-200 shadow-md shadow-indigo-100/50 hover:-translate-y-1 group"
             >
-              <div className="p-3 bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-xl shadow-md shadow-indigo-200"><UserPlus size={24} /></div>
+              <div className="p-3 bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-xl shadow-md shadow-indigo-200 group-hover:scale-105 transition-transform"><UserPlus size={24} /></div>
               <div>
                 <h4 className="font-black text-slate-800 flex items-center gap-2">
                   Bulk Enroll to Class
-                  <span className="text-[9px] font-black uppercase tracking-wider bg-indigo-600 text-white px-2 py-0.5 rounded-full">New</span>
+                  <span className="text-[9px] font-black uppercase tracking-wider bg-indigo-600 text-white px-2 py-0.5 rounded-full shadow-sm">New</span>
                 </h4>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">CSV & Excel Roster Import</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mt-0.5">
+                  <FileSpreadsheet size={12} className="text-indigo-500 shrink-0" />
+                  <span>CSV & Excel Roster Import</span>
+                </p>
               </div>
             </button>
             <button 
               onClick={() => navigate('/admin/students')}
-              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left group hover:-translate-y-1 shadow-sm"
             >
-              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><Users size={24} /></div>
+              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm"><Users size={24} /></div>
               <div>
                 <h4 className="font-black text-slate-800">Student Management</h4>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Enrollment & Records</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mt-0.5">
+                  <UserCheck size={12} className="text-indigo-500 shrink-0" />
+                  <span>Enrollment & Records</span>
+                </p>
               </div>
             </button>
             <button 
               onClick={() => navigate('/staff')}
-              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+              className="card-premium flex items-center gap-4 hover:border-rose-500 transition-all text-left group hover:-translate-y-1 shadow-sm"
             >
-              <div className="p-3 bg-rose-50 text-rose-600 rounded-xl"><Briefcase size={24} /></div>
+              <div className="p-3 bg-rose-50 text-rose-600 rounded-xl group-hover:bg-rose-600 group-hover:text-white transition-all shadow-sm"><Briefcase size={24} /></div>
               <div>
                 <h4 className="font-black text-slate-800">Staff Management</h4>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Teachers & Roles</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mt-0.5">
+                  <GraduationCap size={12} className="text-rose-500 shrink-0" />
+                  <span>Teachers & Roles</span>
+                </p>
               </div>
             </button>
             <button 
               onClick={() => navigate('/admin/classes')}
-              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+              className="card-premium flex items-center gap-4 hover:border-emerald-500 transition-all text-left group hover:-translate-y-1 shadow-sm"
             >
-              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><Layers size={24} /></div>
+              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm"><Layers size={24} /></div>
               <div>
                 <h4 className="font-black text-slate-800">Class Management</h4>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Assign Class Teachers</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mt-0.5">
+                  <School size={12} className="text-emerald-500 shrink-0" />
+                  <span>Assign Class Teachers</span>
+                </p>
               </div>
             </button>
             <button 
               onClick={() => { setActiveTab('Academics'); setAcademicSubTab('assignments'); }}
-              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left group hover:-translate-y-1 shadow-sm"
             >
-              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><FileText size={24} /></div>
+              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm"><FileText size={24} /></div>
               <div>
                 <h4 className="font-black text-slate-800">Publish Assignments</h4>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tasks & Worksheets</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mt-0.5">
+                  <ClipboardList size={12} className="text-indigo-500 shrink-0" />
+                  <span>Tasks & Worksheets</span>
+                </p>
               </div>
             </button>
             <button 
               onClick={() => { setActiveTab('Academics'); setAcademicSubTab('materials'); }}
-              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+              className="card-premium flex items-center gap-4 hover:border-amber-500 transition-all text-left group hover:-translate-y-1 shadow-sm"
             >
-              <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><BookOpen size={24} /></div>
+              <div className="p-3 bg-amber-50 text-amber-600 rounded-xl group-hover:bg-amber-600 group-hover:text-white transition-all shadow-sm"><BookOpen size={24} /></div>
               <div>
                 <h4 className="font-black text-slate-800">Study Materials & Notes</h4>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lecture Notes & Guides</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mt-0.5">
+                  <FolderOpen size={12} className="text-amber-500 shrink-0" />
+                  <span>Lecture Notes & Guides</span>
+                </p>
               </div>
             </button>
             <button 
               onClick={() => navigate('/courses')}
-              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+              className="card-premium flex items-center gap-4 hover:border-teal-500 transition-all text-left group hover:-translate-y-1 shadow-sm"
             >
-              <div className="p-3 bg-teal-50 text-teal-600 rounded-xl"><BookMarked size={24} /></div>
+              <div className="p-3 bg-teal-50 text-teal-600 rounded-xl group-hover:bg-teal-600 group-hover:text-white transition-all shadow-sm"><BookMarked size={24} /></div>
               <div>
                 <h4 className="font-black text-slate-800">Course & Subject Directory</h4>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Curriculum & Teachers</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mt-0.5">
+                  <Library size={12} className="text-teal-500 shrink-0" />
+                  <span>Curriculum & Teachers</span>
+                </p>
               </div>
             </button>
             <button 
               onClick={() => setActiveTab('Inbox')}
-              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
+              className="card-premium flex items-center gap-4 hover:border-purple-500 transition-all text-left group hover:-translate-y-1 shadow-sm"
             >
-              <div className="p-3 bg-purple-50 text-purple-600 rounded-xl"><Mail size={24} /></div>
+              <div className="p-3 bg-purple-50 text-purple-600 rounded-xl group-hover:bg-purple-600 group-hover:text-white transition-all shadow-sm"><Mail size={24} /></div>
               <div>
                 <h4 className="font-black text-slate-800">Admin Inbox & Broadcasts</h4>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Messages & OTP PINs</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mt-0.5">
+                  <Send size={12} className="text-purple-500 shrink-0" />
+                  <span>Messages & OTP PINs</span>
+                </p>
               </div>
             </button>
             <button 
               onClick={() => setShowClubsModal(true)}
-              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left group"
+              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left group hover:-translate-y-1 shadow-sm"
             >
-              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all"><Users size={24} /></div>
+              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm"><Users size={24} /></div>
               <div>
                 <div className="flex items-center gap-2">
                   <h4 className="font-black text-slate-800">Clubs & Houses</h4>
                   <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 rounded-full">Configure</span>
                 </div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">School Societies & Wings</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mt-0.5">
+                  <Award size={12} className="text-indigo-500 shrink-0" />
+                  <span>School Societies & Wings</span>
+                </p>
               </div>
             </button>
           </div>
