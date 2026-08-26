@@ -169,17 +169,36 @@ export const expandMarks = (compressed) => {
   return data;
 };
 
-export const compressStudent = (data) => ({
-  [STUDENT_KEYS.regNo]: data.regNo,
-  [STUDENT_KEYS.name]: data.name,
-  [STUDENT_KEYS.gender]: data.gender,
-  [STUDENT_KEYS.className]: data.className,
-  [STUDENT_KEYS.dob]: data.dob,
-  [STUDENT_KEYS.club]: data.club,
-  [STUDENT_KEYS.house]: data.house,
-  [STUDENT_KEYS.updatedAt]: data.updatedAt || new Date().toISOString(),
-  [STUDENT_KEYS.photo]: data.photo
-});
+export const compressStudent = (data = {}) => {
+  const result = {
+    [STUDENT_KEYS.regNo]: data.regNo || data.r || "",
+    [STUDENT_KEYS.name]: data.name || data.n || "",
+    [STUDENT_KEYS.gender]: normalizeGender(data.gender || data.g),
+    [STUDENT_KEYS.className]: data.className || data.c || "",
+    [STUDENT_KEYS.dob]: data.dob || data.d || "",
+    [STUDENT_KEYS.club]: data.club || data.cl || "",
+    [STUDENT_KEYS.house]: data.house || data.h || "",
+    [STUDENT_KEYS.updatedAt]: data.updatedAt || data.u || new Date().toISOString(),
+    [STUDENT_KEYS.photo]: data.photo || data.p || ""
+  };
+
+  if (data.phone !== undefined && data.phone !== null) result.phone = String(data.phone);
+  if (data.email !== undefined && data.email !== null) result.email = String(data.email);
+  if (data.pin !== undefined && data.pin !== null) result.pin = data.pin;
+  if (data.securityQuestion !== undefined && data.securityQuestion !== null) result.securityQuestion = String(data.securityQuestion);
+  if (data.securityAnswer !== undefined && data.securityAnswer !== null) result.securityAnswer = String(data.securityAnswer);
+  if (data.enrolledVia !== undefined && data.enrolledVia !== null) result.enrolledVia = String(data.enrolledVia);
+  if (data.registeredAt !== undefined && data.registeredAt !== null) result.registeredAt = String(data.registeredAt);
+
+  // Strip any accidental undefined
+  Object.keys(result).forEach(key => {
+    if (result[key] === undefined) {
+      delete result[key];
+    }
+  });
+
+  return result;
+};
 
 export const normalizeGender = (g) => {
   if (!g) return 'Male';
