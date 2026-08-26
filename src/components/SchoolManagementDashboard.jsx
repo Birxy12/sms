@@ -453,7 +453,7 @@ export const StudentAnalysisView = ({ data }) => (
 
     {/* Multi-Term Progression & Current Term Subject Mastery */}
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <SectionCard title="Multi-Term Academic Progression (Previous to Current Term)">
+      <SectionCard title="Academic Progression (2nd Term & 3rd Term)">
         <div style={{ width: '100%', height: 260 }}>
           {data.termProgression && data.termProgression.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
@@ -1007,17 +1007,12 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
       return (studentRegNo && reg === studentRegNo) || (studentName && name === studentName);
     });
 
-    const termWeight = (t = '') => {
-      const norm = t.toLowerCase();
-      if (norm.includes('first') || norm.includes('1st')) return 1;
-      if (norm.includes('second') || norm.includes('2nd')) return 2;
-      if (norm.includes('third') || norm.includes('3rd')) return 3;
-      return 4;
-    };
+    let secondTermAvg = 0, thirdTermAvg = 0;
+    let hasSecondTerm = false, hasThirdTerm = false;
+    let secondTermMarksObj = null, thirdTermMarksObj = null;
 
-    const termProgression = studentAllTermsDocs.map(doc => {
-      const session = doc.s || doc.session || currentSession || '2025/2026';
-      const term = doc.t || doc.term || 'Term';
+    studentAllTermsDocs.forEach(doc => {
+      const norm = (doc.t || doc.term || '').toLowerCase();
       const termMarks = doc.m || doc.marks || {};
       
       let totalSum = 0;
@@ -1038,88 +1033,62 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
         avg = subjectCount > 0 ? totalSum / subjectCount : 0;
       }
 
-      return {
-        id: doc.id,
-        session,
-        term,
-        termLabel: `${term} (${session})`,
-        average: parseFloat(avg.toFixed(1)),
-        subjectsCount: subjectCount || Object.keys(termMarks).filter(k => k !== '_meta').length,
-        marksObj: termMarks,
-        sessionNum: parseInt(session.split('/')[0]) || 2025,
-        termNum: termWeight(term)
-      };
+      if (norm.includes('second') || norm.includes('2nd')) {
+        secondTermAvg = parseFloat(avg.toFixed(1));
+        hasSecondTerm = true;
+        secondTermMarksObj = termMarks;
+      } else if (norm.includes('third') || norm.includes('3rd')) {
+        thirdTermAvg = parseFloat(avg.toFixed(1));
+        hasThirdTerm = true;
+        thirdTermMarksObj = termMarks;
+      }
     });
 
-    // Sort chronologically from earliest to latest
-    termProgression.sort((a, b) => {
-      if (a.sessionNum !== b.sessionNum) return a.sessionNum - b.sessionNum;
-      return a.termNum - b.termNum;
-    });
+    // Build explicit 2-term progression for Second Term and Third Term
+    const termProgression = [
+      {
+        termLabel: '2nd Term',
+        average: secondTermAvg,
+        status: hasSecondTerm ? 'Completed' : 'Pending',
+        subjectsCount: secondTermMarksObj ? Object.keys(secondTermMarksObj).filter(k => k !== '_meta').length : 0
+      },
+      {
+        termLabel: '3rd Term (Current)',
+        average: thirdTermAvg,
+        status: hasThirdTerm ? 'In Progress' : 'Pending',
+        subjectsCount: thirdTermMarksObj ? Object.keys(thirdTermMarksObj).filter(k => k !== '_meta').length : 0
+      }
+    ];
 
-    // Most recent / current term record
-    const latestTermRecord = termProgression.length > 0 ? termProgression[termProgression.length - 1] : null;
-    const previousTermRecord = termProgression.length > 1 ? termProgression[termProgression.length - 2] : null;
+    // Current/Latest Term marks (use 3rd term if available, otherwise 2nd term)
+    const latestTermMarksObj = thirdTermMarksObj || secondTermMarksObj || {};
 
-    // Individual subject scores from latest/current term
+    // Individual subject scores from latest term
     let studentScores = [];
     let assessmentBreakdown = [];
     let studentSum = 0, studentCount = 0;
 
-    if (latestTermRecord && latestTermRecord.marksObj) {
-      Object.entries(latestTermRecord.marksObj).forEach(([subj, sObj]) => {
-        if (subj === '_meta' || !sObj) return;
-        const total = parseFloat(sObj.total) || parseFloat(sObj.percent) || parseFloat(sObj.exam) || 0;
-        const ca1 = parseFloat(sObj.ca1) || parseFloat(sObj.test) || 0;
-        const ca2 = parseFloat(sObj.ca2) || parseFloat(sObj.project) || 0;
-        const exam = parseFloat(sObj.exam) || 0;
-        if (total > 0 || ca1 > 0 || exam > 0) {
-          const cleanSubj = subj.length > 14 ? subj.substring(0, 13) + '…' : subj;
-          studentScores.push({ subject: cleanSubj, score: total });
-          assessmentBreakdown.push({ subject: cleanSubj, ca: ca1 + ca2, exam: exam || Math.max(0, total - (ca1 + ca2)), total });
-          studentSum += total;
-          studentCount++;
-        }
-      });
-    }
-
-    // Specific session evaluation: If records span 2nd Term and 3rd Term (database started 2nd term and now in 3rd term)
-    // Formula: (Second Term Avg + Third Term Avg) / 2
-    let secondTermAvg = 0, thirdTermAvg = 0;
-    let hasSecondTerm = false, hasThirdTerm = false;
-    let otherTermsSum = 0, otherTermsCount = 0;
-
-    termProgression.forEach(t => {
-      const norm = (t.term || '').toLowerCase();
-      if (norm.includes('second') || norm.includes('2nd')) {
-        secondTermAvg = t.average;
-        hasSecondTerm = true;
-      } else if (norm.includes('third') || norm.includes('3rd')) {
-        thirdTermAvg = t.average;
-        hasThirdTerm = true;
-      } else if (t.average > 0) {
-        otherTermsSum += t.average;
-        otherTermsCount++;
+    Object.entries(latestTermMarksObj).forEach(([subj, sObj]) => {
+      if (subj === '_meta' || !sObj) return;
+      const total = parseFloat(sObj.total) || parseFloat(sObj.percent) || parseFloat(sObj.exam) || 0;
+      const ca1 = parseFloat(sObj.ca1) || parseFloat(sObj.test) || 0;
+      const ca2 = parseFloat(sObj.ca2) || parseFloat(sObj.project) || 0;
+      const exam = parseFloat(sObj.exam) || 0;
+      if (total > 0 || ca1 > 0 || exam > 0) {
+        const cleanSubj = subj.length > 14 ? subj.substring(0, 13) + '…' : subj;
+        studentScores.push({ subject: cleanSubj, score: total });
+        assessmentBreakdown.push({ subject: cleanSubj, ca: ca1 + ca2, exam: exam || Math.max(0, total - (ca1 + ca2)), total });
+        studentSum += total;
+        studentCount++;
       }
     });
 
-    const currentAvg = latestTermRecord ? latestTermRecord.average : (studentCount > 0 ? (studentSum / studentCount).toFixed(1) : '0.0');
-    const prevAvg = previousTermRecord ? previousTermRecord.average : null;
-    
-    let overallAcademicAverage = '0.0';
-    if (hasSecondTerm || hasThirdTerm) {
-      // (Second Term + Third Term) / 2
-      const sum2ndAnd3rd = secondTermAvg + thirdTermAvg;
-      overallAcademicAverage = (sum2ndAnd3rd / 2).toFixed(1);
-    } else if (otherTermsCount > 0) {
-      overallAcademicAverage = (otherTermsSum / otherTermsCount).toFixed(1);
-    } else if (latestTermRecord) {
-      overallAcademicAverage = latestTermRecord.average.toFixed(1);
-    }
-
-    const avgDeltaText = (hasSecondTerm && hasThirdTerm && prevAvg !== null)
-      ? (Number(currentAvg) - Number(prevAvg) >= 0 ? `+${(Number(currentAvg) - Number(prevAvg)).toFixed(1)}% vs Prev Term` : `${(Number(currentAvg) - Number(prevAvg)).toFixed(1)}% vs Prev Term`)
-      : (hasSecondTerm || hasThirdTerm ? '2nd & 3rd Term Averages (÷2)' : (latestTermRecord ? `${latestTermRecord.term}` : 'No Exam Record'));
+    // Formula: (Second Term Avg + Third Term Avg) / 2
+    const overallAcademicAverage = ((secondTermAvg + thirdTermAvg) / 2).toFixed(1);
+    const avgDelta = (hasSecondTerm && hasThirdTerm) ? (thirdTermAvg - secondTermAvg).toFixed(1) : null;
+    const avgDeltaText = avgDelta !== null 
+      ? (Number(avgDelta) >= 0 ? `+${avgDelta}% vs 2nd Term` : `${avgDelta}% vs 2nd Term`)
+      : '(2nd + 3rd Term) ÷ 2';
 
     // Real Attendance
     const studentNormClass = normalizeClassName(currentStudent?.className || '');
@@ -1179,7 +1148,7 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
 
     const student = {
       kpis: [
-        { title: 'Academic Average', value: `${overallAcademicAverage}%`, change: avgDeltaText, isPositive: true, icon: Award, subText: (hasSecondTerm || hasThirdTerm) ? '2nd Term + 3rd Term (÷2)' : (termProgression.length > 1 ? `${termProgression.length} Terms Combined` : `${studentCount} Subjects Graded`) },
+        { title: 'Academic Average', value: `${overallAcademicAverage}%`, change: avgDeltaText, isPositive: true, icon: Award, subText: '2nd Term + 3rd Term (÷2)' },
         { title: 'Attendance Record', value: `${attendanceRate}%`, change: totalDaysRecorded > 0 ? 'Recorded' : 'Good Standing', isPositive: parseFloat(attendanceRate) >= 75, icon: UserCheck, subText: attendanceSubText },
         { title: 'Coursework Tasks', value: `${studentClassAssignments.length} Due`, change: 'Active', isPositive: studentClassAssignments.length <= 2, icon: ClipboardList, subText: 'Assignments' },
         { title: 'School Fee Status', value: feeStatusText, change: feeChangeText, isPositive: isFeePositive, icon: CreditCard, subText: feeSubText },
