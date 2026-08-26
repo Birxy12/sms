@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { db } from '../../lib/firebase';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { uploadFileToSupabase } from '../../lib/supabase';
@@ -68,7 +69,21 @@ const ImageCropperContainer = React.memo(({ image, aspectRatio, filterStyle, cro
 });
 
 const ContentCMS = () => {
-  const [activeTab, setActiveTab] = useState('about');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'about';
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
+
+  const handleTabSelect = (tabId) => {
+    setActiveTab(tabId);
+    setSearchParams({ tab: tabId });
+  };
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
@@ -144,18 +159,32 @@ const ContentCMS = () => {
     if (activeTab === 'testimonies') fetchTestimonies();
     if (activeTab === 'dates') fetchSchoolDates();
   }, [activeTab]);
+
   const fetchGlobalSettings = async () => {
     try {
       const docSnap = await getDoc(doc(db, 'settings', 'public_content'));
       if (docSnap.exists()) {
         const data = docSnap.data();
-         if (data.aboutHtml) setAboutHtml(data.aboutHtml);
-         if (data.aboutImage) setAboutImage(data.aboutImage);
-         if (data.contactDetails) setContactData(data.contactDetails);
-         if (data.landingPage) setLandingData(data.landingPage);
-         if (data.managementTeam) setManagementTeam(data.managementTeam);
-         if (data.principalData) setPrincipalData(data.principalData);
-       }
+        if (data.aboutHtml) setAboutHtml(data.aboutHtml);
+        if (data.aboutImage) setAboutImage(data.aboutImage);
+        if (data.contactDetails) setContactData(data.contactDetails);
+        if (data.landingPage) {
+          setLandingData(prev => ({
+            ...prev,
+            ...data.landingPage,
+            stats: Array.isArray(data.landingPage.stats) && data.landingPage.stats.length > 0
+              ? data.landingPage.stats
+              : (prev.stats || [
+                  { label: 'Students', value: 500, suffix: '+' },
+                  { label: 'Success Rate', value: 98, suffix: '%' },
+                  { label: 'Awards', value: 150, suffix: '+' }
+                ]),
+            heroImages: Array.isArray(data.landingPage.heroImages) ? data.landingPage.heroImages : (prev.heroImages || [])
+          }));
+        }
+        if (data.managementTeam) setManagementTeam(Array.isArray(data.managementTeam) ? data.managementTeam : []);
+        if (data.principalData) setPrincipalData(prev => ({ ...prev, ...data.principalData }));
+      }
     } catch (e) {
       console.error(e);
     }
@@ -613,7 +642,7 @@ const ContentCMS = () => {
         {cmsTabs.map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleTabSelect(tab.id)}
             className={`modern-tab-item ${activeTab === tab.id ? 'active' : ''}`}
           >
             <tab.icon size={18} />
@@ -661,14 +690,14 @@ const ContentCMS = () => {
                   <ImageIcon size={18} className="text-indigo-600" /> Hero Slideshow Images
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(landingData.heroImages || []).map((img, idx) => (
+                  {(landingData?.heroImages || []).map((img, idx) => (
                     <div key={idx} className="relative flex flex-col gap-2 p-2 border border-slate-100 rounded-xl bg-slate-50/50">
                       {renderFileUploader({
                         label: `Slide ${idx + 1}`,
                         currentUrl: typeof img === 'string' ? img : img.url,
                         folder: "landing",
                         onUpload: (url) => {
-                          const newImgs = [...landingData.heroImages];
+                          const newImgs = [...(landingData?.heroImages || [])];
                           newImgs[idx] = { url, caption: typeof img === 'string' ? '' : (img.caption || '') };
                           setLandingData({...landingData, heroImages: newImgs});
                         }
@@ -678,7 +707,7 @@ const ContentCMS = () => {
                         placeholder="Image Caption..."
                         value={typeof img === 'string' ? '' : (img.caption || '')}
                         onChange={(e) => {
-                          const newImgs = [...landingData.heroImages];
+                          const newImgs = [...(landingData?.heroImages || [])];
                           if (typeof newImgs[idx] === 'string') {
                             newImgs[idx] = { url: newImgs[idx], caption: e.target.value };
                           } else {
@@ -690,7 +719,7 @@ const ContentCMS = () => {
                       />
                       <button 
                         onClick={() => {
-                          const newImgs = landingData.heroImages.filter((_, i) => i !== idx);
+                          const newImgs = (landingData?.heroImages || []).filter((_, i) => i !== idx);
                           setLandingData({...landingData, heroImages: newImgs});
                         }}
                         className="absolute top-2 right-2 p-2 text-rose-500 hover:bg-rose-50 rounded-lg"
@@ -700,7 +729,7 @@ const ContentCMS = () => {
                     </div>
                   ))}
                   <button 
-                    onClick={() => setLandingData({...landingData, heroImages: [...(landingData.heroImages || []), { url: '', caption: '' }]})}
+                    onClick={() => setLandingData({...landingData, heroImages: [...(landingData?.heroImages || []), { url: '', caption: '' }]})}
                     className="flex flex-col items-center justify-center gap-2 h-[120px] border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold hover:border-indigo-400 hover:text-indigo-600 transition-all"
                   >
                     <Plus size={24} /> 
@@ -712,26 +741,38 @@ const ContentCMS = () => {
               <div className="pt-6 border-t border-slate-100">
                 <h4 className="font-bold text-slate-800 mb-4">School Statistics</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {landingData.stats.map((s, idx) => (
+                  {(landingData?.stats || [
+                    { label: 'Students', value: 500, suffix: '+' },
+                    { label: 'Success Rate', value: 98, suffix: '%' },
+                    { label: 'Awards', value: 150, suffix: '+' }
+                  ]).map((s, idx) => (
                     <div key={idx} className="p-4 bg-slate-50 rounded-2xl border-2 border-slate-100">
                       <p className="text-[10px] font-black uppercase text-slate-400 mb-3">{s.label}</p>
                       <div className="flex gap-2">
                         <input 
                           type="number" 
-                          value={s.value} 
+                          value={s.value ?? 0} 
                           onChange={e => {
-                            const newStats = [...landingData.stats];
-                            newStats[idx].value = parseInt(e.target.value);
+                            const baseStats = Array.isArray(landingData?.stats) ? landingData.stats : [
+                              { label: 'Students', value: 500, suffix: '+' },
+                              { label: 'Success Rate', value: 98, suffix: '%' },
+                              { label: 'Awards', value: 150, suffix: '+' }
+                            ];
+                            const newStats = baseStats.map((item, i) => i === idx ? { ...item, value: parseInt(e.target.value) || 0 } : item);
                             setLandingData({...landingData, stats: newStats});
                           }} 
                           className="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none focus:border-indigo-500 font-bold" 
                         />
                         <input 
                           type="text" 
-                          value={s.suffix} 
+                          value={s.suffix || ''} 
                           onChange={e => {
-                            const newStats = [...landingData.stats];
-                            newStats[idx].suffix = e.target.value;
+                            const baseStats = Array.isArray(landingData?.stats) ? landingData.stats : [
+                              { label: 'Students', value: 500, suffix: '+' },
+                              { label: 'Success Rate', value: 98, suffix: '%' },
+                              { label: 'Awards', value: 150, suffix: '+' }
+                            ];
+                            const newStats = baseStats.map((item, i) => i === idx ? { ...item, suffix: e.target.value } : item);
                             setLandingData({...landingData, stats: newStats});
                           }} 
                           className="w-16 px-3 py-2 rounded-lg border border-slate-200 outline-none focus:border-indigo-500 font-bold text-center" 
