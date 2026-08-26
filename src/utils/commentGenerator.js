@@ -44,33 +44,35 @@ export const DEFAULT_COMMENT_TEMPLATES = {
  * @returns {object} { teacherComment, principalComment }
  */
 export const generateAutoComments = (percentage = 0, customTemplates = {}) => {
-  const templates = { ...DEFAULT_COMMENT_TEMPLATES, ...customTemplates };
+  const templates = (customTemplates && Object.keys(customTemplates).length > 0)
+    ? customTemplates
+    : DEFAULT_COMMENT_TEMPLATES;
+  
   const score = Math.max(0, Math.min(100, Number(percentage) || 0));
 
-  if (score >= (templates.distinction?.minScore ?? 75)) {
-    return {
-      teacherComment: templates.distinction?.teacher || DEFAULT_COMMENT_TEMPLATES.distinction.teacher,
-      principalComment: templates.distinction?.principal || DEFAULT_COMMENT_TEMPLATES.distinction.principal
-    };
-  } else if (score >= (templates.veryGood?.minScore ?? 65)) {
-    return {
-      teacherComment: templates.veryGood?.teacher || DEFAULT_COMMENT_TEMPLATES.veryGood.teacher,
-      principalComment: templates.veryGood?.principal || DEFAULT_COMMENT_TEMPLATES.veryGood.principal
-    };
-  } else if (score >= (templates.good?.minScore ?? 55)) {
-    return {
-      teacherComment: templates.good?.teacher || DEFAULT_COMMENT_TEMPLATES.good.teacher,
-      principalComment: templates.good?.principal || DEFAULT_COMMENT_TEMPLATES.good.principal
-    };
-  } else if (score >= (templates.pass?.minScore ?? 45)) {
-    return {
-      teacherComment: templates.pass?.teacher || DEFAULT_COMMENT_TEMPLATES.pass.teacher,
-      principalComment: templates.pass?.principal || DEFAULT_COMMENT_TEMPLATES.pass.principal
-    };
-  } else {
-    return {
-      teacherComment: templates.fail?.teacher || DEFAULT_COMMENT_TEMPLATES.fail.teacher,
-      principalComment: templates.fail?.principal || DEFAULT_COMMENT_TEMPLATES.fail.principal
-    };
+  // Convert template map to array and sort by minScore descending
+  const tiers = Object.entries(templates)
+    .map(([key, val]) => ({
+      key,
+      minScore: Number(val?.minScore ?? 0),
+      label: val?.label || key,
+      teacher: val?.teacher || '',
+      principal: val?.principal || ''
+    }))
+    .sort((a, b) => b.minScore - a.minScore);
+
+  for (const tier of tiers) {
+    if (score >= tier.minScore) {
+      return {
+        teacherComment: tier.teacher || 'Satisfactory academic progress and good conduct.',
+        principalComment: tier.principal || 'Good academic effort. Keep improving.'
+      };
+    }
   }
+
+  // Fallback if no tier matched
+  return {
+    teacherComment: 'Unsatisfactory performance. Urgent academic intervention and remedial study required.',
+    principalComment: 'Below required academic standard. Serious commitment to studies needed.'
+  };
 };
