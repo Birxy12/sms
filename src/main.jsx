@@ -24,9 +24,13 @@ if (typeof window !== 'undefined') {
       msg.includes('ve":-1') ||
       msg.includes('ERR_INTERNET_DISCONNECTED') ||
       msg.includes('net::ERR_INTERNET_DISCONNECTED') ||
+      msg.includes('ERR_NETWORK_CHANGED') ||
+      msg.includes('ERR_CONNECTION_RESET') ||
       msg.includes('ERR_CONNECTION_CLOSED') ||
       msg.includes('QUIC_NETWORK_IDLE_TIMEOUT') ||
       msg.includes('ERR_QUIC_PROTOCOL_ERROR') ||
+      msg.includes('fonts.googleapis.com') ||
+      msg.includes('fonts.gstatic.com') ||
       msg.includes('Firestore/Write/channel') ||
       msg.includes('Firestore/Listen/channel') ||
       msg.includes('network-request-failed')
@@ -46,9 +50,13 @@ if (typeof window !== 'undefined') {
       msg.includes('ve":-1') ||
       msg.includes('ERR_INTERNET_DISCONNECTED') ||
       msg.includes('net::ERR_INTERNET_DISCONNECTED') ||
+      msg.includes('ERR_NETWORK_CHANGED') ||
+      msg.includes('ERR_CONNECTION_RESET') ||
       msg.includes('ERR_CONNECTION_CLOSED') ||
       msg.includes('QUIC_NETWORK_IDLE_TIMEOUT') ||
       msg.includes('ERR_QUIC_PROTOCOL_ERROR') ||
+      msg.includes('fonts.googleapis.com') ||
+      msg.includes('fonts.gstatic.com') ||
       msg.includes('Firestore/Write/channel') ||
       msg.includes('Firestore/Listen/channel') ||
       msg.includes('network-request-failed')
@@ -69,9 +77,13 @@ if (typeof window !== 'undefined') {
       msg.includes('BloomFilter') ||
       msg.includes('ve":-1') ||
       msg.includes('ERR_INTERNET_DISCONNECTED') ||
+      msg.includes('ERR_NETWORK_CHANGED') ||
+      msg.includes('ERR_CONNECTION_RESET') ||
       msg.includes('ERR_CONNECTION_CLOSED') ||
       msg.includes('QUIC_NETWORK_IDLE_TIMEOUT') ||
       msg.includes('ERR_QUIC_PROTOCOL_ERROR') ||
+      msg.includes('fonts.googleapis.com') ||
+      msg.includes('fonts.gstatic.com') ||
       msg.includes('Firestore/Write/channel') ||
       msg.includes('Firestore/Listen/channel')
     ) {
