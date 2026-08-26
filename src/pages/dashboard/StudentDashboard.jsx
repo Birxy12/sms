@@ -189,17 +189,38 @@ const StudentDashboard = () => {
         let expected = 0;
         let paid = 0;
         let lastDate = 'N/A';
+        let isVerified = false;
+
+        let classFallbackFee = 0;
+        try {
+          const feeSnap = await getDoc(doc(db, 'settings', 'fees'));
+          if (feeSnap.exists()) {
+            const fData = feeSnap.data();
+            classFallbackFee = parseFloat(fData[className]) || parseFloat(fData['default']) || 0;
+          }
+        } catch (fErr) {
+          console.warn('Could not fetch settings/fees:', fErr);
+        }
+
         if (currentStudent?.id) {
           const studentRef = doc(db, 'students', currentStudent.id);
           const studentSnap = await getDoc(studentRef);
           if (studentSnap.exists()) {
             const sData = studentSnap.data();
-            expected = parseFloat(sData.expectedFee) || 0;
+            expected = parseFloat(sData.expectedFee) || classFallbackFee || 0;
             paid = parseFloat(sData.paidFee) || parseFloat(sData.paidAmount) || 0;
             lastDate = sData.lastPaymentDate || 'N/A';
+            isVerified = sData.feeVerified === true || sData.isVerified === true;
           }
+        } else {
+          expected = parseFloat(currentStudent?.expectedFee) || classFallbackFee || 0;
+          paid = parseFloat(currentStudent?.paidFee) || parseFloat(currentStudent?.paidAmount) || 0;
+          lastDate = currentStudent?.lastPaymentDate || 'N/A';
+          isVerified = currentStudent?.feeVerified === true || currentStudent?.isVerified === true;
         }
-        setFeeData({ expected, paid, balance: Math.max(0, expected - paid), lastDate });
+
+        const balance = Math.max(0, expected - paid);
+        setFeeData({ expected, paid, balance, lastDate, isVerified });
 
         // 4. Load Student Wallet
         await loadWallet(currentStudent?.id || regNum);
@@ -224,18 +245,18 @@ const StudentDashboard = () => {
     setFundingProcessing(true);
     setFundSuccessMsg('');
     try {
-      // Simulate network request for payment processing
       await new Promise(r => setTimeout(r, 1200));
       const ref = `REF-${Math.floor(100000 + Math.random() * 900000)}`;
       const updated = await fundStudentWallet(currentStudent?.id || regNum, amount, fundMethod, ref);
       setWalletData(updated);
-      setFundSuccessMsg(`Successfully credited ₦${amount.toLocaleString()} via ${fundMethod}!`);
+      setFundSuccessMsg(`Wallet funded successfully with ₦${amount.toLocaleString()}!`);
       setTimeout(() => {
-        setFundSuccessMsg('');
         setShowFundModal(false);
+        setFundSuccessMsg('');
+        setFundAmount('5000');
       }, 1800);
-    } catch (err) {
-      alert(err.message || 'Payment failed');
+    } catch (e) {
+      alert("Failed to fund wallet: " + e.message);
     } finally {
       setFundingProcessing(false);
     }
@@ -273,7 +294,10 @@ const StudentDashboard = () => {
   };
 
   const termsPerSession = 3;
-  const feeIsCleared = feeData.balance <= 0;
+  // Strictly PENDING until payment is made (paid > 0) AND verified or equal/exceeds expected fee
+  const hasPaid = (feeData.paid || 0) > 0;
+  const feeIsCleared = hasPaid && (feeData.isVerified || (feeData.expected > 0 && feeData.paid >= feeData.expected));
+  const feeIsPartial = hasPaid && !feeIsCleared && feeData.balance > 0;
 
   const mainStats = [
     { label: 'GPA Average', value: `${avgScore}%`, icon: Zap, color: '#6366f1', trend: '+2.4%' },
@@ -285,11 +309,11 @@ const StudentDashboard = () => {
       trend: `${totalExamsCount} Total` 
     },
     { 
-      label: feeIsCleared ? 'Fees Cleared' : 'Pending Fees', 
-      value: feeIsCleared ? 'Cleared ✓' : `₦${feeData.balance.toLocaleString()}`, 
+      label: feeIsCleared ? 'Fees Cleared' : (feeIsPartial ? 'Partial Fee' : 'Pending Fee'), 
+      value: feeIsCleared ? 'Cleared ✓' : (feeData.balance > 0 ? `₦${feeData.balance.toLocaleString()}` : (feeData.expected > 0 ? `₦${feeData.expected.toLocaleString()}` : 'Pending')), 
       icon: Wallet, 
-      color: feeIsCleared ? '#10b981' : '#f59e0b', 
-      trend: feeIsCleared ? 'All Clear' : 'Awaiting Payment' 
+      color: feeIsCleared ? '#10b981' : (feeIsPartial ? '#f59e0b' : '#ef4444'), 
+      trend: feeIsCleared ? 'Verified ✓' : (feeIsPartial ? 'Partial Paid' : 'Awaiting Payment') 
     },
     { label: 'Attendance', value: '94%', icon: Calendar, color: '#ec4899', trend: 'Excellent' },
   ];
@@ -716,13 +740,15 @@ const StudentDashboard = () => {
                       </div>
                       <h3 className="text-2xl font-black text-slate-800 mb-2">School Fees Balance</h3>
                       <p className="text-slate-400 font-bold mb-8">Summary of your current financial standing.</p>
-                      <div className="text-4xl font-black text-slate-900 mb-2">₦{feeData.balance.toLocaleString()}</div>
-                      <div className={`text-xs font-black uppercase ${feeData.balance <= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                        {feeData.balance <= 0 ? 'Fully Cleared' : 'Awaiting Payment'}
+                      <div className="text-4xl font-black text-slate-900 mb-2">
+                        {feeIsCleared ? '₦0' : (feeData.balance > 0 ? `₦${feeData.balance.toLocaleString()}` : (feeData.expected > 0 ? `₦${feeData.expected.toLocaleString()}` : 'Pending'))}
+                      </div>
+                      <div className={`text-xs font-black uppercase ${feeIsCleared ? 'text-emerald-500' : (feeIsPartial ? 'text-amber-500' : 'text-rose-500')}`}>
+                        {feeIsCleared ? 'Fully Cleared & Verified ✓' : (feeIsPartial ? 'Partial Payment Made' : 'Pending / Awaiting Payment')}
                       </div>
                     </div>
                     <div className="mt-8 space-y-3">
-                      {feeData.balance > 0 ? (
+                      {!feeIsCleared ? (
                         <button onClick={() => setShowFeePayModal(true)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2">
                           <Wallet size={18} /> Pay Fee via Student Wallet
                         </button>

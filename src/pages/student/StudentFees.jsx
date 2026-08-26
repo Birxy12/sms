@@ -27,6 +27,15 @@ const StudentFees = () => {
         const studentRef = doc(db, 'students', currentStudent.id);
         const studentSnap = await getDoc(studentRef);
         
+        let classFallback = 0;
+        try {
+          const feeSnap = await getDoc(doc(db, 'settings', 'fees'));
+          if (feeSnap.exists()) {
+            const fData = feeSnap.data();
+            classFallback = parseFloat(fData[currentStudent.className]) || parseFloat(fData['default']) || 0;
+          }
+        } catch (fErr) {}
+
         let expected = 0;
         let paid = 0;
         let lastDate = 'N/A';
@@ -34,16 +43,18 @@ const StudentFees = () => {
         let session = currentSession || '2025/2026';
         let txnId = '';
         let serialNo = '';
+        let isVerified = false;
 
         if (studentSnap.exists()) {
           const sData = studentSnap.data();
-          expected = parseFloat(sData.expectedFee) || 0;
+          expected = parseFloat(sData.expectedFee) || classFallback || 0;
           paid = parseFloat(sData.paidFee) || parseFloat(sData.paidAmount) || 0;
           lastDate = sData.lastPaymentDate || 'N/A';
           term = sData.lastPaymentTerm || 'First Term';
           session = sData.lastPaymentSession || currentSession || '2025/2026';
           txnId = sData.lastTransactionId || '';
           serialNo = sData.lastSerialNo || '';
+          isVerified = sData.feeVerified === true || sData.isVerified === true;
         }
 
         setFeeData({
@@ -53,7 +64,8 @@ const StudentFees = () => {
           term,
           session,
           txnId,
-          serialNo
+          serialNo,
+          isVerified
         });
 
         // Load wallet balance
@@ -131,8 +143,9 @@ const StudentFees = () => {
   };
 
   const balance = Math.max(0, feeData.expected - feeData.paid);
-  const isCleared = feeData.paid > 0 && (feeData.expected === 0 || feeData.paid >= feeData.expected);
-  const percentPaid = feeData.expected > 0 ? Math.min(100, Math.round((feeData.paid / feeData.expected) * 100)) : (feeData.paid > 0 ? 100 : 0);
+  const hasPaid = (feeData.paid || 0) > 0;
+  const isCleared = hasPaid && (feeData.isVerified || (feeData.expected > 0 && feeData.paid >= feeData.expected));
+  const percentPaid = feeData.expected > 0 ? Math.min(100, Math.round((feeData.paid / feeData.expected) * 100)) : (isCleared ? 100 : 0);
 
   // Set default payAmount when outstanding balance is fetched
   useEffect(() => {
