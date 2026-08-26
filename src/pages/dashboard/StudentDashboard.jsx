@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { getStudentWallet, fundStudentWallet, debitStudentWallet } from '../../utils/wallet';
 import { MARKS_KEYS, expandMarks } from '../../utils/firestoreSchema';
-import { getProspectusFeeData, formatNaira } from '../../utils/prospectusFees';
+import { getProspectusFeeData, getClassFees, getExpectedFeeForStudent, formatNaira } from '../../utils/prospectusFees';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import PinSetupModal from '../../components/student/PinSetupModal';
@@ -238,19 +238,14 @@ const StudentDashboard = () => {
         let lastDate = 'N/A';
         let isVerified = false;
 
-        let classFallbackFee = 0;
+        let feeSettings = {};
         try {
           const feeSnap = await getDoc(doc(db, 'settings', 'fees'));
           if (feeSnap.exists()) {
-            const fData = feeSnap.data();
-            classFallbackFee = parseFloat(fData[className]) || parseFloat(fData['default']) || 0;
+            feeSettings = feeSnap.data() || {};
           }
         } catch (fErr) {
           console.warn('Could not fetch settings/fees:', fErr);
-        }
-
-        if (!classFallbackFee && className && className !== 'N/A') {
-          classFallbackFee = getProspectusFeeData(className).total || 0;
         }
 
         if (currentStudent?.id) {
@@ -258,13 +253,25 @@ const StudentDashboard = () => {
           const studentSnap = await getDoc(studentRef);
           if (studentSnap.exists()) {
             const sData = studentSnap.data();
-            expected = parseFloat(sData.expectedFee) || classFallbackFee || 0;
+            const isIntake = sData.isNewIntake === true || sData.studentType === 'new_intake';
+            const calculatedFee = getExpectedFeeForStudent(sData.className || className, isIntake, feeSettings);
+
+            expected = (sData.expectedFee !== undefined && sData.expectedFee !== null && Number(sData.expectedFee) > 0)
+              ? Number(sData.expectedFee)
+              : calculatedFee;
+
             paid = parseFloat(sData.paidFee) || parseFloat(sData.paidAmount) || 0;
             lastDate = sData.lastPaymentDate || 'N/A';
             isVerified = sData.feeVerified === true || sData.isVerified === true;
           }
         } else {
-          expected = parseFloat(currentStudent?.expectedFee) || classFallbackFee || 0;
+          const isIntake = currentStudent?.isNewIntake === true || currentStudent?.studentType === 'new_intake';
+          const calculatedFee = getExpectedFeeForStudent(className, isIntake, feeSettings);
+
+          expected = (currentStudent?.expectedFee !== undefined && currentStudent?.expectedFee !== null && Number(currentStudent?.expectedFee) > 0)
+            ? Number(currentStudent?.expectedFee)
+            : calculatedFee;
+
           paid = parseFloat(currentStudent?.paidFee) || parseFloat(currentStudent?.paidAmount) || 0;
           lastDate = currentStudent?.lastPaymentDate || 'N/A';
           isVerified = currentStudent?.feeVerified === true || currentStudent?.isVerified === true;

@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { db } from '../../lib/firebase';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import FBNCheckout from 'firstchekout';
 import { useTheme } from '../../context/ThemeContext';
-import { DollarSign, CreditCard, Clock, AlertTriangle, CheckCircle, ArrowRight, Printer, X, Wallet, ListChecks, Receipt } from 'lucide-react';
+import { DollarSign, CreditCard, Clock, AlertTriangle, CheckCircle, ArrowRight, Printer, X, Wallet, ListChecks, Receipt, Building2 } from 'lucide-react';
 import ReceiptScanner from '../../components/ReceiptScanner';
 import { getStudentWallet, debitStudentWallet } from '../../utils/wallet';
-import { getProspectusFeeData, formatNaira } from '../../utils/prospectusFees';
+import { getProspectusFeeData, getClassFees, getExpectedFeeForStudent, formatNaira } from '../../utils/prospectusFees';
+import { payWithFirstBank, payWithMoniepoint, SUPPORTED_GATEWAYS, SCHOOL_BANK_ACCOUNTS } from '../../utils/paymentGateways';
 
 const StudentFees = () => {
   const { currentStudent } = useStudentAuth();
@@ -17,6 +17,7 @@ const StudentFees = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [payAmount, setPayAmount] = useState('');
   const [paying, setPaying] = useState(false);
+  const [selectedGateway, setSelectedGateway] = useState('firstbank');
   const [walletBalance, setWalletBalance] = useState(0);
 
   useEffect(() => {
@@ -28,19 +29,13 @@ const StudentFees = () => {
         const studentRef = doc(db, 'students', currentStudent.id);
         const studentSnap = await getDoc(studentRef);
         
-        let classFallback = 0;
+        let feeSettings = {};
         try {
           const feeSnap = await getDoc(doc(db, 'settings', 'fees'));
           if (feeSnap.exists()) {
-            const fData = feeSnap.data();
-            classFallback = parseFloat(fData[currentStudent.className]) || parseFloat(fData['default']) || 0;
+            feeSettings = feeSnap.data() || {};
           }
         } catch (fErr) {}
-
-        // If no custom admin override in settings/fees, fallback to official Prospectus 2025/2026 fee
-        if (!classFallback && currentStudent.className) {
-          classFallback = getProspectusFeeData(currentStudent.className).total || 0;
-        }
 
         let expected = 0;
         let paid = 0;
@@ -53,7 +48,13 @@ const StudentFees = () => {
 
         if (studentSnap.exists()) {
           const sData = studentSnap.data();
-          expected = parseFloat(sData.expectedFee) || classFallback || 0;
+          const isIntake = sData.isNewIntake === true || sData.studentType === 'new_intake';
+          const calculatedExpected = getExpectedFeeForStudent(sData.className || currentStudent.className, isIntake, feeSettings);
+
+          expected = (sData.expectedFee !== undefined && sData.expectedFee !== null && Number(sData.expectedFee) > 0)
+            ? Number(sData.expectedFee)
+            : calculatedExpected;
+
           paid = parseFloat(sData.paidFee) || parseFloat(sData.paidAmount) || 0;
           lastDate = sData.lastPaymentDate || 'N/A';
           term = sData.lastPaymentTerm || 'First Term';
@@ -175,119 +176,97 @@ const StudentFees = () => {
 
     setPaying(true);
 
-    try {
-      // 1. Generate unique 12-character transaction reference
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let txnRef = '';
-      for (let i = 0; i < 12; i++) {
-        txnRef += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
+    const onPaymentSuccess = async ({ reference, gateway, amount: paidAmt }) => {
+      try {
+        const oldPaid = parseFloat(feeData.paid) || 0;
+        const newPaid = oldPaid + paidAmt;
+        const serialNo = 'SN-' + Math.floor(100000 + Math.random() * 900000);
 
-      // 2. Formulate customer name split
-      const nameParts = (currentStudent?.name || 'Student User').trim().split(' ');
-      const firstname = nameParts[0] || 'Student';
-      const lastname = nameParts.slice(1).join(' ') || 'User';
+        const studentRef = doc(db, 'students', currentStudent.id);
+        await updateDoc(studentRef, {
+          paidFee: newPaid,
+          paidAmount: newPaid,
+          lastPaymentDate: new Date().toLocaleDateString('en-NG'),
+          lastTransactionId: reference,
+          lastSerialNo: serialNo,
+          lastPaymentTerm: feeData.term || 'First Term',
+          lastPaymentSession: feeData.session || currentSession || '2025/2026',
+        });
 
-      const live = import.meta.env.VITE_FBN_LIVE === 'true';
-      const publicKey = import.meta.env.VITE_FBN_PUBLIC_KEY || 'sb-pk-placeholder-key';
-      
-      const baseFrame = live 
-        ? 'https://checkout.firstchekout.com' 
-        : 'https://sandbox.firstchekout.com';
-      const apiBase = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
-        ? 'https://bdsportals.vercel.app'
-        : window.location.origin;
-      const initiatePaymentURI = `${apiBase}/api/fbn-checkout`;
-
-      const txn = {
-        live,
-        ref: txnRef,
-        amount: amount,
-        fees: [{ amount: amount, label: 'School Fee' }],
-        customer: {
-          firstname,
-          lastname,
-          email: currentStudent?.email || 'student@school.com',
-          id: currentStudent?.id || 'anonymous_id',
-        },
-        publicKey,
-        description: `School Fee Payment - ${feeData.term || 'First Term'} (${feeData.session || currentSession || '2025/2026'})`,
-        currency: 'NGN',
-        meta: {
-          studentId: currentStudent?.id || '',
-          regNo: currentStudent?.regNo || '',
+        await addDoc(collection(db, 'payment_messages'), {
+          studentName: currentStudent.name || currentStudent['STUDENT NAME'] || 'Student',
+          className: currentStudent.className || currentStudent.class_name || currentStudent.CLASS || 'N/A',
+          regNo: currentStudent.regNo || currentStudent.REGNO || 'N/A',
+          amount: paidAmt,
+          method: `Online Payment (${gateway})`,
           term: feeData.term || 'First Term',
           session: feeData.session || currentSession || '2025/2026',
-        },
-        callback: async (res) => {
-          console.log('FBN Callback:', res);
-          // FBNChekOut returns success status on payment completion
-          if (res.status === 'success' || res.status === 'successful' || res.event === 'success') {
-            try {
-              const oldPaid = parseFloat(feeData.paid) || 0;
-              const newPaid = oldPaid + amount;
-              const serialNo = 'SN-' + Math.floor(100000 + Math.random() * 900000);
+          transactionId: reference,
+          serialNo,
+          message: `Online payment of ₦${paidAmt.toLocaleString()} received via ${gateway}.`,
+          createdAt: serverTimestamp(),
+        });
 
-              const studentRef = doc(db, 'students', currentStudent.id);
-              await updateDoc(studentRef, {
-                paidFee: newPaid,
-                paidAmount: newPaid,
-                lastPaymentDate: new Date().toLocaleDateString('en-NG'),
-                lastTransactionId: res.reference || txnRef,
-                lastSerialNo: serialNo,
-                lastPaymentTerm: feeData.term || 'First Term',
-                lastPaymentSession: feeData.session || currentSession || '2025/2026',
-              });
+        setFeeData(prev => ({
+          ...prev,
+          paid: newPaid,
+          lastDate: new Date().toLocaleDateString('en-NG'),
+          txnId: reference,
+          serialNo
+        }));
 
-              await addDoc(collection(db, 'payment_messages'), {
-                studentName: currentStudent.name || currentStudent['STUDENT NAME'] || 'Student',
-                className: currentStudent.className || currentStudent.class_name || currentStudent.CLASS || 'N/A',
-                regNo: currentStudent.regNo || currentStudent.REGNO || 'N/A',
-                amount,
-                method: 'Online Payment (FirstChekOut)',
-                term: feeData.term || 'First Term',
-                session: feeData.session || currentSession || '2025/2026',
-                transactionId: res.reference || txnRef,
-                serialNo,
-                message: `Online payment of ₦${amount.toLocaleString()} received via FirstChekOut.`,
-                createdAt: serverTimestamp(),
-              });
+        alert(`Payment Successful! ₦${paidAmt.toLocaleString()} has been credited to your school fee account via ${gateway}.`);
+      } catch (err) {
+        console.error('Error updating records after payment:', err);
+        alert('Payment succeeded but there was an error updating your dashboard. Please contact the Bursar.');
+      } finally {
+        setPaying(false);
+      }
+    };
 
-              setFeeData(prev => ({
-                ...prev,
-                paid: newPaid,
-                lastDate: new Date().toLocaleDateString('en-NG'),
-                txnId: res.reference || txnRef,
-                serialNo
-              }));
+    const customer = {
+      fullName: currentStudent?.name || currentStudent?.fullName || 'Student User',
+      email: currentStudent?.email || `${(currentStudent?.regNo || 'student').replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}@school.com`,
+      id: currentStudent?.id,
+      regNo: currentStudent?.regNo,
+      phone: currentStudent?.phone || currentStudent?.parentPhone || ''
+    };
 
-              alert('Payment Successful! Your school fee record has been updated.');
-            } catch (err) {
-              console.error('Error updating records after payment:', err);
-              alert('Payment succeeded but there was an error updating your dashboard. Please contact the Bursar.');
-            }
-          } else {
-            alert(`Payment status: ${res.status || 'Failed'}. Please try again.`);
-          }
+    const meta = {
+      studentId: currentStudent?.id || '',
+      regNo: currentStudent?.regNo || '',
+      term: feeData.term || 'First Term',
+      session: feeData.session || currentSession || '2025/2026',
+    };
+
+    const description = `School Fee Payment - ${feeData.term || 'First Term'} (${feeData.session || currentSession || '2025/2026'})`;
+
+    if (selectedGateway === 'moniepoint') {
+      await payWithMoniepoint({
+        amount,
+        customer,
+        meta,
+        description,
+        onSuccess: onPaymentSuccess,
+        onFailure: (err) => {
+          console.warn('Moniepoint failure:', err);
           setPaying(false);
         },
-        onClose: () => {
-          console.log('Payment modal closed');
+        onClose: () => setPaying(false)
+      });
+    } else {
+      await payWithFirstBank({
+        amount,
+        customer,
+        meta,
+        description,
+        onSuccess: onPaymentSuccess,
+        onFailure: (err) => {
+          console.warn('First Bank failure:', err);
           setPaying(false);
-        }
-      };
-
-      const addressUrl = {
-        BaseFrame: baseFrame,
-        InitiatePaymentURI: initiatePaymentURI
-      };
-
-      await FBNCheckout.initiateTransactionAsync(txn, addressUrl);
-
-    } catch (error) {
-      console.error('Error starting FirstChekOut payment:', error);
-      alert('Failed to initialize payment gateway: ' + error.message);
-      setPaying(false);
+        },
+        onClose: () => setPaying(false)
+      });
     }
   };
 
@@ -589,13 +568,61 @@ const StudentFees = () => {
           </div>
 
           <div className="card-white dark:bg-slate-800 dark:border-slate-700 rounded-3xl border border-slate-200 shadow-sm p-8 border-t-4 border-t-indigo-500">
-            <h4 className="text-lg font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-              <CreditCard size={20} className="text-indigo-500" />
-              Pay Online (FirstChekOut / Card)
-            </h4>
-            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
-              Pay your fees instantly using First Bank's secure payment gateway. Supports cards, bank transfers, USSD, and direct bank account debit.
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+              <h4 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2 m-0">
+                <CreditCard size={20} className="text-indigo-500" />
+                Pay Online Gateway
+              </h4>
+              <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                Instant Auto-Receipt
+              </span>
+            </div>
+            
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-5">
+              Select your preferred secure payment partner to pay instantly via Debit Card, Bank Transfer, USSD, or Account Debit.
             </p>
+
+            {/* Gateway Selection Tabs */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {SUPPORTED_GATEWAYS.map(gw => {
+                const isActive = selectedGateway === gw.id;
+                return (
+                  <button
+                    key={gw.id}
+                    type="button"
+                    onClick={() => setSelectedGateway(gw.id)}
+                    className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
+                      isActive
+                        ? 'border-indigo-600 bg-indigo-50/60 dark:bg-indigo-950/40 shadow-sm ring-2 ring-indigo-500/20'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-black text-slate-900 dark:text-white">
+                        {gw.name}
+                      </span>
+                      {isActive && (
+                        <div className="w-4 h-4 rounded-full bg-indigo-600 flex items-center justify-center text-white">
+                          <CheckCircle size={10} />
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                      {gw.provider}
+                    </span>
+                    <div className="mt-2">
+                      <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md ${
+                        gw.id === 'firstbank' 
+                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' 
+                          : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                      }`}>
+                        {gw.badge}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
             
             {!isCleared ? (
               <div className="space-y-4">
@@ -615,7 +642,7 @@ const StudentFees = () => {
                   disabled={paying}
                   className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 dark:shadow-none hover:shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  {paying ? 'Processing Checkout...' : `Pay ₦${parseFloat(payAmount || 0).toLocaleString()} Online`}
+                  {paying ? 'Connecting Gateway...' : `Pay ₦${parseFloat(payAmount || 0).toLocaleString()} with ${selectedGateway === 'moniepoint' ? 'Moniepoint' : 'First Bank'}`}
                 </button>
               </div>
             ) : (
@@ -627,55 +654,47 @@ const StudentFees = () => {
 
           <div className="card-white dark:bg-slate-800 dark:border-slate-700 rounded-3xl border border-slate-200 shadow-sm p-8 border-t-4 border-t-indigo-500">
             <h4 className="text-lg font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-              <AlertTriangle size={20} className="text-amber-500" />
-              Payment Instructions
+              <Building2 size={20} className="text-amber-500" />
+              Direct Bank Transfer & Cash Accounts
             </h4>
             <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
-              To settle your outstanding balance, please proceed with a bank transfer to the school's official account listed below. Ensure you include your <strong className="dark:text-white">Registration Number</strong> in the transaction description.
+              To settle your outstanding balance offline, transfer to any of the official school collection accounts below. Please ensure your <strong className="dark:text-white">Registration Number ({currentStudent?.regNo || 'Reg No'})</strong> is included in the narration.
             </p>
             
-            <div className="space-y-4">
-              <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-5 border border-slate-100 dark:border-slate-800">
-                <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-2 flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                  Option 1: First Bank (School Account)
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500 dark:text-slate-400 font-bold">Bank Name</span>
-                    <span className="text-slate-900 dark:text-white font-black uppercase">First Bank of Nigeria</span>
+            <div className="space-y-3">
+              {SCHOOL_BANK_ACCOUNTS.map((acc, idx) => (
+                <div key={acc.accountNumber} className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
+                  <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                      Option {idx + 1}: {acc.bankName}
+                    </span>
+                    <span className="text-[9px] text-slate-400 font-bold lowercase">({acc.type})</span>
                   </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500 dark:text-slate-400 font-bold">Account Name</span>
-                    <span className="text-slate-900 dark:text-white font-black uppercase">Bonus Dominus School</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500 dark:text-slate-400 font-bold">Account Number</span>
-                    <span className="text-slate-900 dark:text-white font-black font-mono text-sm">2022829027</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-5 border border-slate-100 dark:border-slate-800">
-                <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-2 flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  Option 2: OPay (Emmanuel Anyaegbu)
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500 dark:text-slate-400 font-bold">Bank Name</span>
-                    <span className="text-slate-900 dark:text-white font-black uppercase">OPay</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500 dark:text-slate-400 font-bold">Account Name</span>
-                    <span className="text-slate-900 dark:text-white font-black uppercase">Anyaegbu Emmanuel Chinedu</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500 dark:text-slate-400 font-bold">Account Number</span>
-                    <span className="text-slate-900 dark:text-white font-black font-mono text-sm">9017588338</span>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-500 dark:text-slate-400 font-bold">Account Name</span>
+                      <span className="text-slate-900 dark:text-white font-black">{acc.accountName}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-500 dark:text-slate-400 font-bold">Account Number</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-900 dark:text-white font-black font-mono text-sm tracking-wider">{acc.accountNumber}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard?.writeText(acc.accountNumber);
+                            alert(`Copied ${acc.accountNumber} to clipboard!`);
+                          }}
+                          className="text-[10px] bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded font-bold hover:bg-indigo-600 hover:text-white transition-colors"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
 
             <button 

@@ -10,7 +10,6 @@ import {
   Receipt, Wallet, Check, FileCheck, DollarSign, Layers, ShieldCheck,
   Building, CheckCircle2
 } from 'lucide-react';
-import FBNCheckout from 'firstchekout';
 import { db } from '../../lib/firebase';
 import {
   collection, addDoc, getDocs, query, orderBy,
@@ -19,9 +18,22 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import brandLogo from '../../assets/bdslogo.jpg';
 import { NIGERIA_STATES, getLgasForState } from '../../utils/nigeriaStatesLga';
-import { generateUniqueClassRegNo } from '../../utils/regNoGenerator';
-import { getProspectusFeeData, formatNaira, PROSPECTUS_FEES_SCHEDULE, PROSPECTUS_REQUIREMENTS, getClassSection } from '../../utils/prospectusFees';
-import '../home.css';
+import { 
+  getProspectusFeeData, 
+  getClassFees, 
+  getExpectedFeeForStudent, 
+  getApplicantFeeBreakdown,
+  formatNaira, 
+  PROSPECTUS_FEES_SCHEDULE, 
+  PROSPECTUS_REQUIREMENTS, 
+  getClassSection 
+} from '../../utils/prospectusFees';
+import { 
+  payWithFirstBank, 
+  payWithMoniepoint, 
+  SUPPORTED_GATEWAYS, 
+  SCHOOL_BANK_ACCOUNTS 
+} from '../../utils/paymentGateways';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const generateAppNo = () => {
@@ -34,9 +46,11 @@ const fmt = (s) =>
   `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
 const getStoredAdmissionResult = (data) => {
-  const total = 20;
+  const total = Number(data?.cbtTotal || 20);
   const score = Number(data?.cbtScore ?? 0);
-  const percentage = data?.cbtCompleted ? Math.round((score / total) * 100) : 0;
+  const percentage = data?.cbtPercentage !== undefined && data?.cbtPercentage !== null
+    ? Number(data.cbtPercentage)
+    : (total > 0 ? Math.round((score / total) * 100) : 0);
   const explicitStatus = ['granted', 'trial', 'rejected'].includes(data?.admissionStatus)
     ? data.admissionStatus
     : null;
@@ -47,7 +61,7 @@ const getStoredAdmissionResult = (data) => {
   return {
     score,
     total,
-    percentage: explicitStatus ? (explicitStatus === 'granted' ? 100 : explicitStatus === 'trial' ? 50 : 0) : percentage,
+    percentage,
     status: explicitStatus || computedStatus,
     regNo: data?.regNo || null,
   };
@@ -163,9 +177,12 @@ const AdmissionPortal = () => {
   const [result, setResult] = useState(null);
   const [payingFee, setPayingFee] = useState(false);
   const [feePaidState, setFeePaidState] = useState(null);
+  const [selectedAdmissionGateway, setSelectedAdmissionGateway] = useState('firstbank');
+  const [showTransferDetails, setShowTransferDetails] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [showRequirementsModal, setShowRequirementsModal] = useState(false);
   const [isReceiptPdfGenerating, setIsReceiptPdfGenerating] = useState(false);
+  const [feeSettings, setFeeSettings] = useState({});
   const receiptRef = useRef(null);
 
   const defaultClasses = () => [
@@ -203,6 +220,16 @@ const AdmissionPortal = () => {
           setAdmissionOpen(true);
         }
       } catch { setAdmissionOpen(true); }
+
+      // Fetch dynamic fee settings
+      try {
+        const feeSnap = await getDoc(doc(db, 'settings', 'fees'));
+        if (feeSnap.exists()) {
+          setFeeSettings(feeSnap.data() || {});
+        }
+      } catch (fErr) {
+        console.warn('Could not load settings/fees in AdmissionPortal:', fErr);
+      }
 
       try {
         const snap = await getDocs(query(collection(db, 'classes')));
@@ -269,9 +296,15 @@ const AdmissionPortal = () => {
   const ensureStudentEnrolled = async (applicantInfo, status, existingRegNo) => {
     if (status === 'rejected') return existingRegNo || null;
     try {
+      let feeSettings = {};
+      try {
+        const feeSnap = await getDoc(doc(db, 'settings', 'fees'));
+        if (feeSnap.exists()) feeSettings = feeSnap.data() || {};
+      } catch (e) {}
+
       // Calculate accurate section prospectus fee for candidate's class
       const prospectusData = getProspectusFeeData(applicantInfo.classApplyingFor);
-      const expectedFee = prospectusData.total || 0;
+      const expectedFee = getExpectedFeeForStudent(applicantInfo.classApplyingFor, true, feeSettings);
 
       // Check if student with this application number already exists in students collection
       const qStud = query(collection(db, 'students'), where('appNo', '==', applicantInfo.appNo));
@@ -288,6 +321,8 @@ const AdmissionPortal = () => {
         name: applicantInfo.fullName,
         regNo,
         className: applicantInfo.classApplyingFor,
+        studentType: 'new_intake',
+        isNewIntake: true,
         dateOfBirth: applicantInfo.dateOfBirth || '',
         gender: applicantInfo.gender || '',
         stateOfOrigin: applicantInfo.stateOfOrigin || '',
@@ -323,15 +358,15 @@ const AdmissionPortal = () => {
     setSubmittingForm(true);
     try {
       const appNo = generateAppNo();
-      const prospectusData = getProspectusFeeData(formData.classApplyingFor);
+      const feeDetails = getApplicantFeeBreakdown(formData.classApplyingFor, feeSettings);
       const docRef = await addDoc(collection(db, 'admissions'), {
         ...formData,
         appNo,
         cbtCompleted: false,
         cbtScore: null,
         admissionStatus: 'pending',
-        prospectusTotal: prospectusData.total,
-        classSection: prospectusData.sectionTitle,
+        prospectusTotal: feeDetails.total,
+        classSection: feeDetails.sectionTitle,
         feePaid: false,
         createdAt: serverTimestamp(),
       });
@@ -352,11 +387,13 @@ const AdmissionPortal = () => {
       const data = { id: snap.docs[0].id, ...snap.docs[0].data() };
       setAppData({ appNo: data.appNo, docId: data.id, applicant: data });
 
+      const feeDetails = getApplicantFeeBreakdown(data.classApplyingFor, feeSettings);
+
       if (data.feePaid) {
         setFeePaidState({
           paid: true,
           ref: data.paymentRef || 'REF-OFFLINE',
-          amount: data.paidAmount || getProspectusFeeData(data.classApplyingFor).total,
+          amount: data.paidAmount || feeDetails.total,
           date: data.paidAt ? new Date(data.paidAt).toLocaleDateString('en-NG') : today,
           method: data.paymentMethod || 'Online Payment (FirstChekOut)'
         });
@@ -440,8 +477,8 @@ const AdmissionPortal = () => {
     if (examDone) return;
     clearInterval(timerRef.current); setExamDone(true);
     const score = questions.reduce((acc, q, i) => acc + (answers[i] === q.correctIndex ? 1 : 0), 0);
-    const total = questions.length;
-    const percentage = Math.round((score / total) * 100);
+    const total = questions.length || 20;
+    const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
     const status = percentage >= 50 ? 'granted' : percentage >= 40 ? 'trial' : 'rejected';
     
     let regNo = null;
@@ -454,6 +491,8 @@ const AdmissionPortal = () => {
         await updateDoc(doc(db, 'admissions', appData.docId), {
           cbtCompleted: true,
           cbtScore: score,
+          cbtTotal: total,
+          cbtPercentage: percentage,
           admissionStatus: status,
           regNo: regNo || null,
           studentCreated: status !== 'rejected'
@@ -490,31 +529,30 @@ const AdmissionPortal = () => {
   };
 
   const handleDownloadLetterPdf = async () => {
-    if (!letterRef.current) return;
+    const targetElement = letterRef.current;
+    if (!targetElement) return;
 
     setIsLetterPdfGenerating(true);
     try {
       const html2pdf = (await import('html2pdf.js')).default;
-      const clone = letterRef.current.cloneNode(true);
-      clone.style.position = 'fixed';
-      clone.style.left = '-9999px';
-      clone.style.top = '0';
-      clone.style.width = '794px';
-      clone.style.maxWidth = '794px';
-      clone.style.background = '#ffffff';
-      clone.style.opacity = '1';
-      clone.style.transform = 'none';
-      document.body.appendChild(clone);
 
       const opt = {
-        margin: [8, 8, 8, 8],
-        filename: `${(appData?.applicant?.fullName || 'admission-letter').replace(/\s+/g, '-').toLowerCase()}-${appData?.appNo || 'letter'}.pdf`,
+        margin: [6, 6, 6, 6],
+        filename: `admission-letter-${(appData?.applicant?.fullName || 'candidate').replace(/\s+/g, '-').toLowerCase()}-${appData?.appNo || 'letter'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, allowTaint: true, imageTimeout: 60000 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+          allowTaint: true,
+          scrollY: 0,
+          scrollX: 0
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       };
-      await html2pdf().set(opt).from(clone).save();
-      clone.remove();
+
+      await html2pdf().set(opt).from(targetElement).save();
     } catch (err) {
       console.error('PDF download failed:', err);
       window.alert('PDF download failed. Please try again.');
@@ -529,7 +567,7 @@ const AdmissionPortal = () => {
       const dateStr = now.toLocaleDateString('en-NG');
       const serialNo = 'RCP-' + Math.floor(100000 + Math.random() * 900000);
       const targetClass = appData?.applicant?.classApplyingFor || '';
-      const prospectusData = getProspectusFeeData(targetClass);
+      const feeDetails = getApplicantFeeBreakdown(targetClass, feeSettings);
 
       // 1. Update Admission Document in Firestore
       if (appData?.docId) {
@@ -540,7 +578,7 @@ const AdmissionPortal = () => {
           receiptSerial: serialNo,
           paidAt: now.toISOString(),
           paymentMethod: method,
-          feeBreakdown: prospectusData.items,
+          feeBreakdown: feeDetails.items,
         });
       }
 
@@ -554,6 +592,8 @@ const AdmissionPortal = () => {
             paidFee: amount,
             paidAmount: amount,
             expectedFee: amount,
+            studentType: 'new_intake',
+            isNewIntake: true,
             feeVerified: true,
             admissionConfirmed: true,
             paymentConfirmed: true,
@@ -579,7 +619,7 @@ const AdmissionPortal = () => {
         session: '2025/2026',
         transactionId: txnRef,
         serialNo,
-        message: `Prospectus admission & school fee of ${formatNaira(amount)} received for ${appData?.applicant?.fullName} (${targetClass} - ${prospectusData.sectionTitle}).`,
+        message: `Prospectus admission & school fee of ${formatNaira(amount)} received for ${appData?.applicant?.fullName} (${targetClass} - ${feeDetails.sectionTitle}).`,
         createdAt: serverTimestamp(),
       });
 
@@ -600,85 +640,65 @@ const AdmissionPortal = () => {
     }
   };
 
-  const handlePayProspectusFee = async () => {
+  const handlePayProspectusFee = async (overrideGateway) => {
     if (!appData?.applicant) return;
     const targetClass = appData.applicant.classApplyingFor;
-    const prospectusData = getProspectusFeeData(targetClass);
-    const amount = prospectusData.total;
+    const feeDetails = getApplicantFeeBreakdown(targetClass, feeSettings);
+    const amount = feeDetails.total;
+    const activeGateway = overrideGateway || selectedAdmissionGateway;
 
     setPayingFee(true);
 
-    try {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let txnRef = 'BDS-ADM-';
-      for (let i = 0; i < 8; i++) {
-        txnRef += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-
-      const nameParts = (appData.applicant.fullName || 'Candidate').trim().split(' ');
-      const firstname = nameParts[0] || 'Candidate';
-      const lastname = nameParts.slice(1).join(' ') || 'Applicant';
-
-      const live = import.meta.env.VITE_FBN_LIVE === 'true';
-      const publicKey = import.meta.env.VITE_FBN_PUBLIC_KEY || 'sb-pk-placeholder-key';
-      
-      const baseFrame = live 
-        ? 'https://checkout.firstchekout.com' 
-        : 'https://sandbox.firstchekout.com';
-      const apiBase = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
-        ? 'https://bdsportals.vercel.app'
-        : window.location.origin;
-      const initiatePaymentURI = `${apiBase}/api/fbn-checkout`;
-
-      const txn = {
-        live,
-        ref: txnRef,
-        amount: amount,
-        fees: [{ amount: amount, label: `Admission & School Fees (${prospectusData.sectionTitle})` }],
-        customer: {
-          firstname,
-          lastname,
-          email: appData.applicant.email || `${appData.appNo.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}@school.com`,
-          id: appData.docId || appData.appNo,
-        },
-        publicKey,
-        description: `New Student Admission & School Fees - ${targetClass} (${prospectusData.sectionTitle})`,
-        currency: 'NGN',
-        meta: {
-          appNo: appData.appNo,
-          regNo: result?.regNo || '',
-          targetClass,
-          section: prospectusData.sectionKey,
-          amount,
-        },
-        callback: async (res) => {
-          console.log('FBN Admission Payment Callback:', res);
-          if (res.status === 'success' || res.status === 'successful' || res.event === 'success') {
-            await handlePaymentSuccess(res.reference || txnRef, amount, 'Online Payment (FirstChekOut / Card)');
-          } else {
-            alert(`Payment status: ${res.status || 'Cancelled/Failed'}. Please try again.`);
-          }
-          setPayingFee(false);
-        },
-        onClose: () => {
-          setPayingFee(false);
-        }
-      };
-
-      const addressUrl = {
-        BaseFrame: baseFrame,
-        InitiatePaymentURI: initiatePaymentURI
-      };
-
-      await FBNCheckout.initiateTransactionAsync(txn, addressUrl);
-    } catch (err) {
-      console.warn('FirstChekOut modal note:', err);
-      const userSimulate = window.confirm(`Initiate instant sandbox admission payment of ${formatNaira(amount)} for ${targetClass} (${prospectusData.sectionTitle})?`);
-      if (userSimulate) {
-        const simRef = 'BDS-SIM-' + Math.floor(100000 + Math.random() * 900000);
-        await handlePaymentSuccess(simRef, amount, 'Online Payment (Verified Gateway)');
-      }
+    const onPaymentSuccess = async ({ reference, gateway, amount: paidAmt }) => {
+      await handlePaymentSuccess(reference, paidAmt, `Online Payment (${gateway})`);
       setPayingFee(false);
+    };
+
+    const customer = {
+      fullName: appData.applicant.fullName || 'Candidate Applicant',
+      email: appData.applicant.email || `${(appData.appNo || 'student').replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}@school.com`,
+      id: appData.docId || appData.appNo,
+      appNo: appData.appNo,
+      regNo: result?.regNo || '',
+      phone: appData.applicant.phone || appData.applicant.parentPhone || ''
+    };
+
+    const meta = {
+      appNo: appData.appNo,
+      regNo: result?.regNo || '',
+      targetClass,
+      section: feeDetails.sectionKey,
+      amount,
+    };
+
+    const description = `Admission & School Fees - ${targetClass} (${feeDetails.sectionTitle})`;
+
+    if (activeGateway === 'moniepoint') {
+      await payWithMoniepoint({
+        amount,
+        customer,
+        meta,
+        description,
+        onSuccess: onPaymentSuccess,
+        onFailure: (err) => {
+          console.warn('Moniepoint payment issue:', err);
+          setPayingFee(false);
+        },
+        onClose: () => setPayingFee(false)
+      });
+    } else {
+      await payWithFirstBank({
+        amount,
+        customer,
+        meta,
+        description,
+        onSuccess: onPaymentSuccess,
+        onFailure: (err) => {
+          console.warn('First Bank payment issue:', err);
+          setPayingFee(false);
+        },
+        onClose: () => setPayingFee(false)
+      });
     }
   };
 
@@ -697,30 +717,28 @@ const AdmissionPortal = () => {
   };
 
   const handleDownloadReceiptPdf = async () => {
-    if (!receiptRef.current) return;
+    const targetElement = receiptRef.current;
+    if (!targetElement) return;
+
     setIsReceiptPdfGenerating(true);
     try {
       const html2pdf = (await import('html2pdf.js')).default;
-      const clone = receiptRef.current.cloneNode(true);
-      clone.style.position = 'fixed';
-      clone.style.left = '-9999px';
-      clone.style.top = '0';
-      clone.style.width = '794px';
-      clone.style.maxWidth = '794px';
-      clone.style.background = '#ffffff';
-      clone.style.opacity = '1';
-      clone.style.transform = 'none';
-      document.body.appendChild(clone);
-
       const opt = {
-        margin: [8, 8, 8, 8],
+        margin: [6, 6, 6, 6],
         filename: `admission-receipt-${(appData?.applicant?.fullName || 'student').replace(/\s+/g, '-').toLowerCase()}-${appData?.appNo || 'rcp'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, allowTaint: true, imageTimeout: 60000 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          backgroundColor: '#ffffff', 
+          logging: false, 
+          allowTaint: true,
+          scrollY: 0,
+          scrollX: 0
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       };
-      await html2pdf().set(opt).from(clone).save();
-      clone.remove();
+      await html2pdf().set(opt).from(targetElement).save();
     } catch (err) {
       console.error('PDF download failed:', err);
       window.alert('PDF download failed. Please try again.');
@@ -1162,7 +1180,7 @@ const AdmissionPortal = () => {
               {/* ══════════ PROSPECTUS 2025/2026 FEES & PAYMENT SECTION ══════════ */}
               {(result.status === 'granted' || result.status === 'trial') && (() => {
                 const targetClass = appData?.applicant?.classApplyingFor || 'JSS 1';
-                const prospectusData = getProspectusFeeData(targetClass);
+                const feeDetails = getApplicantFeeBreakdown(targetClass, feeSettings);
 
                 return (
                   <div style={{ marginBottom: 32 }}>
@@ -1185,7 +1203,7 @@ const AdmissionPortal = () => {
                           <div>
                             <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: '2.5px', textTransform: 'uppercase', color: '#c7d2fe' }}>PROSPECTUS 2025/2026</span>
                             <h3 style={{ margin: '2px 0 0', fontSize: 20, fontWeight: 900, color: '#fff' }}>
-                              {prospectusData.sectionTitle}
+                              {feeDetails.sectionTitle}
                             </h3>
                           </div>
                         </div>
@@ -1205,7 +1223,7 @@ const AdmissionPortal = () => {
                       </div>
 
                       <p style={{ fontSize: 13, color: '#e0e7ff', margin: '0 0 20px', lineHeight: 1.6, maxWidth: 680 }}>
-                        Official schedule of admission charges, term fees, uniforms, and student requisites for newly admitted candidates into <strong>{targetClass}</strong> ({prospectusData.classesDesc}).
+                        Official schedule of admission charges, term fees, uniforms, and student requisites for newly admitted candidates into <strong>{targetClass}</strong> ({feeDetails.classesDesc}).
                       </p>
 
                       {/* Itemized Table */}
@@ -1234,7 +1252,7 @@ const AdmissionPortal = () => {
                         </div>
 
                         <div style={{ divideY: '1px solid #f1f5f9' }}>
-                          {prospectusData.items.map((item, idx) => (
+                          {feeDetails.items.map((item, idx) => (
                             <div
                               key={item.name}
                               style={{
@@ -1268,10 +1286,10 @@ const AdmissionPortal = () => {
                         }}>
                           <span></span>
                           <span style={{ fontWeight: 900, color: '#065f46', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                            TOTAL PAYABLE
+                            TOTAL PAYABLE (NEW INTAKE)
                           </span>
                           <span style={{ textAlign: 'right', fontWeight: 900, color: '#047857', fontSize: 18, fontFamily: 'monospace' }}>
-                            {formatNaira(prospectusData.total)}
+                            {formatNaira(feeDetails.total)}
                           </span>
                         </div>
                       </div>
@@ -1323,41 +1341,179 @@ const AdmissionPortal = () => {
                             </div>
                           </div>
                         ) : (
-                          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <ShieldCheck size={18} color="#fdba74" />
-                                <span style={{ fontSize: 13, color: '#c7d2fe' }}>
-                                  Instant activation of student portal upon successful fee payment.
+                                <span style={{ fontSize: 13, color: '#c7d2fe', fontWeight: 600 }}>
+                                  Instant activation of student portal upon verified fee payment.
                                 </span>
                               </div>
                               <button
-                                onClick={handlePayProspectusFee}
-                                disabled={payingFee}
+                                type="button"
+                                onClick={() => setShowTransferDetails(prev => !prev)}
                                 style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 10,
-                                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                                  background: 'rgba(255,255,255,0.12)',
                                   color: '#fff',
-                                  border: 'none',
-                                  padding: '14px 28px',
-                                  borderRadius: 14,
-                                  fontWeight: 900,
-                                  fontSize: 14,
-                                  cursor: payingFee ? 'not-allowed' : 'pointer',
-                                  boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)',
-                                  transition: 'transform 0.15s, box-shadow 0.15s',
-                                  opacity: payingFee ? 0.8 : 1
+                                  border: '1px solid rgba(255,255,255,0.2)',
+                                  padding: '7px 14px',
+                                  borderRadius: 10,
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 6
                                 }}
                               >
-                                {payingFee ? (
-                                  <><Loader2 size={18} className="admission-spin" /> Processing Payment...</>
-                                ) : (
-                                  <><CreditCard size={18} /> Pay {formatNaira(prospectusData.total)} Online Now</>
-                                )}
+                                <Building size={14} /> {showTransferDetails ? 'Hide Bank Accounts' : 'View Direct Transfer Accounts'}
                               </button>
                             </div>
+
+                            {/* Gateway Selector Cards */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+                              {SUPPORTED_GATEWAYS.map(gw => {
+                                const isSelected = selectedAdmissionGateway === gw.id;
+                                return (
+                                  <div
+                                    key={gw.id}
+                                    onClick={() => setSelectedAdmissionGateway(gw.id)}
+                                    style={{
+                                      background: isSelected ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)',
+                                      border: isSelected ? '2px solid #fdba74' : '1px solid rgba(255,255,255,0.15)',
+                                      borderRadius: 14,
+                                      padding: '14px 16px',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      justifyContent: 'space-between',
+                                      boxShadow: isSelected ? '0 8px 20px rgba(0,0,0,0.2)' : 'none'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                      <span style={{ color: '#fff', fontWeight: 900, fontSize: 13 }}>
+                                        {gw.name}
+                                      </span>
+                                      <span style={{
+                                        background: gw.id === 'firstbank' ? '#0284c7' : '#059669',
+                                        color: '#fff',
+                                        fontSize: 9,
+                                        fontWeight: 800,
+                                        padding: '2px 8px',
+                                        borderRadius: 6,
+                                        textTransform: 'uppercase'
+                                      }}>
+                                        {gw.provider}
+                                      </span>
+                                    </div>
+                                    <p style={{ color: '#cbd5e1', fontSize: 11, margin: '0 0 8px', lineHeight: 1.4 }}>
+                                      {gw.tagline}
+                                    </p>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <span style={{ fontSize: 10, color: '#fdba74', fontWeight: 700 }}>
+                                        {gw.badge}
+                                      </span>
+                                      <div style={{
+                                        width: 18,
+                                        height: 18,
+                                        borderRadius: '50%',
+                                        border: isSelected ? 'none' : '1.5px solid rgba(255,255,255,0.4)',
+                                        background: isSelected ? '#10b981' : 'transparent',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#fff'
+                                      }}>
+                                        {isSelected && <Check size={12} />}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Direct Bank Accounts Drawer */}
+                            {showTransferDetails && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                style={{
+                                  background: '#ffffff',
+                                  borderRadius: 16,
+                                  padding: '18px 20px',
+                                  color: '#0f172a',
+                                  boxShadow: '0 10px 30px rgba(0,0,0,0.15)'
+                                }}
+                              >
+                                <p style={{ fontSize: 11, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 10px' }}>
+                                  Official School Bank Accounts for Manual Transfer / Bursary Payment
+                                </p>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+                                  {SCHOOL_BANK_ACCOUNTS.map((acc, aIdx) => (
+                                    <div key={acc.accountNumber} style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 12, border: '1px solid #e2e8f0' }}>
+                                      <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: '#1e293b' }}>
+                                        {acc.bankName}
+                                      </p>
+                                      <p style={{ margin: '2px 0 6px', fontSize: 10, color: '#64748b' }}>
+                                        {acc.accountName}
+                                      </p>
+                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span style={{ fontFamily: 'monospace', fontWeight: 900, fontSize: 14, color: '#0f172a' }}>
+                                          {acc.accountNumber}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            navigator.clipboard?.writeText(acc.accountNumber);
+                                            alert(`Copied ${acc.bankName} account (${acc.accountNumber}) to clipboard!`);
+                                          }}
+                                          style={{ background: '#0284c7', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: 'pointer' }}
+                                        >
+                                          Copy
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <p style={{ margin: '10px 0 0', fontSize: 11, color: '#64748b', fontStyle: 'italic' }}>
+                                  Note: Please bring transfer evidence or receipt to the school Bursary for account validation and credential collection.
+                                </p>
+                              </motion.div>
+                            )}
+
+                            {/* Trigger Pay Button */}
+                            <button
+                              onClick={() => handlePayProspectusFee()}
+                              disabled={payingFee}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 10,
+                                background: selectedAdmissionGateway === 'moniepoint'
+                                  ? 'linear-gradient(135deg, #059669, #047857)'
+                                  : 'linear-gradient(135deg, #0284c7, #0369a1)',
+                                color: '#fff',
+                                border: 'none',
+                                padding: '16px 28px',
+                                borderRadius: 14,
+                                fontWeight: 900,
+                                fontSize: 15,
+                                cursor: payingFee ? 'not-allowed' : 'pointer',
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                                transition: 'transform 0.15s, box-shadow 0.15s',
+                                opacity: payingFee ? 0.8 : 1,
+                                width: '100%'
+                              }}
+                            >
+                              {payingFee ? (
+                                <><Loader2 size={18} className="admission-spin" /> Launching Payment Portal...</>
+                              ) : (
+                                <><CreditCard size={18} /> Pay {formatNaira(feeDetails.total)} with {selectedAdmissionGateway === 'moniepoint' ? 'Moniepoint' : 'First Bank'}</>
+                              )}
+                            </button>
                           </div>
                         )}
                       </div>
@@ -1394,7 +1550,7 @@ const AdmissionPortal = () => {
                         gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
                         gap: '10px 18px'
                       }}>
-                        {prospectusData.requirements.map((req, idx) => (
+                        {feeDetails.requirements.map((req, idx) => (
                           <div
                             key={req}
                             style={{
@@ -1469,39 +1625,52 @@ const AdmissionPortal = () => {
                       <p style={{ color: '#475569', fontWeight: 700, fontSize: 11, margin: 0, fontFamily: 'monospace' }}>{appData?.appNo}</p>
                     </div>
                     <div style={{ padding: '36px' }}>
-                      <p style={{ fontFamily: 'Arial', marginBottom: 20, color: '#334155', fontSize: 14, lineHeight: 1.8 }}>Dear <strong>{appData?.applicant?.fullName || 'Applicant'}</strong>,</p>
-                      {result.status === 'granted' ? (
-                        <>
-                          <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>We are delighted to inform you that following your <strong>General Assessment Examination</strong>, you have been <strong>OFFERED ADMISSION</strong> into <strong>{schoolName || 'our school'}</strong> for <strong>{appData?.applicant?.classApplyingFor}</strong> for the upcoming academic session.</p>
-                          <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>Your CBT score of <strong>{result.score}/{result.total} ({result.percentage}%)</strong> demonstrates a strong academic foundation. Your student account has been automatically provisioned under <strong>{appData?.applicant?.classApplyingFor}</strong> with Registration Number: <strong>{result.regNo}</strong>.</p>
-                          <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial' }}>Please bring this letter along with your <strong>Birth Certificate</strong>, <strong>Previous School Report Card</strong>, and <strong>2 Passport Photographs</strong> to the Bursary office to finalise enrollment.</p>
-                        </>
-                      ) : (
-                        <>
-                          <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>Following your <strong>General Assessment Examination</strong>, you have been offered a <strong>PROVISIONAL (TRIAL) ADMISSION</strong> into <strong>{schoolName || 'our school'}</strong> for <strong>{appData?.applicant?.classApplyingFor}</strong>.</p>
-                          <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial' }}>Your score of <strong>{result.score}/{result.total} ({result.percentage}%)</strong> places you on a monitored trial period. Your student account has been created with Registration Number: <strong>{result.regNo}</strong>.</p>
-                        </>
-                      )}
-                      <div style={{ marginTop: 24, background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', padding: '20px 24px' }}>
-                        <p style={{ fontSize: 10, fontWeight: 900, letterSpacing: '3px', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 12, fontFamily: 'Arial' }}>Applicant Details</p>
-                        <div className="admission-details-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 28px' }}>
-                          {[
-                            ['Full Name', appData?.applicant?.fullName],
-                            ['Date of Birth', appData?.applicant?.dateOfBirth],
-                            ['Gender', appData?.applicant?.gender],
-                            ['State of Origin', appData?.applicant?.stateOfOrigin],
-                            ['Class Admitted', appData?.applicant?.classApplyingFor],
-                            ['CBT Score', `${result.score}/${result.total} (${result.percentage}%)`],
-                            ...(result.regNo ? [['Registration No.', result.regNo]] : []),
-                            ['Application No.', appData?.appNo],
-                          ].map(([label, value]) => (
-                            <div key={label} style={{ display: 'flex', gap: 8, fontSize: 13, fontFamily: 'Arial', padding: '5px 0', borderBottom: '1px solid #f1f5f9' }}>
-                              <span style={{ color: '#94a3b8', fontWeight: 700, minWidth: 130 }}>{label}:</span>
-                              <span style={{ color: '#0f172a', fontWeight: 900 }}>{value || '—'}</span>
+                      {(() => {
+                        const letterTargetClass = appData?.applicant?.classApplyingFor || '';
+                        const letterFeeDetails = getApplicantFeeBreakdown(letterTargetClass, feeSettings);
+
+                        return (
+                          <>
+                            <p style={{ fontFamily: 'Arial', marginBottom: 20, color: '#334155', fontSize: 14, lineHeight: 1.8 }}>Dear <strong>{appData?.applicant?.fullName || 'Applicant'}</strong>,</p>
+                            {result.status === 'granted' ? (
+                              <>
+                                <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>We are delighted to inform you that following your <strong>General Assessment Examination</strong>, you have been <strong>OFFERED ADMISSION</strong> into <strong>{schoolName || 'our school'}</strong> for <strong>{appData?.applicant?.classApplyingFor}</strong> for the upcoming academic session.</p>
+                                <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>Your CBT score of <strong>{result.score}/{result.total} ({result.percentage}%)</strong> demonstrates a strong academic foundation. Your student account has been automatically provisioned under <strong>{appData?.applicant?.classApplyingFor}</strong> with Registration Number: <strong>{result.regNo}</strong>.</p>
+                                <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>The total approved new intake fee for <strong>{appData?.applicant?.classApplyingFor}</strong> is <strong>{formatNaira(letterFeeDetails.total)}</strong> (Tuition: {formatNaira(letterFeeDetails.schoolFee)} + Admission, Uniforms, P.E, Sports & Requisites) as scheduled in the school prospectus. Please complete fee payment online or at the Bursary to activate your student portal credentials.</p>
+                                <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial' }}>Please bring this letter along with your <strong>Birth Certificate</strong>, <strong>Previous School Report Card</strong>, and <strong>2 Passport Photographs</strong> to the Bursary office to finalise enrollment.</p>
+                              </>
+                            ) : (
+                              <>
+                                <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>Following your <strong>General Assessment Examination</strong>, you have been offered a <strong>PROVISIONAL (TRIAL) ADMISSION</strong> into <strong>{schoolName || 'our school'}</strong> for <strong>{appData?.applicant?.classApplyingFor}</strong>.</p>
+                                <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>Your score of <strong>{result.score}/{result.total} ({result.percentage}%)</strong> places you on a monitored trial period. Your student account has been created with Registration Number: <strong>{result.regNo}</strong>.</p>
+                                <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial' }}>The total approved new intake fee for <strong>{appData?.applicant?.classApplyingFor}</strong> is <strong>{formatNaira(letterFeeDetails.total)}</strong>. Please complete payment to formalise admission.</p>
+                              </>
+                            )}
+                            <div style={{ marginTop: 24, background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', padding: '20px 24px' }}>
+                              <p style={{ fontSize: 10, fontWeight: 900, letterSpacing: '3px', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 12, fontFamily: 'Arial' }}>Applicant Details & Fee Summary</p>
+                              <div className="admission-details-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 28px' }}>
+                                {[
+                                  ['Full Name', appData?.applicant?.fullName],
+                                  ['Date of Birth', appData?.applicant?.dateOfBirth],
+                                  ['Gender', appData?.applicant?.gender],
+                                  ['State of Origin', appData?.applicant?.stateOfOrigin],
+                                  ['Class Admitted', appData?.applicant?.classApplyingFor],
+                                  ['Section / Category', `${letterFeeDetails.sectionTitle} (New Intake)`],
+                                  ['CBT Score', `${result.score}/${result.total} (${result.percentage}%)`],
+                                  ['Total Fees Payable', formatNaira(letterFeeDetails.total)],
+                                  ...(result.regNo ? [['Registration No.', result.regNo]] : []),
+                                  ['Application No.', appData?.appNo],
+                                ].map(([label, value]) => (
+                                  <div key={label} style={{ display: 'flex', gap: 8, fontSize: 13, fontFamily: 'Arial', padding: '5px 0', borderBottom: '1px solid #f1f5f9' }}>
+                                    <span style={{ color: '#94a3b8', fontWeight: 700, minWidth: 140 }}>{label}:</span>
+                                    <span style={{ color: '#0f172a', fontWeight: 900 }}>{value || '—'}</span>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          ))}
-                        </div>
-                      </div>
+                          </>
+                        );
+                      })()}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 32, paddingTop: 24, borderTop: '1px solid #e2e8f0' }}>
                         <AppBarcode value={appData?.appNo || 'BDS'} />
                         <div style={{ textAlign: 'right' }}>
@@ -1667,49 +1836,60 @@ const AdmissionPortal = () => {
                   </div>
 
                   {/* Student Summary Grid */}
-                  <div style={{ background: '#f8fafc', borderRadius: 14, padding: '16px 20px', border: '1px solid #e2e8f0', marginBottom: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 24px', fontSize: 12 }}>
-                    <div>
-                      <span style={{ color: '#64748b', fontWeight: 700 }}>Candidate Name:</span>
-                      <strong style={{ display: 'block', color: '#0f172a', fontSize: 13 }}>{appData?.applicant?.fullName || 'Candidate'}</strong>
-                    </div>
-                    <div>
-                      <span style={{ color: '#64748b', fontWeight: 700 }}>Class & Section:</span>
-                      <strong style={{ display: 'block', color: '#0f172a', fontSize: 13 }}>
-                        {appData?.applicant?.classApplyingFor || 'N/A'} ({getProspectusFeeData(appData?.applicant?.classApplyingFor).sectionTitle})
-                      </strong>
-                    </div>
-                    <div>
-                      <span style={{ color: '#64748b', fontWeight: 700 }}>Application No:</span>
-                      <span style={{ display: 'block', fontFamily: 'monospace', fontWeight: 800, color: '#4f46e5' }}>{appData?.appNo}</span>
-                    </div>
-                    <div>
-                      <span style={{ color: '#64748b', fontWeight: 700 }}>Reg Number:</span>
-                      <span style={{ display: 'block', fontFamily: 'monospace', fontWeight: 800, color: '#059669' }}>{result?.regNo || appData?.applicant?.regNo || 'PENDING'}</span>
-                    </div>
-                  </div>
+                  {(() => {
+                    const receiptTargetClass = appData?.applicant?.classApplyingFor || '';
+                    const receiptFeeDetails = getApplicantFeeBreakdown(receiptTargetClass, feeSettings);
+                    const breakdownItems = appData?.applicant?.feeBreakdown || receiptFeeDetails.items;
+                    const totalPaid = feePaidState?.amount || receiptFeeDetails.total;
 
-                  {/* Itemized Table */}
-                  <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 120px', padding: '10px 16px', background: '#f1f5f9', fontWeight: 800, fontSize: 11, color: '#475569', textTransform: 'uppercase' }}>
-                      <span>#</span>
-                      <span>Item Breakdown</span>
-                      <span style={{ textAlign: 'right' }}>Amount</span>
-                    </div>
-                    {getProspectusFeeData(appData?.applicant?.classApplyingFor).items.map((item, idx) => (
-                      <div key={item.name} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 120px', padding: '9px 16px', borderBottom: '1px solid #f1f5f9', fontSize: 12, background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
-                        <span style={{ color: '#94a3b8' }}>{idx + 1}</span>
-                        <span style={{ color: '#1e293b', fontWeight: 600 }}>{item.name}</span>
-                        <span style={{ textAlign: 'right', fontWeight: 800, fontFamily: 'monospace', color: '#0f172a' }}>{formatNaira(item.amount)}</span>
-                      </div>
-                    ))}
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 120px', padding: '14px 16px', background: '#ecfdf5', fontWeight: 900, fontSize: 14, color: '#065f46', borderTop: '2px solid #a7f3d0' }}>
-                      <span></span>
-                      <span>TOTAL PAID IN FULL</span>
-                      <span style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: 16 }}>
-                        {formatNaira(feePaidState?.amount || getProspectusFeeData(appData?.applicant?.classApplyingFor).total)}
-                      </span>
-                    </div>
-                  </div>
+                    return (
+                      <>
+                        <div style={{ background: '#f8fafc', borderRadius: 14, padding: '16px 20px', border: '1px solid #e2e8f0', marginBottom: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 24px', fontSize: 12 }}>
+                          <div>
+                            <span style={{ color: '#64748b', fontWeight: 700 }}>Candidate Name:</span>
+                            <strong style={{ display: 'block', color: '#0f172a', fontSize: 13 }}>{appData?.applicant?.fullName || 'Candidate'}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: '#64748b', fontWeight: 700 }}>Class & Section:</span>
+                            <strong style={{ display: 'block', color: '#0f172a', fontSize: 13 }}>
+                              {receiptTargetClass || 'N/A'} ({receiptFeeDetails.sectionTitle})
+                            </strong>
+                          </div>
+                          <div>
+                            <span style={{ color: '#64748b', fontWeight: 700 }}>Application No:</span>
+                            <span style={{ display: 'block', fontFamily: 'monospace', fontWeight: 800, color: '#4f46e5' }}>{appData?.appNo}</span>
+                          </div>
+                          <div>
+                            <span style={{ color: '#64748b', fontWeight: 700 }}>Reg Number:</span>
+                            <span style={{ display: 'block', fontFamily: 'monospace', fontWeight: 800, color: '#059669' }}>{result?.regNo || appData?.applicant?.regNo || 'PENDING'}</span>
+                          </div>
+                        </div>
+
+                        {/* Itemized Table */}
+                        <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 120px', padding: '10px 16px', background: '#f1f5f9', fontWeight: 800, fontSize: 11, color: '#475569', textTransform: 'uppercase' }}>
+                            <span>#</span>
+                            <span>Item Breakdown</span>
+                            <span style={{ textAlign: 'right' }}>Amount</span>
+                          </div>
+                          {breakdownItems.map((item, idx) => (
+                            <div key={item.name} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 120px', padding: '9px 16px', borderBottom: '1px solid #f1f5f9', fontSize: 12, background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
+                              <span style={{ color: '#94a3b8' }}>{idx + 1}</span>
+                              <span style={{ color: '#1e293b', fontWeight: 600 }}>{item.name}</span>
+                              <span style={{ textAlign: 'right', fontWeight: 800, fontFamily: 'monospace', color: '#0f172a' }}>{formatNaira(item.amount)}</span>
+                            </div>
+                          ))}
+                          <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 120px', padding: '14px 16px', background: '#ecfdf5', fontWeight: 900, fontSize: 14, color: '#065f46', borderTop: '2px solid #a7f3d0' }}>
+                            <span></span>
+                            <span>TOTAL PAID IN FULL</span>
+                            <span style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: 16 }}>
+                              {formatNaira(totalPaid)}
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
 
                   {/* Signatures & Barcode */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: 16 }}>

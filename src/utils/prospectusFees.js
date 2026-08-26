@@ -146,16 +146,181 @@ export function getClassSection(className) {
 }
 
 /**
- * Retrieves the complete prospectus fee breakdown and requirements for a given class
+ * Retrieves the complete default prospectus fee breakdown and requirements for a given class
  * @param {string} className
  */
 export function getProspectusFeeData(className) {
   const sectionKey = getClassSection(className);
   const data = PROSPECTUS_FEES_SCHEDULE[sectionKey] || PROSPECTUS_FEES_SCHEDULE.junior_secondary;
+  const schoolFeeItem = data.items.find(i => i.name.toLowerCase().includes('school fee'));
+  const schoolFee = schoolFeeItem ? schoolFeeItem.amount : Math.round(data.total * 0.45);
+  
   return {
     ...data,
+    schoolFee,
+    prospectiveTotal: data.total,
     requirements: PROSPECTUS_REQUIREMENTS,
     className: className || data.classesDesc
+  };
+}
+
+/**
+ * Retrieves the default structured fee configuration for a class
+ * Returning students pay schoolFee only; New Intakes pay prospectiveTotal.
+ * @param {string} className
+ */
+export function getDefaultClassFeeStructure(className) {
+  const pData = getProspectusFeeData(className);
+  return {
+    className: className || 'JSS1',
+    sectionKey: pData.sectionKey,
+    sectionTitle: pData.sectionTitle,
+    schoolFee: pData.schoolFee,
+    prospectiveTotal: pData.prospectiveTotal,
+    items: pData.items,
+    requirements: pData.requirements
+  };
+}
+
+/**
+ * Resolves the class fee configuration by merging Firestore settings with defaults
+ * @param {string} className
+ * @param {object} feeSettings - Document data from settings/fees in Firestore
+ */
+export function getClassFees(className, feeSettings = {}) {
+  const defaults = getDefaultClassFeeStructure(className);
+  if (!feeSettings || typeof feeSettings !== 'object') {
+    return defaults;
+  }
+
+  const custom = feeSettings[className] || feeSettings[className?.trim()] || feeSettings['default'];
+  if (!custom) {
+    return defaults;
+  }
+
+  if (typeof custom === 'number') {
+    return {
+      ...defaults,
+      schoolFee: custom,
+      // If user sets a custom school fee, scale or keep prospectiveTotal
+      prospectiveTotal: Math.max(custom, defaults.prospectiveTotal)
+    };
+  }
+
+  if (typeof custom === 'object') {
+    return {
+      ...defaults,
+      schoolFee: custom.schoolFee !== undefined && custom.schoolFee !== null && custom.schoolFee !== '' 
+        ? Number(custom.schoolFee) 
+        : defaults.schoolFee,
+      prospectiveTotal: custom.prospectiveTotal !== undefined && custom.prospectiveTotal !== null && custom.prospectiveTotal !== ''
+        ? Number(custom.prospectiveTotal) 
+        : (custom.total !== undefined ? Number(custom.total) : defaults.prospectiveTotal),
+      items: Array.isArray(custom.items) && custom.items.length > 0 ? custom.items : defaults.items
+    };
+  }
+
+  return defaults;
+}
+
+/**
+ * Determines the expected fee for a student based on whether they are a New Intake or Existing/Returning student
+ * @param {object|string} studentOrClass - Student object or className string
+ * @param {boolean} [isNewIntake] - Optional override boolean
+ * @param {object} [feeSettings] - Optional fee settings from Firestore
+ * @returns {number} The expected fee in Naira
+ */
+export function getExpectedFeeForStudent(studentOrClass, isNewIntake, feeSettings = {}) {
+  if (!studentOrClass) return 0;
+
+  let className = '';
+  let studentIntake = false;
+
+  if (typeof studentOrClass === 'object') {
+    className = studentOrClass.className || studentOrClass.class_name || studentOrClass.CLASS || studentOrClass.class || '';
+    studentIntake = studentOrClass.isNewIntake === true || 
+                    studentOrClass.studentType === 'new_intake' || 
+                    String(studentOrClass.studentType || '').toLowerCase().includes('new');
+    
+    // If student explicitly has a positive expected fee already configured on their profile
+    if (studentOrClass.expectedFee !== undefined && studentOrClass.expectedFee !== null && Number(studentOrClass.expectedFee) > 0) {
+      return Number(studentOrClass.expectedFee);
+    }
+  } else {
+    className = String(studentOrClass);
+  }
+
+  const finalIsNewIntake = isNewIntake !== undefined ? Boolean(isNewIntake) : studentIntake;
+  const classFeeConfig = getClassFees(className, feeSettings);
+
+  return finalIsNewIntake ? classFeeConfig.prospectiveTotal : classFeeConfig.schoolFee;
+}
+
+/**
+ * Generates an accurate itemized fee breakdown for a newly admitted applicant
+ * taking reference from official prospectus items while syncing with custom fee settings.
+ * @param {string} className
+ * @param {object} feeSettings
+ */
+export function getApplicantFeeBreakdown(className, feeSettings = {}) {
+  const feeConfig = getClassFees(className, feeSettings);
+  const defaultData = getProspectusFeeData(className);
+  
+  // If custom items are already explicitly configured
+  if (Array.isArray(feeConfig.items) && feeConfig.items.length > 0 && feeConfig.items !== defaultData.items) {
+    const total = feeConfig.items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+    return {
+      className: className || defaultData.className,
+      sectionKey: feeConfig.sectionKey,
+      sectionTitle: feeConfig.sectionTitle,
+      classesDesc: defaultData.classesDesc,
+      schoolFee: feeConfig.schoolFee,
+      total: feeConfig.prospectiveTotal || total,
+      items: feeConfig.items,
+      requirements: PROSPECTUS_REQUIREMENTS
+    };
+  }
+
+  const targetTotal = Number(feeConfig.prospectiveTotal || defaultData.total);
+  const targetSchoolFee = Number(feeConfig.schoolFee || defaultData.schoolFee);
+
+  // Take default non-school-fee prospectus items
+  const nonSchoolFeeItems = defaultData.items.filter(i => !i.name.toLowerCase().includes('school fee'));
+  const nonSchoolFeeSum = nonSchoolFeeItems.reduce((s, i) => s + Number(i.amount || 0), 0);
+  
+  let finalItems = [];
+  finalItems.push({ name: 'School Fees (Tuition)', amount: targetSchoolFee });
+
+  const remaining = targetTotal - targetSchoolFee;
+  if (remaining <= 0) {
+    finalItems = [{ name: 'Total School Fees & Admission Package', amount: targetTotal }];
+  } else if (nonSchoolFeeSum > 0 && Math.abs(remaining - nonSchoolFeeSum) > 0) {
+    // Proportionately adjust other items so the sum equals targetTotal exactly
+    let runningSum = 0;
+    const scaledItems = nonSchoolFeeItems.map((item, idx) => {
+      if (idx === nonSchoolFeeItems.length - 1) {
+        const lastAmt = remaining - runningSum;
+        return { name: item.name, amount: Math.max(0, lastAmt) };
+      }
+      const ratio = item.amount / nonSchoolFeeSum;
+      const amt = Math.round(remaining * ratio);
+      runningSum += amt;
+      return { name: item.name, amount: amt };
+    });
+    finalItems.push(...scaledItems);
+  } else {
+    finalItems.push(...nonSchoolFeeItems);
+  }
+
+  return {
+    className: className || defaultData.className,
+    sectionKey: feeConfig.sectionKey,
+    sectionTitle: feeConfig.sectionTitle,
+    classesDesc: defaultData.classesDesc,
+    schoolFee: targetSchoolFee,
+    total: targetTotal,
+    items: finalItems,
+    requirements: PROSPECTUS_REQUIREMENTS
   };
 }
 
@@ -166,3 +331,4 @@ export function getProspectusFeeData(className) {
 export function formatNaira(amount) {
   return `₦${Number(amount || 0).toLocaleString('en-NG')}`;
 }
+

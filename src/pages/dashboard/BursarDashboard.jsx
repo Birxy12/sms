@@ -6,17 +6,30 @@ import {
   Wallet, DollarSign, TrendingUp, TrendingDown, Users, 
   Search, Download, Plus, ArrowUpRight, 
   CheckCircle, AlertCircle, Loader2, Briefcase, Settings, Printer, MessageSquare, AlertTriangle, FileText, UserPlus, Banknote,
-  FileSpreadsheet, User, ShieldCheck, Key, Lock, Clock, History, CheckCheck, RefreshCw, X, ShieldAlert
+  FileSpreadsheet, User, ShieldCheck, Key, Lock, Clock, History, CheckCheck, RefreshCw, X, ShieldAlert,
+  Sparkles, ListChecks, CheckCircle2, ChevronDown, ChevronUp, Layers, Check, HelpCircle
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { fetchGlobalClasses, DEFAULT_CLASSES, normalizeClassName, getUniqueClasses } from '../../utils/classUtils';
 import { getClassCode, formatRegNumberSuffix } from '../../utils/regNoGenerator';
 import { createWhatsAppChatUrl } from '../../utils/whatsapp';
+import { 
+  getProspectusFeeData, 
+  getDefaultClassFeeStructure,
+  getClassFees,
+  getExpectedFeeForStudent,
+  formatNaira, 
+  PROSPECTUS_FEES_SCHEDULE, 
+  PROSPECTUS_REQUIREMENTS, 
+  getClassSection 
+} from '../../utils/prospectusFees';
 import SchoolManagementDashboard from '../../components/SchoolManagementDashboard';
 import Papa from 'papaparse';
 
 const ADMIN_WHATSAPP_PHONE = '2349066202949';
+const SESSIONS = ['2025/2026', '2026/2027', '2024/2025'];
+const TERMS = ['First Term', 'Second Term', 'Third Term'];
 
 const OldFeesAnalytics = ({ currentCollected, currentExpected }) => {
   const [oldFees, setOldFees] = useState(() => {
@@ -148,6 +161,7 @@ const BursarDashboard = () => {
   // Data state
   const [allStudents, setAllStudents] = useState([]);
   const [paymentMessages, setPaymentMessages] = useState([]);
+  const [feeSettings, setFeeSettings] = useState({});
   const [stats, setStats] = useState({
     totalExpected: 0,
     totalCollected: 0,
@@ -247,11 +261,27 @@ const BursarDashboard = () => {
         console.warn("Class sync error:", cErr);
       }
 
+      // Fetch global fee settings
+      let loadedFees = {};
+      try {
+        const feeSnap = await getDoc(doc(db, 'settings', 'fees'));
+        if (feeSnap.exists()) {
+          loadedFees = feeSnap.data() || {};
+          setFeeSettings(loadedFees);
+        }
+      } catch (fErr) {
+        console.warn("Could not fetch settings/fees:", fErr);
+      }
+
       let expected = 0;
       let collected = 0;
       students.forEach(s => {
-        const pFee = parseFloat(s.paidFee) || 0;
-        const eFee = parseFloat(s.expectedFee) || 0;
+        const pFee = parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0;
+        let eFee = parseFloat(s.expectedFee) || 0;
+        if (eFee <= 0) {
+          const isIntake = s.isNewIntake === true || s.studentType === 'new_intake';
+          eFee = getExpectedFeeForStudent(s.className || s.class_name || s.CLASS, isIntake, loadedFees);
+        }
         collected += pFee;
         expected += eFee;
       });
@@ -516,114 +546,444 @@ const BursarDashboard = () => {
   // --- Sub-Components for Tabs ---
 
   const FeeSettingView = () => {
-    const [selectedClass, setSelectedClass] = useState('');
-    const [feeAmount, setFeeAmount] = useState('');
+    const [selectedClass, setSelectedClass] = useState(classes[0] || 'JSS1');
+    const [schoolFee, setSchoolFee] = useState('');
+    const [prospectiveTotal, setProspectiveTotal] = useState('');
     const [feeSession, setFeeSession] = useState('2025/2026');
     const [feeTerm, setFeeTerm] = useState('First Term');
+    const [syncMode, setSyncMode] = useState('smart'); // 'smart', 'returning_all', 'intake_all'
     const [saving, setSaving] = useState(false);
+    const [savingSettingsOnly, setSavingSettingsOnly] = useState(false);
 
-    const handleSetFee = async (e) => {
+    // Auto load selected class defaults/custom values
+    useEffect(() => {
+      if (!selectedClass) return;
+      const config = getClassFees(selectedClass, feeSettings);
+      setSchoolFee(config.schoolFee || '');
+      setProspectiveTotal(config.prospectiveTotal || '');
+    }, [selectedClass, feeSettings]);
+
+    const targetStudents = allStudents.filter(s => 
+      (s.className || s.class_name || s.CLASS) === selectedClass
+    );
+    const returningCount = targetStudents.filter(s => !s.isNewIntake && s.studentType !== 'new_intake').length;
+    const intakeCount = targetStudents.filter(s => s.isNewIntake === true || s.studentType === 'new_intake').length;
+    const sectionInfo = getProspectusFeeData(selectedClass);
+
+    // Save Fee Settings to Firestore
+    const handleSaveFeeSettingsOnly = async (e) => {
+      if (e) e.preventDefault();
+      if (!selectedClass || !schoolFee || !prospectiveTotal) {
+        alert('Please specify both Returning School Fee and New Intake Prospective Total.');
+        return;
+      }
+
+      setSavingSettingsOnly(true);
+      try {
+        await ensureFirebaseAuth();
+        const updatedFees = {
+          ...feeSettings,
+          [selectedClass]: {
+            schoolFee: parseFloat(schoolFee) || 0,
+            prospectiveTotal: parseFloat(prospectiveTotal) || 0,
+            updatedAt: new Date().toISOString(),
+            updatedBy: currentAdmin?.name || currentAdmin?.email || 'Bursar'
+          }
+        };
+
+        await setDoc(doc(db, 'settings', 'fees'), updatedFees, { merge: true });
+        setFeeSettings(updatedFees);
+        setStatus({
+          type: 'success',
+          message: `Fee settings saved for ${selectedClass}: Returning ₦${Number(schoolFee).toLocaleString()} | New Intake ₦${Number(prospectiveTotal).toLocaleString()}`
+        });
+      } catch (err) {
+        console.error(err);
+        setStatus({ type: 'error', message: 'Failed to save fee settings.' });
+      } finally {
+        setSavingSettingsOnly(false);
+      }
+    };
+
+    // Save & Apply Fee to Enrolled Students in Class
+    const handleApplyFeeToStudents = async (e) => {
       e.preventDefault();
-      if (!selectedClass || !feeAmount) return;
-      if (!window.confirm(`Set fee of ₦${feeAmount} for ALL students in ${selectedClass} for ${feeTerm} (${feeSession})?`)) return;
+      if (!selectedClass || !schoolFee || !prospectiveTotal) {
+        alert('Please specify both Returning School Fee and New Intake Prospective Total.');
+        return;
+      }
+
+      const confirmMsg = syncMode === 'smart'
+        ? `Apply fees to ${targetStudents.length} students in ${selectedClass}?\n\n• Returning Students (${returningCount}): ₦${Number(schoolFee).toLocaleString()}\n• New Intakes (${intakeCount}): ₦${Number(prospectiveTotal).toLocaleString()}\n• Term: ${feeTerm} (${feeSession})`
+        : syncMode === 'returning_all'
+        ? `Set Returning Fee (₦${Number(schoolFee).toLocaleString()}) for ALL ${targetStudents.length} students in ${selectedClass}?`
+        : `Set New Intake Fee (₦${Number(prospectiveTotal).toLocaleString()}) for ALL ${targetStudents.length} students in ${selectedClass}?`;
+
+      if (!window.confirm(confirmMsg)) return;
 
       setSaving(true);
       try {
-        const batch = writeBatch(db);
-        const targetStudents = allStudents.filter(s => 
-          (s.className || s.class_name || s.CLASS) === selectedClass
-        );
+        await ensureFirebaseAuth();
 
-        targetStudents.forEach(s => {
+        // 1. Save to settings/fees first so it's permanent
+        const updatedFees = {
+          ...feeSettings,
+          [selectedClass]: {
+            schoolFee: parseFloat(schoolFee) || 0,
+            prospectiveTotal: parseFloat(prospectiveTotal) || 0,
+            updatedAt: new Date().toISOString(),
+            updatedBy: currentAdmin?.name || currentAdmin?.email || 'Bursar'
+          }
+        };
+        await setDoc(doc(db, 'settings', 'fees'), updatedFees, { merge: true });
+        setFeeSettings(updatedFees);
+
+        // 2. Batch update enrolled students
+        let batch = writeBatch(db);
+        let count = 0;
+
+        for (const s of targetStudents) {
+          const isIntake = s.isNewIntake === true || s.studentType === 'new_intake';
+          let appliedAmount = parseFloat(schoolFee);
+          if (syncMode === 'smart') {
+            appliedAmount = isIntake ? parseFloat(prospectiveTotal) : parseFloat(schoolFee);
+          } else if (syncMode === 'intake_all') {
+            appliedAmount = parseFloat(prospectiveTotal);
+          } else {
+            appliedAmount = parseFloat(schoolFee);
+          }
+
           const ref = doc(db, 'students', s.id);
           batch.update(ref, { 
-            expectedFee: parseFloat(feeAmount),
+            expectedFee: appliedAmount,
             lastPaymentTerm: feeTerm,
-            lastPaymentSession: feeSession
+            lastPaymentSession: feeSession,
+            updatedAt: new Date().toISOString()
           });
-        });
+          count++;
 
-        if (targetStudents.length > 0) {
-          await batch.commit();
-          await fetchFinancialData();
-          setStatus({ type: 'success', message: `Updated expected fee for ${targetStudents.length} students in ${selectedClass}.` });
-        } else {
-          setStatus({ type: 'error', message: `No students found in ${selectedClass}.` });
+          if (count % 300 === 0) {
+            await batch.commit();
+            batch = writeBatch(db);
+          }
         }
+
+        if (count % 300 !== 0 && count > 0) {
+          await batch.commit();
+        }
+
+        await fetchFinancialData();
+        setStatus({ 
+          type: 'success', 
+          message: `Fee settings saved & applied to ${targetStudents.length} students in ${selectedClass} successfully.` 
+        });
       } catch (err) {
         console.error(err);
-        setStatus({ type: 'error', message: 'Failed to set fee.' });
+        setStatus({ type: 'error', message: 'Failed to apply fee to students.' });
       } finally {
         setSaving(false);
-        setFeeAmount('');
       }
     };
 
     return (
-      <div className="card-white p-8 max-w-2xl mx-auto mt-8 border border-slate-200 shadow-sm rounded-3xl">
-        <div className="flex items-center gap-4 mb-8 border-b border-slate-100 pb-6">
-          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
-            <Settings size={24} />
+      <div className="space-y-8 mt-6 max-w-5xl mx-auto">
+        {/* Main Fee Settings Form Card */}
+        <div className="card-white p-6 sm:p-8 border border-slate-200 shadow-sm rounded-3xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 border-b border-slate-100 pb-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center shadow-inner">
+                <Settings size={26} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-900">Class Fee & Prospective Structure</h3>
+                <p className="text-xs sm:text-sm text-slate-500">
+                  Configure Returning Student School Fees and New Intake Total Packages dynamically.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 bg-slate-100 px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-600 self-start sm:self-auto">
+              <Sparkles size={14} className="text-indigo-600" />
+              <span>{sectionInfo.sectionTitle}</span>
+            </div>
           </div>
-          <div>
-            <h3 className="text-xl font-black text-slate-900">Classwise Fee Setting</h3>
-            <p className="text-sm text-slate-500">Set the expected total fee for a specific class.</p>
-          </div>
+
+          <form onSubmit={handleApplyFeeToStudents} className="space-y-6">
+            {/* Class & Session Controls */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">
+                  1. Select Target Class
+                </label>
+                <select 
+                  value={selectedClass} 
+                  onChange={(e) => setSelectedClass(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-indigo-500 outline-none font-bold text-slate-800 transition-all cursor-pointer text-sm"
+                  required
+                >
+                  {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">
+                  Academic Session
+                </label>
+                <select 
+                  value={feeSession} 
+                  onChange={(e) => setFeeSession(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-indigo-500 outline-none font-bold text-slate-800 transition-all cursor-pointer text-sm"
+                >
+                  {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">
+                  Academic Term
+                </label>
+                <select 
+                  value={feeTerm} 
+                  onChange={(e) => setFeeTerm(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-indigo-500 outline-none font-bold text-slate-800 transition-all cursor-pointer text-sm"
+                >
+                  {TERMS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Returning Fee vs Prospective Total Amounts */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+              {/* Existing / Returning Student Fee */}
+              <div className="p-5 rounded-2xl border-2 border-indigo-100 bg-indigo-50/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-lg bg-indigo-600 text-white font-black text-xs flex items-center justify-center">🎓</span>
+                    <label className="text-xs font-black text-indigo-950 uppercase tracking-wider">
+                      Returning Student School Fee
+                    </label>
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                    Tuition Only
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Regular termly school fee for already existing students in <strong>{selectedClass}</strong>.
+                </p>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-lg text-slate-400">₦</span>
+                  <input 
+                    type="number" 
+                    value={schoolFee} 
+                    onChange={(e) => setSchoolFee(e.target.value)}
+                    placeholder="e.g. 32000"
+                    className="w-full pl-9 pr-4 py-3 rounded-xl bg-white border-2 border-indigo-200 focus:border-indigo-600 outline-none font-black text-slate-900 text-lg transition-all"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* New Intake Prospective Package Fee */}
+              <div className="p-5 rounded-2xl border-2 border-amber-100 bg-amber-50/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-lg bg-amber-500 text-white font-black text-xs flex items-center justify-center">🌟</span>
+                    <label className="text-xs font-black text-amber-950 uppercase tracking-wider">
+                      New Intake Prospective Total
+                    </label>
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                    Full Package
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Total admission package for fresh students (Tuition, Uniforms, P.E, Sports, Caution, etc.).
+                </p>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-lg text-slate-400">₦</span>
+                  <input 
+                    type="number" 
+                    value={prospectiveTotal} 
+                    onChange={(e) => setProspectiveTotal(e.target.value)}
+                    placeholder="e.g. 77000"
+                    className="w-full pl-9 pr-4 py-3 rounded-xl bg-white border-2 border-amber-200 focus:border-amber-500 outline-none font-black text-slate-900 text-lg transition-all"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Sync Scope Options & Enrolled Class Stats */}
+            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 pb-3 border-b border-slate-200">
+                <p className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                  Enrolled in {selectedClass}: <span className="text-indigo-600">{targetStudents.length} Students</span>
+                </p>
+                <div className="flex gap-3 text-xs font-bold text-slate-500">
+                  <span>🎓 Returning: <strong className="text-slate-800">{returningCount}</strong></span>
+                  <span>•</span>
+                  <span>🌟 New Intakes: <strong className="text-slate-800">{intakeCount}</strong></span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block mb-2">
+                  When Applying Fee to Class Students:
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <label className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-2.5 ${
+                    syncMode === 'smart' ? 'border-indigo-600 bg-white shadow-sm' : 'border-slate-200 bg-slate-100/60'
+                  }`}>
+                    <input 
+                      type="radio" 
+                      name="syncMode" 
+                      value="smart" 
+                      checked={syncMode === 'smart'} 
+                      onChange={() => setSyncMode('smart')}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <p className="text-xs font-black text-slate-800">⚡ Smart Sync (Auto)</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        Returning get ₦{Number(schoolFee || 0).toLocaleString()}, New Intakes get ₦{Number(prospectiveTotal || 0).toLocaleString()}
+                      </p>
+                    </div>
+                  </label>
+
+                  <label className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-2.5 ${
+                    syncMode === 'returning_all' ? 'border-indigo-600 bg-white shadow-sm' : 'border-slate-200 bg-slate-100/60'
+                  }`}>
+                    <input 
+                      type="radio" 
+                      name="syncMode" 
+                      value="returning_all" 
+                      checked={syncMode === 'returning_all'} 
+                      onChange={() => setSyncMode('returning_all')}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <p className="text-xs font-black text-slate-800">🎓 School Fee to ALL</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        Sets ₦{Number(schoolFee || 0).toLocaleString()} for every student in {selectedClass}
+                      </p>
+                    </div>
+                  </label>
+
+                  <label className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-2.5 ${
+                    syncMode === 'intake_all' ? 'border-indigo-600 bg-white shadow-sm' : 'border-slate-200 bg-slate-100/60'
+                  }`}>
+                    <input 
+                      type="radio" 
+                      name="syncMode" 
+                      value="intake_all" 
+                      checked={syncMode === 'intake_all'} 
+                      onChange={() => setSyncMode('intake_all')}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <p className="text-xs font-black text-slate-800">🌟 Intake Fee to ALL</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        Sets ₦{Number(prospectiveTotal || 0).toLocaleString()} for every student in {selectedClass}
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button 
+                type="button"
+                onClick={handleSaveFeeSettingsOnly}
+                disabled={savingSettingsOnly || saving}
+                className="flex-1 px-6 py-4 rounded-xl border-2 border-slate-200 hover:border-indigo-500 bg-white text-slate-700 hover:text-indigo-600 font-bold transition-all flex items-center justify-center gap-2 text-sm shadow-sm"
+              >
+                {savingSettingsOnly ? <Loader2 size={18} className="animate-spin" /> : <Settings size={18} />}
+                Save Fee Setting Only
+              </button>
+
+              <button 
+                type="submit" 
+                disabled={saving || savingSettingsOnly} 
+                className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-xl hover:bg-indigo-700 transition flex justify-center items-center gap-2 shadow-lg shadow-indigo-200 text-sm"
+              >
+                {saving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />} 
+                Save & Apply to Enrolled Students
+              </button>
+            </div>
+          </form>
         </div>
 
-        <form onSubmit={handleSetFee} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Global Class Fee Master Matrix Table */}
+        <div className="card-white p-6 sm:p-8 border border-slate-200 shadow-sm rounded-3xl">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-slate-100">
             <div>
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Select Class</label>
-              <select 
-                value={selectedClass} 
-                onChange={(e) => setSelectedClass(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold"
-                required
-              >
-                <option value="">Choose a class...</option>
-                {classes.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Expected Fee Amount (₦)</label>
-              <input 
-                type="number" 
-                value={feeAmount} 
-                onChange={(e) => setFeeAmount(e.target.value)}
-                placeholder="e.g. 45000"
-                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold"
-                required
-              />
+              <h4 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <Layers size={20} className="text-indigo-600" />
+                Active Class Fee Schedule Matrix
+              </h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Overview of configured fees across all classes. Click "Configure" to modify any class.
+              </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Session / Year</label>
-              <select 
-                value={feeSession} 
-                onChange={(e) => setFeeSession(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold"
-              >
-                {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Term</label>
-              <select 
-                value={feeTerm} 
-                onChange={(e) => setFeeTerm(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold"
-              >
-                {TERMS.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                  <th className="py-3 px-4">Class</th>
+                  <th className="py-3 px-4">Section</th>
+                  <th className="py-3 px-4">Enrolled Students</th>
+                  <th className="py-3 px-4">Returning School Fee</th>
+                  <th className="py-3 px-4">New Intake Prospective Total</th>
+                  <th className="py-3 px-4 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
+                {classes.map((cls) => {
+                  const cfg = getClassFees(cls, feeSettings);
+                  const clsStudents = allStudents.filter(s => (s.className || s.class_name || s.CLASS) === cls);
+                  const isSelected = selectedClass === cls;
+
+                  return (
+                    <tr key={cls} className={`hover:bg-indigo-50/40 transition-colors ${isSelected ? 'bg-indigo-50/60' : ''}`}>
+                      <td className="py-3 px-4">
+                        <span className="font-black text-slate-900 text-sm">{cls}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                          {cfg.sectionTitle}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-mono text-slate-600">
+                        {clsStudents.length} Students
+                      </td>
+                      <td className="py-3 px-4 font-mono text-indigo-600 font-extrabold text-sm">
+                        ₦{cfg.schoolFee.toLocaleString()}
+                      </td>
+                      <td className="py-3 px-4 font-mono text-amber-600 font-extrabold text-sm">
+                        ₦{cfg.prospectiveTotal.toLocaleString()}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedClass(cls);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white font-black text-xs transition-colors"
+                        >
+                          Configure
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-          <button type="submit" disabled={saving} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 transition flex justify-center items-center gap-2">
-            {saving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />} Apply Fee to Class
-          </button>
-        </form>
+        </div>
       </div>
     );
   };
@@ -1140,9 +1500,26 @@ const BursarDashboard = () => {
   };
 
   const RegisterStudentView = () => {
-    const [form, setForm] = useState({ name: '', regNo: '', className: '', gender: '', phone: '', guardianName: '' });
+    const [form, setForm] = useState({ 
+      name: '', 
+      regNo: '', 
+      className: classes[0] || 'JSS1', 
+      gender: 'Male', 
+      phone: '', 
+      guardianName: '',
+      studentType: 'returning', // 'returning' | 'new_intake'
+      expectedFee: ''
+    });
     const [saving, setSaving] = useState(false);
     const [done, setDone] = useState(null);
+
+    // Update expected fee automatically when className or studentType changes
+    useEffect(() => {
+      const cls = form.className || 'JSS1';
+      const isIntake = form.studentType === 'new_intake';
+      const autoFee = getExpectedFeeForStudent(cls, isIntake, feeSettings);
+      setForm(prev => ({ ...prev, expectedFee: String(autoFee) }));
+    }, [form.className, form.studentType, feeSettings]);
 
     const generateRegNo = () => {
       const year = new Date().getFullYear();
@@ -1157,67 +1534,252 @@ const BursarDashboard = () => {
       e.preventDefault();
       setSaving(true);
       try {
+        await ensureFirebaseAuth();
         const regNo = form.regNo || generateRegNo();
+        const finalExpected = parseFloat(form.expectedFee) || getExpectedFeeForStudent(form.className, form.studentType === 'new_intake', feeSettings);
+
         await addDoc(collection(db, 'students'), {
-          name: form.name, regNo, className: form.className,
-          gender: form.gender, guardianPhone: form.phone, guardianName: form.guardianName,
-          paidFee: 0, expectedFee: 0, createdAt: serverTimestamp(), createdBy: 'bursar',
+          name: form.name, 
+          regNo, 
+          className: form.className,
+          gender: form.gender, 
+          guardianPhone: form.phone, 
+          guardianName: form.guardianName,
+          studentType: form.studentType,
+          isNewIntake: form.studentType === 'new_intake',
+          paidFee: 0, 
+          paidAmount: 0,
+          expectedFee: finalExpected, 
+          createdAt: serverTimestamp(), 
+          createdBy: 'bursar',
         });
+
         await fetchFinancialData();
-        setDone(regNo);
-        setForm({ name: '', regNo: '', className: '', gender: '', phone: '', guardianName: '' });
-      } catch (e) { console.error(e); alert('Registration failed.'); }
-      finally { setSaving(false); }
+        setDone({ regNo, name: form.name, expectedFee: finalExpected, type: form.studentType });
+        setForm({ 
+          name: '', 
+          regNo: '', 
+          className: form.className, 
+          gender: 'Male', 
+          phone: '', 
+          guardianName: '',
+          studentType: 'returning',
+          expectedFee: String(getExpectedFeeForStudent(form.className, false, feeSettings))
+        });
+      } catch (e) { 
+        console.error(e); 
+        alert('Registration failed.'); 
+      } finally { 
+        setSaving(false); 
+      }
     };
 
+    const activeFeeConfig = getClassFees(form.className || 'JSS1', feeSettings);
+
     return (
-      <div className="card-white p-8 mt-8 border border-slate-200 rounded-3xl shadow-sm max-w-2xl mx-auto">
+      <div className="card-white p-6 sm:p-8 mt-8 border border-slate-200 rounded-3xl shadow-sm max-w-2xl mx-auto">
         <div className="flex items-center gap-4 mb-8 border-b border-slate-100 pb-6">
-          <div className="w-12 h-12 bg-violet-50 text-violet-600 rounded-xl flex items-center justify-center"><UserPlus size={24}/></div>
-          <div><h3 className="text-xl font-black text-slate-900">Register New Student</h3><p className="text-sm text-slate-500">Add a student manually to the database.</p></div>
+          <div className="w-12 h-12 bg-violet-50 text-violet-600 rounded-2xl flex items-center justify-center shadow-inner">
+            <UserPlus size={26}/>
+          </div>
+          <div>
+            <h3 className="text-xl font-black text-slate-900">Register Student & Fee Assignment</h3>
+            <p className="text-xs sm:text-sm text-slate-500">
+              Enroll returning or new intake students with automatic fee tier assignment.
+            </p>
+          </div>
         </div>
+
         {done && (
-          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3">
-            <CheckCircle size={20} className="text-emerald-600"/>
-            <p className="font-black text-emerald-800 text-sm">Registered! Reg No: <span className="font-mono">{done}</span></p>
-            <button onClick={() => setDone(null)} className="ml-auto text-emerald-600 font-bold text-xs underline">Register Another</button>
+          <div className="mb-6 p-5 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-1 animate-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-emerald-800 font-black text-sm">
+                <CheckCircle size={18} className="text-emerald-600"/>
+                <span>Student Enrolled Successfully!</span>
+              </div>
+              <button onClick={() => setDone(null)} className="text-emerald-700 font-bold text-xs underline">
+                Dismiss
+              </button>
+            </div>
+            <p className="text-xs text-emerald-700">
+              <strong>{done.name}</strong> • Reg No: <span className="font-mono font-black">{done.regNo}</span> • Expected Fee: <strong>₦{Number(done.expectedFee).toLocaleString()}</strong> ({done.type === 'new_intake' ? '🌟 New Intake' : '🎓 Returning Student'})
+            </p>
           </div>
         )}
-        <form onSubmit={handleRegister} className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {[
-              { label: 'Full Name', name: 'name', placeholder: 'e.g. John Doe', required: true },
-              { label: 'Reg Number (auto if blank)', name: 'regNo', placeholder: 'BDS/2025/001' },
-              { label: "Guardian's Name", name: 'guardianName', placeholder: "Mrs. Doe" },
-              { label: "Guardian's Phone", name: 'phone', placeholder: '08012345678' },
-            ].map(f => (
-              <div key={f.name}>
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">{f.label}</label>
-                <input type="text" name={f.name} value={form[f.name]} onChange={handleChange} placeholder={f.placeholder} required={!!f.required}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-violet-500 outline-none font-bold text-slate-800 transition-all"/>
-              </div>
-            ))}
+
+        <form onSubmit={handleRegister} className="space-y-6">
+          {/* Student Intake Category (Returning vs New Intake) */}
+          <div>
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2.5 block">
+              1. Student Intake Category
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Option: Returning Student */}
+              <label className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3 ${
+                form.studentType === 'returning' 
+                  ? 'border-indigo-600 bg-indigo-50/50 shadow-sm' 
+                  : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
+              }`}>
+                <input 
+                  type="radio" 
+                  name="studentType" 
+                  value="returning" 
+                  checked={form.studentType === 'returning'} 
+                  onChange={() => setForm({ ...form, studentType: 'returning' })}
+                  className="mt-1"
+                />
+                <div>
+                  <p className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                    🎓 Returning Student
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Pays <strong>School Fee Only</strong> (₦{activeFeeConfig.schoolFee.toLocaleString()})
+                  </p>
+                </div>
+              </label>
+
+              {/* Option: New Intake */}
+              <label className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3 ${
+                form.studentType === 'new_intake' 
+                  ? 'border-amber-500 bg-amber-50/50 shadow-sm' 
+                  : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
+              }`}>
+                <input 
+                  type="radio" 
+                  name="studentType" 
+                  value="new_intake" 
+                  checked={form.studentType === 'new_intake'} 
+                  onChange={() => setForm({ ...form, studentType: 'new_intake' })}
+                  className="mt-1"
+                />
+                <div>
+                  <p className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                    🌟 New Intake / Fresh Admission
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Pays <strong>Total Prospective Fee</strong> (₦{activeFeeConfig.prospectiveTotal.toLocaleString()})
+                  </p>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Student Info Inputs */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Class</label>
-              <select name="className" value={form.className} onChange={handleChange} required
-                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-violet-500 outline-none font-bold text-slate-800 transition-all cursor-pointer">
-                <option value="">Select Class</option>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Full Name</label>
+              <input 
+                type="text" 
+                name="name" 
+                value={form.name} 
+                onChange={handleChange} 
+                placeholder="e.g. John Emmanuel Doe" 
+                required
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-violet-500 outline-none font-bold text-slate-800 transition-all text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">
+                Reg Number <span className="text-slate-400 font-normal text-[10px]">(auto if blank)</span>
+              </label>
+              <input 
+                type="text" 
+                name="regNo" 
+                value={form.regNo} 
+                onChange={handleChange} 
+                placeholder="BDS/JSS1/2026/001" 
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-violet-500 outline-none font-bold text-slate-800 transition-all text-sm font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Class Section</label>
+              <select 
+                name="className" 
+                value={form.className} 
+                onChange={handleChange} 
+                required
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-violet-500 outline-none font-bold text-slate-800 transition-all cursor-pointer text-sm"
+              >
                 {classes.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+
             <div>
               <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Gender</label>
-              <select name="gender" value={form.gender} onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-violet-500 outline-none font-bold text-slate-800 transition-all cursor-pointer">
-                <option value="">Select Gender</option>
+              <select 
+                name="gender" 
+                value={form.gender} 
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-violet-500 outline-none font-bold text-slate-800 transition-all cursor-pointer text-sm"
+              >
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
               </select>
             </div>
+
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Guardian's Name</label>
+              <input 
+                type="text" 
+                name="guardianName" 
+                value={form.guardianName} 
+                onChange={handleChange} 
+                placeholder="Mr. & Mrs. Doe" 
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-violet-500 outline-none font-bold text-slate-800 transition-all text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Guardian's Phone</label>
+              <input 
+                type="tel" 
+                name="phone" 
+                value={form.phone} 
+                onChange={handleChange} 
+                placeholder="08012345678" 
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-violet-500 outline-none font-bold text-slate-800 transition-all text-sm"
+              />
+            </div>
           </div>
-          <button type="submit" disabled={saving}
-            className="w-full bg-violet-600 text-white font-black py-4 rounded-xl hover:bg-violet-700 transition-all shadow-lg disabled:opacity-50 flex items-center justify-center gap-2">
-            {saving ? <Loader2 size={20} className="animate-spin"/> : <UserPlus size={20}/>} Register Student
+
+          {/* Computed Expected Fee Tier Card */}
+          <div className="p-4 bg-slate-50 rounded-2xl border-2 border-slate-200 space-y-3">
+            <div className="flex justify-between items-center">
+              <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                Expected Fee for {form.className} ({form.studentType === 'new_intake' ? '🌟 New Intake' : '🎓 Returning'})
+              </label>
+              <span className={`text-xs font-black px-2.5 py-0.5 rounded-full ${
+                form.studentType === 'new_intake' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'
+              }`}>
+                ₦{Number(form.expectedFee || 0).toLocaleString()}
+              </span>
+            </div>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-sm text-slate-400">₦</span>
+              <input 
+                type="number" 
+                name="expectedFee"
+                value={form.expectedFee} 
+                onChange={handleChange}
+                placeholder="Expected Fee"
+                className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-white border border-slate-300 focus:border-violet-600 outline-none font-black text-slate-900 text-base"
+                required
+              />
+            </div>
+            <p className="text-[10px] text-slate-400">
+              Automatically pre-loaded based on <strong>{form.className}</strong> Fee Settings. You can adjust if special concessions apply.
+            </p>
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={saving}
+            className="w-full bg-violet-600 text-white font-black py-4 rounded-xl hover:bg-violet-700 transition-all shadow-lg shadow-violet-200 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+          >
+            {saving ? <Loader2 size={20} className="animate-spin"/> : <UserPlus size={20}/>} 
+            Enroll Student & Set Expected Fee
           </button>
         </form>
       </div>

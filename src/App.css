@@ -512,24 +512,25 @@ h1, h2, h3, h4, h5, h6 {
    ========================================= */
 
 .glass-morphism {
-  background: var(--glass-bg, white);
+  background: var(--glass-bg, #1e293b);
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  border: 1px solid var(--glass-border, #e2e8f0);
+  border: 1px solid var(--glass-border, #334155);
 }
 
 .card-premium {
-  background: white;
+  background: var(--bg-primary, #1e293b);
   border-radius: var(--radius-xl);
-  border: 1px solid var(--slate-200);
+  border: 1px solid var(--border-color, #334155);
   box-shadow: var(--shadow-md);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--text-main, #f8fafc);
 }
 
 .card-premium:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-xl);
-  border-color: var(--primary-light);
+  border-color: var(--primary-light, rgba(255, 107, 0, 0.2));
 }
 
 .btn-glow {
@@ -559,18 +560,19 @@ h1, h2, h3, h4, h5, h6 {
 .input-premium {
   width: 100%;
   padding: 14px 18px;
-  background: white;
-  border: 2px solid var(--slate-100);
+  background: var(--bg-tertiary, #334155);
+  border: 2px solid var(--border-color, #334155);
   border-radius: var(--radius-lg);
   font-size: 15px;
   font-weight: 600;
+  color: var(--text-main, #f8fafc);
   transition: all 0.2s ease;
   outline: none;
 }
 
 .input-premium:focus {
   border-color: var(--primary);
-  background: white;
+  background: var(--bg-tertiary, #334155);
   box-shadow: 0 0 0 4px var(--primary-light);
 }
 
@@ -760,13 +762,13 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .modern-tab-item:hover {
-  color: #1e293b;
+  color: var(--text-main, #f8fafc);
 }
 
 .modern-tab-item.active {
-  background: white;
-  color: #4f46e5;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+  background: var(--bg-tertiary, #334155);
+  color: var(--primary, #ff6b00);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   transform: translateY(-1px);
 }
 

@@ -39,10 +39,18 @@ try {
 
 // Initialize Firestore with standard reliable persistent local cache and long polling settings
 const initFirestore = () => {
+  let firestoreInstance;
+  try {
+    // If Firestore was already initialized on this app instance (e.g., during Vite HMR)
+    firestoreInstance = getFirestore(app);
+  } catch (e) {}
+
+  if (firestoreInstance) {
+    return firestoreInstance;
+  }
+
   const connectionSettings = {
-    experimentalAutoDetectLongPolling: true,
-    experimentalForceLongPolling: true,
-    useFetchStreams: false
+    experimentalAutoDetectLongPolling: true
   };
 
   if (typeof window !== 'undefined' && typeof indexedDB !== 'undefined') {
@@ -54,7 +62,11 @@ const initFirestore = () => {
         ...connectionSettings
       });
     } catch (error) {
-      console.warn('Firestore local cache initialization fallback to default Firestore.', error?.message || error);
+      try {
+        return initializeFirestore(app, connectionSettings);
+      } catch (err2) {
+        return getFirestore(app);
+      }
     }
   }
 

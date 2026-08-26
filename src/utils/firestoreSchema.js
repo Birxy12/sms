@@ -207,6 +207,11 @@ export const compressStudent = (data = {}) => {
   if (data.phone !== undefined && data.phone !== null) result.phone = String(data.phone);
   if (data.email !== undefined && data.email !== null) result.email = String(data.email);
   if (data.pin !== undefined && data.pin !== null) result.pin = data.pin;
+  if (data.studentType !== undefined && data.studentType !== null) result.studentType = String(data.studentType);
+  if (data.isNewIntake !== undefined && data.isNewIntake !== null) result.isNewIntake = Boolean(data.isNewIntake);
+  if (data.expectedFee !== undefined && data.expectedFee !== null) result.expectedFee = Number(data.expectedFee);
+  if (data.paidFee !== undefined && data.paidFee !== null) result.paidFee = Number(data.paidFee);
+  if (data.paidAmount !== undefined && data.paidAmount !== null) result.paidAmount = Number(data.paidAmount);
   if (data.securityQuestion !== undefined && data.securityQuestion !== null) result.securityQuestion = String(data.securityQuestion);
   if (data.securityAnswer !== undefined && data.securityAnswer !== null) result.securityAnswer = String(data.securityAnswer);
   if (data.enrolledVia !== undefined && data.enrolledVia !== null) result.enrolledVia = String(data.enrolledVia);
@@ -246,6 +251,10 @@ export const expandStudent = (compressed) => {
       updatedAt: compressed.updatedAt || compressed.u || '',
       photo: compressed.photo || compressed.p || '',
       pin: compressed.pin,
+      studentType: compressed.studentType || (compressed.isNewIntake ? 'new_intake' : 'returning'),
+      isNewIntake: compressed.isNewIntake === true || compressed.studentType === 'new_intake',
+      expectedFee: compressed.expectedFee !== undefined ? Number(compressed.expectedFee) : undefined,
+      paidFee: compressed.paidFee !== undefined ? Number(compressed.paidFee) : (compressed.paidAmount !== undefined ? Number(compressed.paidAmount) : undefined),
       securityQuestion: compressed.securityQuestion,
       securityAnswer: compressed.securityAnswer
     };
@@ -261,8 +270,11 @@ export const expandStudent = (compressed) => {
     house: compressed[STUDENT_KEYS.house] || compressed.house || '',
     updatedAt: compressed[STUDENT_KEYS.updatedAt] || compressed.updatedAt || '',
     photo: compressed[STUDENT_KEYS.photo] || compressed.photo || '',
-    // PIN and security fields are usually not compressed but we should keep them
     pin: compressed.pin,
+    studentType: compressed.studentType || (compressed.isNewIntake ? 'new_intake' : 'returning'),
+    isNewIntake: compressed.isNewIntake === true || compressed.studentType === 'new_intake',
+    expectedFee: compressed.expectedFee !== undefined ? Number(compressed.expectedFee) : undefined,
+    paidFee: compressed.paidFee !== undefined ? Number(compressed.paidFee) : (compressed.paidAmount !== undefined ? Number(compressed.paidAmount) : undefined),
     securityQuestion: compressed.securityQuestion,
     securityAnswer: compressed.securityAnswer
   };

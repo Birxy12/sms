@@ -1,9 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Loader2, Camera, Upload, UserCircle, KeyRound, Sparkles } from 'lucide-react';
+import { X, Loader2, Camera, Upload, UserCircle, KeyRound, Sparkles, DollarSign } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import StudentAvatar from './StudentAvatar';
 import AvatarSelector from './AvatarSelector';
 import { useGlobalClubsAndHouses } from '../utils/schoolClubsAndHouses';
+import { getClassFees, getExpectedFeeForStudent } from '../utils/prospectusFees';
+import { db } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 const FieldError = ({ message }) => (
   <span style={{ display: 'block', marginTop: '4px', fontSize: '11px', fontWeight: 600, color: '#ef4444' }}>
@@ -29,6 +32,36 @@ const StudentFormModal = ({
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  const [feeSettings, setFeeSettings] = useState({});
+
+  // Fetch global fee settings when modal opens
+  useEffect(() => {
+    if (!showModal) return;
+    const fetchFees = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'fees'));
+        if (snap.exists()) setFeeSettings(snap.data() || {});
+      } catch (e) {}
+    };
+    fetchFees();
+  }, [showModal]);
+
+  // Set default studentType and expected fee if enrolling new student
+  useEffect(() => {
+    if (showModal && !isEditing) {
+      const cls = currentStudent.className || 'JSS1';
+      const type = currentStudent.studentType || 'returning';
+      const autoFee = getExpectedFeeForStudent(cls, type === 'new_intake', feeSettings);
+      if (!currentStudent.studentType || !currentStudent.expectedFee) {
+        setCurrentStudent(prev => ({
+          ...prev,
+          studentType: type,
+          isNewIntake: type === 'new_intake',
+          expectedFee: prev.expectedFee || autoFee
+        }));
+      }
+    }
+  }, [showModal, isEditing, currentStudent.className, currentStudent.studentType, feeSettings]);
 
   useEffect(() => {
     if (!showModal) return;
@@ -148,6 +181,64 @@ const StudentFormModal = ({
             )}
           </AnimatePresence>
 
+          {/* Student Intake Category (Returning vs New Intake) */}
+          <div className="space-y-1.5 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+            <label style={{ fontSize: '11px', fontWeight: 800, color: 'rgb(71, 85, 105)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>
+              Student Intake Category
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <label 
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '10px',
+                  border: (currentStudent.studentType === 'returning' || (!currentStudent.studentType && !currentStudent.isNewIntake)) ? '2px solid #4f46e5' : '1.5px solid #e2e8f0',
+                  background: (currentStudent.studentType === 'returning' || (!currentStudent.studentType && !currentStudent.isNewIntake)) ? '#eef2ff' : '#fff',
+                  cursor: 'pointer'
+                }}
+              >
+                <input 
+                  type="radio" 
+                  name="modalStudentType" 
+                  value="returning" 
+                  checked={currentStudent.studentType === 'returning' || (!currentStudent.studentType && !currentStudent.isNewIntake)}
+                  onChange={() => {
+                    const cls = currentStudent.className || 'JSS1';
+                    const fee = getExpectedFeeForStudent(cls, false, feeSettings);
+                    setCurrentStudent({ ...currentStudent, studentType: 'returning', isNewIntake: false, expectedFee: fee });
+                  }} 
+                />
+                <div>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#1e293b', display: 'block' }}>🎓 Returning</span>
+                  <span style={{ fontSize: '10px', color: '#64748b' }}>School Fee Only</span>
+                </div>
+              </label>
+
+              <label 
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '10px',
+                  border: (currentStudent.studentType === 'new_intake' || currentStudent.isNewIntake) ? '2px solid #f59e0b' : '1.5px solid #e2e8f0',
+                  background: (currentStudent.studentType === 'new_intake' || currentStudent.isNewIntake) ? '#fffbeb' : '#fff',
+                  cursor: 'pointer'
+                }}
+              >
+                <input 
+                  type="radio" 
+                  name="modalStudentType" 
+                  value="new_intake" 
+                  checked={currentStudent.studentType === 'new_intake' || currentStudent.isNewIntake}
+                  onChange={() => {
+                    const cls = currentStudent.className || 'JSS1';
+                    const fee = getExpectedFeeForStudent(cls, true, feeSettings);
+                    setCurrentStudent({ ...currentStudent, studentType: 'new_intake', isNewIntake: true, expectedFee: fee });
+                  }} 
+                />
+                <div>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#1e293b', display: 'block' }}>🌟 New Intake</span>
+                  <span style={{ fontSize: '10px', color: '#64748b' }}>Full Package</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div className="space-y-1.5">
               <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Full Name</label>
@@ -163,7 +254,20 @@ const StudentFormModal = ({
             
             <div className="space-y-1.5">
               <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>Class Section</label>
-              <select value={currentStudent.className || ''} onChange={(e) => setCurrentStudent({...currentStudent, className: e.target.value})} style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '13px', fontWeight: 500, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }}>
+              <select 
+                value={currentStudent.className || ''} 
+                onChange={(e) => {
+                  const newCls = e.target.value;
+                  const isIntake = currentStudent.studentType === 'new_intake' || currentStudent.isNewIntake;
+                  const autoFee = getExpectedFeeForStudent(newCls, isIntake, feeSettings);
+                  setCurrentStudent({
+                    ...currentStudent, 
+                    className: newCls,
+                    expectedFee: autoFee
+                  });
+                }} 
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '13px', fontWeight: 500, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }}
+              >
                 {classes.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
@@ -179,6 +283,25 @@ const StudentFormModal = ({
                 <option value="Female">Female</option>
               </select>
             </div>
+          </div>
+
+          {/* Expected Fee Field */}
+          <div className="space-y-1.5">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Expected Termly Fee (₦)
+              </label>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: (currentStudent.studentType === 'new_intake' || currentStudent.isNewIntake) ? '#d97706' : '#4f46e5' }}>
+                {(currentStudent.studentType === 'new_intake' || currentStudent.isNewIntake) ? '🌟 New Intake Tier' : '🎓 Returning Student Tier'}
+              </span>
+            </div>
+            <input 
+              type="number" 
+              placeholder="e.g. 32000" 
+              value={currentStudent.expectedFee !== undefined ? currentStudent.expectedFee : ''} 
+              onChange={(e) => setCurrentStudent({...currentStudent, expectedFee: Number(e.target.value)})} 
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '14px', fontWeight: 800, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }} 
+            />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

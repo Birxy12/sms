@@ -14,6 +14,7 @@ import { useGlobalClasses } from '../utils/classUtils';
 import { compressStudent, expandStudent, normalizeGender } from '../utils/firestoreSchema';
 import { generateUniqueRegNoSync } from '../utils/regNoGenerator';
 import { useGlobalClubsAndHouses } from '../utils/schoolClubsAndHouses';
+import { getClassFees, getExpectedFeeForStudent } from '../utils/prospectusFees';
 
 const BulkStudentEnrollModal = ({
   isOpen,
@@ -24,6 +25,8 @@ const BulkStudentEnrollModal = ({
   const classes = useGlobalClasses();
   const { clubs, houses } = useGlobalClubsAndHouses();
   const [selectedClass, setSelectedClass] = useState(initialClass || 'JSS1');
+  const [batchStudentType, setBatchStudentType] = useState('returning'); // 'returning' | 'new_intake'
+  const [feeSettings, setFeeSettings] = useState({});
   const [existingRegNos, setExistingRegNos] = useState(new Set());
   const [file, setFile] = useState(null);
   const [parsing, setParsing] = useState(false);
@@ -42,6 +45,18 @@ const BulkStudentEnrollModal = ({
       setSelectedClass(initialClass);
     }
   }, [initialClass]);
+
+  // Load fee settings from Firestore
+  useEffect(() => {
+    if (!isOpen) return;
+    const fetchFees = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'fees'));
+        if (snap.exists()) setFeeSettings(snap.data() || {});
+      } catch (e) {}
+    };
+    fetchFees();
+  }, [isOpen]);
 
   // Load existing student registration numbers from Firestore for collision-free sequential generation
   useEffect(() => {
@@ -294,6 +309,8 @@ const BulkStudentEnrollModal = ({
       let batch = writeBatch(db);
       let count = 0;
       let total = parsedStudents.length;
+      const isIntake = batchStudentType === 'new_intake';
+      const expectedFee = getExpectedFeeForStudent(selectedClass, isIntake, feeSettings);
 
       for (let i = 0; i < total; i++) {
         const student = parsedStudents[i];
@@ -305,6 +322,11 @@ const BulkStudentEnrollModal = ({
           name: student.name,
           gender: student.gender,
           className: selectedClass,
+          studentType: batchStudentType,
+          isNewIntake: isIntake,
+          expectedFee: expectedFee,
+          paidFee: 0,
+          paidAmount: 0,
           phone: student.phone || '',
           email: student.email || '',
           dob: student.dob || '',
@@ -463,6 +485,59 @@ const BulkStudentEnrollModal = ({
                     >
                       <FileText size={14} /> CSV Template (.csv)
                     </button>
+                  </div>
+                </div>
+
+                {/* Batch Student Intake Category */}
+                <div className="pt-2 border-t border-slate-100">
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    2. Batch Intake Category & Fee Structure
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {(() => {
+                      const cfg = getClassFees(selectedClass, feeSettings);
+                      return (
+                        <>
+                          <label className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-2.5 ${
+                            batchStudentType === 'returning' ? 'border-indigo-600 bg-indigo-50/50' : 'border-slate-200 hover:border-slate-300'
+                          }`}>
+                            <input 
+                              type="radio" 
+                              name="batchStudentType" 
+                              value="returning" 
+                              checked={batchStudentType === 'returning'} 
+                              onChange={() => setBatchStudentType('returning')}
+                              className="mt-0.5"
+                            />
+                            <div>
+                              <p className="text-xs font-black text-slate-800">🎓 Returning / Existing Students</p>
+                              <p className="text-[11px] text-indigo-600 font-bold mt-0.5">
+                                Pays School Fee Only: <strong>₦{cfg.schoolFee.toLocaleString()}</strong>
+                              </p>
+                            </div>
+                          </label>
+
+                          <label className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-2.5 ${
+                            batchStudentType === 'new_intake' ? 'border-amber-500 bg-amber-50/50' : 'border-slate-200 hover:border-slate-300'
+                          }`}>
+                            <input 
+                              type="radio" 
+                              name="batchStudentType" 
+                              value="new_intake" 
+                              checked={batchStudentType === 'new_intake'} 
+                              onChange={() => setBatchStudentType('new_intake')}
+                              className="mt-0.5"
+                            />
+                            <div>
+                              <p className="text-xs font-black text-slate-800">🌟 New Intake / Fresh Batch</p>
+                              <p className="text-[11px] text-amber-600 font-bold mt-0.5">
+                                Pays Total Prospective Fee: <strong>₦{cfg.prospectiveTotal.toLocaleString()}</strong>
+                              </p>
+                            </div>
+                          </label>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
 
