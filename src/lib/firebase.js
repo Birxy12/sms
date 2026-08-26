@@ -37,21 +37,28 @@ try {
   // Ignore
 }
 
-// Initialize Firestore with standard reliable persistent local cache and multi-tab manager
+// Initialize Firestore with standard reliable persistent local cache and experimentalForceLongPolling
 const initFirestore = () => {
   if (typeof window !== 'undefined' && typeof indexedDB !== 'undefined') {
     try {
       return initializeFirestore(app, {
         localCache: persistentLocalCache({
           tabManager: persistentMultipleTabManager()
-        })
+        }),
+        experimentalForceLongPolling: true
       });
     } catch (error) {
       console.warn('Firestore local cache initialization fallback to default Firestore.', error?.message || error);
     }
   }
 
-  return getFirestore(app);
+  try {
+    return initializeFirestore(app, {
+      experimentalForceLongPolling: true
+    });
+  } catch (e) {
+    return getFirestore(app);
+  }
 };
 
 const db = initFirestore();
