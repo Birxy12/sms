@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Award, CreditCard, Calendar, Bell, ChevronRight, 
   Inbox as InboxIcon, Trophy, Wallet, BookOpen, Library, MonitorCheck, 
   AlertCircle, Star, ArrowUpRight, ArrowDownRight, Clock, User, Zap, GraduationCap, ChevronDown,
-  Eye, EyeOff, PlusCircle, Search, CheckCircle2, X, RefreshCw, BarChart3, Sparkles
+  Eye, EyeOff, PlusCircle, Search, CheckCircle2, X, RefreshCw, BarChart3, Sparkles, Settings, Receipt, FileText
 } from 'lucide-react';
 import { getStudentWallet, fundStudentWallet, debitStudentWallet } from '../../utils/wallet';
 import { MARKS_KEYS, expandMarks } from '../../utils/firestoreSchema';
@@ -517,11 +517,12 @@ const StudentDashboard = () => {
                       {showBalance ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
                   </div>
-                  <button onClick={() => { setActiveTab('wallet'); setShowFundModal(true); }} className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 font-black text-white rounded-xl transition-all text-sm flex items-center gap-2 shadow-lg shadow-emerald-500/20">
+                  <button onClick={() => { setActiveTab('wallet'); setShowFundModal(true); }} className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 font-black text-white rounded-xl transition-all text-sm flex items-center gap-2 shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95">
                     <PlusCircle size={16} /> Fund Wallet
                   </button>
-                  <button onClick={() => navigate('/students/profile')} className="px-6 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl font-bold transition-all text-sm">
-                    Profile Settings
+                  <button onClick={() => navigate('/students/profile')} className="px-5 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl font-bold transition-all text-sm flex items-center gap-2 text-white border border-white/20 hover:border-white/40 shadow-sm hover:scale-105 active:scale-95">
+                    <Settings size={16} className="text-indigo-300" />
+                    <span>Profile Settings</span>
                   </button>
                 </div>
               </div>
@@ -859,9 +860,11 @@ const StudentDashboard = () => {
                         <button
                           onClick={() => navigate(`/students/results?pubId=${encodeURIComponent(selectedTermId)}`)}
                           disabled={!selectedTermId}
-                          className="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50 whitespace-nowrap"
+                          className="px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-2xl font-black transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-50 whitespace-nowrap flex items-center gap-2 hover:scale-[1.02] active:scale-95 border border-indigo-400/30"
                         >
-                          View Results →
+                          <Trophy size={16} className="text-amber-300" />
+                          <span>View Term Results</span>
+                          <ChevronRight size={16} />
                         </button>
                       </div>
                     </div>
@@ -878,9 +881,9 @@ const StudentDashboard = () => {
                       <button 
                         key={idx}
                         onClick={() => navigate(module.path)}
-                        className="p-8 bg-white border border-slate-100 rounded-[2rem] text-left hover:shadow-2xl hover:shadow-slate-200/50 transition-all space-y-4"
+                        className="p-8 bg-white border border-slate-100 rounded-[2rem] text-left hover:shadow-2xl hover:shadow-slate-200/50 transition-all space-y-4 hover:scale-[1.02] active:scale-95"
                       >
-                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: `${module.color}15` }}>
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm" style={{ backgroundColor: `${module.color}15`, border: `1px solid ${module.color}30` }}>
                           <module.icon size={28} style={{ color: module.color }} />
                         </div>
                         <div>
@@ -894,21 +897,30 @@ const StudentDashboard = () => {
               )}
 
               {activeTab === 'notices' && (
-                <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden">
-                  <div className="p-8 border-b border-slate-50 flex justify-between items-center">
-                    <h3 className="text-xl font-black text-slate-800">School Notifications</h3>
-                    <div className="bg-amber-100 text-amber-600 px-3 py-1 rounded-full text-[10px] font-black uppercase">
-                      {inboxCount} New Alerts
+                <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
+                  <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                        <Bell size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-slate-800">School Notifications</h3>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Official announcements & alerts</p>
+                      </div>
+                    </div>
+                    <div className="bg-amber-100 text-amber-700 border border-amber-200 px-3.5 py-1 rounded-full text-xs font-black uppercase flex items-center gap-1.5 shadow-sm">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping inline-block" />
+                      <span>{inboxCount} New Alerts</span>
                     </div>
                   </div>
                   <div className="divide-y divide-slate-50">
                     {recentNotifications.length > 0 ? recentNotifications.map((notif, idx) => (
-                      <div key={idx} className="p-8 flex gap-6 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => navigate('/students/inbox')}>
-                        <div className="w-12 h-12 bg-white border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400">
+                      <div key={idx} className="p-8 flex gap-6 hover:bg-slate-50/80 transition-colors cursor-pointer group" onClick={() => navigate('/students/inbox')}>
+                        <div className="w-12 h-12 bg-indigo-50 border border-indigo-100 group-hover:bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 transition-colors shrink-0">
                           <Bell size={20} />
                         </div>
                         <div>
-                          <p className="text-sm font-black text-slate-800 mb-1">{notif.title || 'Official Announcement'}</p>
+                          <p className="text-sm font-black text-slate-800 group-hover:text-indigo-600 transition-colors mb-1">{notif.title || 'Official Announcement'}</p>
                           <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed mb-3">{notif.message}</p>
                           <div className="flex items-center gap-4 text-[10px] font-black text-slate-400 uppercase">
                             <span className="flex items-center gap-1"><Clock size={12} /> {notif.createdAt?.seconds ? new Date(notif.createdAt.seconds * 1000).toLocaleDateString() : 'Today'}</span>
@@ -917,8 +929,10 @@ const StudentDashboard = () => {
                         </div>
                       </div>
                     )) : (
-                      <div className="p-20 text-center">
-                        <p className="text-slate-400 font-bold">Your inbox is empty</p>
+                      <div className="p-20 text-center text-slate-400">
+                        <Bell size={40} className="mx-auto mb-3 opacity-30" />
+                        <p className="font-bold text-sm">Your inbox is empty</p>
+                        <p className="text-xs mt-1">Official announcements will appear here.</p>
                       </div>
                     )}
                   </div>
@@ -927,9 +941,9 @@ const StudentDashboard = () => {
 
               {activeTab === 'finance' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="bg-white p-8 rounded-[2rem] border border-slate-100 flex flex-col justify-between">
+                  <div className="bg-white p-8 rounded-[2rem] border border-slate-100 flex flex-col justify-between shadow-sm">
                     <div>
-                      <div className="w-16 h-16 bg-pink-100 rounded-3xl flex items-center justify-center text-pink-600 mb-6">
+                      <div className="w-16 h-16 bg-rose-50 border border-rose-100 rounded-3xl flex items-center justify-center text-rose-600 mb-6 shadow-sm">
                         <Wallet size={32} />
                       </div>
                       <h3 className="text-2xl font-black text-slate-800 mb-2">School Fees Balance</h3>
@@ -937,28 +951,37 @@ const StudentDashboard = () => {
                       <div className="text-4xl font-black text-slate-900 mb-2">
                         {feeIsCleared ? '₦0' : (feeData.balance > 0 ? `₦${feeData.balance.toLocaleString()}` : (feeData.expected > 0 ? `₦${feeData.expected.toLocaleString()}` : 'Pending'))}
                       </div>
-                      <div className={`text-xs font-black uppercase ${feeIsCleared ? 'text-emerald-500' : (feeIsPartial ? 'text-amber-500' : 'text-rose-500')}`}>
-                        {feeIsCleared ? 'Fully Cleared & Verified ✓' : (feeIsPartial ? 'Partial Payment Made' : 'Pending / Awaiting Payment')}
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase ${
+                        feeIsCleared 
+                          ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' 
+                          : (feeIsPartial ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-rose-50 text-rose-600 border border-rose-200')
+                      }`}>
+                        {feeIsCleared ? '✓ Fully Cleared & Verified' : (feeIsPartial ? 'Partial Payment Made' : 'Pending / Awaiting Payment')}
                       </div>
                     </div>
                     <div className="mt-8 space-y-3">
                       {!feeIsCleared ? (
-                        <button onClick={() => setShowFeePayModal(true)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2">
+                        <button onClick={() => setShowFeePayModal(true)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 transition-all">
                           <Wallet size={18} /> Pay Fee via Student Wallet
                         </button>
                       ) : null}
-                      <button onClick={() => navigate('/students/fees')} className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm shadow-xl">
-                        Open Full Fee Portal
+                      <button onClick={() => navigate('/students/fees')} className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2 border border-slate-700/60 hover:scale-[1.01] active:scale-95 transition-all">
+                        <FileText size={18} className="text-indigo-400" />
+                        <span>Open Full Fee Portal</span>
                       </button>
                     </div>
                   </div>
-                  <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 border-dashed flex flex-col items-center justify-center text-center">
-                    <div className="w-20 h-20 bg-white rounded-full shadow-sm flex items-center justify-center text-slate-300 mb-6">
-                      <CreditCard size={40} />
+                  <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-200/70 border-dashed flex flex-col items-center justify-center text-center">
+                    <div className="w-20 h-20 bg-white rounded-3xl shadow-sm border border-slate-100 flex items-center justify-center text-indigo-500 mb-6">
+                      <CreditCard size={36} />
                     </div>
                     <h3 className="text-lg font-black text-slate-800 mb-2">Payment Receipts</h3>
-                    <p className="text-sm text-slate-400 font-medium max-w-[200px]">View and download all your previous payment receipts.</p>
-                    <button onClick={() => navigate('/students/fees')} className="mt-6 text-sm font-black text-indigo-600">View History →</button>
+                    <p className="text-sm text-slate-400 font-medium max-w-[220px]">View and download all your verified payment receipts and invoices.</p>
+                    <button onClick={() => navigate('/students/fees')} className="mt-6 px-5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-sm font-black transition-all flex items-center gap-2 shadow-sm hover:scale-105 active:scale-95 border border-indigo-200/80">
+                      <Receipt size={16} className="text-indigo-600" />
+                      <span>View Payment History</span>
+                      <ChevronRight size={14} />
+                    </button>
                   </div>
                 </div>
               )}
