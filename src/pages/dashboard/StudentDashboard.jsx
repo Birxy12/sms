@@ -324,8 +324,11 @@ const StudentDashboard = () => {
   const feeIsCleared = hasPaid && (feeData.isVerified || (feeData.expected > 0 && feeData.paid >= feeData.expected));
   const feeIsPartial = hasPaid && !feeIsCleared && feeData.balance > 0;
 
+  // GPA 0 to 5.0 scale (5.0 for 100%, calculated from 2nd Term + 3rd Term average)
+  const gpaValue = ((parseFloat(avgScore || 0) / 100) * 5).toFixed(2);
+
   const mainStats = [
-    { label: 'GPA Average', value: `${avgScore}%`, icon: Zap, color: '#6366f1', trend: '+2.4%' },
+    { label: 'GPA Average', value: `${gpaValue} / 5.0`, icon: Zap, color: '#6366f1', trend: `${avgScore}% Avg` },
     { 
       label: 'Exams Taken', 
       value: `${currentSessionExamsCount}/${termsPerSession}`, 
@@ -488,8 +491,8 @@ const StudentDashboard = () => {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-2xl font-black text-indigo-600">{avgScore}%</p>
-                              <p className="text-[10px] font-black text-slate-400 uppercase">Class Average</p>
+                              <p className="text-2xl font-black text-indigo-600">{gpaValue} <span className="text-xs font-bold text-slate-400">/ 5.0</span></p>
+                              <p className="text-[10px] font-black text-slate-400 uppercase">{avgScore}% Academic Avg</p>
                             </div>
                           </div>
                           <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">

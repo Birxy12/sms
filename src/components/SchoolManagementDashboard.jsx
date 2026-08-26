@@ -1146,9 +1146,11 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
         status: 'pending'
       }));
 
+    const studentGpa = ((parseFloat(overallAcademicAverage || 0) / 100) * 5).toFixed(2);
+
     const student = {
       kpis: [
-        { title: 'Academic Average', value: `${overallAcademicAverage}%`, change: avgDeltaText, isPositive: true, icon: Award, subText: '2nd Term + 3rd Term (÷2)' },
+        { title: 'GPA Average (5.0)', value: `${studentGpa} / 5.0`, change: avgDeltaText, isPositive: true, icon: Award, subText: `${overallAcademicAverage}% (2nd & 3rd Term ÷2)` },
         { title: 'Attendance Record', value: `${attendanceRate}%`, change: totalDaysRecorded > 0 ? 'Recorded' : 'Good Standing', isPositive: parseFloat(attendanceRate) >= 75, icon: UserCheck, subText: attendanceSubText },
         { title: 'Coursework Tasks', value: `${studentClassAssignments.length} Due`, change: 'Active', isPositive: studentClassAssignments.length <= 2, icon: ClipboardList, subText: 'Assignments' },
         { title: 'School Fee Status', value: feeStatusText, change: feeChangeText, isPositive: isFeePositive, icon: CreditCard, subText: feeSubText },
