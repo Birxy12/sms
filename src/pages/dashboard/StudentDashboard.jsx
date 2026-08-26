@@ -153,11 +153,16 @@ const StudentDashboard = () => {
         setTotalExamsCount(resultsToAnalyze.length);
 
         if (resultsToAnalyze.length > 0) {
-          // Academic Average: Sum of each term's average (previous terms + current term) / total terms with exams taken
-          let sumOfTermAverages = 0;
-          let termsWithExamsCount = 0;
+          // Academic Average: (Second Term + Third Term) / 2
+          let secondTermAvg = 0;
+          let thirdTermAvg = 0;
+          let hasSecondTerm = false;
+          let hasThirdTerm = false;
+          let otherTermsSum = 0;
+          let otherTermsCount = 0;
 
           resultsToAnalyze.forEach(result => {
+            const norm = (result.term || '').toLowerCase();
             const marks = result.marks || {};
             let termAvg = 0;
             if (marks._meta && marks._meta.average !== undefined && parseFloat(marks._meta.average) > 0) {
@@ -180,14 +185,24 @@ const StudentDashboard = () => {
               }
             }
 
-            if (termAvg > 0) {
-              sumOfTermAverages += termAvg;
-              termsWithExamsCount++;
+            if (norm.includes('second') || norm.includes('2nd')) {
+              secondTermAvg = termAvg;
+              hasSecondTerm = true;
+            } else if (norm.includes('third') || norm.includes('3rd')) {
+              thirdTermAvg = termAvg;
+              hasThirdTerm = true;
+            } else if (termAvg > 0) {
+              otherTermsSum += termAvg;
+              otherTermsCount++;
             }
           });
 
-          if (termsWithExamsCount > 0) {
-            setAvgScore((sumOfTermAverages / termsWithExamsCount).toFixed(1));
+          if (hasSecondTerm || hasThirdTerm) {
+            // Formula: (Second Term + Third Term) / 2
+            const sum2ndAnd3rd = secondTermAvg + thirdTermAvg;
+            setAvgScore((sum2ndAnd3rd / 2).toFixed(1));
+          } else if (otherTermsCount > 0) {
+            setAvgScore((otherTermsSum / otherTermsCount).toFixed(1));
           } else {
             setAvgScore('0.0');
           }

@@ -1083,27 +1083,43 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
       });
     }
 
-    // Academic Average: Sum of (previous term averages + current term average if exams taken) / total terms with exams
-    let cumulativeTermSum = 0;
-    let totalTermsWithExams = 0;
+    // Specific session evaluation: If records span 2nd Term and 3rd Term (database started 2nd term and now in 3rd term)
+    // Formula: (Second Term Avg + Third Term Avg) / 2
+    let secondTermAvg = 0, thirdTermAvg = 0;
+    let hasSecondTerm = false, hasThirdTerm = false;
+    let otherTermsSum = 0, otherTermsCount = 0;
 
     termProgression.forEach(t => {
-      if (t.average > 0) {
-        cumulativeTermSum += t.average;
-        totalTermsWithExams++;
+      const norm = (t.term || '').toLowerCase();
+      if (norm.includes('second') || norm.includes('2nd')) {
+        secondTermAvg = t.average;
+        hasSecondTerm = true;
+      } else if (norm.includes('third') || norm.includes('3rd')) {
+        thirdTermAvg = t.average;
+        hasThirdTerm = true;
+      } else if (t.average > 0) {
+        otherTermsSum += t.average;
+        otherTermsCount++;
       }
     });
 
     const currentAvg = latestTermRecord ? latestTermRecord.average : (studentCount > 0 ? (studentSum / studentCount).toFixed(1) : '0.0');
     const prevAvg = previousTermRecord ? previousTermRecord.average : null;
     
-    const overallAcademicAverage = totalTermsWithExams > 0 
-      ? (cumulativeTermSum / totalTermsWithExams).toFixed(1)
-      : (latestTermRecord ? latestTermRecord.average.toFixed(1) : (studentCount > 0 ? (studentSum / studentCount).toFixed(1) : '0.0'));
+    let overallAcademicAverage = '0.0';
+    if (hasSecondTerm || hasThirdTerm) {
+      // (Second Term + Third Term) / 2
+      const sum2ndAnd3rd = secondTermAvg + thirdTermAvg;
+      overallAcademicAverage = (sum2ndAnd3rd / 2).toFixed(1);
+    } else if (otherTermsCount > 0) {
+      overallAcademicAverage = (otherTermsSum / otherTermsCount).toFixed(1);
+    } else if (latestTermRecord) {
+      overallAcademicAverage = latestTermRecord.average.toFixed(1);
+    }
 
-    const avgDeltaText = (totalTermsWithExams > 1 && prevAvg !== null)
+    const avgDeltaText = (hasSecondTerm && hasThirdTerm && prevAvg !== null)
       ? (Number(currentAvg) - Number(prevAvg) >= 0 ? `+${(Number(currentAvg) - Number(prevAvg)).toFixed(1)}% vs Prev Term` : `${(Number(currentAvg) - Number(prevAvg)).toFixed(1)}% vs Prev Term`)
-      : (totalTermsWithExams > 0 ? `${totalTermsWithExams} Term(s) Recorded` : 'No Exam Record');
+      : (hasSecondTerm || hasThirdTerm ? '2nd & 3rd Term Averages (÷2)' : (latestTermRecord ? `${latestTermRecord.term}` : 'No Exam Record'));
 
     // Real Attendance
     const studentNormClass = normalizeClassName(currentStudent?.className || '');
