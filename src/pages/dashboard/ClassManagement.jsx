@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, query, getDocs, where, doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
-import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info, UserCheck, X, Calendar, CheckSquare, Square, ChevronDown, Save, Check, Download, Plus, Trash2 } from 'lucide-react';
+import { Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, Info, UserCheck, X, Calendar, CheckSquare, Square, ChevronDown, Save, Check, Download, Plus, Trash2, UserPlus } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import BulkStudentEnrollModal from '../../components/BulkStudentEnrollModal';
 
 const ClassManagement = () => {
   const { currentSession } = useTheme();
@@ -10,6 +11,10 @@ const ClassManagement = () => {
   const [loading, setLoading] = useState(true);
   const [staff, setStaff] = useState([]);
   const [savingTeacher, setSavingTeacher] = useState('');
+
+  // Bulk Enroll modal state
+  const [showBulkEnroll, setShowBulkEnroll] = useState(false);
+  const [bulkEnrollTargetClass, setBulkEnrollTargetClass] = useState('JSS1');
 
   // Add Class modal state
   const [showAddClass, setShowAddClass] = useState(false);
@@ -294,6 +299,15 @@ const ClassManagement = () => {
             <TrendingUp size={16} />
             Academic Session {currentSession}
           </div>
+          <button
+            onClick={() => {
+              setBulkEnrollTargetClass('JSS1');
+              setShowBulkEnroll(true);
+            }}
+            className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
+          >
+            <UserPlus size={16} /> Bulk Enroll (CSV/Excel)
+          </button>
           <button
             onClick={() => setShowAddClass(true)}
             className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
@@ -741,6 +755,18 @@ const ClassManagement = () => {
           </div>
         </div>
       )}
+
+      <BulkStudentEnrollModal 
+        isOpen={showBulkEnroll}
+        initialClass={bulkEnrollTargetClass}
+        onClose={() => setShowBulkEnroll(false)}
+        onEnrolled={() => {
+          fetchClassStats();
+          if (selectedClass) {
+            fetchClassStudents(selectedClass);
+          }
+        }}
+      />
     </div>
   );
 };

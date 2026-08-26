@@ -10,6 +10,7 @@ import ImageCropperModal from '../../components/ImageCropperModal';
 import StudentAvatar from '../../components/StudentAvatar';
 import GlobalPhotoUploader from '../../components/GlobalPhotoUploader';
 import StudentFormModal from '../../components/StudentFormModal';
+import BulkStudentEnrollModal from '../../components/BulkStudentEnrollModal';
 import { formatDateForInput } from '../../utils/dateFormatter';
 import { useGlobalClasses } from '../../utils/classUtils';
 import { generateUniqueRegNoSync } from '../../utils/regNoGenerator';
@@ -23,6 +24,7 @@ const StudentManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('All');
   const [showModal, setShowModal] = useState(false);
+  const [showBulkEnrollModal, setShowBulkEnrollModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentStudent, setCurrentStudent] = useState({ 
     name: '', regNo: '', className: 'JSS1', gender: 'Male', email: '', 
@@ -514,7 +516,15 @@ const StudentManagement = () => {
           <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Student Records</h2>
           <p className="text-slate-500">Manage enrollment, class assignments, and individual student profiles.</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+          <button
+            onClick={() => setShowBulkEnrollModal(true)}
+            className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-5 py-3 rounded-xl text-sm font-bold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg shadow-emerald-100"
+          >
+            <UserPlus size={18} />
+            <span>Bulk Enroll (CSV/Excel)</span>
+          </button>
+          
           <div className="bg-white border border-slate-200 px-6 py-3 rounded-xl flex items-center gap-4 shadow-sm hover:border-indigo-200 transition-colors group">
             <div className="flex flex-col">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1 group-hover:text-indigo-600">Portal Governance</span>
@@ -1132,6 +1142,13 @@ const StudentManagement = () => {
         <span className="hidden sm:inline">Enroll New Student</span>
         <span className="sm:hidden inline">Enroll</span>
       </button>
+
+      <BulkStudentEnrollModal 
+        isOpen={showBulkEnrollModal}
+        initialClass={selectedClass === 'All' ? 'JSS1' : selectedClass}
+        onClose={() => setShowBulkEnrollModal(false)}
+        onEnrolled={() => fetchStudents()}
+      />
     </div>
   );
 };

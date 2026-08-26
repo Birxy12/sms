@@ -7,6 +7,7 @@ import StatCard from '../../components/StatCard';
 import ResultPublisher from '../../components/ResultPublisher';
 import Marksheet from '../../components/Marksheet';
 import BulkUpload from '../../components/BulkUpload';
+import BulkStudentEnrollModal from '../../components/BulkStudentEnrollModal';
 import ScoreEntry from '../../components/ScoreEntry';
 import AssignmentManager from '../../components/AssignmentManager';
 import NoteManager from '../../components/NoteManager';
@@ -14,7 +15,7 @@ import StaffDashboard from './StaffDashboard';
 import StudentDashboard from './StudentDashboard';
 import NotificationCenter from './NotificationCenter';
 import { expandStudent } from '../../utils/firestoreSchema';
-import { Users, User, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw, BarChart3, FileText, BookMarked, Globe, Mail, Inbox } from 'lucide-react';
+import { Users, User, UserPlus, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, CheckCircle, XCircle, Loader2, Search, RefreshCw, BarChart3, FileText, BookMarked, Globe, Mail, Inbox } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useGlobalClasses } from '../../utils/classUtils';
 import { useOnlineUsers } from '../../utils/presence';
@@ -118,6 +119,7 @@ const AdminDashboard = () => {
   };
   
   const classes = useGlobalClasses();
+  const [showBulkEnrollModal, setShowBulkEnrollModal] = useState(false);
   const adminTabs = [
     { id: 'Overview', label: 'Overview', icon: TrendingUp },
     { id: 'Academics', label: 'Academics', icon: BookOpen },
@@ -1098,6 +1100,19 @@ const AdminDashboard = () => {
         <div className="animate-in fade-in space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <button 
+              onClick={() => setShowBulkEnrollModal(true)}
+              className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left bg-gradient-to-br from-indigo-50/60 via-purple-50/40 to-white border-indigo-200 shadow-md shadow-indigo-100/50 hover:-translate-y-1"
+            >
+              <div className="p-3 bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-xl shadow-md shadow-indigo-200"><UserPlus size={24} /></div>
+              <div>
+                <h4 className="font-black text-slate-800 flex items-center gap-2">
+                  Bulk Enroll to Class
+                  <span className="text-[9px] font-black uppercase tracking-wider bg-indigo-600 text-white px-2 py-0.5 rounded-full">New</span>
+                </h4>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">CSV & Excel Roster Import</p>
+              </div>
+            </button>
+            <button 
               onClick={() => navigate('/admin/students')}
               className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left"
             >
@@ -1170,6 +1185,14 @@ const AdminDashboard = () => {
           </div>
           <BulkUpload />
           <ResultPublisher />
+
+          <BulkStudentEnrollModal 
+            isOpen={showBulkEnrollModal}
+            onClose={() => setShowBulkEnrollModal(false)}
+            onEnrolled={() => {
+              // Optionally trigger any live refresh
+            }}
+          />
 
           {/* System Controls Card */}
           <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">

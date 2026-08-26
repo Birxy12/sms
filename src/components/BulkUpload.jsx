@@ -8,6 +8,9 @@ import { CLASS_LIST, getAllSubjects, getSubjectsForClass } from '../utils/subjec
 import { compressMarks, compressStudent, expandMarks, expandStudent, MARKS_KEYS, STUDENT_KEYS } from '../utils/firestoreSchema';
 import { useTheme } from '../context/ThemeContext';
 import { getAverageDivisor } from '../utils/averageDivisor';
+import { generateUniqueRegNoSync } from '../utils/regNoGenerator';
+import BulkStudentEnrollModal from './BulkStudentEnrollModal';
+import { UserPlus } from 'lucide-react';
 
 const getOrdinal = (n) => {
   if (isNaN(n) || n <= 0) return 'N/A';
@@ -24,6 +27,7 @@ const BulkUpload = ({ onComplete }) => {
   const [selectedClass, setSelectedClass] = useState('JSS1');
   const [selectedSession, setSelectedSession] = useState('2025/2026');
   const [selectedTerm, setSelectedTerm] = useState('Second Term');
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
 
   const classesList = CLASS_LIST;
   const sessionsList = ['2024/2025', '2025/2026', '2026/2027'];
@@ -358,26 +362,40 @@ const BulkUpload = ({ onComplete }) => {
         const normalizedHeaders = headerRow.map(h => typeof h === 'string' ? h.trim().toUpperCase() : '');
 
         const regNoIdx = normalizedHeaders.findIndex(h => h.includes('REG') && h.includes('NO'));
-        const nameIdx = normalizedHeaders.findIndex(h => h.includes('NAME'));
-        const sexIdx = normalizedHeaders.findIndex(h => h === 'SEX' || h === 'GENDER');
+        const nameIdx = normalizedHeaders.findIndex(h => h.includes('NAME') || h === 'STUDENT' || h === 'FULLNAME');
+        const sexIdx = normalizedHeaders.findIndex(h => h === 'SEX' || h === 'GENDER' || h === 'G');
         const dobIdx = normalizedHeaders.findIndex(h => h.includes('D.O.B') || h === 'DOB' || h.includes('DATE OF BIRTH') || h.includes('DATE'));
         const clubIdx = normalizedHeaders.findIndex(h => h === 'CLUB' || h.includes('CLUB'));
         const houseIdx = normalizedHeaders.findIndex(h => h === 'HOUSE' || h.includes('HOUSE') || h === 'COLUMN1');
 
-        if (regNoIdx === -1) {
-          throw new Error("Could not find Registration Number column in the spreadsheet header. Please check your file format.");
-        }
+        // Fetch existing RegNos for collision prevention
+        const existingSnap = await getDocs(collection(db, 'students'));
+        const workingRegSet = new Set();
+        existingSnap.docs.forEach(d => {
+          const s = expandStudent(d.data());
+          if (s.regNo) workingRegSet.add(s.regNo.trim().toUpperCase());
+        });
 
         for (let i = 1; i < rawData.length; i++) {
           const row = rawData[i];
-          const rawRegNo = row[regNoIdx]?.toString().trim();
-          if (!rawRegNo || rawRegNo === '0') continue;
+          if (!row || row.length === 0) continue;
+
+          let rawRegNo = regNoIdx !== -1 ? row[regNoIdx]?.toString().trim() : '';
+          const studentName = nameIdx !== -1 ? (row[nameIdx]?.toString().trim() || 'Unknown') : 'Unknown';
+          
+          if (!rawRegNo && (!studentName || studentName === 'Unknown')) continue;
+
+          // Auto-generate if missing
+          if (!rawRegNo || rawRegNo === '0' || rawRegNo.toLowerCase() === 'auto' || rawRegNo === 'N/A') {
+            rawRegNo = generateUniqueRegNoSync(selectedClass, workingRegSet);
+          }
+          workingRegSet.add(rawRegNo.toUpperCase());
 
           const docId = rawRegNo.replace(/\//g, '-');
           const studentRef = doc(collection(db, 'students'), docId);
           batch.set(studentRef, compressStudent({
             regNo: rawRegNo,
-            name: nameIdx !== -1 ? (row[nameIdx] || 'Unknown') : 'Unknown',
+            name: studentName,
             gender: sexIdx !== -1 ? (row[sexIdx] || '') : '',
             dob: dobIdx !== -1 ? (row[dobIdx] || '') : '',
             club: clubIdx !== -1 ? (row[clubIdx] || '') : '',
@@ -692,6 +710,14 @@ const BulkUpload = ({ onComplete }) => {
 
           <div className="flex flex-wrap gap-4">
             <button
+              onClick={() => setShowEnrollModal(true)}
+              className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-bold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-100"
+            >
+              <UserPlus size={20} />
+              Open Interactive Bulk Enroll Modal
+            </button>
+
+            <button
               onClick={handleDownloadRoster}
               disabled={loading}
               className="flex items-center gap-2 bg-indigo-100 text-indigo-700 px-6 py-3 rounded-xl font-bold hover:bg-indigo-200 transition-all disabled:opacity-50"
@@ -806,6 +832,15 @@ const BulkUpload = ({ onComplete }) => {
             )}
           </div>
         )}
+
+        <BulkStudentEnrollModal
+          isOpen={showEnrollModal}
+          initialClass={selectedClass}
+          onClose={() => setShowEnrollModal(false)}
+          onEnrolled={() => {
+            if (onComplete) onComplete();
+          }}
+        />
       </div>
     );
   };
