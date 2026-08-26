@@ -50,16 +50,20 @@ const BulkUpload = ({ onComplete }) => {
       snap.forEach(doc => {
         const d = expandStudent(doc.data());
         rawData.push({
-          'REG NO': d.regNo,
-          'STUDENT NAME': d.name,
-          'SEX': d.gender,
-          'D.O.B': d.dob || '',
-          'CLUB': d.club || '',
-          'HOUSE': d.house || ''
+          'regno': d.regNo || '',
+          'Names': d.name || '',
+          'GENDER': d.gender || 'Male',
+          'PHONE': d.phone || '',
+          'EMAIL': d.email || '',
+          'DATE OF BIRTH': d.dob || '',
+          'HOUSE': d.house || '',
+          'CLUB': d.club || ''
         });
       });
 
-      const ws = XLSX.utils.json_to_sheet(rawData);
+      const ws = XLSX.utils.json_to_sheet(rawData, {
+        header: ['regno', 'Names', 'GENDER', 'PHONE', 'EMAIL', 'DATE OF BIRTH', 'HOUSE', 'CLUB']
+      });
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Students");
       XLSX.writeFile(wb, `${selectedClass.replace(/\s+/g, '_')}_Roster.xlsx`);

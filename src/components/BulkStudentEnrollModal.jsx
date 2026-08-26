@@ -76,9 +76,9 @@ const BulkStudentEnrollModal = ({
   const handleDownloadTemplateXlsx = () => {
     const sampleData = [
       {
-        'STUDENT NAME': 'Chukwuma Emmanuel Obi',
+        'regno': '', // Left blank to demonstrate auto-generation (or input custom e.g. BDS/SS1/2026/001)
+        'Names': 'Chukwuma Emmanuel Obi',
         'GENDER': 'Male',
-        'REG NO': '', // Left blank to demonstrate auto-generation
         'PHONE': '08012345678',
         'EMAIL': 'chukwuma.obi@example.com',
         'DATE OF BIRTH': '2012-05-14',
@@ -86,9 +86,9 @@ const BulkStudentEnrollModal = ({
         'CLUB': 'Jets Club'
       },
       {
-        'STUDENT NAME': 'Amina Fatima Bello',
+        'regno': '',
+        'Names': 'Amina Fatima Bello',
         'GENDER': 'Female',
-        'REG NO': '',
         'PHONE': '08098765432',
         'EMAIL': 'amina.bello@example.com',
         'DATE OF BIRTH': '2012-09-22',
@@ -96,9 +96,9 @@ const BulkStudentEnrollModal = ({
         'CLUB': 'Press Club'
       },
       {
-        'STUDENT NAME': 'Adeyemi David Olawale',
+        'regno': '',
+        'Names': 'Adeyemi David Olawale',
         'GENDER': 'Male',
-        'REG NO': '',
         'PHONE': '08134567890',
         'EMAIL': 'adeyemi.david@example.com',
         'DATE OF BIRTH': '2011-11-03',
@@ -107,24 +107,26 @@ const BulkStudentEnrollModal = ({
       }
     ];
 
-    const ws = XLSX.utils.json_to_sheet(sampleData);
+    const ws = XLSX.utils.json_to_sheet(sampleData, {
+      header: ['regno', 'Names', 'GENDER', 'PHONE', 'EMAIL', 'DATE OF BIRTH', 'HOUSE', 'CLUB']
+    });
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Students");
-    XLSX.writeFile(wb, `${selectedClass.replace(/\s+/g, '_')}_Bulk_Enrollment_Template.xlsx`);
+    XLSX.writeFile(wb, `${selectedClass.replace(/\s+/g, '_')}_Enrollment_Template.xlsx`);
   };
 
   // Download Sample CSV Template (.csv)
   const handleDownloadTemplateCsv = () => {
-    const csvContent = "STUDENT NAME,GENDER,REG NO,PHONE,EMAIL,DATE OF BIRTH,HOUSE,CLUB\n" +
-      "Chukwuma Emmanuel Obi,Male,,08012345678,chukwuma.obi@example.com,2012-05-14,Blue House,Jets Club\n" +
-      "Amina Fatima Bello,Female,,08098765432,amina.bello@example.com,2012-09-22,Red House,Press Club\n" +
-      "Adeyemi David Olawale,Male,,08134567890,adeyemi.david@example.com,2011-11-03,Green House,Drama Club\n";
+    const csvContent = "regno,Names,GENDER,PHONE,EMAIL,DATE OF BIRTH,HOUSE,CLUB\n" +
+      ",Chukwuma Emmanuel Obi,Male,08012345678,chukwuma.obi@example.com,2012-05-14,Blue House,Jets Club\n" +
+      ",Amina Fatima Bello,Female,08098765432,amina.bello@example.com,2012-09-22,Red House,Press Club\n" +
+      ",Adeyemi David Olawale,Male,08134567890,adeyemi.david@example.com,2011-11-03,Green House,Drama Club\n";
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${selectedClass.replace(/\s+/g, '_')}_Bulk_Enrollment_Template.csv`;
+    a.download = `${selectedClass.replace(/\s+/g, '_')}_Enrollment_Template.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -138,17 +140,17 @@ const BulkStudentEnrollModal = ({
     const headerRow = rows[0] || [];
     const normalizedHeaders = headerRow.map(h => typeof h === 'string' ? h.trim().toUpperCase() : String(h || '').trim().toUpperCase());
 
-    const nameIdx = normalizedHeaders.findIndex(h => h.includes('NAME') || h === 'STUDENT' || h === 'FULLNAME');
-    const regNoIdx = normalizedHeaders.findIndex(h => h.includes('REG') || h.includes('ADMISSION') || h === 'ROLL NO' || h === 'ID');
+    const regNoIdx = normalizedHeaders.findIndex(h => h === 'REGNO' || h.includes('REG NO') || h.includes('REG') || h.includes('ADMISSION') || h === 'ROLL NO' || h === 'ID');
+    const nameIdx = normalizedHeaders.findIndex(h => h.includes('NAME') || h === 'NAMES' || h === 'STUDENT' || h === 'FULLNAME');
     const sexIdx = normalizedHeaders.findIndex(h => h === 'SEX' || h === 'GENDER' || h === 'G');
     const phoneIdx = normalizedHeaders.findIndex(h => h.includes('PHONE') || h.includes('MOBILE') || h.includes('CONTACT') || h.includes('TEL'));
     const emailIdx = normalizedHeaders.findIndex(h => h.includes('EMAIL') || h.includes('MAIL'));
-    const dobIdx = normalizedHeaders.findIndex(h => h.includes('DOB') || h.includes('DATE OF BIRTH') || h.includes('D.O.B') || h.includes('BIRTH'));
+    const dobIdx = normalizedHeaders.findIndex(h => h.includes('DATE OF B') || h.includes('DATE OF BIRTH') || h.includes('DOB') || h.includes('D.O.B') || h.includes('BIRTH'));
     const houseIdx = normalizedHeaders.findIndex(h => h.includes('HOUSE'));
     const clubIdx = normalizedHeaders.findIndex(h => h.includes('CLUB') || h.includes('SOCIETY'));
 
     if (nameIdx === -1 && regNoIdx === -1) {
-      throw new Error('Could not find "STUDENT NAME" or "REG NO" column in the header. Please check template format.');
+      throw new Error('Could not find "Names" or "regno" column in the header. Please check template format.');
     }
 
     const workingRegSet = new Set(currentExistingRegNos);
