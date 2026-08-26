@@ -37,15 +37,21 @@ try {
   // Ignore
 }
 
-// Initialize Firestore with standard reliable persistent local cache and experimentalForceLongPolling
+// Initialize Firestore with standard reliable persistent local cache and long polling settings
 const initFirestore = () => {
+  const connectionSettings = {
+    experimentalAutoDetectLongPolling: true,
+    experimentalForceLongPolling: true,
+    useFetchStreams: false
+  };
+
   if (typeof window !== 'undefined' && typeof indexedDB !== 'undefined') {
     try {
       return initializeFirestore(app, {
         localCache: persistentLocalCache({
           tabManager: persistentMultipleTabManager()
         }),
-        experimentalForceLongPolling: true
+        ...connectionSettings
       });
     } catch (error) {
       console.warn('Firestore local cache initialization fallback to default Firestore.', error?.message || error);
@@ -53,9 +59,7 @@ const initFirestore = () => {
   }
 
   try {
-    return initializeFirestore(app, {
-      experimentalForceLongPolling: true
-    });
+    return initializeFirestore(app, connectionSettings);
   } catch (e) {
     return getFirestore(app);
   }

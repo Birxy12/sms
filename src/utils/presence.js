@@ -50,8 +50,11 @@ export const useOnlineUsers = (user) => {
 
     const presenceRef = doc(db, 'presence', sessionId);
 
-    // Light-speed primitive heartbeat function (no serverTimestamp transform transforms)
+    // Light-speed primitive heartbeat function (no serverTimestamp transforms)
     const updateHeartbeat = async (force = false) => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        return; // Skip heartbeat write when offline
+      }
       const now = Date.now();
       if (!force && now - lastHeartbeatTime.current < 10000) {
         return; // Debounce user activity bursts to 10s

@@ -306,11 +306,16 @@ const StaffManagement = () => {
                 >
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-4">
-                      <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 overflow-hidden border border-slate-200 text-[10px]">
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center font-black text-indigo-600 overflow-hidden border border-indigo-100 text-sm shrink-0 shadow-sm">
                         {person.photo ? (
-                          <img src={person.photo} alt={person.name} className="w-full h-full object-cover rounded-full" />
+                          <img 
+                            src={person.photo} 
+                            alt={person.name} 
+                            className="w-full h-full object-cover rounded-2xl" 
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
                         ) : (
-                          person.name[0]
+                          (person.name || 'S')[0].toUpperCase()
                         )}
                       </div>
                       <div>
