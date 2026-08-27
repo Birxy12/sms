@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../lib/firebase';
-import { collection, query, getDocs, where, doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, getDocs, where, doc, setDoc, getDoc, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import { 
   Layers, Users, BookOpen, ChevronRight, GraduationCap, ArrowUpRight, TrendingUp, 
-  Info, UserCheck, X, Calendar, CheckSquare, Square, ChevronDown, Save, Check, 
-  Download, Plus, Trash2, UserPlus, DollarSign, AlertCircle, CheckCircle2, 
+  Info, UserCheck, X, Calendar, CheckSquare, Square, MinusSquare, ChevronDown, Save, Check, 
+  Download, Plus, Trash2, UserPlus, UserMinus, ArrowRightLeft, DollarSign, AlertCircle, CheckCircle2, 
   Search, Filter, CreditCard, ArrowRight, Eye, ShieldCheck, Mail, Phone, RefreshCw,
-  Sparkles, Award, FileSpreadsheet
+  Sparkles, Award, FileSpreadsheet, AlertTriangle, Loader2
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import BulkStudentEnrollModal from '../../components/BulkStudentEnrollModal';
-import { expandStudent } from '../../utils/firestoreSchema';
+import { expandStudent, sanitizeFirestoreData } from '../../utils/firestoreSchema';
 import { normalizeClassName } from '../../utils/classUtils';
 
 const ClassManagement = () => {
@@ -39,6 +40,12 @@ const ClassManagement = () => {
   const [studentSearch, setStudentSearch] = useState('');
   const [feeFilter, setFeeFilter] = useState('all'); // 'all', 'owing', 'cleared'
   
+  // Batch Selection & Removal State
+  const [selectedStudentIds, setSelectedStudentIds] = useState([]);
+  const [batchActionModal, setBatchActionModal] = useState(null); // { type: 'remove' | 'transfer' | 'delete', targetClass?: string, singleStudent?: object }
+  const [batchProcessing, setBatchProcessing] = useState(false);
+  const [batchToast, setBatchToast] = useState({ show: false, type: 'success', message: '' });
+
   // Attendance State
   const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [presentStudents, setPresentStudents] = useState([]);
@@ -353,6 +360,172 @@ const ClassManagement = () => {
       alert('Failed to save attendance.');
     } finally {
       setAttendanceSaving(false);
+    }
+  };
+
+  // Clear selected student checkboxes when switching class or tab
+  useEffect(() => {
+    setSelectedStudentIds([]);
+  }, [selectedClass, activeTab]);
+
+  // Selection Helper Functions
+  const toggleSelectStudent = (id) => {
+    if (!id) return;
+    setSelectedStudentIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllStudents = () => {
+    const currentDisplayedIds = displayedStudents.map(s => s.id).filter(Boolean);
+    const allSelected = currentDisplayedIds.length > 0 && currentDisplayedIds.every(id => selectedStudentIds.includes(id));
+    if (allSelected) {
+      setSelectedStudentIds(prev => prev.filter(id => !currentDisplayedIds.includes(id)));
+    } else {
+      setSelectedStudentIds(prev => Array.from(new Set([...prev, ...currentDisplayedIds])));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedStudentIds([]);
+  };
+
+  // 1. Batch Remove / Unassign from Current Class
+  const handleConfirmBatchRemove = async (targetIds = selectedStudentIds) => {
+    if (!targetIds || targetIds.length === 0) return;
+    setBatchProcessing(true);
+    try {
+      await ensureFirebaseAuth();
+      const chunkSize = 400;
+      for (let i = 0; i < targetIds.length; i += chunkSize) {
+        const chunk = targetIds.slice(i, i + chunkSize);
+        const batch = writeBatch(db);
+        chunk.forEach(id => {
+          const studentRef = doc(db, 'students', id);
+          batch.update(studentRef, {
+            className: '',
+            c: '',
+            previousClass: selectedClass,
+            unassignedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        });
+        await batch.commit();
+      }
+
+      // Update local state
+      setClassStudents(prev => prev.filter(s => !targetIds.includes(s.id)));
+      setSelectedStudentIds(prev => prev.filter(id => !targetIds.includes(id)));
+      setBatchActionModal(null);
+      fetchClassStats();
+
+      setBatchToast({
+        show: true,
+        type: 'success',
+        message: `Successfully removed ${targetIds.length} student(s) from ${selectedClass}.`
+      });
+      setTimeout(() => setBatchToast({ show: false, type: 'success', message: '' }), 4000);
+    } catch (error) {
+      console.error('Batch removal error:', error);
+      setBatchToast({
+        show: true,
+        type: 'error',
+        message: 'Failed to remove student(s) from class. Please try again.'
+      });
+      setTimeout(() => setBatchToast({ show: false, type: 'error', message: '' }), 4000);
+    } finally {
+      setBatchProcessing(false);
+    }
+  };
+
+  // 2. Batch Transfer / Move to Another Class
+  const handleConfirmBatchTransfer = async (targetClass, targetIds = selectedStudentIds) => {
+    if (!targetClass || !targetIds || targetIds.length === 0) return;
+    setBatchProcessing(true);
+    try {
+      await ensureFirebaseAuth();
+      const normTarget = normalizeClassName(targetClass);
+      const chunkSize = 400;
+      for (let i = 0; i < targetIds.length; i += chunkSize) {
+        const chunk = targetIds.slice(i, i + chunkSize);
+        const batch = writeBatch(db);
+        chunk.forEach(id => {
+          const studentRef = doc(db, 'students', id);
+          batch.update(studentRef, {
+            className: normTarget,
+            c: normTarget,
+            transferredFrom: selectedClass,
+            transferredAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        });
+        await batch.commit();
+      }
+
+      // Update local state
+      setClassStudents(prev => prev.filter(s => !targetIds.includes(s.id)));
+      setSelectedStudentIds(prev => prev.filter(id => !targetIds.includes(id)));
+      setBatchActionModal(null);
+      fetchClassStats();
+
+      setBatchToast({
+        show: true,
+        type: 'success',
+        message: `Successfully moved ${targetIds.length} student(s) to ${normTarget}.`
+      });
+      setTimeout(() => setBatchToast({ show: false, type: 'success', message: '' }), 4000);
+    } catch (error) {
+      console.error('Batch transfer error:', error);
+      setBatchToast({
+        show: true,
+        type: 'error',
+        message: 'Failed to transfer students. Please try again.'
+      });
+      setTimeout(() => setBatchToast({ show: false, type: 'error', message: '' }), 4000);
+    } finally {
+      setBatchProcessing(false);
+    }
+  };
+
+  // 3. Batch Permanent Delete
+  const handleConfirmBatchDelete = async (targetIds = selectedStudentIds) => {
+    if (!targetIds || targetIds.length === 0) return;
+    setBatchProcessing(true);
+    try {
+      await ensureFirebaseAuth();
+      const chunkSize = 400;
+      for (let i = 0; i < targetIds.length; i += chunkSize) {
+        const chunk = targetIds.slice(i, i + chunkSize);
+        const batch = writeBatch(db);
+        chunk.forEach(id => {
+          const studentRef = doc(db, 'students', id);
+          batch.delete(studentRef);
+        });
+        await batch.commit();
+      }
+
+      // Update local state
+      setClassStudents(prev => prev.filter(s => !targetIds.includes(s.id)));
+      setSelectedStudentIds(prev => prev.filter(id => !targetIds.includes(id)));
+      setBatchActionModal(null);
+      fetchClassStats();
+
+      setBatchToast({
+        show: true,
+        type: 'success',
+        message: `Permanently deleted ${targetIds.length} student record(s).`
+      });
+      setTimeout(() => setBatchToast({ show: false, type: 'success', message: '' }), 4000);
+    } catch (error) {
+      console.error('Batch delete error:', error);
+      setBatchToast({
+        show: true,
+        type: 'error',
+        message: 'Failed to delete student record(s).'
+      });
+      setTimeout(() => setBatchToast({ show: false, type: 'error', message: '' }), 4000);
+    } finally {
+      setBatchProcessing(false);
     }
   };
 
@@ -759,93 +932,224 @@ const ClassManagement = () => {
                   {/* ─────────────────────────────────────────────────────────────
                       TAB 1: ALL STUDENTS ROSTER
                   ───────────────────────────────────────────────────────────── */}
-                  {activeTab === 'students' && (
-                    <div className="space-y-4 animate-in fade-in">
-                      {/* Search & Actions Bar */}
-                      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                        <div className="relative flex-1">
-                          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                          <input
-                            type="text"
-                            placeholder={`Search ${classStudents.length} student(s) by name or Reg No...`}
-                            value={studentSearch}
-                            onChange={(e) => setStudentSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 focus:bg-white transition-all"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={downloadClassRoster}
-                            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black flex items-center gap-2 transition-colors"
-                          >
-                            <FileSpreadsheet size={15} /> Export Roster (CSV)
-                          </button>
-                        </div>
-                      </div>
+                  {activeTab === 'students' && (() => {
+                    const allDisplayedSelected = displayedStudents.length > 0 && displayedStudents.every(s => selectedStudentIds.includes(s.id));
+                    const someDisplayedSelected = selectedStudentIds.length > 0 && !allDisplayedSelected;
 
-                      {/* Students List Table / Cards */}
-                      {displayedStudents.length === 0 ? (
-                        <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center">
-                          <Users size={36} className="mx-auto text-slate-300 mb-2" />
-                          <h4 className="text-base font-black text-slate-700">No Students Found</h4>
-                          <p className="text-xs text-slate-400 mt-1">
-                            {classStudents.length === 0 
-                              ? `No students have been enrolled in ${selectedClass} yet.`
-                              : `No students matched the query "${studentSearch}".`}
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                              <thead>
-                                <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-black uppercase text-slate-400 tracking-wider">
-                                  <th className="py-3 px-4">#</th>
-                                  <th className="py-3 px-4">Student</th>
-                                  <th className="py-3 px-4">Reg No</th>
-                                  <th className="py-3 px-4">Gender</th>
-                                  <th className="py-3 px-4">House</th>
-                                  <th className="py-3 px-4">Club / Society</th>
-                                  <th className="py-3 px-4">Contact</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
-                                {displayedStudents.map((s, idx) => (
-                                  <tr key={s.id || idx} className="hover:bg-indigo-50/30 transition-colors">
-                                    <td className="py-3.5 px-4 text-slate-400 font-mono">{idx + 1}</td>
-                                    <td className="py-3.5 px-4">
-                                      <div className="flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-full bg-indigo-50 text-indigo-700 font-black flex items-center justify-center overflow-hidden border border-indigo-100 shrink-0">
-                                          {s.photo ? <img src={s.photo} alt={s.name} className="w-full h-full object-cover" /> : (s.name?.[0] || 'S')}
-                                        </div>
-                                        <div>
-                                          <span className="font-extrabold text-slate-900 block">{s.name}</span>
-                                          <span className="text-[10px] text-slate-400">{s.dob || 'DOB: Not set'}</span>
-                                        </div>
-                                      </div>
-                                    </td>
-                                    <td className="py-3.5 px-4 font-mono font-bold text-indigo-600">{s.regNo || 'Pending'}</td>
-                                    <td className="py-3.5 px-4">
-                                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
-                                        s.gender === 'Female' ? 'bg-pink-50 text-pink-700' : 'bg-blue-50 text-blue-700'
-                                      }`}>
-                                        {s.gender || 'Male'}
-                                      </span>
-                                    </td>
-                                    <td className="py-3.5 px-4 text-slate-600">{s.house || '—'}</td>
-                                    <td className="py-3.5 px-4 text-slate-600">{s.club || '—'}</td>
-                                    <td className="py-3.5 px-4 text-slate-500 text-[11px]">
-                                      {s.phone ? <span>{s.phone}</span> : (s.email ? <span>{s.email}</span> : <span className="text-slate-300">No contact</span>)}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                    return (
+                      <div className="space-y-4 animate-in fade-in">
+                        {/* Search & Actions Bar */}
+                        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                          <div className="relative flex-1">
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                            <input
+                              type="text"
+                              placeholder={`Search ${classStudents.length} student(s) by name or Reg No...`}
+                              value={studentSearch}
+                              onChange={(e) => setStudentSearch(e.target.value)}
+                              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={downloadClassRoster}
+                              className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black flex items-center gap-2 transition-colors cursor-pointer"
+                            >
+                              <FileSpreadsheet size={15} /> Export Roster (CSV)
+                            </button>
                           </div>
                         </div>
-                      )}
-                    </div>
-                  )}
+
+                        {/* Batch Action Bar (Appears when 1 or more students are selected) */}
+                        {selectedStudentIds.length > 0 && (
+                          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-3.5 sm:p-4 rounded-2xl shadow-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 border border-indigo-500/30">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center font-black text-sm shrink-0 shadow-md shadow-indigo-500/50">
+                                {selectedStudentIds.length}
+                              </div>
+                              <div>
+                                <p className="text-xs font-black text-white m-0 flex items-center gap-2">
+                                  <span>{selectedStudentIds.length} of {classStudents.length} Student{selectedStudentIds.length > 1 ? 's' : ''} Selected</span>
+                                  <span className="text-[10px] font-bold text-indigo-300 bg-indigo-900/60 px-2 py-0.5 rounded-md border border-indigo-700/50">
+                                    Batch Mode
+                                  </span>
+                                </p>
+                                <p className="text-[10px] text-indigo-300 m-0 mt-0.5">Apply action across all selected students in {selectedClass}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2">
+                              {/* Batch Remove Button */}
+                              <button
+                                onClick={() => setBatchActionModal({ type: 'remove' })}
+                                disabled={batchProcessing}
+                                className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-amber-900/20 transition-all cursor-pointer disabled:opacity-50"
+                                title="Remove selected students from this class (marks them Unassigned)"
+                              >
+                                <UserMinus size={14} />
+                                <span>Remove from {selectedClass}</span>
+                              </button>
+
+                              {/* Batch Transfer Button */}
+                              <button
+                                onClick={() => setBatchActionModal({ type: 'transfer', targetClass: classes.find(c => c !== selectedClass) || '' })}
+                                disabled={batchProcessing}
+                                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-indigo-900/20 transition-all cursor-pointer disabled:opacity-50"
+                                title="Move selected students to another class"
+                              >
+                                <ArrowRightLeft size={14} />
+                                <span>Move to Class…</span>
+                              </button>
+
+                              {/* Batch Delete Button */}
+                              <button
+                                onClick={() => setBatchActionModal({ type: 'delete' })}
+                                disabled={batchProcessing}
+                                className="px-3.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                                title="Permanently delete selected student records"
+                              >
+                                <Trash2 size={14} />
+                                <span>Delete</span>
+                              </button>
+
+                              {/* Deselect All */}
+                              <button
+                                onClick={clearSelection}
+                                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
+                                title="Deselect all"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Students List Table / Cards */}
+                        {displayedStudents.length === 0 ? (
+                          <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center">
+                            <Users size={36} className="mx-auto text-slate-300 mb-2" />
+                            <h4 className="text-base font-black text-slate-700">No Students Found</h4>
+                            <p className="text-xs text-slate-400 mt-1">
+                              {classStudents.length === 0 
+                                ? `No students have been enrolled in ${selectedClass} yet.`
+                                : `No students matched the query "${studentSearch}".`}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-black uppercase text-slate-400 tracking-wider">
+                                    <th className="py-3 px-3 w-10 text-center">
+                                      <button 
+                                        onClick={handleSelectAllStudents} 
+                                        className="text-slate-400 hover:text-indigo-600 transition-colors focus:outline-none cursor-pointer flex items-center justify-center mx-auto"
+                                        title={allDisplayedSelected ? "Deselect All" : "Select All"}
+                                      >
+                                        {allDisplayedSelected ? (
+                                          <CheckSquare size={16} className="text-indigo-600" />
+                                        ) : someDisplayedSelected ? (
+                                          <MinusSquare size={16} className="text-indigo-500" />
+                                        ) : (
+                                          <Square size={16} />
+                                        )}
+                                      </button>
+                                    </th>
+                                    <th className="py-3 px-3 w-8">#</th>
+                                    <th className="py-3 px-4">Student</th>
+                                    <th className="py-3 px-4">Reg No</th>
+                                    <th className="py-3 px-4">Gender</th>
+                                    <th className="py-3 px-4">House</th>
+                                    <th className="py-3 px-4">Club / Society</th>
+                                    <th className="py-3 px-4">Contact</th>
+                                    <th className="py-3 px-4 text-right">Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
+                                  {displayedStudents.map((s, idx) => {
+                                    const isSelected = selectedStudentIds.includes(s.id);
+                                    return (
+                                      <tr 
+                                        key={s.id || idx} 
+                                        className={`transition-colors cursor-pointer ${
+                                          isSelected ? 'bg-indigo-50/70 border-l-4 border-l-indigo-600' : 'hover:bg-slate-50/80'
+                                        }`}
+                                        onClick={() => toggleSelectStudent(s.id)}
+                                      >
+                                        <td className="py-3.5 px-3 w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                                          <button 
+                                            onClick={() => toggleSelectStudent(s.id)}
+                                            className="text-slate-300 hover:text-indigo-600 transition-colors focus:outline-none cursor-pointer flex items-center justify-center mx-auto"
+                                          >
+                                            {isSelected ? (
+                                              <CheckSquare size={16} className="text-indigo-600" />
+                                            ) : (
+                                              <Square size={16} />
+                                            )}
+                                          </button>
+                                        </td>
+                                        <td className="py-3.5 px-3 text-slate-400 font-mono">{idx + 1}</td>
+                                        <td className="py-3.5 px-4">
+                                          <div className="flex items-center gap-3">
+                                            <div className="w-9 h-9 rounded-full bg-indigo-50 text-indigo-700 font-black flex items-center justify-center overflow-hidden border border-indigo-100 shrink-0">
+                                              {s.photo ? <img src={s.photo} alt={s.name} className="w-full h-full object-cover" /> : (s.name?.[0] || 'S')}
+                                            </div>
+                                            <div>
+                                              <span className="font-extrabold text-slate-900 block">{s.name}</span>
+                                              <span className="text-[10px] text-slate-400">{s.dob || 'DOB: Not set'}</span>
+                                            </div>
+                                          </div>
+                                        </td>
+                                        <td className="py-3.5 px-4 font-mono font-bold text-indigo-600">{s.regNo || 'Pending'}</td>
+                                        <td className="py-3.5 px-4">
+                                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
+                                            s.gender === 'Female' ? 'bg-pink-50 text-pink-700' : 'bg-blue-50 text-blue-700'
+                                          }`}>
+                                            {s.gender || 'Male'}
+                                          </span>
+                                        </td>
+                                        <td className="py-3.5 px-4 text-slate-600">{s.house || '—'}</td>
+                                        <td className="py-3.5 px-4 text-slate-600">{s.club || '—'}</td>
+                                        <td className="py-3.5 px-4 text-slate-500 text-[11px]">
+                                          {s.phone ? <span>{s.phone}</span> : (s.email ? <span>{s.email}</span> : <span className="text-slate-300">No contact</span>)}
+                                        </td>
+                                        <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                          <div className="flex items-center justify-end gap-1">
+                                            <button
+                                              onClick={() => setBatchActionModal({ type: 'remove', singleStudent: s })}
+                                              className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                                              title={`Remove ${s.name} from ${selectedClass}`}
+                                            >
+                                              <UserMinus size={15} />
+                                            </button>
+                                            <button
+                                              onClick={() => setBatchActionModal({ type: 'transfer', targetClass: classes.find(c => c !== selectedClass) || '', singleStudent: s })}
+                                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                                              title={`Move ${s.name} to another class`}
+                                            >
+                                              <ArrowRightLeft size={15} />
+                                            </button>
+                                            <button
+                                              onClick={() => setBatchActionModal({ type: 'delete', singleStudent: s })}
+                                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                              title={`Delete ${s.name}`}
+                                            >
+                                              <Trash2 size={15} />
+                                            </button>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* ─────────────────────────────────────────────────────────────
                       TAB 2: TAKE ATTENDANCE
@@ -1232,6 +1536,186 @@ const ClassManagement = () => {
           </div>
         );
       })()}
+
+      {/* Batch Action Confirmation Modal */}
+      {batchActionModal && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl p-6 sm:p-8 animate-in zoom-in-95 border border-slate-100 text-left">
+            <div className="flex justify-between items-start mb-5">
+              <div className="flex items-center gap-3">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shrink-0 ${
+                  batchActionModal.type === 'remove' 
+                    ? 'bg-amber-500 shadow-lg shadow-amber-500/30' 
+                    : batchActionModal.type === 'transfer' 
+                      ? 'bg-indigo-600 shadow-lg shadow-indigo-500/30' 
+                      : 'bg-rose-600 shadow-lg shadow-rose-500/30'
+                }`}>
+                  {batchActionModal.type === 'remove' && <UserMinus size={24} />}
+                  {batchActionModal.type === 'transfer' && <ArrowRightLeft size={24} />}
+                  {batchActionModal.type === 'delete' && <Trash2 size={24} />}
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 m-0">
+                    {batchActionModal.type === 'remove' && (
+                      batchActionModal.singleStudent 
+                        ? `Remove Student from ${selectedClass}` 
+                        : `Batch Remove Students from ${selectedClass}`
+                    )}
+                    {batchActionModal.type === 'transfer' && (
+                      batchActionModal.singleStudent 
+                        ? `Transfer Student to Another Class` 
+                        : `Batch Transfer Students`
+                    )}
+                    {batchActionModal.type === 'delete' && (
+                      batchActionModal.singleStudent 
+                        ? `Permanently Delete Student` 
+                        : `Permanently Delete Selected Students`
+                    )}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium m-0 mt-0.5">
+                    {batchActionModal.singleStudent 
+                      ? `1 student selected (${batchActionModal.singleStudent.name})` 
+                      : `${selectedStudentIds.length} student(s) selected`}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => !batchProcessing && setBatchActionModal(null)}
+                disabled={batchProcessing}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Body content based on modal type */}
+            <div className="space-y-4">
+              {batchActionModal.type === 'remove' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-900 space-y-2">
+                  <p className="font-bold flex items-center gap-1.5 text-amber-800 m-0">
+                    <AlertTriangle size={15} /> Student profiles will be retained
+                  </p>
+                  <p className="m-0 text-[11px] leading-relaxed">
+                    The selected student(s) will be unassigned from <strong>{selectedClass}</strong>. Their registration numbers, marks, and profile records remain safely stored in the database.
+                  </p>
+                </div>
+              )}
+
+              {batchActionModal.type === 'transfer' && (
+                <div className="space-y-3">
+                  <label className="text-xs font-black uppercase tracking-wider text-slate-600 block">
+                    Select Destination Class:
+                  </label>
+                  <select
+                    value={batchActionModal.targetClass || ''}
+                    onChange={(e) => setBatchActionModal(prev => ({ ...prev, targetClass: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-black text-slate-800 outline-none focus:border-indigo-600 focus:bg-white transition-all cursor-pointer"
+                  >
+                    {classes.filter(c => c !== selectedClass).map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-400 m-0">
+                    Selected student(s) will be immediately moved from <strong>{selectedClass}</strong> to <strong>{batchActionModal.targetClass || 'the chosen class'}</strong>.
+                  </p>
+                </div>
+              )}
+
+              {batchActionModal.type === 'delete' && (
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-xs text-rose-900 space-y-2">
+                  <p className="font-bold flex items-center gap-1.5 text-rose-800 m-0">
+                    <AlertTriangle size={15} /> Irreversible Action
+                  </p>
+                  <p className="m-0 text-[11px] leading-relaxed">
+                    This will permanently delete the student records from the database. This action cannot be undone.
+                  </p>
+                </div>
+              )}
+
+              {/* Selected Students Preview List */}
+              <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200 max-h-36 overflow-y-auto space-y-1.5 custom-scrollbar">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block mb-1">
+                  Affected Student(s):
+                </span>
+                {(() => {
+                  const targetStudents = batchActionModal.singleStudent 
+                    ? [batchActionModal.singleStudent] 
+                    : classStudents.filter(s => selectedStudentIds.includes(s.id));
+                  return targetStudents.map(s => (
+                    <div key={s.id} className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg bg-white border border-slate-100 shadow-2xs">
+                      <span className="font-bold text-slate-800">{s.name}</span>
+                      <span className="font-mono text-[11px] text-indigo-600 font-bold">{s.regNo || 'No Reg'}</span>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-slate-100">
+              <button
+                onClick={() => setBatchActionModal(null)}
+                disabled={batchProcessing}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-slate-600 text-xs hover:bg-slate-50 disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const ids = batchActionModal.singleStudent 
+                    ? [batchActionModal.singleStudent.id] 
+                    : selectedStudentIds;
+                  if (batchActionModal.type === 'remove') handleConfirmBatchRemove(ids);
+                  else if (batchActionModal.type === 'transfer') handleConfirmBatchTransfer(batchActionModal.targetClass, ids);
+                  else if (batchActionModal.type === 'delete') handleConfirmBatchDelete(ids);
+                }}
+                disabled={batchProcessing || (batchActionModal.type === 'transfer' && !batchActionModal.targetClass)}
+                className={`px-5 py-2.5 rounded-xl text-white font-black text-xs flex items-center gap-2 shadow-lg disabled:opacity-50 cursor-pointer ${
+                  batchActionModal.type === 'remove'
+                    ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-200'
+                    : batchActionModal.type === 'transfer'
+                      ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'
+                      : 'bg-rose-600 hover:bg-rose-700 shadow-rose-200'
+                }`}
+              >
+                {batchProcessing ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Processing…</span>
+                  </>
+                ) : (
+                  <>
+                    {batchActionModal.type === 'remove' && <UserMinus size={14} />}
+                    {batchActionModal.type === 'transfer' && <ArrowRightLeft size={14} />}
+                    {batchActionModal.type === 'delete' && <Trash2 size={14} />}
+                    <span>
+                      {batchActionModal.type === 'remove' && 'Confirm Removal'}
+                      {batchActionModal.type === 'transfer' && 'Confirm Transfer'}
+                      {batchActionModal.type === 'delete' && 'Confirm Deletion'}
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Toast Notification */}
+      {batchToast.show && (
+        <div className={`fixed bottom-6 right-6 z-[70] p-4 rounded-2xl shadow-2xl flex items-center gap-3 border animate-in slide-in-from-bottom-5 duration-300 ${
+          batchToast.type === 'success' 
+            ? 'bg-emerald-900 text-emerald-100 border-emerald-700' 
+            : 'bg-rose-900 text-rose-100 border-rose-700'
+        }`}>
+          {batchToast.type === 'success' ? (
+            <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+          ) : (
+            <AlertCircle size={18} className="text-rose-400 shrink-0" />
+          )}
+          <span className="text-xs font-bold">{batchToast.message}</span>
+        </div>
+      )}
 
       {/* Bulk Enroll Modal */}
       <BulkStudentEnrollModal 
