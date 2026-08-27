@@ -1351,7 +1351,7 @@ const BrandingSettings = () => {
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">1st Test (CAT 1)</label>
+                  <label className="block text-xs font-black text-slate-700 dark:text-slate-200 mb-1">1st Test (CAT 1)</label>
                   <input
                     type="number"
                     min="0"
@@ -1362,7 +1362,7 @@ const BrandingSettings = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">2nd Test (CAT 2)</label>
+                  <label className="block text-xs font-black text-slate-700 dark:text-slate-200 mb-1">2nd Test (CAT 2)</label>
                   <input
                     type="number"
                     min="0"
@@ -1373,7 +1373,7 @@ const BrandingSettings = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Exam Max Score</label>
+                  <label className="block text-xs font-black text-slate-700 dark:text-slate-200 mb-1">Exam Max Score</label>
                   <input
                     type="number"
                     min="0"
@@ -1409,7 +1409,7 @@ const BrandingSettings = () => {
 
                 <div className="flex items-center gap-4">
                   <div className="w-32">
-                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Pass Mark (%)</label>
+                    <label className="block text-xs font-black text-slate-700 dark:text-slate-200 mb-1">Pass Mark (%)</label>
                     <input
                       type="number"
                       min="0"
@@ -1440,7 +1440,7 @@ const BrandingSettings = () => {
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
               {Object.entries(divisorInputs).map(([className, value]) => (
                 <div key={className} className="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 text-center">
-                  <span className="block text-[11px] font-black text-slate-600 dark:text-slate-400 mb-1">{className}</span>
+                  <span className="block text-xs font-black text-slate-700 dark:text-slate-200 mb-1">{className}</span>
                   <input
                     type="number"
                     min="1"
@@ -1454,63 +1454,85 @@ const BrandingSettings = () => {
           </div>
 
           {/* Auto Comments Templates */}
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
-            <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-100 dark:border-slate-700 pb-4">
-              <div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white m-0">Auto-Generated Result Remarks</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 m-0">Customizable Principal & Form Teacher comments based on student performance tiers</p>
+          <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 border-2 border-indigo-500/40 shadow-xl shadow-indigo-950/30 space-y-6">
+            <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-700 pb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md">
+                  <Award size={22} className="text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-black text-white m-0">Auto-Generated Result Remarks</h3>
+                    <span className="bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
+                      Custom Tiers
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 m-0 mt-0.5 font-medium">
+                    Configure Principal & Form Teacher comment templates based on student score percentages
+                  </p>
+                </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <button
                   type="button"
                   onClick={handleResetDefaultCommentTiers}
-                  className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 transition-all flex items-center gap-1.5"
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
                 >
-                  <RefreshCcw size={12} /> Reset 5 Tiers
+                  <RefreshCcw size={13} className="text-slate-300" /> 
+                  <span className="text-white">Reset 5 Tiers</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddTierModal(!showAddTierModal)}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-md shadow-indigo-600/20 transition-all flex items-center gap-1.5 active:scale-95"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-violet-600 hover:from-indigo-400 hover:to-violet-500 text-white text-xs font-black shadow-lg shadow-indigo-600/40 transition-all flex items-center gap-2 active:scale-95"
                 >
-                  <Plus size={14} /> Add Performance Tier
+                  <Plus size={16} className="text-white font-black stroke-[3]" /> 
+                  <span className="text-white font-black">Add Performance Tier</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setCommentsEnabled(!commentsEnabled)}
-                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all focus:outline-none ${commentsEnabled ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  title={commentsEnabled ? 'Auto-comments enabled' : 'Auto-comments disabled'}
+                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all focus:outline-none ${commentsEnabled ? 'bg-emerald-500 shadow-md shadow-emerald-500/30' : 'bg-slate-700 border border-slate-600'}`}
                 >
-                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${commentsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                  <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform ${commentsEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
                 </button>
               </div>
             </div>
 
             {/* Add New Tier Creator Box */}
             {showAddTierModal && (
-              <div className="p-5 bg-indigo-50/80 dark:bg-indigo-950/40 rounded-2xl border-2 border-indigo-200 dark:border-indigo-800 space-y-4 animate-in zoom-in-95 duration-150">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
-                    <Plus size={14} /> Create New Performance Tier
-                  </h4>
-                  <button onClick={() => setShowAddTierModal(false)} className="text-slate-400 hover:text-slate-600">
-                    <X size={16} />
+              <div className="p-6 bg-slate-950 rounded-2xl border-2 border-indigo-400 text-white space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2 text-white">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black">
+                      <Plus size={16} className="text-white" />
+                    </div>
+                    <h4 className="text-sm font-black text-white m-0">Create New Remark Tier</h4>
+                  </div>
+                  <button onClick={() => setShowAddTierModal(false)} className="text-slate-400 hover:text-white p-1">
+                    <X size={18} className="text-white" />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-bold text-indigo-900 dark:text-indigo-200 mb-1">Tier Title / Label</label>
+                    <label className="block text-xs font-black text-white mb-1.5 flex items-center gap-1.5">
+                      <Award size={14} className="text-indigo-400" /> Tier Title / Label
+                    </label>
                     <input
                       type="text"
                       value={newTierLabel}
                       onChange={(e) => setNewTierLabel(e.target.value)}
                       placeholder="e.g. High Distinction / Honors (85% - 100%)"
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs font-bold text-slate-800 dark:text-white"
+                      className="w-full bg-slate-900 border-2 border-slate-700 focus:border-indigo-400 text-white rounded-xl p-3 text-xs font-bold placeholder:text-slate-500 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-indigo-900 dark:text-indigo-200 mb-1">Minimum Score % (0 - 100)</label>
+                    <label className="block text-xs font-black text-white mb-1.5 flex items-center gap-1.5">
+                      <Sliders size={14} className="text-indigo-400" /> Minimum Score %
+                    </label>
                     <input
                       type="number"
                       min="0"
@@ -1518,48 +1540,52 @@ const BrandingSettings = () => {
                       value={newTierMinScore}
                       onChange={(e) => setNewTierMinScore(e.target.value)}
                       placeholder="85"
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs font-black text-slate-800 dark:text-white"
+                      className="w-full bg-slate-900 border-2 border-slate-700 focus:border-indigo-400 text-white rounded-xl p-3 text-xs font-black placeholder:text-slate-500 focus:outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[11px] font-bold text-indigo-900 dark:text-indigo-200 mb-1">Form Teacher Remark Template</label>
+                    <label className="block text-xs font-black text-white mb-1.5 flex items-center gap-1.5">
+                      <UserCheck size={14} className="text-emerald-400" /> Form Teacher Remark Template
+                    </label>
                     <textarea
                       rows={2}
                       value={newTierTeacher}
                       onChange={(e) => setNewTierTeacher(e.target.value)}
                       placeholder="e.g. An exceptional student with outstanding academic brilliance and conduct."
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs text-slate-800 dark:text-white"
+                      className="w-full bg-slate-900 border-2 border-slate-700 focus:border-indigo-400 text-white rounded-xl p-3 text-xs font-medium placeholder:text-slate-500 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-indigo-900 dark:text-indigo-200 mb-1">Principal Remark Template</label>
+                    <label className="block text-xs font-black text-white mb-1.5 flex items-center gap-1.5">
+                      <Award size={14} className="text-amber-400" /> Principal Remark Template
+                    </label>
                     <textarea
                       rows={2}
                       value={newTierPrincipal}
                       onChange={(e) => setNewTierPrincipal(e.target.value)}
                       placeholder="e.g. Excellent result! Continues to set the academic standard."
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs text-slate-800 dark:text-white"
+                      className="w-full bg-slate-900 border-2 border-slate-700 focus:border-indigo-400 text-white rounded-xl p-3 text-xs font-medium placeholder:text-slate-500 focus:outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-1">
+                <div className="flex justify-end gap-3 pt-2">
                   <button
                     type="button"
                     onClick={() => setShowAddTierModal(false)}
-                    className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-300"
+                    className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold border border-slate-700 transition-all"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={handleAddCommentTier}
-                    className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow"
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-lg shadow-emerald-900/40 transition-all flex items-center gap-2"
                   >
-                    Save Tier
+                    <Check size={16} className="text-white font-black stroke-[3]" /> Save Tier
                   </button>
                 </div>
               </div>
@@ -1570,11 +1596,14 @@ const BrandingSettings = () => {
                 {Object.entries(tpls)
                   .sort(([, a], [, b]) => Number(b?.minScore ?? 0) - Number(a?.minScore ?? 0))
                   .map(([key, tier]) => (
-                    <div key={key} className="p-5 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3.5 shadow-sm">
-                      
+                    <div 
+                      key={key} 
+                      className="p-5 bg-slate-950/90 rounded-2xl border-2 border-slate-700/80 hover:border-indigo-500/60 transition-all space-y-4 shadow-lg text-white"
+                    >
                       {/* Tier Header & Score Editor */}
-                      <div className="flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-700 pb-3">
-                        <div className="flex-1">
+                      <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                        <div className="flex items-center gap-2 flex-1">
+                          <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0" />
                           <input
                             type="text"
                             value={tier?.label || ''}
@@ -1582,14 +1611,14 @@ const BrandingSettings = () => {
                               const val = e.target.value;
                               setTpls(prev => ({ ...prev, [key]: { ...prev[key], label: val } }));
                             }}
-                            className="w-full bg-transparent border-b border-dashed border-slate-300 dark:border-slate-600 focus:border-indigo-500 text-xs font-black text-slate-900 dark:text-white p-0.5 focus:outline-none"
+                            className="w-full bg-slate-900 border border-slate-700 focus:border-indigo-400 text-xs font-black text-white px-2.5 py-1.5 rounded-lg focus:outline-none"
                             placeholder="Tier Name..."
                           />
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                          <div className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1">
-                            <span className="text-[10px] font-bold text-slate-500">Min %:</span>
+                          <div className="flex items-center gap-1.5 bg-indigo-950/70 border border-indigo-500/50 rounded-lg px-2.5 py-1 text-white">
+                            <span className="text-[10px] font-black text-indigo-300 uppercase">Min %</span>
                             <input
                               type="number"
                               min="0"
@@ -1599,7 +1628,7 @@ const BrandingSettings = () => {
                                 const val = Number(e.target.value) || 0;
                                 setTpls(prev => ({ ...prev, [key]: { ...prev[key], minScore: val } }));
                               }}
-                              className="w-10 bg-transparent text-xs font-black text-indigo-600 dark:text-indigo-400 text-center focus:outline-none"
+                              className="w-10 bg-indigo-600 text-xs font-black text-white text-center rounded focus:outline-none px-1"
                             />
                           </div>
 
@@ -1607,15 +1636,17 @@ const BrandingSettings = () => {
                             type="button"
                             onClick={() => handleDeleteCommentTier(key)}
                             title="Delete this Tier"
-                            className="p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
+                            className="p-2 text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors shadow-sm"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={14} className="text-white" />
                           </button>
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-500 mb-1">Form Teacher Remark</label>
+                        <label className="block text-xs font-black text-slate-200 mb-1.5 flex items-center gap-1.5">
+                          <UserCheck size={14} className="text-emerald-400" /> Form Teacher Remark Template
+                        </label>
                         <textarea
                           rows={2}
                           value={tier?.teacher || ''}
@@ -1623,12 +1654,14 @@ const BrandingSettings = () => {
                             const val = e.target.value;
                             setTpls(prev => ({ ...prev, [key]: { ...prev[key], teacher: val } }));
                           }}
-                          className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs text-slate-800 dark:text-white leading-relaxed"
+                          className="w-full bg-slate-900 border-2 border-slate-700 focus:border-indigo-400 text-white rounded-xl p-3 text-xs font-medium leading-relaxed focus:outline-none"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-500 mb-1">Principal Remark</label>
+                        <label className="block text-xs font-black text-slate-200 mb-1.5 flex items-center gap-1.5">
+                          <Award size={14} className="text-amber-400" /> Principal Remark Template
+                        </label>
                         <textarea
                           rows={2}
                           value={tier?.principal || ''}
@@ -1636,7 +1669,7 @@ const BrandingSettings = () => {
                             const val = e.target.value;
                             setTpls(prev => ({ ...prev, [key]: { ...prev[key], principal: val } }));
                           }}
-                          className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs text-slate-800 dark:text-white leading-relaxed"
+                          className="w-full bg-slate-900 border-2 border-slate-700 focus:border-indigo-400 text-white rounded-xl p-3 text-xs font-medium leading-relaxed focus:outline-none"
                         />
                       </div>
                     </div>
