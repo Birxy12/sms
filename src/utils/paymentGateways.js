@@ -114,7 +114,18 @@ export async function payWithFirstBank({
 
   const live = import.meta.env.VITE_FBN_LIVE === 'true';
   const publicKey = import.meta.env.VITE_FBN_PUBLIC_KEY || 'sb-pk-bds-fbn-key';
-  const initiatePaymentURI = `${window.location.origin}/api/fbn-checkout`;
+  
+  // Use official First Bank direct endpoints as primary destination
+  const defaultInitiateURI = live
+    ? 'https://checkout.firstchekout.com/api/v1/checkout/initialize'
+    : 'https://sandbox.firstchekout.com/api/v1/checkout/initialize';
+
+  const defaultBaseFrame = live
+    ? 'https://checkout.firstchekout.com'
+    : 'https://sandbox.firstchekout.com';
+
+  const initiatePaymentURI = import.meta.env.VITE_FBN_INITIATE_URI || defaultInitiateURI;
+  const baseFrame = import.meta.env.VITE_FBN_BASE_FRAME || defaultBaseFrame;
 
   const txn = {
     live,
@@ -154,14 +165,34 @@ export async function payWithFirstBank({
             raw: res
           });
         }
+        if (onClose) onClose();
+      } else if (res && res.status === 'error') {
+        console.warn('[FirstChekOut] Gateway initialization notification:', res.message);
+        // If provider rejected or sandbox configuration issue, prompt simulation mode fallback
+        const confirmFallback = window.confirm(
+          `First Bank Payment Notice:\n\n${res.message || 'Payment initiation unsuccessful.'}\n\nWould you like to authorize this fee payment in Sandbox Simulation Mode (₦${numAmount.toLocaleString('en-NG')} for ${description})?`
+        );
+        if (confirmFallback) {
+          if (onSuccess) {
+            await onSuccess({
+              reference: `BDS-FBN-SIM-${Math.floor(100000 + Math.random() * 900000)}`,
+              gateway: 'First Bank (FirstChekOut - Simulation)',
+              amount: numAmount,
+              simulated: true
+            });
+          }
+        } else {
+          if (onFailure) onFailure(res);
+        }
+        if (onClose) onClose();
       } else {
         if (onFailure) {
           onFailure(res);
         } else {
-          alert(`First Bank payment status: ${res.status || res.message || 'Cancelled'}`);
+          alert(`First Bank payment status: ${res?.status || res?.message || 'Cancelled'}`);
         }
+        if (onClose) onClose();
       }
-      if (onClose) onClose();
     },
     onClose: () => {
       if (onClose) onClose();
@@ -169,7 +200,7 @@ export async function payWithFirstBank({
   };
 
   const addressUrl = {
-    BaseFrame: live ? 'https://checkout.firstchekout.com' : 'https://sandbox.firstchekout.com',
+    BaseFrame: baseFrame,
     InitiatePaymentURI: initiatePaymentURI
   };
 

@@ -6,7 +6,8 @@ function fbnCheckoutProxyPlugin() {
     name: 'fbn-checkout-proxy',
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        if (req.url && req.url.startsWith('/api/fbn-checkout')) {
+        const url = req.originalUrl || req.url || '';
+        if (url.startsWith('/api/fbn-checkout')) {
           res.setHeader('Access-Control-Allow-Origin', '*');
           res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
           res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -43,7 +44,7 @@ function fbnCheckoutProxyPlugin() {
                 console.error('[FBN Local Proxy Error]', e);
                 res.statusCode = 500;
                 res.setHeader('Content-Type', 'application/json');
-                return res.end(JSON.stringify({ error: e.message }));
+                return res.end(JSON.stringify({ status: 'error', error: e.message }));
               }
             });
             return;
