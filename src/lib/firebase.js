@@ -50,7 +50,7 @@ const initFirestore = () => {
   }
 
   const connectionSettings = {
-    experimentalAutoDetectLongPolling: true
+    experimentalForceLongPolling: true
   };
 
   if (typeof window !== 'undefined' && typeof indexedDB !== 'undefined') {

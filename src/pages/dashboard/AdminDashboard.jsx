@@ -951,7 +951,7 @@ const AdminDashboard = () => {
     return () => {
       isMounted = false;
     };
-  }, [viewMode, authReady, globalClasses]);
+  }, [viewMode, authReady]);
 
   const stats = [
     { title: 'Total Students', value: realStats.students.toLocaleString(), icon: GraduationCap, color: '#ff6b00' },
