@@ -1685,14 +1685,23 @@ const BrandingSettings = () => {
       {/* TAB 4: PORTAL PERMISSIONS & SECURITY */}
       {/* ========================================================================= */}
       {activeTab === 'permissions' && (
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-6 animate-in fade-in duration-200">
-          <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-700 pb-4">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 flex items-center justify-center">
-              <Lock size={20} />
-            </div>
-            <div>
-              <h3 className="text-lg font-black text-slate-900 dark:text-white m-0">Portal Access & Security Controls</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 m-0">Enable or lock specific public and student portals across the web application</p>
+        <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 border-2 border-indigo-500/40 shadow-xl shadow-indigo-950/30 space-y-6 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-700 pb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md">
+                <Lock size={22} className="text-white" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-black text-white m-0">Portal Access & Security Controls</h3>
+                  <span className="bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
+                    Master Access
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 m-0 mt-0.5 font-medium">
+                  Enable or lock specific public and student portals across the web application
+                </p>
+              </div>
             </div>
           </div>
 
@@ -1702,71 +1711,118 @@ const BrandingSettings = () => {
                 id: 'admissionOpen',
                 title: 'Public Admission Portal',
                 description: 'Allow new applicant candidate registrations and entrance applications.',
-                badge: 'Public'
+                badge: 'Public',
+                icon: School,
+                iconColor: 'text-indigo-400',
+                iconBg: 'bg-indigo-950/60'
               },
               {
                 id: 'cbtEnabled',
                 title: 'CBT Entrance Examination',
                 description: 'Require candidates to complete the timed online assessment before prospectus payment.',
-                badge: 'Admission'
+                badge: 'Admission',
+                icon: Zap,
+                iconColor: 'text-amber-400',
+                iconBg: 'bg-amber-950/60'
               },
               {
                 id: 'subjectRegistrationEnabled',
                 title: 'Subject Registration Portal',
                 description: 'Allow SS2 and SS3 students to self-register their 9 subjects on the student dashboard.',
-                badge: 'Senior Secondary'
+                badge: 'Senior Secondary',
+                icon: BookOpen,
+                iconColor: 'text-sky-400',
+                iconBg: 'bg-sky-950/60'
               },
               {
                 id: 'resultCheckingEnabled',
                 title: 'Terminal Result Checking Portal',
                 description: 'Allow students to view and download their academic report cards for published terms.',
-                badge: 'Results'
+                badge: 'Results',
+                icon: Award,
+                iconColor: 'text-emerald-400',
+                iconBg: 'bg-emerald-950/60'
               },
               {
                 id: 'onlinePaymentEnabled',
                 title: 'Online Payment Gateways (First Bank & Moniepoint)',
                 description: 'Allow direct online fee settlement with instant automated credit verification.',
-                badge: 'Bursary'
+                badge: 'Bursary',
+                icon: CreditCard,
+                iconColor: 'text-violet-400',
+                iconBg: 'bg-violet-950/60'
               },
               {
                 id: 'walletPaymentEnabled',
                 title: 'Student E-Wallet Payments',
                 description: 'Enable pre-loaded student e-wallet debiting for fee payments without card charges.',
-                badge: 'Wallet'
+                badge: 'Wallet',
+                icon: CreditCard,
+                iconColor: 'text-teal-400',
+                iconBg: 'bg-teal-950/60'
               },
               {
                 id: 'allowProfileEdit',
                 title: 'Student Profile Self-Editing',
                 description: 'Allow registered students to update their personal info, phone numbers, and passport photos.',
-                badge: 'Security'
+                badge: 'Security',
+                icon: UserCheck,
+                iconColor: 'text-rose-400',
+                iconBg: 'bg-rose-950/60'
               }
             ].map(perm => {
               const isEnabled = !!permissions[perm.id];
+              const Icon = perm.icon;
               return (
                 <div 
                   key={perm.id}
-                  className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-4"
+                  className="p-5 rounded-2xl bg-slate-950/90 border-2 border-slate-700/80 hover:border-indigo-500/60 transition-all text-white shadow-lg flex items-center justify-between gap-4"
                 >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-black text-slate-900 dark:text-white m-0">{perm.title}</h4>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                        {perm.badge}
-                      </span>
+                  <div className="flex items-start gap-3.5">
+                    <div className={`w-10 h-10 rounded-xl ${perm.iconBg} border border-slate-700 flex items-center justify-center shrink-0 mt-0.5 shadow-sm`}>
+                      <Icon size={20} className={perm.iconColor} />
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 m-0 leading-relaxed">{perm.description}</p>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-sm font-black text-white m-0 tracking-tight">{perm.title}</h4>
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 uppercase">
+                          {perm.badge}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 m-0 leading-relaxed font-medium">{perm.description}</p>
+                      <div className="pt-1">
+                        {isEnabled ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-400">
+                            <CheckCircle size={13} className="text-emerald-400" /> Active & Open
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-black text-slate-400">
+                            <Lock size={13} className="text-slate-400" /> Locked / Disabled
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => setPermissions(prev => ({ ...prev, [perm.id]: !isEnabled }))}
-                    className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-all focus:outline-none ${
-                      isEnabled ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'
+                    title={isEnabled ? `${perm.title} is ON - Click to Lock` : `${perm.title} is OFF - Click to Enable`}
+                    className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-all focus:outline-none p-1 ${
+                      isEnabled 
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-md shadow-emerald-500/30' 
+                        : 'bg-slate-800 border-2 border-slate-600'
                     }`}
                   >
-                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${
-                      isEnabled ? 'translate-x-6' : 'translate-x-1'
-                    }`} />
+                    <span className={`inline-flex items-center justify-center h-6 w-6 transform rounded-full bg-white shadow-md transition-transform ${
+                      isEnabled ? 'translate-x-6' : 'translate-x-0'
+                    }`}>
+                      {isEnabled ? (
+                        <Check size={13} className="text-emerald-600 font-black stroke-[3]" />
+                      ) : (
+                        <Lock size={11} className="text-slate-500" />
+                      )}
+                    </span>
                   </button>
                 </div>
               );
@@ -2160,52 +2216,79 @@ const BrandingSettings = () => {
           </div>
 
           {/* Home Page Announcement Popup Banner */}
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 dark:border-slate-700 pb-4">
+          <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 border-2 border-amber-500/40 shadow-xl shadow-amber-950/20 space-y-5">
+            <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-700 pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center">
-                  <AlertTriangle size={20} />
+                <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md">
+                  <AlertTriangle size={22} className="text-white" />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-900 dark:text-white m-0">Public Announcement / Modal Ad Banner</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 m-0">Show a dismissible floating promo banner to visitors on the landing page</p>
+                  <h3 className="text-base font-black text-white m-0">Public Announcement / Modal Ad Banner</h3>
+                  <p className="text-xs text-slate-300 m-0 mt-0.5 font-medium">Show a dismissible floating promo banner to visitors on the landing page</p>
                 </div>
               </div>
 
-              <button
-                onClick={() => setHomeAdEnabled(!homeAdEnabled)}
-                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all ${homeAdEnabled ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'}`}
-              >
-                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${homeAdEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-              </button>
+              <div className="flex items-center gap-3">
+                {homeAdEnabled ? (
+                  <span className="text-xs font-black text-emerald-400 flex items-center gap-1">
+                    <CheckCircle size={13} /> Active
+                  </span>
+                ) : (
+                  <span className="text-xs font-black text-slate-400 flex items-center gap-1">
+                    <Lock size={13} /> Inactive
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setHomeAdEnabled(!homeAdEnabled)}
+                  title={homeAdEnabled ? 'Banner is Enabled' : 'Banner is Disabled'}
+                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all focus:outline-none p-1 ${
+                    homeAdEnabled ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-md shadow-emerald-500/30' : 'bg-slate-800 border-2 border-slate-600'
+                  }`}
+                >
+                  <span className={`inline-flex items-center justify-center h-6 w-6 transform rounded-full bg-white shadow-md transition-transform ${
+                    homeAdEnabled ? 'translate-x-6' : 'translate-x-0'
+                  }`}>
+                    {homeAdEnabled ? (
+                      <Check size={13} className="text-emerald-600 font-black stroke-[3]" />
+                    ) : (
+                      <Lock size={11} className="text-slate-500" />
+                    )}
+                  </span>
+                </button>
+              </div>
             </div>
 
             {homeAdEnabled && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Target Link URL (Optional)</label>
+                  <label className="block text-xs font-black text-white mb-1.5 flex items-center gap-1.5">
+                    <Globe size={14} className="text-amber-400" /> Target Link URL (Optional)
+                  </label>
                   <input
                     type="url"
                     value={homeAdLink}
                     onChange={(e) => setHomeAdLink(e.target.value)}
                     placeholder="https://..."
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs font-bold text-slate-800 dark:text-white"
+                    className="w-full bg-slate-950 border-2 border-slate-700 focus:border-amber-400 text-white rounded-xl p-3 text-xs font-bold placeholder:text-slate-500 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Banner Graphic Image</label>
+                  <label className="block text-xs font-black text-white mb-1.5 flex items-center gap-1.5">
+                    <ImageIcon size={14} className="text-amber-400" /> Banner Graphic Image
+                  </label>
                   <div className="flex items-center gap-3">
                     {homeAdImage ? (
-                      <div className="relative w-32 h-16 rounded-xl overflow-hidden border border-slate-200">
+                      <div className="relative w-36 h-20 rounded-xl overflow-hidden border-2 border-slate-700 shadow">
                         <img src={homeAdImage} alt="Ad" className="w-full h-full object-cover" />
-                        <button onClick={() => setHomeAdImage(null)} className="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-0.5">
-                          <X size={12} />
+                        <button onClick={() => setHomeAdImage(null)} className="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-1 shadow hover:bg-rose-700">
+                          <X size={12} className="text-white" />
                         </button>
                       </div>
                     ) : (
-                      <label className="cursor-pointer bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2">
-                        <Upload size={14} /> Upload Banner
+                      <label className="cursor-pointer bg-amber-500 hover:bg-amber-600 text-white px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 shadow-md">
+                        <Upload size={15} className="text-white" /> Upload Banner
                         <input type="file" accept="image/*" onChange={handleAdUpload} className="hidden" />
                       </label>
                     )}
