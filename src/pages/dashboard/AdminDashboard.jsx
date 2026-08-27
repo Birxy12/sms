@@ -27,6 +27,7 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useGlobalClasses, normalizeClassName } from '../../utils/classUtils';
 import { useOnlineUsers } from '../../utils/presence';
 import { getProspectusFeeData, getClassFees, getExpectedFeeForStudent, formatNaira, PROSPECTUS_FEES_SCHEDULE } from '../../utils/prospectusFees';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 // Helper to format timestamps into clean relative times (e.g. 2 hours ago, Yesterday)
 function formatRelativeTime(dateInput) {
   if (!dateInput) return 'Recently';
@@ -75,6 +76,7 @@ LiveClock.displayName = 'LiveClock';
 const AdminDashboard = () => {
   const { currentAdmin, changePassword, authReady } = useAdminAuth();
   const onlineCount = useOnlineUsers(currentAdmin);
+  const globalClasses = useGlobalClasses();
   const [viewMode, setViewMode] = useState('admin'); // admin, staff, student
   const [selectedClass, setSelectedClass] = useState('JSS1');
   const [activeTab, setActiveTab] = useState('Overview');
@@ -627,7 +629,7 @@ const AdminDashboard = () => {
     students: 0,
     teachers: 0,
     subjects: 0,
-    classes: classes.length,
+    classes: 19,
     demographics: { male: 0, female: 0, others: 0 }
   });
 
@@ -878,6 +880,25 @@ const AdminDashboard = () => {
             );
           }
 
+          // Fetch dynamic classes from Firestore 'classes' collection
+          let classesCount = 0;
+          try {
+            const classSnap = await getDocs(collection(db, 'classes'));
+            const activeDocs = classSnap.docs.filter(d => !d.data()?.deleted && d.id);
+            if (activeDocs.length > 0) {
+              classesCount = activeDocs.length;
+            }
+          } catch (clsErr) {
+            console.warn('Could not fetch classes stats:', clsErr.message);
+          }
+
+          const calculatedClasses = Math.max(
+            classesCount,
+            globalClasses?.length || 0,
+            Object.keys(classMap).length,
+            19
+          );
+
           // Sort all activities by timestamp descending
           activities.sort((a, b) => b.timestamp - a.timestamp);
 
@@ -888,7 +909,7 @@ const AdminDashboard = () => {
               students: studentSnap.size,
               teachers: staffSize,
               subjects: subjectSize,
-              classes: Object.keys(classMap).length || prev.classes || 0,
+              classes: calculatedClasses,
               demographics: { male, female, others }
             }));
 
@@ -930,13 +951,13 @@ const AdminDashboard = () => {
     return () => {
       isMounted = false;
     };
-  }, [viewMode, authReady]);
+  }, [viewMode, authReady, globalClasses]);
 
   const stats = [
     { title: 'Total Students', value: realStats.students.toLocaleString(), icon: GraduationCap, color: '#ff6b00' },
     { title: 'Total Teachers', value: realStats.teachers.toLocaleString(), icon: Briefcase, color: '#111111' },
     { title: 'Online Users (Real-Time)', value: `${onlineCount.toLocaleString()} Online`, icon: Activity, color: '#10b981' },
-    { title: 'Active Classes', value: realStats.classes.toLocaleString(), icon: Users, color: '#ff6b00' },
+    { title: 'Active Classes', value: (realStats.classes || globalClasses?.length || 19).toLocaleString(), icon: Users, color: '#ff6b00' },
   ];
 
   const displayActivities = realActivities.length > 0 ? realActivities : [
