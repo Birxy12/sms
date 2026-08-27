@@ -950,46 +950,45 @@ const AdminDashboard = () => {
                   <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-2">
                       <span className="relative flex h-2.5 w-2.5">
-
                         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                       </span>
-                      <h3 className="text-sm font-black text-slate-700 uppercase tracking-wider">Live System Stream</h3>
+                      <h3 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider">Live System Stream</h3>
                     </div>
-                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">Realtime Audit</span>
+                    <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800">Realtime Audit</span>
                   </div>
                   
                   <div className="ops-log text-left mb-4">
                     {systemLogs.map((log, idx) => (
                       <div key={idx} className="flex gap-2 mb-1 last:mb-0">
-                        <span className="text-slate-500 font-bold">[{log.time}]</span>
+                        <span className="text-slate-400 font-bold">[{log.time}]</span>
                         <span className="text-emerald-400 font-bold">$</span>
-                        <span className="text-slate-300 font-medium">{log.text}</span>
+                        <span className="text-slate-200 font-medium">{log.text}</span>
                       </div>
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-slate-400 font-bold bg-slate-50 p-3 rounded-2xl">
-                    <span className="flex items-center gap-1.5"><Server size={14} /> Host: production-asia-south</span>
-                    <span className="flex items-center gap-1.5"><Key size={14} /> SSL Secured</span>
+                  <div className="flex items-center justify-between text-xs text-slate-700 dark:text-slate-300 font-bold bg-slate-100 dark:bg-slate-900/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+                    <span className="flex items-center gap-1.5"><Server size={14} className="text-indigo-600 dark:text-indigo-400" /> Host: production-asia-south</span>
+                    <span className="flex items-center gap-1.5"><Key size={14} className="text-emerald-600 dark:text-emerald-400" /> SSL Secured</span>
                   </div>
                 </div>
 
                 <div className="card-premium p-6 flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-left block">Connection Latency</span>
+                    <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest text-left block">Connection Latency</span>
                     <div className="flex items-baseline gap-2 mt-1 justify-start">
-                      <h4 className="text-3xl font-black text-slate-800">{latencyHistory[latencyHistory.length - 1]}ms</h4>
-                      <span className="text-[10px] text-emerald-500 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">Excellent</span>
+                      <h4 className="text-3xl font-black text-slate-900 dark:text-white">{latencyHistory[latencyHistory.length - 1]}ms</h4>
+                      <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-700">Excellent</span>
                     </div>
                   </div>
                   
                   {/* Sparkline Graphic */}
-                  <div className="h-20 w-full mt-4 flex items-center justify-center bg-slate-50/50 rounded-2xl p-2 border border-slate-100">
-                    <svg className="w-full h-full" viewBox="0 0 120 30" preserveAspectRatio="none">
+                  <div className="h-20 w-full mt-4 flex items-center justify-center bg-slate-100 dark:bg-slate-900 rounded-2xl p-2 border border-slate-200 dark:border-slate-800">
+                    <svg className="w-full h-full text-indigo-600 dark:text-indigo-400" viewBox="0 0 120 30" preserveAspectRatio="none">
                       <path 
                         d={sparklineD} 
                         fill="none" 
-                        stroke="var(--primary)" 
+                        stroke="currentColor" 
                         strokeWidth="2.5" 
                         strokeLinecap="round" 
                         strokeLinejoin="round"
@@ -998,14 +997,14 @@ const AdminDashboard = () => {
                     </svg>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-center">
+                  <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 text-center">
                     <div>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Min Latency</p>
-                      <p className="text-xs font-black text-slate-700">{Math.min(...latencyHistory)}ms</p>
+                      <p className="text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Min Latency</p>
+                      <p className="text-xs font-black text-slate-900 dark:text-white">{Math.min(...latencyHistory)}ms</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Max Latency</p>
-                      <p className="text-xs font-black text-slate-700">{Math.max(...latencyHistory)}ms</p>
+                      <p className="text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Max Latency</p>
+                      <p className="text-xs font-black text-slate-900 dark:text-white">{Math.max(...latencyHistory)}ms</p>
                     </div>
                   </div>
                 </div>

@@ -956,45 +956,45 @@ const BrandingSettings = () => {
               </h4>
 
               <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Campus Physical Address</label>
+                <label className="block text-xs font-black text-slate-700 dark:text-slate-200 mb-1">Campus Physical Address</label>
                 <input
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="e.g. 123 Education Lane, Digital City, Nigeria"
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm font-bold text-slate-900 dark:text-white"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Phone Number(s)</label>
+                  <label className="block text-xs font-black text-slate-700 dark:text-slate-200 mb-1">Phone Number(s)</label>
                   <input
                     type="text"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+234 800 123 4567"
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm font-bold text-slate-900 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Official Inquiry Email</label>
+                  <label className="block text-xs font-black text-slate-700 dark:text-slate-200 mb-1">Official Inquiry Email</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="info@school.edu.ng"
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm font-bold text-slate-900 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Working / Office Hours</label>
+                  <label className="block text-xs font-black text-slate-700 dark:text-slate-200 mb-1">Working / Office Hours</label>
                   <input
                     type="text"
                     value={officeHours}
                     onChange={(e) => setOfficeHours(e.target.value)}
                     placeholder="Mon - Fri: 8:00 AM - 4:00 PM"
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm font-bold text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
