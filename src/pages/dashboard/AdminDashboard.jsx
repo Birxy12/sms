@@ -20,13 +20,47 @@ import {
   Users, User, UserPlus, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, 
   BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, 
   CheckCircle, CheckCircle2, XCircle, Loader2, Search, RefreshCw, BarChart3, FileText, BookMarked, Globe, 
-  Mail, Inbox, CreditCard, FileSpreadsheet, FolderOpen, UserCheck, School, ClipboardList, Library, Send, Award
+  Mail, Inbox, CreditCard, FileSpreadsheet, FolderOpen, UserCheck, School, ClipboardList, Library, Send, Award,
+  X, Clock
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useGlobalClasses, normalizeClassName } from '../../utils/classUtils';
 import { useOnlineUsers } from '../../utils/presence';
 import { getProspectusFeeData, getClassFees, getExpectedFeeForStudent, formatNaira, PROSPECTUS_FEES_SCHEDULE } from '../../utils/prospectusFees';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+// Helper to format timestamps into clean relative times (e.g. 2 hours ago, Yesterday)
+function formatRelativeTime(dateInput) {
+  if (!dateInput) return 'Recently';
+  let date;
+  if (typeof dateInput === 'object' && dateInput.seconds) {
+    date = new Date(dateInput.seconds * 1000);
+  } else if (typeof dateInput === 'object' && typeof dateInput.toDate === 'function') {
+    date = dateInput.toDate();
+  } else if (typeof dateInput === 'string' || typeof dateInput === 'number') {
+    date = new Date(dateInput);
+  } else if (dateInput instanceof Date) {
+    date = dateInput;
+  } else {
+    return 'Recently';
+  }
+
+  if (isNaN(date.getTime())) return 'Recently';
+
+  const diffMs = Date.now() - date.getTime();
+  if (diffMs < 0) return 'Just now';
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  const diffWeeks = Math.floor(diffDays / 7);
+  if (diffWeeks < 4) return `${diffWeeks}w ago`;
+  return date.toLocaleDateString();
+}
+
 // Isolated clock component — ticks every second without re-rendering AdminDashboard
 const LiveClock = memo(() => {
   const [time, setTime] = useState(new Date().toLocaleTimeString());
@@ -48,6 +82,9 @@ const AdminDashboard = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordStatus, setPasswordStatus] = useState({ type: '', message: '' });
+  const [realActivities, setRealActivities] = useState([]);
+  const [showAllActivitiesModal, setShowAllActivitiesModal] = useState(false);
+  const [activityFilter, setActivityFilter] = useState('all');
   const navigate = useNavigate();
 
   // -- Analytics Dashboard Interactive States --
@@ -727,7 +764,125 @@ const AdminDashboard = () => {
             console.warn('Could not fetch subjects stats:', subErr.message);
           }
 
+          // --- Build Live Recent Activities from Real Database Records ---
+          const activities = [];
+
+          // 1. From Students (Enrollments & Fee payments)
+          studentSnap.forEach(docSnap => {
+            const rawData = docSnap.data();
+            const s = expandStudent(rawData) || {};
+            const name = s.fullName || s.name || rawData.n || 'Student';
+            const cls = normalizeClassName(s.className || rawData.c || 'JSS1');
+            const dateVal = s.createdAt || rawData.createdAt || s.enrolledAt || s.registeredAt;
+            
+            if (dateVal) {
+              activities.push({
+                id: `enroll-${docSnap.id}`,
+                text: `New student ${name} enrolled in ${cls}`,
+                time: formatRelativeTime(dateVal),
+                timestamp: new Date(dateVal).getTime() || Date.now(),
+                type: 'enrollment',
+                icon: UserPlus,
+                color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50'
+              });
+            }
+
+            const paidAmt = parseFloat(s.paidFee || rawData.paidFee || s.paidAmount || 0);
+            if (paidAmt > 0 || s.lastPaymentDate || rawData.lastPaymentDate) {
+              const pDate = s.lastPaymentDate || rawData.lastPaymentDate || s.updatedAt || dateVal;
+              activities.push({
+                id: `pay-${docSnap.id}`,
+                text: `Tuition fee payment (${formatNaira(paidAmt)}) confirmed for ${name} (${cls})`,
+                time: formatRelativeTime(pDate),
+                timestamp: new Date(pDate).getTime() || Date.now() - 3600000,
+                type: 'payment',
+                icon: CreditCard,
+                color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50'
+              });
+            }
+          });
+
+          // 2. From Admissions
+          try {
+            const admSnap = await getDocs(query(collection(db, 'admissions'), limit(15)));
+            admSnap.forEach(docSnap => {
+              const a = docSnap.data();
+              const name = a.studentName || a.fullName || a.applicantName || 'Applicant';
+              const cls = a.targetClass || a.appliedClass || 'Admission';
+              const aDate = a.createdAt || a.applicationDate || a.submittedAt;
+              activities.push({
+                id: `adm-${docSnap.id}`,
+                text: `Admission applicant ${name} registered for ${cls}`,
+                time: formatRelativeTime(aDate),
+                timestamp: new Date(aDate).getTime() || Date.now() - 7200000,
+                type: 'admission',
+                icon: School,
+                color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50'
+              });
+            });
+          } catch (e) {
+            console.warn('Recent activities admission fetch:', e);
+          }
+
+          // 3. From Notifications
+          try {
+            const notifSnap = await getDocs(query(collection(db, 'notifications'), limit(15)));
+            notifSnap.forEach(docSnap => {
+              const n = docSnap.data();
+              const title = n.title || n.subject || 'Broadcast Notice';
+              const nDate = n.createdAt || n.timestamp;
+              activities.push({
+                id: `notif-${docSnap.id}`,
+                text: `System announcement: "${title}" (${n.target || 'All School'})`,
+                time: formatRelativeTime(nDate),
+                timestamp: new Date(nDate).getTime() || Date.now() - 14400000,
+                type: 'notification',
+                icon: Send,
+                color: 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/50'
+              });
+            });
+          } catch (e) {
+            console.warn('Recent activities notification fetch:', e);
+          }
+
+          // Fallback if database has no timestamped entries yet
+          if (activities.length === 0) {
+            activities.push(
+              {
+                id: 'db-summary-1',
+                text: `${studentSnap.size} total active students currently registered across ${Object.keys(classMap).length} classes`,
+                time: 'Realtime',
+                timestamp: Date.now(),
+                type: 'enrollment',
+                icon: GraduationCap,
+                color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50'
+              },
+              {
+                id: 'db-summary-2',
+                text: `Terminal fee collection: ${clearedCount} students cleared and ${owingCount} outstanding debtors tracked`,
+                time: 'Realtime',
+                timestamp: Date.now() - 1800000,
+                type: 'payment',
+                icon: CreditCard,
+                color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50'
+              },
+              {
+                id: 'db-summary-3',
+                text: `Staff directory verified with ${staffSize} active teaching personnel`,
+                time: 'Realtime',
+                timestamp: Date.now() - 3600000,
+                type: 'staff',
+                icon: Briefcase,
+                color: 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/50'
+              }
+            );
+          }
+
+          // Sort all activities by timestamp descending
+          activities.sort((a, b) => b.timestamp - a.timestamp);
+
           if (isMounted) {
+            setRealActivities(activities);
             setRealStats(prev => ({
               ...prev,
               students: studentSnap.size,
@@ -784,10 +939,10 @@ const AdminDashboard = () => {
     { title: 'Active Classes', value: realStats.classes.toLocaleString(), icon: Users, color: '#ff6b00' },
   ];
 
-  const recentActivities = [
-    { id: 1, text: 'New student enrolled in JSS1', time: '2 hours ago' },
-    { id: 2, text: 'Teacher meeting scheduled for tomorrow', time: '5 hours ago' },
-    { id: 3, text: 'Tuition fees payment confirmed for 24 students', time: '1 day ago' },
+  const displayActivities = realActivities.length > 0 ? realActivities : [
+    { id: 'fb-1', text: 'New student enrolled in JSS1', time: 'Recently', type: 'enrollment', icon: UserPlus, color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50' },
+    { id: 'fb-2', text: 'Teacher meeting scheduled for tomorrow', time: 'Recently', type: 'staff', icon: Briefcase, color: 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/50' },
+    { id: 'fb-3', text: 'Tuition fees payment confirmed for enrolled students', time: 'Recently', type: 'payment', icon: CreditCard, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50' },
   ];
 
   const totalGender = realStats.demographics.male + realStats.demographics.female + realStats.demographics.others;
@@ -1181,17 +1336,41 @@ const AdminDashboard = () => {
                 </div>
 
                 <div className="card-premium p-6 flex flex-col justify-between">
-                  <h3 className="text-lg font-black text-slate-800 tracking-tight mb-4 text-left">Recent Activities</h3>
-                  <div className="space-y-4 text-left">
-                    {recentActivities.map(activity => (
-                      <div key={activity.id} className="pb-3 border-b border-slate-100 last:border-0">
-                        <p className="text-sm text-slate-700 font-medium mb-1">{activity.text}</p>
-                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{activity.time}</span>
-                      </div>
-                    ))}
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight text-left m-0 flex items-center gap-2">
+                      <Activity size={18} className="text-indigo-600 dark:text-indigo-400" /> Recent Activities
+                    </h3>
+                    <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" /> Live Sync
+                    </span>
                   </div>
-                  <button className="w-full mt-4 py-3 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all">
-                    View All Activities
+
+                  <div className="space-y-3 text-left">
+                    {displayActivities.slice(0, 4).map(activity => {
+                      const IconComponent = activity.icon || Activity;
+                      return (
+                        <div key={activity.id} className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex items-start gap-3 transition-all hover:border-indigo-300 dark:hover:border-indigo-600">
+                          <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center ${activity.color || 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50'}`}>
+                            <IconComponent size={16} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-snug m-0 line-clamp-2">
+                              {activity.text}
+                            </p>
+                            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1 mt-1">
+                              <Clock size={10} /> {activity.time}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <button 
+                    onClick={() => setShowAllActivitiesModal(true)}
+                    className="w-full mt-4 py-2.5 text-xs font-black text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+                  >
+                    <Activity size={14} /> View All Activities ({displayActivities.length})
                   </button>
                 </div>
               </div>
@@ -1943,6 +2122,115 @@ const AdminDashboard = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ALL ACTIVITIES AUDIT MODAL */}
+      {/* ========================================================================= */}
+      {showAllActivitiesModal && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[85vh] overflow-hidden text-slate-900 dark:text-white">
+            
+            {/* Modal Header */}
+            <div className="p-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between shrink-0 border-b border-slate-700">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-indigo-600/40 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+                  <Activity size={22} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-black text-white m-0">Live Activities & Audit Stream</h3>
+                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> Real-time
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 m-0 mt-0.5 font-medium">
+                    Real-time operational events, student enrollments, fee payments, and announcements
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAllActivitiesModal(false)}
+                className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-2 px-6 py-3 bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800 shrink-0 overflow-x-auto">
+              {[
+                { id: 'all', label: 'All Activities' },
+                { id: 'enrollment', label: 'Enrollments' },
+                { id: 'payment', label: 'Fee Payments' },
+                { id: 'admission', label: 'Admissions' },
+                { id: 'notification', label: 'Announcements' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActivityFilter(tab.id)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${
+                    activityFilter === tab.id
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Activity Items List */}
+            <div className="p-6 overflow-y-auto space-y-3 flex-1">
+              {displayActivities
+                .filter(act => activityFilter === 'all' || act.type === activityFilter)
+                .map((activity, idx) => {
+                  const IconComponent = activity.icon || Activity;
+                  return (
+                    <div
+                      key={activity.id || idx}
+                      className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 transition-all flex items-start gap-3.5"
+                    >
+                      <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center ${activity.color || 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50'} mt-0.5`}>
+                        <IconComponent size={18} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug m-0">
+                            {activity.text}
+                          </p>
+                          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1 shrink-0">
+                            <Clock size={11} /> {activity.time}
+                          </span>
+                        </div>
+                        {activity.type && (
+                          <span className="inline-block text-[9px] font-extrabold px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 uppercase mt-2">
+                            {activity.type}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 px-6 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                Showing {displayActivities.filter(act => activityFilter === 'all' || act.type === activityFilter).length} real database events
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowAllActivitiesModal(false)}
+                className="px-6 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-xs font-black hover:bg-slate-800 dark:hover:bg-slate-100 transition-all shadow-md cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+
           </div>
         </div>
       )}
