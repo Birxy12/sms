@@ -14,7 +14,7 @@ import BulkStudentEnrollModal from '../../components/BulkStudentEnrollModal';
 import ManageClubsAndHousesModal from '../../components/ManageClubsAndHousesModal';
 import { formatDateForInput } from '../../utils/dateFormatter';
 import { useGlobalClasses, normalizeClassName } from '../../utils/classUtils';
-import { expandStudent, compressStudent } from '../../utils/firestoreSchema';
+import { expandStudent, compressStudent, sanitizeFirestoreData } from '../../utils/firestoreSchema';
 import { generateUniqueRegNoSync } from '../../utils/regNoGenerator';
 import { generateWhatsAppPinReset } from '../../utils/whatsapp';
 
@@ -372,7 +372,8 @@ const StudentManagement = () => {
     setSaving(true);
     try {
       await ensureFirebaseAuth();
-      const { id, ...saveData } = currentStudent;
+      const { id, ...rawSaveData } = currentStudent;
+      const saveData = sanitizeFirestoreData(rawSaveData) || {};
       let targetStudentId = id;
 
       if (isEditing) {

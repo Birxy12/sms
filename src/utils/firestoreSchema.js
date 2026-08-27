@@ -227,6 +227,30 @@ export const compressStudent = (data = {}) => {
   return result;
 };
 
+/**
+ * Recursively sanitizes data before sending to Firestore
+ * Removes any undefined values at any depth to prevent FirestoreError: Unsupported field value: undefined
+ */
+export const sanitizeFirestoreData = (data) => {
+  if (data === null || data === undefined) return null;
+  if (typeof data !== 'object') return data;
+  if (Array.isArray(data)) {
+    return data.filter(item => item !== undefined).map(item => sanitizeFirestoreData(item));
+  }
+  const clean = {};
+  Object.keys(data).forEach(key => {
+    const val = data[key];
+    if (val !== undefined) {
+      if (typeof val === 'object' && val !== null && !(val instanceof Date)) {
+        clean[key] = sanitizeFirestoreData(val);
+      } else {
+        clean[key] = val;
+      }
+    }
+  });
+  return clean;
+};
+
 export const normalizeGender = (g) => {
   if (!g) return 'Male';
   const str = String(g).trim().toUpperCase();
@@ -238,44 +262,37 @@ export const normalizeGender = (g) => {
 export const expandStudent = (compressed) => {
   if (!compressed) return null;
   
-  // Detect if already expanded
-  if (compressed.regNo || compressed.REGNO || compressed.name || compressed['STUDENT NAME']) {
-    return {
-      regNo: compressed.regNo || compressed.REGNO || compressed['REG NO'] || compressed.r || '',
-      name: compressed.name || compressed['STUDENT NAME'] || compressed.n || '',
-      gender: normalizeGender(compressed.gender || compressed.GENDER || compressed.g),
-      className: compressed.className || compressed.CLASS || compressed.class_name || compressed.class || compressed.c || compressed.grade || compressed.Class || compressed['Class'] || compressed['CLASS NAME'] || '',
-      dob: compressed.dob || compressed.DOB || compressed.d || '',
-      club: compressed.club || compressed.cl || '',
-      house: compressed.house || compressed.h || '',
-      updatedAt: compressed.updatedAt || compressed.u || '',
-      photo: compressed.photo || compressed.p || '',
-      pin: compressed.pin,
-      studentType: compressed.studentType || (compressed.isNewIntake ? 'new_intake' : 'returning'),
-      isNewIntake: compressed.isNewIntake === true || compressed.studentType === 'new_intake',
-      expectedFee: compressed.expectedFee !== undefined ? Number(compressed.expectedFee) : undefined,
-      paidFee: compressed.paidFee !== undefined ? Number(compressed.paidFee) : (compressed.paidAmount !== undefined ? Number(compressed.paidAmount) : undefined),
-      securityQuestion: compressed.securityQuestion,
-      securityAnswer: compressed.securityAnswer
-    };
-  }
-
-  return {
-    regNo: compressed[STUDENT_KEYS.regNo] || compressed.regNo || compressed.REGNO || '',
-    name: compressed[STUDENT_KEYS.name] || compressed.name || compressed['STUDENT NAME'] || '',
-    gender: normalizeGender(compressed[STUDENT_KEYS.gender] || compressed.gender || compressed.GENDER),
-    className: compressed[STUDENT_KEYS.className] || compressed.className || compressed.CLASS || compressed.class_name || compressed.c || compressed.class || compressed.grade || '',
-    dob: compressed[STUDENT_KEYS.dob] || compressed.dob || '',
-    club: compressed[STUDENT_KEYS.club] || compressed.club || '',
-    house: compressed[STUDENT_KEYS.house] || compressed.house || '',
-    updatedAt: compressed[STUDENT_KEYS.updatedAt] || compressed.updatedAt || '',
-    photo: compressed[STUDENT_KEYS.photo] || compressed.photo || '',
-    pin: compressed.pin,
-    studentType: compressed.studentType || (compressed.isNewIntake ? 'new_intake' : 'returning'),
-    isNewIntake: compressed.isNewIntake === true || compressed.studentType === 'new_intake',
-    expectedFee: compressed.expectedFee !== undefined ? Number(compressed.expectedFee) : undefined,
-    paidFee: compressed.paidFee !== undefined ? Number(compressed.paidFee) : (compressed.paidAmount !== undefined ? Number(compressed.paidAmount) : undefined),
-    securityQuestion: compressed.securityQuestion,
-    securityAnswer: compressed.securityAnswer
+  const raw = compressed;
+  
+  const student = {
+    regNo: raw.regNo || raw.REGNO || raw['REG NO'] || raw.r || '',
+    name: raw.name || raw['STUDENT NAME'] || raw.n || '',
+    gender: normalizeGender(raw.gender || raw.GENDER || raw.g),
+    className: raw.className || raw.CLASS || raw.class_name || raw.class || raw.c || raw.grade || raw.Class || raw['Class'] || raw['CLASS NAME'] || '',
+    dob: raw.dob || raw.DOB || raw.d || '',
+    club: raw.club || raw.cl || '',
+    house: raw.house || raw.h || '',
+    updatedAt: raw.updatedAt || raw.u || '',
+    photo: raw.photo || raw.p || '',
+    studentType: raw.studentType || (raw.isNewIntake ? 'new_intake' : 'returning'),
+    isNewIntake: raw.isNewIntake === true || raw.studentType === 'new_intake',
   };
+
+  if (raw.email !== undefined && raw.email !== null) student.email = String(raw.email);
+  if (raw.phone !== undefined && raw.phone !== null) student.phone = String(raw.phone);
+  if (raw.pin !== undefined && raw.pin !== null && raw.pin !== '') student.pin = String(raw.pin);
+  if (raw.expectedFee !== undefined && raw.expectedFee !== null && !isNaN(raw.expectedFee)) student.expectedFee = Number(raw.expectedFee);
+  if (raw.paidFee !== undefined && raw.paidFee !== null && !isNaN(raw.paidFee)) student.paidFee = Number(raw.paidFee);
+  else if (raw.paidAmount !== undefined && raw.paidAmount !== null && !isNaN(raw.paidAmount)) student.paidFee = Number(raw.paidAmount);
+  if (raw.securityQuestion !== undefined && raw.securityQuestion !== null) student.securityQuestion = String(raw.securityQuestion);
+  if (raw.securityAnswer !== undefined && raw.securityAnswer !== null) student.securityAnswer = String(raw.securityAnswer);
+
+  // Preserve all other defined raw properties without introducing undefined
+  Object.keys(raw).forEach(key => {
+    if (student[key] === undefined && raw[key] !== undefined && raw[key] !== null) {
+      student[key] = raw[key];
+    }
+  });
+
+  return sanitizeFirestoreData(student);
 };
