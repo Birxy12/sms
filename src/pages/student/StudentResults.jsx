@@ -17,6 +17,7 @@ import html2pdf from 'html2pdf.js';
 import StudentAvatar from '../../components/StudentAvatar';
 
 const StudentResults = ({ isPublic }) => {
+  const { currentStudent: loggedInStudent } = useStudentAuth() || {};
   const { 
     schoolName, motto, schoolAddress, schoolPhone, principalName, 
     schoolLogo, primaryColor, principalSignature, principalStamp, 
