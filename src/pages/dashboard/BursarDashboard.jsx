@@ -245,77 +245,93 @@ const BursarDashboard = () => {
   };
 
   const fetchFinancialData = async () => {
-    setLoading(true);
-    try {
-      await ensureFirebaseAuth();
-      const snap = await getDocs(collection(db, 'students'));
-      const students = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setAllStudents(students);
-
-      // Sync classes strictly from Firestore 'classes' collection (Manage Classes) 
-      try {
-        const dynamicClasses = await fetchGlobalClasses();
-        // Do not merge stray misspelled student classes (like 'JSS 1') as new distinct classes
-        setClasses(dynamicClasses);
-      } catch (cErr) {
-        console.warn("Class sync error:", cErr);
-      }
-
-      // Fetch global fee settings
-      let loadedFees = {};
-      try {
-        const feeSnap = await getDoc(doc(db, 'settings', 'fees'));
-        if (feeSnap.exists()) {
-          loadedFees = feeSnap.data() || {};
-          setFeeSettings(loadedFees);
-        }
-      } catch (fErr) {
-        console.warn("Could not fetch settings/fees:", fErr);
-      }
-
-      let expected = 0;
-      let collected = 0;
-      students.forEach(s => {
-        const pFee = parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0;
-        let eFee = parseFloat(s.expectedFee) || 0;
-        if (eFee <= 0) {
-          const isIntake = s.isNewIntake === true || s.studentType === 'new_intake';
-          eFee = getExpectedFeeForStudent(s.className || s.class_name || s.CLASS, isIntake, loadedFees);
-        }
-        collected += pFee;
-        expected += eFee;
-      });
-
-      setStats({
-        totalExpected: expected,
-        totalCollected: collected,
-        totalOutstanding: Math.max(0, expected - collected),
-        totalStudents: students.length
-      });
-      
-      // Fetch payment messages
-      try {
-        const msgSnap = await getDocs(query(collection(db, 'payment_messages'), orderBy('createdAt', 'desc')));
-        setPaymentMessages(msgSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-      } catch (e) {
-        console.log("No payment messages collection yet or index missing.");
-      }
-    } catch (error) {
-      console.error(error);
-      setStatus({ 
-        type: 'error', 
-        message: (typeof navigator !== 'undefined' && !navigator.onLine)
-          ? 'Offline: Showing cached school financial data.' 
-          : 'Failed to load financial records.' 
-      });
-    } finally {
-      setLoading(false);
-    }
+    // Legacy function kept to avoid breaking references inside handleVerifyPinAndResetFees etc.
+    // Data is now fetched in real-time via onSnapshot in useEffect.
   };
 
   useEffect(() => {
-    fetchFinancialData();
+    let unsubscribeStudents = null;
+    let unsubscribeFees = null;
+    let unsubscribeMessages = null;
+
+    const setupListeners = async () => {
+      try {
+        await ensureFirebaseAuth();
+        
+        // Sync Classes
+        try {
+          const dynamicClasses = await fetchGlobalClasses();
+          setClasses(dynamicClasses);
+        } catch (cErr) {
+          console.warn("Class sync error:", cErr);
+        }
+
+        // Setup Fee Settings Listener
+        import('firebase/firestore').then(({ onSnapshot }) => {
+          unsubscribeFees = onSnapshot(doc(db, 'settings', 'fees'), (feeSnap) => {
+            let loadedFees = {};
+            if (feeSnap.exists()) {
+              loadedFees = feeSnap.data() || {};
+              setFeeSettings(loadedFees);
+            }
+
+            // Setup Students Listener AFTER getting fees to accurately calculate expectations
+            if (!unsubscribeStudents) {
+              unsubscribeStudents = onSnapshot(collection(db, 'students'), (snap) => {
+                const students = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                setAllStudents(students);
+
+                let expected = 0;
+                let collected = 0;
+                students.forEach(s => {
+                  const pFee = parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0;
+                  let eFee = parseFloat(s.expectedFee) || 0;
+                  if (eFee <= 0) {
+                    const isIntake = s.isNewIntake === true || s.studentType === 'new_intake';
+                    eFee = getExpectedFeeForStudent(s.className || s.class_name || s.CLASS, isIntake, loadedFees);
+                  }
+                  collected += pFee;
+                  expected += eFee;
+                });
+
+                setStats({
+                  totalExpected: expected,
+                  totalCollected: collected,
+                  totalOutstanding: Math.max(0, expected - collected),
+                  totalStudents: students.length
+                });
+                setLoading(false);
+              }, (err) => {
+                console.error(err);
+                setLoading(false);
+              });
+            }
+          });
+
+          // Setup Messages Listener
+          unsubscribeMessages = onSnapshot(query(collection(db, 'payment_messages'), orderBy('createdAt', 'desc')), (msgSnap) => {
+            setPaymentMessages(msgSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+          });
+        });
+
+      } catch (error) {
+        console.error(error);
+        setStatus({ 
+          type: 'error', 
+          message: 'Failed to setup financial listeners.' 
+        });
+        setLoading(false);
+      }
+    };
+
+    setupListeners();
     fetchResetHistory();
+
+    return () => {
+      if (unsubscribeStudents) unsubscribeStudents();
+      if (unsubscribeFees) unsubscribeFees();
+      if (unsubscribeMessages) unsubscribeMessages();
+    };
   }, []);
 
   useEffect(() => {

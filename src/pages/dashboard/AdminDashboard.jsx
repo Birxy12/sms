@@ -21,7 +21,7 @@ import {
   BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, 
   CheckCircle, CheckCircle2, XCircle, Loader2, Search, RefreshCw, BarChart3, FileText, BookMarked, Globe, 
   Mail, Inbox, CreditCard, FileSpreadsheet, FolderOpen, UserCheck, School, ClipboardList, Library, Send, Award,
-  X, Clock
+  X, Clock, Wallet
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useGlobalClasses, normalizeClassName } from '../../utils/classUtils';
