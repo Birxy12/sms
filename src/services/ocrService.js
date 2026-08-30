@@ -1,3 +1,4 @@
+/* eslint-env node */
 'use strict';
 
 const vision = require('@google-cloud/vision');

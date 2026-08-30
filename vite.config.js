@@ -87,7 +87,14 @@ export default defineConfig({
   },
   build: {
     sourcemap: false,
-    chunkSizeWarningLimit: 2000
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom', 'firebase', 'lucide-react', 'recharts', 'framer-motion', 'antd'],
+        },
+      },
+    },
   },
   optimizeDeps: {
     include: ['react-easy-crop']

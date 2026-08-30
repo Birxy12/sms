@@ -1146,8 +1146,8 @@ const StudentResults = ({ isPublic }) => {
             )}
           </div>
           <div className="rc-footer-right">
-            <p>Term Ends: <strong>{termEndDate || schoolDates.termEnds}</strong></p>
-            <p>Next Term Begins: <strong>{nextTermBeginsDate || schoolDates.nextTermBegins}</strong></p>
+            <p>Term Ends: <strong>{termEndDate || ''}</strong></p>
+            <p>Next Term Begins: <strong>{nextTermBeginsDate || ''}</strong></p>
           </div>
         </div>
         <div className="rc-branding-bar">
