@@ -27,6 +27,7 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useGlobalClasses, normalizeClassName } from '../../utils/classUtils';
 import { useOnlineUsers } from '../../utils/presence';
 import { getProspectusFeeData, getClassFees, getExpectedFeeForStudent, formatNaira, PROSPECTUS_FEES_SCHEDULE } from '../../utils/prospectusFees';
+import { useFinance } from '../../context/FinanceContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 // Helper to format timestamps into clean relative times (e.g. 2 hours ago, Yesterday)
 function formatRelativeTime(dateInput) {
@@ -633,19 +634,7 @@ const AdminDashboard = () => {
     demographics: { male: 0, female: 0, others: 0 }
   });
 
-  const [realFinance, setRealFinance] = useState({
-    loading: true,
-    totalExpected: 0,
-    totalCollected: 0,
-    totalOutstanding: 0,
-    totalStudents: 0,
-    clearedCount: 0,
-    owingCount: 0,
-    collectionRate: 0,
-    classBreakdown: [],
-    debtorsList: [],
-    recentPayments: []
-  });
+  const { financeData: realFinance } = useFinance();
 
   const [financeSearch, setFinanceSearch] = useState('');
   const [financeClassFilter, setFinanceClassFilter] = useState('All');
@@ -912,36 +901,9 @@ const AdminDashboard = () => {
               classes: calculatedClasses,
               demographics: { male, female, others }
             }));
-
-            const classBreakdown = Object.values(classMap).map(c => ({
-              ...c,
-              collectionRate: c.expected > 0 ? Math.round((c.collected / c.expected) * 100) : 0
-            }));
-            classBreakdown.sort((a, b) => a.className.localeCompare(b.className));
-            debtorsList.sort((a, b) => b.balance - a.balance);
-            recentPayments.sort((a, b) => (b.lastPaymentDate || '').localeCompare(a.lastPaymentDate || ''));
-
-            const collectionRate = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0;
-
-            setRealFinance({
-              loading: false,
-              totalExpected,
-              totalCollected,
-              totalOutstanding: totalDebt,
-              totalStudents: studentSnap.size,
-              clearedCount,
-              owingCount,
-              collectionRate,
-              classBreakdown,
-              debtorsList,
-              recentPayments
-            });
           }
         } catch (error) {
           console.error('Error fetching dashboard stats:', error);
-          if (isMounted) {
-            setRealFinance(prev => ({ ...prev, loading: false }));
-          }
         }
       };
 
@@ -1116,6 +1078,12 @@ const AdminDashboard = () => {
                         className="px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2"
                       >
                         <BarChart3 size={15} /> Open Multi-Role Analysis Hub
+                      </button>
+                      <button 
+                        onClick={() => navigate('/finance')}
+                        className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2"
+                      >
+                        <Wallet size={15} /> Go to Bursar Portal
                       </button>
                     </div>
                   </div>

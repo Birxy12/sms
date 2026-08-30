@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+import { getAnalytics, isSupported } from "firebase/analytics";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getFirestore, setLogLevel } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
@@ -21,7 +21,13 @@ let analytics = null;
 if (typeof window !== 'undefined') {
   try {
     if (window.navigator?.onLine) {
-      analytics = getAnalytics(app);
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.info('Firebase analytics disabled: running on localhost.');
+      } else {
+        isSupported().then(supported => {
+          if (supported) analytics = getAnalytics(app);
+        }).catch(err => console.warn('Firebase analytics support check failed:', err));
+      }
     } else {
       console.warn('Firebase analytics disabled: offline mode detected.');
     }
