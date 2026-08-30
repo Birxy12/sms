@@ -20,6 +20,7 @@ import { useTheme } from '../context/ThemeContext';
 import { expandStudent, expandMarks, MARKS_KEYS, STUDENT_KEYS } from '../utils/firestoreSchema';
 import { fetchGlobalClasses, DEFAULT_CLASSES, normalizeClassName, getUniqueClasses } from '../utils/classUtils';
 import { useOnlineUsers } from '../utils/presence';
+import { useFinance } from '../context/FinanceContext';
 import AnalyticsReportModal from './AnalyticsReportModal';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -596,6 +597,7 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
   const { schoolName } = useTheme();
   const user = currentAdmin || currentStudent;
   const onlineCount = useOnlineUsers(user);
+  const { financeData } = useFinance();
 
   const [activeRole, setActiveRole] = useState(userRole);
   const { 
@@ -856,7 +858,7 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
       kpis: [
         { title: 'Total Students', value: students.length.toLocaleString(), change: `${students.length} Enrolled`, isPositive: true, icon: Users, subText: 'Active Students' },
         { title: 'Total Teachers', value: staff.length.toLocaleString(), change: `${staff.length} Faculty`, isPositive: true, icon: GraduationCap, subText: 'Academic Staff' },
-        { title: 'Fees Collected', value: `₦${(totalCollected / 1000000).toFixed(2)}M`, change: `${totalExpected > 0 ? Math.round((totalCollected/totalExpected)*100) : 0}% Target`, isPositive: true, icon: DollarSign, subText: `₦${totalCollected.toLocaleString()}` },
+        { title: 'Fees Collected', value: `₦${(financeData.totalCollected / 1000000).toFixed(2)}M`, change: `${financeData.collectionRate}% Target`, isPositive: true, icon: DollarSign, subText: `₦${financeData.totalCollected.toLocaleString()}` },
         { title: 'Academic Mastery', value: `${schoolAvgScore}%`, change: '+2.4%', isPositive: true, icon: Activity, subText: 'Exam & CAT Avg' },
       ],
       enrollmentTrend,
@@ -906,34 +908,28 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
       };
     });
 
-    const debtorsList = students
-      .filter(s => s.balance > 0)
-      .sort((a, b) => b.balance - a.balance)
-      .slice(0, 6)
-      .map(s => ({
+    const bursar = {
+      kpis: [
+        { title: 'Total Collected', value: `₦${financeData.totalCollected.toLocaleString()}`, change: `${financeData.collectionRate}%`, isPositive: true, icon: Wallet, subText: 'Net Collections' },
+        { title: 'Outstanding Fees', value: `₦${financeData.totalOutstanding.toLocaleString()}`, change: `${financeData.owingCount} Debtors`, isPositive: false, icon: AlertCircle, subText: 'Unpaid Invoices' },
+        { title: 'Payroll Disbursed', value: `₦${totalSalaries.toLocaleString()}`, change: `${staffPayments.length} Payments`, isPositive: false, icon: Receipt, subText: 'Staff Expenses' },
+        { title: 'Net Balance', value: `₦${Math.max(0, financeData.totalCollected - totalSalaries).toLocaleString()}`, change: '+Surplus', isPositive: true, icon: DollarSign, subText: 'Treasury Reserves' },
+      ],
+      monthlyRevenue: monthlyRev,
+      feeBreakdown: [
+        { category: 'Tuition Fees', amount: financeData.totalCollected > 0 ? Math.round(financeData.totalCollected * 0.7) : 0 },
+        { category: 'ICT & CBT Fees', amount: financeData.totalCollected > 0 ? Math.round(financeData.totalCollected * 0.15) : 0 },
+        { category: 'Development Levy', amount: financeData.totalCollected > 0 ? Math.round(financeData.totalCollected * 0.08) : 0 },
+        { category: 'Library & Labs', amount: financeData.totalCollected > 0 ? Math.round(financeData.totalCollected * 0.07) : 0 },
+      ],
+      pendingPayments: financeData.debtorsList.slice(0, 6).map(s => ({
         id: s.id,
         student: s.name || s.regNo || 'Student',
         grade: s.className,
         amount: s.balance,
         due: 'Due Now',
-        status: s.paidFee > 0 ? 'partial' : 'overdue'
-      }));
-
-    const bursar = {
-      kpis: [
-        { title: 'Total Collected', value: `₦${totalCollected.toLocaleString()}`, change: `${totalExpected > 0 ? Math.round((totalCollected/totalExpected)*100) : 0}%`, isPositive: true, icon: Wallet, subText: 'Net Collections' },
-        { title: 'Outstanding Fees', value: `₦${totalOutstanding.toLocaleString()}`, change: `${students.filter(s => s.balance > 0).length} Debtors`, isPositive: false, icon: AlertCircle, subText: 'Unpaid Invoices' },
-        { title: 'Payroll Disbursed', value: `₦${totalSalaries.toLocaleString()}`, change: `${staffPayments.length} Payments`, isPositive: false, icon: Receipt, subText: 'Staff Expenses' },
-        { title: 'Net Balance', value: `₦${Math.max(0, totalCollected - totalSalaries).toLocaleString()}`, change: '+Surplus', isPositive: true, icon: DollarSign, subText: 'Treasury Reserves' },
-      ],
-      monthlyRevenue: monthlyRev,
-      feeBreakdown: [
-        { category: 'Tuition Fees', amount: totalCollected > 0 ? Math.round(totalCollected * 0.7) : 0 },
-        { category: 'ICT & CBT Fees', amount: totalCollected > 0 ? Math.round(totalCollected * 0.15) : 0 },
-        { category: 'Development Levy', amount: totalCollected > 0 ? Math.round(totalCollected * 0.08) : 0 },
-        { category: 'Library & Labs', amount: totalCollected > 0 ? Math.round(totalCollected * 0.07) : 0 },
-      ],
-      pendingPayments: debtorsList
+        status: s.paid > 0 ? 'partial' : 'overdue'
+      }))
     };
 
     // --- 4. TEACHER DATA ---

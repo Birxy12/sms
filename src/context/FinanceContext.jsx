@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc } from 'firebase/firestore';
-import { expandStudent, normalizeClassName, getExpectedFeeForStudent } from '../utils/studentUtils';
+import { expandStudent } from '../utils/firestoreSchema';
+import { normalizeClassName } from '../utils/classUtils';
+import { getExpectedFeeForStudent } from '../utils/prospectusFees';
 
 const FinanceContext = createContext();
 
