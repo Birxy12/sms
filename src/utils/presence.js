@@ -255,10 +255,9 @@ class PresenceManager {
 
           if (lastSeenMs) {
             const diff = now - lastSeenMs;
-            // Bounded window check: accounts for mild clock skew (-15s) and cutoff (+75s)
-            if (diff >= -15000 && diff <= PRESENCE_CUTOFF_MS) {
-              const effectiveUserId = data.userId || (data.clientId ? `guest_${data.clientId}` : docSnap.id);
-              activeUsers.add(effectiveUserId);
+            // Allow negative diffs (other user's clock is faster) and cutoff for stale docs
+            if (diff <= PRESENCE_CUTOFF_MS) {
+              activeUsers.add(docSnap.id); // Count unique active sessions/tabs
             } else if (diff > PRUNE_INTERVAL_MS) {
               staleDocIds.push(docSnap.id);
             }
@@ -267,11 +266,8 @@ class PresenceManager {
           }
         });
 
-        // Always ensure current user / client is included when online
-        const myUserId = this.getUserId();
-        if (myUserId) {
-          activeUsers.add(myUserId);
-        }
+        // Always ensure current session is included when online
+        activeUsers.add(this.sessionId);
 
         const finalCount = Math.max(1, activeUsers.size);
         this.setCount(finalCount, true);
