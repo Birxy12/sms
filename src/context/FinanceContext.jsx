@@ -61,8 +61,7 @@ export const FinanceProvider = ({ children }) => {
         }
         classMap[cls].studentCount++;
 
-        const fallbackFee = getExpectedFeeForStudent(merged, undefined, currentFeeSettings);
-        const expected = parseFloat(merged.expectedFee) || parseFloat(fallbackFee) || 0;
+        const expected = parseFloat(merged.expectedFee) || 0;
         const paid = parseFloat(merged.paidFee) || parseFloat(merged.paidAmount) || 0;
         const balance = Math.max(0, expected - paid);
 
