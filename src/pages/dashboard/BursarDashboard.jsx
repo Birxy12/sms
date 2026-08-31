@@ -1198,15 +1198,7 @@ const BursarDashboard = () => {
   };
 
   const DebtorsView = () => {
-    const debtors = allStudents.filter(s => {
-      const eFee = parseFloat(s.expectedFee) || 0;
-      const pFee = parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0;
-      return eFee > 0 && pFee < eFee;
-    }).sort((a, b) => {
-      const balA = (parseFloat(a.expectedFee) || 0) - (parseFloat(a.paidFee) || parseFloat(a.paidAmount) || 0);
-      const balB = (parseFloat(b.expectedFee) || 0) - (parseFloat(b.paidFee) || parseFloat(b.paidAmount) || 0);
-      return balB - balA; // highest debt first
-    });
+    const debtors = stats?.debtorsList || [];
 
     return (
       <div className="card-white p-6 mt-8 shadow-sm rounded-3xl border border-rose-100 bg-gradient-to-b from-white to-rose-50/30">
@@ -1231,7 +1223,7 @@ const BursarDashboard = () => {
             </thead>
             <tbody className="divide-y divide-rose-50">
               {debtors.map(s => {
-                const bal = (parseFloat(s.expectedFee) || 0) - (parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0);
+                const bal = s.balance || 0;
                 return (
                   <tr key={s.id} className="hover:bg-rose-50/50">
                     <td className="px-6 py-4">
