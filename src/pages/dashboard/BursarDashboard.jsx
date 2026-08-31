@@ -1461,15 +1461,15 @@ const BursarDashboard = () => {
               )}
             </div>
             {selectedStudent && (
-              <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 flex items-center justify-between">
+              <div className="bg-slate-900 rounded-2xl p-5 border border-slate-700 flex items-center justify-between shadow-xl">
                 <div>
-                  <p className="font-black text-indigo-900">{selectedStudent.name||selectedStudent['STUDENT NAME']}</p>
-                  <p className="text-xs text-indigo-500 font-bold">{selectedStudent.regNo||selectedStudent.REGNO} \u2022 {selectedStudent.className||selectedStudent.CLASS}</p>
-                  <p className="text-xs text-indigo-400 mt-1">
-                    Balance: ₦{Math.max(0, (parseFloat(selectedStudent.expectedFee)||0) - (parseFloat(selectedStudent.paidFee)||parseFloat(selectedStudent.paidAmount)||0) - (parseFloat(discountAmount)||0)).toLocaleString()}
+                  <p className="font-black text-white text-lg">{selectedStudent.name||selectedStudent['STUDENT NAME']}</p>
+                  <p className="text-sm text-slate-400 font-bold mt-0.5">{selectedStudent.regNo||selectedStudent.REGNO} \u2022 {selectedStudent.className||selectedStudent.CLASS}</p>
+                  <p className="text-sm text-emerald-400 font-black mt-2">
+                    Balance: ₦{Math.max(0, (parseFloat(selectedStudent.expectedFee) || parseFloat(getExpectedFeeForStudent(selectedStudent.className || selectedStudent.CLASS || 'JSS1', selectedStudent.studentType === 'new_intake' || selectedStudent.isNewIntake, feeSettings)) || 0) - (parseFloat(selectedStudent.paidFee)||parseFloat(selectedStudent.paidAmount)||0) - (parseFloat(discountAmount)||0)).toLocaleString()}
                   </p>
                 </div>
-                <button onClick={() => { setSelectedStudent(null); setPreSelectedStudent(null); }} className="text-slate-400 hover:text-rose-500 text-xl font-bold">\u2715</button>
+                <button onClick={() => { setSelectedStudent(null); setPreSelectedStudent(null); }} className="text-slate-500 hover:text-rose-400 text-2xl font-black bg-slate-800 w-10 h-10 rounded-full flex items-center justify-center transition-colors">\u2715</button>
               </div>
             )}
             <div className="grid grid-cols-2 gap-4">
