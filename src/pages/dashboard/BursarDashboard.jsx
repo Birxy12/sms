@@ -1198,16 +1198,96 @@ const BursarDashboard = () => {
   };
 
   const DebtorsView = () => {
-    const debtors = stats?.debtorsList || [];
+    const [filterClass, setFilterClass] = useState('All');
+    const allDebtors = stats?.debtorsList || [];
+    
+    const debtors = allDebtors.filter(s => {
+      if (filterClass === 'All') return true;
+      return (s.className || s.class_name || s.CLASS) === filterClass;
+    });
+
+    const printDebtors = () => {
+      const w = window.open('', '_blank');
+      w.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Debtors List - ${filterClass}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 40px; color: #1e293b; max-width: 900px; margin: 0 auto; }
+            h1 { text-align: center; color: #e11d48; margin-bottom: 5px; text-transform: uppercase; }
+            h3 { text-align: center; color: #64748b; margin-top: 0; margin-bottom: 40px; }
+            table { border-collapse: collapse; width: 100%; font-size: 14px; }
+            th, td { border: 1px solid #cbd5e1; padding: 12px; text-align: left; }
+            th { background-color: #f8fafc; font-weight: bold; color: #475569; text-transform: uppercase; }
+            .right { text-align: right; }
+            .total { font-weight: bold; font-size: 16px; background-color: #fff1f2; color: #e11d48; }
+            @media print { body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <h1>${schoolName || 'School Name'} - Debtors List</h1>
+          <h3>Class: ${filterClass} (${debtors.length} Students)</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>S/N</th>
+                <th>Name</th>
+                <th>Reg No</th>
+                <th>Class</th>
+                <th class="right">Outstanding (₦)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${debtors.map((d, i) => `
+                <tr>
+                  <td>${i + 1}</td>
+                  <td>${d.name || d['STUDENT NAME']}</td>
+                  <td>${d.regNo || d.REGNO || 'N/A'}</td>
+                  <td>${d.className || d.CLASS}</td>
+                  <td class="right">${(d.balance || 0).toLocaleString()}</td>
+                </tr>
+              `).join('')}
+              <tr class="total">
+                <td colspan="4" class="right">Total Expected Debt:</td>
+                <td class="right">₦${debtors.reduce((sum, d) => sum + (d.balance || 0), 0).toLocaleString()}</td>
+              </tr>
+            </tbody>
+          </table>
+          <script>window.print();</script>
+        </body>
+        </html>
+      `);
+      w.document.close();
+    };
 
     return (
       <div className="card-white p-6 mt-8 shadow-sm rounded-3xl border border-rose-100 bg-gradient-to-b from-white to-rose-50/30">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-black text-rose-900 flex items-center gap-2">
-            <AlertTriangle size={20} className="text-rose-600" /> Debtors List
-          </h3>
-          <div className="px-4 py-2 bg-rose-100 text-rose-700 rounded-xl text-sm font-black">
-            {debtors.length} Students Owing
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <h3 className="text-xl font-black text-rose-900 flex items-center gap-2">
+              <AlertTriangle size={20} className="text-rose-600" /> Debtors List
+            </h3>
+            <div className="px-4 py-2 bg-rose-100 text-rose-700 rounded-xl text-sm font-black">
+              {debtors.length} Students Owing
+            </div>
+          </div>
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <select 
+              value={filterClass} 
+              onChange={e => setFilterClass(e.target.value)}
+              className="flex-1 md:flex-none px-4 py-2.5 bg-white border-2 border-rose-100 rounded-xl font-bold text-rose-900 outline-none focus:border-rose-300 cursor-pointer text-sm"
+            >
+              <option value="All">All Classes</option>
+              {classes.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            
+            <button 
+              onClick={printDebtors}
+              className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black tracking-wide text-sm transition-colors shadow-lg shadow-rose-200"
+            >
+              <Printer size={18} /> Print / PDF
+            </button>
           </div>
         </div>
 
