@@ -1,7 +1,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import { db } from '../../lib/firebase';
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
-import { collection, query, getDocs, orderBy, limit, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, query, getDocs, onSnapshot, orderBy, limit, doc, getDoc, setDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import StatCard from '../../components/StatCard';
 import ResultPublisher from '../../components/ResultPublisher';
@@ -641,28 +641,21 @@ const AdminDashboard = () => {
   const [financeSubTab, setFinanceSubTab] = useState('debtors'); // 'debtors', 'classes', 'payments'
 
   useEffect(() => {
-    let isMounted = true;
-    
-    if (viewMode === 'admin') {
-      const fetchStats = async () => {
-        if (!currentAdmin) return;
-        if (!authReady) return; // Don't query Firestore until auth is confirmed
-        
-        try {
-          // 1. Fetch fees settings
-          let feeSettings = {};
-          try {
-            const feeSnap = await getDoc(doc(db, 'settings', 'fees'));
-            if (feeSnap.exists()) {
-              feeSettings = feeSnap.data() || {};
-            }
-          } catch (feeErr) {
-            console.warn('Could not fetch fee settings:', feeErr.message);
-          }
+      let unsubs = [];
+      
+      if (viewMode === 'admin') {
+        if (!currentAdmin || !authReady) return;
 
-          // 2. Fetch students
-          const studentSnap = await getDocs(collection(db, 'students'));
-          if (!isMounted) return;
+        let feeSettings = {};
+        let studentSnap = null;
+        let staffSize = 0;
+        let subjectSize = 0;
+        let classesCount = 0;
+        let admSnap = null;
+        let notifSnap = null;
+
+        const compileData = () => {
+          if (!studentSnap) return;
 
           let male = 0;
           let female = 0;
@@ -737,28 +730,9 @@ const AdminDashboard = () => {
             }
           });
 
-          // Fetch staff (Requires Auth)
-          let staffSize = 0;
-          try {
-            const staffSnap = await getDocs(collection(db, 'staff'));
-            staffSize = staffSnap.size;
-          } catch (staffErr) {
-            console.warn('Could not fetch staff stats:', staffErr.message);
-          }
-
-          // Fetch subjects
-          let subjectSize = 0;
-          try {
-            const subjectSnap = await getDocs(collection(db, 'subjects'));
-            subjectSize = subjectSnap.size;
-          } catch (subErr) {
-            console.warn('Could not fetch subjects stats:', subErr.message);
-          }
-
-          // --- Build Live Recent Activities from Real Database Records ---
           const activities = [];
 
-          // 1. From Students (Enrollments & Fee payments)
+          // 1. From Students
           studentSnap.forEach(docSnap => {
             const rawData = docSnap.data();
             const s = expandStudent(rawData) || {};
@@ -794,8 +768,7 @@ const AdminDashboard = () => {
           });
 
           // 2. From Admissions
-          try {
-            const admSnap = await getDocs(query(collection(db, 'admissions'), limit(15)));
+          if (admSnap) {
             admSnap.forEach(docSnap => {
               const a = docSnap.data();
               const name = a.studentName || a.fullName || a.applicantName || 'Applicant';
@@ -811,13 +784,10 @@ const AdminDashboard = () => {
                 color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50'
               });
             });
-          } catch (e) {
-            console.warn('Recent activities admission fetch:', e);
           }
 
           // 3. From Notifications
-          try {
-            const notifSnap = await getDocs(query(collection(db, 'notifications'), limit(15)));
+          if (notifSnap) {
             notifSnap.forEach(docSnap => {
               const n = docSnap.data();
               const title = n.title || n.subject || 'Broadcast Notice';
@@ -832,11 +802,8 @@ const AdminDashboard = () => {
                 color: 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/50'
               });
             });
-          } catch (e) {
-            console.warn('Recent activities notification fetch:', e);
           }
 
-          // Fallback if database has no timestamped entries yet
           if (activities.length === 0) {
             activities.push(
               {
@@ -869,18 +836,6 @@ const AdminDashboard = () => {
             );
           }
 
-          // Fetch dynamic classes from Firestore 'classes' collection
-          let classesCount = 0;
-          try {
-            const classSnap = await getDocs(collection(db, 'classes'));
-            const activeDocs = classSnap.docs.filter(d => !d.data()?.deleted && d.id);
-            if (activeDocs.length > 0) {
-              classesCount = activeDocs.length;
-            }
-          } catch (clsErr) {
-            console.warn('Could not fetch classes stats:', clsErr.message);
-          }
-
           const calculatedClasses = Math.max(
             classesCount,
             globalClasses?.length || 0,
@@ -888,37 +843,68 @@ const AdminDashboard = () => {
             19
           );
 
-          // Sort all activities by timestamp descending
           activities.sort((a, b) => b.timestamp - a.timestamp);
 
-          if (isMounted) {
-            setRealActivities(activities);
-            setRealStats(prev => ({
-              ...prev,
-              students: studentSnap.size,
-              teachers: staffSize,
-              subjects: subjectSize,
-              classes: calculatedClasses,
-              demographics: { male, female, others }
-            }));
+          setRealActivities(activities);
+          setRealStats(prev => ({
+            ...prev,
+            students: studentSnap.size,
+            teachers: staffSize,
+            subjects: subjectSize,
+            classes: calculatedClasses,
+            demographics: { male, female, others }
+          }));
+        };
+
+        // Initialize Listeners
+        unsubs.push(onSnapshot(doc(db, 'settings', 'fees'), (docSnap) => {
+          if (docSnap.exists()) {
+            feeSettings = docSnap.data() || {};
+            compileData();
           }
-        } catch (error) {
-          console.error('Error fetching dashboard stats:', error);
-        }
+        }, (err) => console.warn('fees snap error:', err)));
+
+        unsubs.push(onSnapshot(collection(db, 'students'), (snap) => {
+          studentSnap = snap;
+          compileData();
+        }, (err) => console.warn('students snap error:', err)));
+
+        unsubs.push(onSnapshot(collection(db, 'staff'), (snap) => {
+          staffSize = snap.size;
+          compileData();
+        }, (err) => console.warn('staff snap error:', err)));
+
+        unsubs.push(onSnapshot(collection(db, 'subjects'), (snap) => {
+          subjectSize = snap.size;
+          compileData();
+        }, (err) => console.warn('subjects snap error:', err)));
+
+        unsubs.push(onSnapshot(collection(db, 'classes'), (snap) => {
+          const activeDocs = snap.docs.filter(d => !d.data()?.deleted && d.id);
+          classesCount = activeDocs.length;
+          compileData();
+        }, (err) => console.warn('classes snap error:', err)));
+
+        unsubs.push(onSnapshot(query(collection(db, 'admissions'), limit(15)), (snap) => {
+          admSnap = snap;
+          compileData();
+        }, (err) => console.warn('admissions snap error:', err)));
+
+        unsubs.push(onSnapshot(query(collection(db, 'notifications'), limit(15)), (snap) => {
+          notifSnap = snap;
+          compileData();
+        }, (err) => console.warn('notifications snap error:', err)));
+      }
+
+      return () => {
+        unsubs.forEach(unsub => unsub());
       };
-
-      fetchStats();
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [viewMode, authReady]);
+    }, [viewMode, authReady, currentAdmin, globalClasses]);
 
   const stats = [
     { title: 'Total Students', value: realStats.students.toLocaleString(), icon: GraduationCap, color: '#ff6b00' },
     { title: 'Total Teachers', value: realStats.teachers.toLocaleString(), icon: Briefcase, color: '#111111' },
-    { title: 'Online Users (Real-Time)', value: `${onlineCount.toLocaleString()} Online`, icon: Activity, color: '#10b981' },
+    { title: 'Total Subjects', value: realStats.subjects.toLocaleString(), icon: BookOpen, color: '#10b981' },
     { title: 'Active Classes', value: (realStats.classes || globalClasses?.length || 19).toLocaleString(), icon: Users, color: '#ff6b00' },
   ];
 

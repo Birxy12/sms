@@ -203,6 +203,56 @@ const ClassManagement = () => {
     }
   };
 
+  const handleForceRemoveDuplicates = async () => {
+    if (!window.confirm("Are you sure you want to scan and remove all duplicate students (keeping the oldest/original records)?")) return;
+    setLoading(true);
+    try {
+      await ensureFirebaseAuth();
+      const snap = await getDocs(collection(db, "students"));
+      const byName = {};
+      snap.docs.forEach(d => {
+        const data = d.data();
+        const name = String(data.name || data.NAME || '').trim().toLowerCase();
+        if (name) {
+          if (!byName[name]) byName[name] = [];
+          byName[name].push({ id: d.id, ...data });
+        }
+      });
+      
+      let deletedCount = 0;
+      let batch = writeBatch(db);
+      
+      for (const name in byName) {
+        if (byName[name].length > 1) {
+          const records = byName[name];
+          const toKeep = records.find(r => r.createdBy !== 'script') || records[0];
+          for (const r of records) {
+            if (r.id !== toKeep.id) {
+              batch.delete(doc(db, "students", r.id));
+              deletedCount++;
+              if (deletedCount % 400 === 0) {
+                await batch.commit();
+                batch = writeBatch(db);
+              }
+            }
+          }
+        }
+      }
+      
+      if (deletedCount % 400 !== 0 && deletedCount > 0) {
+        await batch.commit();
+      }
+      
+      alert(`Successfully removed ${deletedCount} duplicate student records.`);
+      fetchClassStats();
+    } catch (e) {
+      console.error(e);
+      alert("Failed to remove duplicates.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAssignTeacher = async (className, teacherId) => {
     setSavingTeacher(className);
     try {
@@ -670,6 +720,12 @@ const ClassManagement = () => {
             className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
           >
             <UserPlus size={16} /> Bulk Enroll (CSV/Excel)
+          </button>
+          <button
+            onClick={handleForceRemoveDuplicates}
+            className="flex items-center gap-2 bg-rose-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-rose-700 transition-all shadow-lg shadow-rose-100"
+          >
+            <Trash2 size={16} /> Remove Duplicates
           </button>
           <button
             onClick={() => setShowAddClass(true)}

@@ -26,6 +26,7 @@ import {
 } from '../../utils/prospectusFees';
 import SchoolManagementDashboard from '../../components/SchoolManagementDashboard';
 import Papa from 'papaparse';
+import { useFinance } from '../../context/FinanceContext';
 
 const ADMIN_WHATSAPP_PHONE = '2349066202949';
 const SESSIONS = ['2025/2026', '2026/2027', '2024/2025'];
@@ -162,12 +163,7 @@ const BursarDashboard = () => {
   const [allStudents, setAllStudents] = useState([]);
   const [paymentMessages, setPaymentMessages] = useState([]);
   const [feeSettings, setFeeSettings] = useState({});
-  const [stats, setStats] = useState({
-    totalExpected: 0,
-    totalCollected: 0,
-    totalOutstanding: 0,
-    totalStudents: 0
-  });
+  const { financeData: stats } = useFinance();
 
   const [classes, setClasses] = useState(DEFAULT_CLASSES);
 
@@ -280,26 +276,6 @@ const BursarDashboard = () => {
               unsubscribeStudents = onSnapshot(collection(db, 'students'), (snap) => {
                 const students = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 setAllStudents(students);
-
-                let expected = 0;
-                let collected = 0;
-                students.forEach(s => {
-                  const pFee = parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0;
-                  let eFee = parseFloat(s.expectedFee) || 0;
-                  if (eFee <= 0) {
-                    const isIntake = s.isNewIntake === true || s.studentType === 'new_intake';
-                    eFee = getExpectedFeeForStudent(s.className || s.class_name || s.CLASS, isIntake, loadedFees);
-                  }
-                  collected += pFee;
-                  expected += eFee;
-                });
-
-                setStats({
-                  totalExpected: expected,
-                  totalCollected: collected,
-                  totalOutstanding: Math.max(0, expected - collected),
-                  totalStudents: students.length
-                });
                 setLoading(false);
               }, (err) => {
                 console.error(err);

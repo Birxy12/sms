@@ -1,0 +1,274 @@
+useEffect(() => {
+    let isMounted = true;
+    
+    if (viewMode === 'admin') {
+      const fetchStats = async () => {
+        if (!currentAdmin) return;
+        if (!authReady) return; // Don't query Firestore until auth is confirmed
+        
+        try {
+          // 1. Fetch fees settings
+          let feeSettings = {};
+          try {
+            const feeSnap = await getDoc(doc(db, 'settings', 'fees'));
+            if (feeSnap.exists()) {
+              feeSettings = feeSnap.data() || {};
+            }
+          } catch (feeErr) {
+            console.warn('Could not fetch fee settings:', feeErr.message);
+          }
+
+          // 2. Fetch students
+          const studentSnap = await getDocs(collection(db, 'students'));
+          if (!isMounted) return;
+
+          let male = 0;
+          let female = 0;
+          let others = 0;
+          
+          let totalExpected = 0;
+          let totalCollected = 0;
+          let totalDebt = 0;
+          let clearedCount = 0;
+          let owingCount = 0;
+          const classMap = {};
+          const debtorsList = [];
+          const recentPayments = [];
+
+          studentSnap.forEach(docSnap => {
+            const rawData = docSnap.data();
+            const data = expandStudent(rawData) || {};
+            const merged = { id: docSnap.id, ...rawData, ...data };
+            const mGender = (merged.gender || '').toLowerCase();
+            if (mGender === 'm' || mGender === 'male') male++;
+            else if (mGender === 'f' || mGender === 'female' || mGender === 'girl') female++;
+            else others++;
+
+            const cls = normalizeClassName(merged.className || 'Unassigned');
+            if (!classMap[cls]) {
+              classMap[cls] = {
+                className: cls,
+                expected: 0,
+                collected: 0,
+                debt: 0,
+                studentCount: 0,
+                clearedCount: 0,
+                owingCount: 0
+              };
+            }
+            classMap[cls].studentCount++;
+
+            const fallbackFee = getExpectedFeeForStudent(merged, undefined, feeSettings);
+            const expected = parseFloat(merged.expectedFee) || parseFloat(fallbackFee) || 0;
+            const paid = parseFloat(merged.paidFee) || parseFloat(merged.paidAmount) || 0;
+            const balance = Math.max(0, expected - paid);
+
+            classMap[cls].expected += expected;
+            classMap[cls].collected += paid;
+            classMap[cls].debt += balance;
+
+            totalExpected += expected;
+            totalCollected += paid;
+            totalDebt += balance;
+
+            const studentFinance = {
+              ...merged,
+              className: cls,
+              expected,
+              paid,
+              balance,
+              isOwing: balance > 0,
+              isCleared: expected > 0 && balance === 0
+            };
+
+            if (balance > 0) {
+              owingCount++;
+              classMap[cls].owingCount++;
+              debtorsList.push(studentFinance);
+            } else if (expected > 0 && balance === 0) {
+              clearedCount++;
+              classMap[cls].clearedCount++;
+            }
+
+            if (paid > 0 || merged.lastPaymentDate) {
+              recentPayments.push(studentFinance);
+            }
+          });
+
+          // Fetch staff (Requires Auth)
+          let staffSize = 0;
+          try {
+            const staffSnap = await getDocs(collection(db, 'staff'));
+            staffSize = staffSnap.size;
+          } catch (staffErr) {
+            console.warn('Could not fetch staff stats:', staffErr.message);
+          }
+
+          // Fetch subjects
+          let subjectSize = 0;
+          try {
+            const subjectSnap = await getDocs(collection(db, 'subjects'));
+            subjectSize = subjectSnap.size;
+          } catch (subErr) {
+            console.warn('Could not fetch subjects stats:', subErr.message);
+          }
+
+          // --- Build Live Recent Activities from Real Database Records ---
+          const activities = [];
+
+          // 1. From Students (Enrollments & Fee payments)
+          studentSnap.forEach(docSnap => {
+            const rawData = docSnap.data();
+            const s = expandStudent(rawData) || {};
+            const name = s.fullName || s.name || rawData.n || 'Student';
+            const cls = normalizeClassName(s.className || rawData.c || 'JSS1');
+            const dateVal = s.createdAt || rawData.createdAt || s.enrolledAt || s.registeredAt;
+            
+            if (dateVal) {
+              activities.push({
+                id: `enroll-${docSnap.id}`,
+                text: `New student ${name} enrolled in ${cls}`,
+                time: formatRelativeTime(dateVal),
+                timestamp: new Date(dateVal).getTime() || Date.now(),
+                type: 'enrollment',
+                icon: UserPlus,
+                color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50'
+              });
+            }
+
+            const paidAmt = parseFloat(s.paidFee || rawData.paidFee || s.paidAmount || 0);
+            if (paidAmt > 0 || s.lastPaymentDate || rawData.lastPaymentDate) {
+              const pDate = s.lastPaymentDate || rawData.lastPaymentDate || s.updatedAt || dateVal;
+              activities.push({
+                id: `pay-${docSnap.id}`,
+                text: `Tuition fee payment (${formatNaira(paidAmt)}) confirmed for ${name} (${cls})`,
+                time: formatRelativeTime(pDate),
+                timestamp: new Date(pDate).getTime() || Date.now() - 3600000,
+                type: 'payment',
+                icon: CreditCard,
+                color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50'
+              });
+            }
+          });
+
+          // 2. From Admissions
+          try {
+            const admSnap = await getDocs(query(collection(db, 'admissions'), limit(15)));
+            admSnap.forEach(docSnap => {
+              const a = docSnap.data();
+              const name = a.studentName || a.fullName || a.applicantName || 'Applicant';
+              const cls = a.targetClass || a.appliedClass || 'Admission';
+              const aDate = a.createdAt || a.applicationDate || a.submittedAt;
+              activities.push({
+                id: `adm-${docSnap.id}`,
+                text: `Admission applicant ${name} registered for ${cls}`,
+                time: formatRelativeTime(aDate),
+                timestamp: new Date(aDate).getTime() || Date.now() - 7200000,
+                type: 'admission',
+                icon: School,
+                color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50'
+              });
+            });
+          } catch (e) {
+            console.warn('Recent activities admission fetch:', e);
+          }
+
+          // 3. From Notifications
+          try {
+            const notifSnap = await getDocs(query(collection(db, 'notifications'), limit(15)));
+            notifSnap.forEach(docSnap => {
+              const n = docSnap.data();
+              const title = n.title || n.subject || 'Broadcast Notice';
+              const nDate = n.createdAt || n.timestamp;
+              activities.push({
+                id: `notif-${docSnap.id}`,
+                text: `System announcement: "${title}" (${n.target || 'All School'})`,
+                time: formatRelativeTime(nDate),
+                timestamp: new Date(nDate).getTime() || Date.now() - 14400000,
+                type: 'notification',
+                icon: Send,
+                color: 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/50'
+              });
+            });
+          } catch (e) {
+            console.warn('Recent activities notification fetch:', e);
+          }
+
+          // Fallback if database has no timestamped entries yet
+          if (activities.length === 0) {
+            activities.push(
+              {
+                id: 'db-summary-1',
+                text: `${studentSnap.size} total active students currently registered across ${Object.keys(classMap).length} classes`,
+                time: 'Realtime',
+                timestamp: Date.now(),
+                type: 'enrollment',
+                icon: GraduationCap,
+                color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50'
+              },
+              {
+                id: 'db-summary-2',
+                text: `Terminal fee collection: ${clearedCount} students cleared and ${owingCount} outstanding debtors tracked`,
+                time: 'Realtime',
+                timestamp: Date.now() - 1800000,
+                type: 'payment',
+                icon: CreditCard,
+                color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50'
+              },
+              {
+                id: 'db-summary-3',
+                text: `Staff directory verified with ${staffSize} active teaching personnel`,
+                time: 'Realtime',
+                timestamp: Date.now() - 3600000,
+                type: 'staff',
+                icon: Briefcase,
+                color: 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/50'
+              }
+            );
+          }
+
+          // Fetch dynamic classes from Firestore 'classes' collection
+          let classesCount = 0;
+          try {
+            const classSnap = await getDocs(collection(db, 'classes'));
+            const activeDocs = classSnap.docs.filter(d => !d.data()?.deleted && d.id);
+            if (activeDocs.length > 0) {
+              classesCount = activeDocs.length;
+            }
+          } catch (clsErr) {
+            console.warn('Could not fetch classes stats:', clsErr.message);
+          }
+
+          const calculatedClasses = Math.max(
+            classesCount,
+            globalClasses?.length || 0,
+            Object.keys(classMap).length,
+            19
+          );
+
+          // Sort all activities by timestamp descending
+          activities.sort((a, b) => b.timestamp - a.timestamp);
+
+          if (isMounted) {
+            setRealActivities(activities);
+            setRealStats(prev => ({
+              ...prev,
+              students: studentSnap.size,
+              teachers: staffSize,
+              subjects: subjectSize,
+              classes: calculatedClasses,
+              demographics: { male, female, others }
+            }));
+          }
+        } catch (error) {
+          console.error('Error fetching dashboard stats:', error);
+        }
+      };
+
+      fetchStats();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [viewMode, authReady]

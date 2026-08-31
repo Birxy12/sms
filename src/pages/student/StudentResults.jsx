@@ -780,6 +780,12 @@ const StudentResults = ({ isPublic }) => {
         }
         .rc-summary-box.status label { color: #15803d; }
         .rc-summary-box.status .value { color: #14532d; }
+        .rc-summary-box.status-repeat {
+          background: #fef2f2;
+          border-color: #fecaca;
+        }
+        .rc-summary-box.status-repeat label { color: #b91c1c; }
+        .rc-summary-box.status-repeat .value { color: #7f1d1d; }
 
         /* ─── COMMENTS ─── */
         .rc-comments {
@@ -1093,9 +1099,13 @@ const StudentResults = ({ isPublic }) => {
                 <label>Total Score</label>
                 <div className="value">{studentMarks?.overallTotal}</div>
               </div>
-              <div className="rc-summary-box status">
+              <div className={`rc-summary-box ${studentMarks?.average < 45 ? 'status-repeat' : 'status'}`}>
                 <label>Status</label>
-                <div className="value">PROMOTED</div>
+                <div className="value">
+                  {studentMarks?.average < 45 
+                    ? (selectedPub?.term?.toLowerCase().includes('third') ? 'REPEAT' : 'FAIL') 
+                    : (selectedPub?.term?.toLowerCase().includes('third') ? 'PROMOTED' : 'PASS')}
+                </div>
               </div>
             </div>
           </div>
