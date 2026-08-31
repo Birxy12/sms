@@ -1303,6 +1303,7 @@ const BursarDashboard = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedStudent, setSelectedStudent] = useState(preSelectedStudent);
     const [cashAmount, setCashAmount] = useState('');
+    const [discountAmount, setDiscountAmount] = useState('');
     const [paymentTerm, setPaymentTerm] = useState('First Term');
     const [paymentSession, setPaymentSession] = useState('2025/2026');
     const [saving, setSaving] = useState(false);
@@ -1323,17 +1324,25 @@ const BursarDashboard = () => {
     const handlePay = async () => {
       if (!selectedStudent || !cashAmount) return;
       const amount = parseFloat(cashAmount);
+      const discount = parseFloat(discountAmount) || 0;
       if (isNaN(amount) || amount <= 0) { alert('Enter a valid amount.'); return; }
       setSaving(true);
       try {
         const oldPaid = parseFloat(selectedStudent.paidFee) || parseFloat(selectedStudent.paidAmount) || 0;
         const newPaid = oldPaid + amount;
+        const oldExpected = parseFloat(selectedStudent.expectedFee) || 0;
+        const newExpected = Math.max(0, oldExpected - discount);
+        const oldDiscountApplied = parseFloat(selectedStudent.discountApplied) || 0;
+        const newDiscountApplied = oldDiscountApplied + discount;
+        
         const txnId = 'TXN-' + Math.floor(10000000 + Math.random() * 90000000);
         const serialNo = 'SN-' + Math.floor(100000 + Math.random() * 900000);
         const ref = doc(db, 'students', selectedStudent.id);
         const isPendingAdmission = selectedStudent.status === 'pending_activation' || selectedStudent.requiresAdminConfirmation || selectedStudent.admissionConfirmed === false || selectedStudent.paymentConfirmed === false;
         await updateDoc(ref, {
           paidFee: newPaid, paidAmount: newPaid,
+          expectedFee: newExpected,
+          discountApplied: newDiscountApplied,
           lastPaymentDate: new Date().toLocaleDateString('en-NG'),
           lastTransactionId: txnId, lastSerialNo: serialNo,
           lastPaymentTerm: paymentTerm, lastPaymentSession: paymentSession,
@@ -1352,14 +1361,14 @@ const BursarDashboard = () => {
           studentName: selectedStudent.name || selectedStudent['STUDENT NAME'],
           className: selectedStudent.className || selectedStudent.class_name || selectedStudent.CLASS,
           regNo: selectedStudent.regNo || selectedStudent.REGNO,
-          amount, method: 'Cash', term: paymentTerm, session: paymentSession,
+          amount, discount, method: 'Cash', term: paymentTerm, session: paymentSession,
           transactionId: txnId, serialNo,
-          message: `Cash payment of \u20a6${amount.toLocaleString()} received for ${paymentTerm}, ${paymentSession}.`,
+          message: `Cash payment of \u20a6${amount.toLocaleString()} received for ${paymentTerm}, ${paymentSession}.${discount > 0 ? ` A discount of \u20a6${discount.toLocaleString()} was applied.` : ''}`,
           createdAt: serverTimestamp(),
         });
-        setReceipt({ student: selectedStudent, amount, newPaid, date: new Date().toLocaleDateString('en-NG'), term: paymentTerm, session: paymentSession, txnId, serialNo });
+        setReceipt({ student: selectedStudent, amount, discount, newPaid, date: new Date().toLocaleDateString('en-NG'), term: paymentTerm, session: paymentSession, txnId, serialNo });
         fetchFinancialData();
-        setCashAmount(''); setSelectedStudent(null); setSearchTerm('');
+        setCashAmount(''); setDiscountAmount(''); setSelectedStudent(null); setSearchTerm('');
         setPreSelectedStudent(null);
       } catch (e) { console.error(e); alert('Payment failed.'); }
       finally { setSaving(false); }
@@ -1396,6 +1405,7 @@ const BursarDashboard = () => {
         <div class="row"><span class="lbl">Reg No:</span><span class="val">${s.regNo||s.REGNO||'N/A'}</span></div>
         <div class="row"><span class="lbl">Class:</span><span class="val">${s.className||s.CLASS||'N/A'}</span></div>
         <div class="row"><span class="lbl">Method:</span><span class="val">CASH</span></div>
+        ${receipt.discount > 0 ? `<div class="row"><span class="lbl">Discount Applied:</span><span class="val" style="color:#ef4444">-\u20a6${receipt.discount.toLocaleString()}</span></div>` : ''}
         <div class="total"><span>Amount Paid:</span><span style="color:#10b981">\u20a6${receipt.amount.toLocaleString()}</span></div>
         <div class="row" style="margin-top:12px"><span class="lbl">Total Paid to Date:</span><span class="val">\u20a6${receipt.newPaid.toLocaleString()}</span></div>
         
@@ -1476,10 +1486,17 @@ const BursarDashboard = () => {
                 </select>
               </div>
             </div>
-            <div>
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Cash Amount (\u20a6)</label>
-              <input type="number" value={cashAmount} onChange={e => setCashAmount(e.target.value)} placeholder="Enter amount received"
-                className="w-full px-4 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-black text-2xl text-slate-900 transition-all" />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Cash Amount (\u20a6)</label>
+                <input type="number" value={cashAmount} onChange={e => setCashAmount(e.target.value)} placeholder="Enter amount received"
+                  className="w-full px-4 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-black text-2xl text-slate-900 transition-all" />
+              </div>
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Discount (\u20a6) <span className="font-normal lowercase text-[10px]">(optional)</span></label>
+                <input type="number" value={discountAmount} onChange={e => setDiscountAmount(e.target.value)} placeholder="Enter discount"
+                  className="w-full px-4 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-rose-400 outline-none font-black text-2xl text-slate-900 transition-all" />
+              </div>
             </div>
             <button disabled={!selectedStudent||!cashAmount||saving} onClick={handlePay}
               className="w-full bg-green-600 text-white font-black py-4 rounded-xl hover:bg-green-700 transition-all shadow-lg disabled:opacity-40 flex items-center justify-center gap-2">
