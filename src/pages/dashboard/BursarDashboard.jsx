@@ -1465,7 +1465,9 @@ const BursarDashboard = () => {
                 <div>
                   <p className="font-black text-indigo-900">{selectedStudent.name||selectedStudent['STUDENT NAME']}</p>
                   <p className="text-xs text-indigo-500 font-bold">{selectedStudent.regNo||selectedStudent.REGNO} \u2022 {selectedStudent.className||selectedStudent.CLASS}</p>
-                  <p className="text-xs text-indigo-400 mt-1">Balance: ₦{Math.max(0,(parseFloat(selectedStudent.expectedFee)||0)-(parseFloat(selectedStudent.paidFee)||parseFloat(selectedStudent.paidAmount)||0)).toLocaleString()}</p>
+                  <p className="text-xs text-indigo-400 mt-1">
+                    Balance: ₦{Math.max(0, (parseFloat(selectedStudent.expectedFee)||0) - (parseFloat(selectedStudent.paidFee)||parseFloat(selectedStudent.paidAmount)||0) - (parseFloat(discountAmount)||0)).toLocaleString()}
+                  </p>
                 </div>
                 <button onClick={() => { setSelectedStudent(null); setPreSelectedStudent(null); }} className="text-slate-400 hover:text-rose-500 text-xl font-bold">\u2715</button>
               </div>
