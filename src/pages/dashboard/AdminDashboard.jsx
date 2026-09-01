@@ -16,6 +16,7 @@ import StaffDashboard from './StaffDashboard';
 import StudentDashboard from './StudentDashboard';
 import NotificationCenter from './NotificationCenter';
 import AdminBulkPrint from '../../components/AdminBulkPrint';
+import AdminAdmissionPortal from '../../components/AdminAdmissionPortal';
 import { expandStudent } from '../../utils/firestoreSchema';
 import { 
   Users, User, UserPlus, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, 
@@ -240,6 +241,16 @@ const AdminDashboard = () => {
       iconBg: 'bg-rose-100/80 text-rose-700',
       inactiveStyle: 'bg-rose-50/80 text-rose-700 hover:bg-rose-100 border-rose-200/60 shadow-sm shadow-rose-100/30'
     }] : []),
+    { 
+      id: 'Admissions', 
+      label: 'Admission Portal', 
+      icon: UserCheck,
+      activeGradient: 'from-fuchsia-600 via-fuchsia-600 to-purple-700',
+      activeShadow: 'shadow-fuchsia-500/30',
+      activeBorder: 'border-fuchsia-400/50',
+      iconBg: 'bg-fuchsia-100/80 text-fuchsia-700',
+      inactiveStyle: 'bg-fuchsia-50/80 text-fuchsia-700 hover:bg-fuchsia-100 border-fuchsia-200/60 shadow-sm shadow-fuchsia-100/30'
+    },
   ];
 
   // ── Fingerprint Manager (inline) ──────────────────────────────────────
@@ -632,7 +643,8 @@ const AdminDashboard = () => {
     teachers: 0,
     subjects: 0,
     classes: 19,
-    demographics: { male: 0, female: 0, others: 0 }
+    demographics: { male: 0, female: 0, others: 0 },
+    enrollmentData: null
   });
 
   const { financeData: realFinance } = useFinance();
@@ -847,13 +859,51 @@ const AdminDashboard = () => {
           activities.sort((a, b) => b.timestamp - a.timestamp);
 
           setRealActivities(activities);
+          const currentYear = new Date().getFullYear();
+          const monthCounts = new Array(12).fill(0);
+          
+          studentSnap.forEach(docSnap => {
+            const rawData = docSnap.data();
+            const s = expandStudent(rawData) || {};
+            const dateVal = s.createdAt || rawData.createdAt || s.enrolledAt || s.registeredAt;
+            if (dateVal) {
+              const d = new Date(dateVal);
+              if (d.getFullYear() === currentYear) {
+                monthCounts[d.getMonth()]++;
+              }
+            } else {
+              monthCounts[0]++; // Default to Jan
+            }
+          });
+
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const calculatedEnrollmentData = [];
+          const currentMonthIdx = new Date().getMonth();
+          
+          // Show up to current month or at least first 6 months
+          const maxMonth = Math.max(5, currentMonthIdx);
+          
+          for (let i = 0; i <= maxMonth; i++) {
+            const count = monthCounts[i];
+            const prevCount = i > 0 ? monthCounts[i - 1] : 0;
+            let growth = 'Baseline';
+            if (prevCount > 0) {
+              const pct = ((count - prevCount) / prevCount) * 100;
+              growth = (pct > 0 ? '+' : '') + pct.toFixed(1) + '%';
+            } else if (count > 0 && prevCount === 0 && i > 0) {
+              growth = '+100%';
+            }
+            calculatedEnrollmentData.push({ m: monthNames[i], count, growth });
+          }
+
           setRealStats(prev => ({
             ...prev,
             students: studentSnap.size,
             teachers: staffSize,
             subjects: subjectSize,
             classes: calculatedClasses,
-            demographics: { male, female, others }
+            demographics: { male, female, others },
+            enrollmentData: calculatedEnrollmentData
           }));
         };
 
@@ -915,7 +965,7 @@ const AdminDashboard = () => {
     { id: 'fb-3', text: 'Tuition fees payment confirmed for enrolled students', time: 'Recently', type: 'payment', icon: CreditCard, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50' },
   ];
 
-  const enrollmentData = [
+  const enrollmentData = realStats.enrollmentData || [
     { m: 'Jan', count: Math.max(1, Math.round(realStats.students * 0.45)), growth: '+12%' },
     { m: 'Feb', count: Math.max(2, Math.round(realStats.students * 0.60)), growth: '+15%' },
     { m: 'Mar', count: Math.max(3, Math.round(realStats.students * 0.72)), growth: '+12%' },
@@ -1025,15 +1075,7 @@ const AdminDashboard = () => {
       <div className="tab-content-animate" key={activeTab}>
         {/* Overview Tab */}
         {activeTab === 'Overview' && (() => {
-          // Dynamic coordinates for Enrollment Growth
-          const enrollmentData = [
-            { m: 'Jan', count: 40, growth: 'Baseline' },
-            { m: 'Feb', count: 65, growth: '+62.5%' },
-            { m: 'Mar', count: 45, growth: '-30.7%' },
-            { m: 'Apr', count: 85, growth: '+88.8%' },
-            { m: 'May', count: 95, growth: '+11.7%' },
-            { m: 'Jun', count: 75, growth: '-21.0%' }
-          ];
+          // Using enrollmentData from upper scope (calculated from realStats)
 
           const sparklineD = latencyHistory.map((val, i) => {
             const x = (i * 120) / (latencyHistory.length - 1);
@@ -2009,6 +2051,13 @@ const AdminDashboard = () => {
       {activeTab === 'Biometrics' && (
         <div className="animate-in fade-in">
           <FingerprintManager />
+        </div>
+      )}
+
+      {/* Admissions Tab */}
+      {activeTab === 'Admissions' && (
+        <div className="animate-in fade-in">
+          <AdminAdmissionPortal />
         </div>
       )}
 

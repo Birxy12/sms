@@ -27,9 +27,9 @@ const BulkStudentResults = forwardRef(({ studentsData, selectedPub, formTeacherN
         const opt = {
           margin: 0,
           filename: `${selectedPub?.targetClass || 'Class'}-Results-${selectedPub?.term}.pdf`,
-          image: { type: 'jpeg', quality: 0.92 },
+          image: { type: 'jpeg', quality: 0.75 },
           html2canvas: { 
-            scale: 1.5, 
+            scale: 1.0, 
             useCORS: true, 
             logging: false, 
             allowTaint: true, 
