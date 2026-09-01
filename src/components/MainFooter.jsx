@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useStudentAuth } from '../context/StudentAuthContext';
 import bdsLogo from '../assets/bdslogo.jpg';
+import sealLogo from '../assets/seal.png';
 import '../assets/Footer.css';
 
 const MainFooter = () => {
@@ -428,6 +429,20 @@ const MainFooter = () => {
               style={{ animation: 'pulse 1.5s ease-in-out infinite' }}
             /> 
             for Excellence
+          </div>
+
+          {/* CEO Seal */}
+          <div style={{ marginTop: '24px' }}>
+            <img 
+              src={sealLogo} 
+              alt="GlobixTech CEO Seal" 
+              style={{ 
+                width: '120px', 
+                height: 'auto', 
+                opacity: 0.95, 
+                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))' 
+              }} 
+            />
           </div>
         </div>
 
