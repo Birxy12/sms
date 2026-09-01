@@ -460,6 +460,12 @@
   .home-features-grid {
     grid-template-columns: 1fr;
   }
+  .home-feature-card {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
 }
 
 .home-feature-card {

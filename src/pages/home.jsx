@@ -408,15 +408,15 @@ const Home = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
                 whileHover={{ y: -8 }}
-                className="home-features-card"
+                className="home-feature-card"
               >
-                <div className="home-features-card-accent"></div>
-                <div className="home-features-card-body">
+                <div className="home-feature-card-accent"></div>
+                <div className="home-feature-card-body">
                   <div className={`home-feature-icon ${f.color}`}>
                     {f.icon}
                   </div>
-                  <h3 className="home-features-name">{f.title}</h3>
-                  <p className="home-features-bio">{f.desc}</p>
+                  <h3 className="home-feature-title">{f.title}</h3>
+                  <p className="home-feature-desc">{f.desc}</p>
                   <div className="home-feature-link">
                     Learn More
                     <ChevronRight size={14} />
