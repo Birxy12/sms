@@ -110,7 +110,7 @@ const AdminAdmissionPortal = () => {
   const filteredAdmissions = admissions.filter(a => {
     const s = searchTerm.toLowerCase();
     const name = (a.studentName || a.fullName || a.applicantName || '').toLowerCase();
-    const appNo = (a.applicationNumber || a.id || '').toLowerCase();
+    const appNo = (a.appNo || a.applicationNumber || a.id || '').toLowerCase();
     return name.includes(s) || appNo.includes(s);
   });
 
@@ -158,14 +158,14 @@ const AdminAdmissionPortal = () => {
               {filteredAdmissions.map((adm) => (
                 <tr key={adm.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                   <td className="py-4 px-4 font-mono text-sm text-slate-700 dark:text-slate-300">
-                    {adm.applicationNumber || adm.id.substring(0, 8).toUpperCase()}
+                    {adm.appNo || adm.applicationNumber || adm.id.substring(0, 8).toUpperCase()}
                   </td>
                   <td className="py-4 px-4 font-medium text-slate-800 dark:text-slate-200">
                     {adm.studentName || adm.fullName || adm.applicantName || 'Unknown Applicant'}
                   </td>
                   <td className="py-4 px-4 text-sm text-slate-600 dark:text-slate-400">
                     <span className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg font-medium">
-                      {adm.targetClass || adm.appliedClass || adm.class || adm.className || 'N/A'}
+                      {adm.classApplyingFor || adm.targetClass || adm.appliedClass || adm.class || adm.className || 'N/A'}
                     </span>
                   </td>
                   <td className="py-4 px-4 text-sm font-medium">
@@ -254,13 +254,13 @@ const AdminAdmissionPortal = () => {
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: '15px', fontSize: '16px', lineHeight: '1.6' }}>
                         <div style={{ fontWeight: 'bold', color: '#64748b' }}>Application No:</div>
-                        <div style={{ fontWeight: '600' }}>{adm.applicationNumber || adm.id.toUpperCase()}</div>
+                        <div style={{ fontWeight: '600' }}>{adm.appNo || adm.applicationNumber || adm.id.toUpperCase()}</div>
                         
                         <div style={{ fontWeight: 'bold', color: '#64748b' }}>Applicant Name:</div>
                         <div>{adm.studentName || adm.fullName || adm.applicantName || 'N/A'}</div>
                         
                         <div style={{ fontWeight: 'bold', color: '#64748b' }}>Target Class:</div>
-                        <div>{adm.targetClass || adm.appliedClass || adm.class || adm.className || 'N/A'}</div>
+                        <div>{adm.classApplyingFor || adm.targetClass || adm.appliedClass || adm.class || adm.className || 'N/A'}</div>
                         
                         <div style={{ fontWeight: 'bold', color: '#64748b' }}>Date Applied:</div>
                         <div>{adm.createdAt ? new Date(adm.createdAt).toLocaleString() : 'N/A'}</div>

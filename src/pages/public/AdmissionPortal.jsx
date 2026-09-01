@@ -36,10 +36,20 @@ import {
 } from '../../utils/paymentGateways';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const generateAppNo = () => {
+const generateAppNo = async (db) => {
   const year = new Date().getFullYear();
-  const num = Math.floor(1000 + Math.random() * 9000);
-  return `BDS/APN/${year}/${num}`;
+  let unique = false;
+  let num, appNo;
+  while (!unique) {
+    num = Math.floor(1000 + Math.random() * 9000);
+    appNo = `BDS/APN/${year}/${num}`;
+    const q = query(collection(db, 'admissions'), where('appNo', '==', appNo));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      unique = true;
+    }
+  }
+  return appNo;
 };
 
 const fmt = (s) =>
@@ -357,7 +367,7 @@ const AdmissionPortal = () => {
     e.preventDefault();
     setSubmittingForm(true);
     try {
-      const appNo = generateAppNo();
+      const appNo = await generateAppNo(db);
       const feeDetails = getApplicantFeeBreakdown(formData.classApplyingFor, feeSettings);
       const docRef = await addDoc(collection(db, 'admissions'), {
         ...formData,
