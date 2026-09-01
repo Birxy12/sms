@@ -7,12 +7,14 @@ import {
   Info, UserCheck, X, Calendar, CheckSquare, Square, MinusSquare, ChevronDown, Save, Check, 
   Download, Plus, Trash2, UserPlus, UserMinus, ArrowRightLeft, DollarSign, AlertCircle, CheckCircle2, 
   Search, Filter, CreditCard, ArrowRight, Eye, ShieldCheck, Mail, Phone, RefreshCw,
-  Sparkles, Award, FileSpreadsheet, AlertTriangle, Loader2
+  Sparkles, Award, FileSpreadsheet, AlertTriangle, Loader2, Printer
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import BulkStudentEnrollModal from '../../components/BulkStudentEnrollModal';
-import { expandStudent, sanitizeFirestoreData } from '../../utils/firestoreSchema';
+import BulkStudentResults from '../../components/BulkStudentResults';
+import { expandStudent, sanitizeFirestoreData, expandMarks, MARKS_KEYS } from '../../utils/firestoreSchema';
 import { normalizeClassName } from '../../utils/classUtils';
+import { getAverageDivisor } from '../../utils/averageDivisor';
 
 const ClassManagement = () => {
   const { currentSession } = useTheme();
@@ -45,6 +47,14 @@ const ClassManagement = () => {
   const [batchActionModal, setBatchActionModal] = useState(null); // { type: 'remove' | 'transfer' | 'delete', targetClass?: string, singleStudent?: object }
   const [batchProcessing, setBatchProcessing] = useState(false);
   const [batchToast, setBatchToast] = useState({ show: false, type: 'success', message: '' });
+
+  // Bulk Print State
+  const bulkPrintRef = React.useRef(null);
+  const [showBulkPrintModal, setShowBulkPrintModal] = useState(false);
+  const [publishedTerms, setPublishedTerms] = useState([]);
+  const [selectedPrintTermId, setSelectedPrintTermId] = useState('');
+  const [bulkPrintData, setBulkPrintData] = useState([]);
+  const [isPreparingPrint, setIsPreparingPrint] = useState(false);
 
   // Attendance State
   const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -438,6 +448,212 @@ const ClassManagement = () => {
 
   const clearSelection = () => {
     setSelectedStudentIds([]);
+  };
+
+  // Bulk Print Functions
+  const handleOpenBulkPrintModal = async () => {
+    if (publishedTerms.length === 0) {
+      try {
+        const pubQuery = query(collection(db, 'publications'), where('type', '==', 'Result'));
+        const pubSnap = await getDocs(pubQuery);
+        const terms = pubSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        terms.sort((a, b) => b.session.localeCompare(a.session));
+        setPublishedTerms(terms);
+        if (terms.length > 0) setSelectedPrintTermId(terms[0].id);
+      } catch (err) {
+        console.error('Error fetching publications:', err);
+      }
+    }
+    setShowBulkPrintModal(true);
+  };
+
+  const handleBulkPrintResults = async () => {
+    if (!selectedPrintTermId) return;
+    setIsPreparingPrint(true);
+    try {
+      const selectedPub = publishedTerms.find(p => p.id === selectedPrintTermId);
+      if (!selectedPub) return;
+
+      const normClass = normalizeClassName(selectedClass);
+      const normTerm = (t = '') => t.toLowerCase().replace(/\s+/g, '');
+      
+      // Determine actual historical class name used in marks
+      let historicalClass = normClass;
+      const firstReg = classStudents.find(s => s.regNo || s['REG NO'] || s.REGNO);
+      if (firstReg) {
+        const regNum = firstReg.regNo || firstReg['REG NO'] || firstReg.REGNO;
+        const [snapR, snapRegNo, snapReg_No] = await Promise.all([
+          getDocs(query(collection(db, 'marks'), where(MARKS_KEYS.regNo, '==', regNum))),
+          getDocs(query(collection(db, 'marks'), where('regNo', '==', regNum))),
+          getDocs(query(collection(db, 'marks'), where('reg_no', '==', regNum)))
+        ]);
+        const docMap = new Map();
+        [...snapR.docs, ...snapRegNo.docs, ...snapReg_No.docs].forEach(doc => {
+          docMap.set(doc.id, doc.data());
+        });
+        const marksData = Array.from(docMap.values()).map(data => expandMarks(data));
+        const foundMarksDoc = marksData.find(d => {
+          const sessionMatch = d.session === selectedPub.session;
+          const termMatch = normTerm(d.term) === normTerm(selectedPub.term) || selectedPub.term.toLowerCase().includes((d.term || '').toLowerCase());
+          return sessionMatch && termMatch;
+        });
+        if (foundMarksDoc && (foundMarksDoc.className || foundMarksDoc.class_name)) {
+          historicalClass = foundMarksDoc.className || foundMarksDoc.class_name;
+        }
+      }
+
+      // Fetch marks for the whole class using the correct historical class name
+      const [snapC, snapClassName, snapClass_Name] = await Promise.all([
+        getDocs(query(collection(db, 'marks'), where(MARKS_KEYS.className, '==', historicalClass))),
+        getDocs(query(collection(db, 'marks'), where('className', '==', historicalClass))),
+        getDocs(query(collection(db, 'marks'), where('class_name', '==', historicalClass)))
+      ]);
+
+      const allDocMap = new Map();
+      [...snapC.docs, ...snapClassName.docs, ...snapClass_Name.docs].forEach(doc => {
+        allDocMap.set(doc.id, doc.data());
+      });
+      const allMarksData = Array.from(allDocMap.values()).map(data => expandMarks(data));
+
+      // Fetch subjects for the class
+      const subjectsQuery = query(collection(db, 'subjects'), where('class', '==', historicalClass));
+      const subjectsSnap = await getDocs(subjectsQuery);
+      const classSubjects = subjectsSnap.docs.map(d => d.data().name);
+
+      const divisor = Math.max(getAverageDivisor(historicalClass, null), 1); // averageDivisors is not locally available, using default getAverageDivisor
+      const classPopSnap = classStudents.length;
+
+      const printData = [];
+
+      classStudents.forEach(student => {
+        const regNum = student.regNo || student['REG NO'] || student.REGNO || '';
+        if (!regNum) return;
+
+        // Find marks doc for this student for the selected term
+        const normTerm = (t = '') => t.toLowerCase().replace(/\s+/g, '');
+        let foundMarksDoc = null;
+        allMarksData.forEach(d => {
+          const sessionMatch = d.session === selectedPub.session;
+          const termMatch = normTerm(d.term) === normTerm(selectedPub.term) || selectedPub.term.toLowerCase().includes((d.term || '').toLowerCase());
+          if (sessionMatch && termMatch && d.regNo === regNum) {
+            foundMarksDoc = d;
+          }
+        });
+
+        // Compute total to find position
+        const studentTotals = {};
+        allMarksData.forEach(d => {
+          const sessionMatch = d.session === selectedPub.session;
+          const termMatch = normTerm(d.term) === normTerm(selectedPub.term) || selectedPub.term.toLowerCase().includes((d.term || '').toLowerCase());
+          if (sessionMatch && termMatch) {
+            const reg = d.regNo;
+            const marksDataObj = d.marks || {};
+            let sum = 0;
+            if (marksDataObj._meta && marksDataObj._meta.overallTotal) {
+              sum = marksDataObj._meta.overallTotal;
+            } else {
+              Object.keys(marksDataObj).forEach(k => {
+                if (k !== '_meta' && marksDataObj[k] && marksDataObj[k].total) {
+                  sum += parseFloat(marksDataObj[k].total || 0);
+                }
+              });
+            }
+            studentTotals[reg] = (studentTotals[reg] || 0) + sum;
+          }
+        });
+
+        const sortedStudents = Object.entries(studentTotals).sort((a, b) => b[1] - a[1]);
+        
+        let posStr = foundMarksDoc?.marks?._meta?.position || '';
+        if (!posStr || posStr === '0' || posStr === 'N/A') {
+          const getOrdinal = (n) => {
+            if (isNaN(n) || n <= 0) return 'N/A';
+            const s = ["th", "st", "nd", "rd"];
+            const v = n % 100;
+            return n + (s[(v - 20) % 10] || s[v] || s[0]);
+          };
+          let rank = 1;
+          posStr = 'N/A';
+          for (let i = 0; i < sortedStudents.length; i++) {
+            if (i > 0 && sortedStudents[i][1] < sortedStudents[i - 1][1]) rank = i + 1;
+            if (sortedStudents[i][0] === regNum) {
+              posStr = sortedStudents[i][1] > 0 ? getOrdinal(rank) : 'N/A';
+              break;
+            }
+          }
+        }
+
+        const rawMarks = foundMarksDoc?.marks || {};
+        let subjectList = classSubjects.length > 0 ? classSubjects : Object.keys(rawMarks).filter(k => k !== '_meta');
+        const seen = new Set();
+        subjectList = subjectList.filter(subj => {
+          const upper = subj.toUpperCase().trim();
+          if (seen.has(upper)) return false;
+          seen.add(upper);
+          return true;
+        });
+
+        let totalScore = 0;
+        const processedMarks = subjectList.map(subjectName => {
+          const dbKey = Object.keys(rawMarks).find(k => k.toUpperCase() === subjectName.toUpperCase()) || subjectName;
+          const isOffered = rawMarks[dbKey] !== undefined;
+          const sm = rawMarks[dbKey] || {};
+          const cat1 = parseFloat(sm.cat1 ?? sm.ca1 ?? 0);
+          const cat2 = parseFloat(sm.cat2 ?? sm.ca2 ?? 0);
+          const exam = parseFloat(sm.exam ?? 0);
+          const total = parseFloat(sm.total ?? (cat1 + cat2 + exam));
+          if (isOffered) totalScore += total;
+          let grade = sm.grade;
+          if (!grade && isOffered) {
+            if (total >= 75) grade = 'A';
+            else if (total >= 70) grade = 'B1';
+            else if (total >= 65) grade = 'B2';
+            else if (total >= 60) grade = 'B3';
+            else if (total >= 50) grade = 'C4';
+            else if (total >= 45) grade = 'C5';
+            else if (total >= 40) grade = 'D7';
+            else if (total >= 35) grade = 'E8';
+            else grade = 'F9';
+          }
+          return { subject: subjectName, cat1, cat2, exam, total, grade: grade || (isOffered ? 'F9' : '-'), isOffered };
+        });
+
+        const displaySubjects = processedMarks.filter(s => s.isOffered);
+
+        printData.push({
+          student,
+          marks: {
+            subjects: displaySubjects.sort((a, b) => a.subject.localeCompare(b.subject)),
+            overallTotal: totalScore,
+            average: (totalScore / divisor).toFixed(1),
+            raw: foundMarksDoc
+          },
+          classStats: {
+            position: posStr,
+            population: classPopSnap,
+            historicalClass: normClass
+          }
+        });
+      });
+
+      setBulkPrintData(printData);
+      
+      // Wait for React to render the invisible component
+      setTimeout(async () => {
+        if (bulkPrintRef.current) {
+          const success = await bulkPrintRef.current.generatePDF();
+          if (success) setShowBulkPrintModal(false);
+          else alert('Failed to generate bulk PDF.');
+        }
+        setIsPreparingPrint(false);
+        setBulkPrintData([]); // Clear data to remove it from DOM after printing
+      }, 1000);
+
+    } catch (err) {
+      console.error(err);
+      alert('Error fetching bulk print data.');
+      setIsPreparingPrint(false);
+    }
   };
 
   // 1. Batch Remove / Unassign from Current Class
@@ -1007,6 +1223,12 @@ const ClassManagement = () => {
                             />
                           </div>
                           <div className="flex items-center gap-2">
+                            <button
+                              onClick={handleOpenBulkPrintModal}
+                              className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black flex items-center gap-2 transition-colors cursor-pointer shadow-md"
+                            >
+                              <Printer size={15} /> Print All Results
+                            </button>
                             <button
                               onClick={downloadClassRoster}
                               className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black flex items-center gap-2 transition-colors cursor-pointer"
@@ -1784,6 +2006,70 @@ const ClassManagement = () => {
             openManageDetails(selectedClass, activeTab);
           }
         }}
+      />
+
+      {/* Bulk Print Modal */}
+      {showBulkPrintModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <Printer className="text-indigo-600" /> Print All Results
+            </h3>
+            
+            {publishedTerms.length === 0 ? (
+              <div className="p-4 bg-amber-50 text-amber-700 rounded-xl text-sm font-bold border border-amber-200">
+                No published terms found. You must publish results first.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-slate-600 font-medium">Select the session/term you want to print report cards for:</p>
+                <select
+                  value={selectedPrintTermId}
+                  onChange={(e) => setSelectedPrintTermId(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-700 focus:border-indigo-500 outline-none"
+                  disabled={isPreparingPrint}
+                >
+                  {publishedTerms.map(pub => (
+                    <option key={pub.id} value={pub.id}>{pub.examName} ({pub.session})</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+              <button
+                onClick={() => setShowBulkPrintModal(false)}
+                className="px-4 py-2 font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors"
+                disabled={isPreparingPrint}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkPrintResults}
+                disabled={publishedTerms.length === 0 || isPreparingPrint}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl flex items-center gap-2 shadow-md shadow-indigo-200"
+              >
+                {isPreparingPrint ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" /> Preparing PDF...
+                  </>
+                ) : (
+                  <>
+                    <Printer size={16} /> Print Results
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden Bulk Print Component */}
+      <BulkStudentResults
+        ref={bulkPrintRef}
+        studentsData={bulkPrintData}
+        selectedPub={publishedTerms.find(p => p.id === selectedPrintTermId)}
+        formTeacherName={classStats.find(c => c.id === selectedClass)?.formTeacherName || 'CLASS TEACHER'}
       />
     </div>
   );

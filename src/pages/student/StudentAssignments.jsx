@@ -11,6 +11,7 @@ const StudentAssignments = () => {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [viewingAttachment, setViewingAttachment] = useState(null);
 
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -158,15 +159,68 @@ const StudentAssignments = () => {
             </div>
 
             {selectedTask.attachmentUrl && (
-              <a 
-                href={selectedTask.attachmentUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-3.5 bg-indigo-600 text-white font-black text-sm rounded-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-100"
-              >
-                <Download size={16} /> Download Worksheet / Attachment
-              </a>
+              <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                <button
+                  onClick={() => setViewingAttachment(selectedTask.attachmentUrl)}
+                  className="w-full py-3.5 bg-slate-900 text-white font-black text-sm rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <Eye size={16} /> Open & Read Material
+                </button>
+                <a 
+                  href={selectedTask.attachmentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3.5 bg-indigo-600 text-white font-black text-sm rounded-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-100"
+                >
+                  <Download size={16} /> Download
+                </a>
+              </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* PDF/Attachment Viewer Modal */}
+      {viewingAttachment && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-2 sm:p-6 bg-slate-900/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-white w-full h-full max-w-6xl rounded-3xl shadow-2xl flex flex-col overflow-hidden relative">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50 shrink-0">
+              <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
+                <FileText className="text-indigo-600" /> Document Viewer
+              </h3>
+              <div className="flex items-center gap-3">
+                <a 
+                  href={viewingAttachment}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 text-slate-500 hover:text-indigo-600 transition-colors bg-white rounded-lg shadow-sm border border-slate-200"
+                  title="Download File"
+                >
+                  <Download size={18} />
+                </a>
+                <button 
+                  onClick={() => setViewingAttachment(null)}
+                  className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors rounded-lg bg-white shadow-sm border border-slate-200"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 w-full bg-slate-200 relative">
+              {viewingAttachment.toLowerCase().includes('.pdf') ? (
+                <iframe 
+                  src={viewingAttachment} 
+                  className="w-full h-full border-none"
+                  title="PDF Viewer"
+                />
+              ) : (
+                <iframe 
+                  src={`https://docs.google.com/viewer?url=${encodeURIComponent(viewingAttachment)}&embedded=true`}
+                  className="w-full h-full border-none"
+                  title="Document Viewer"
+                />
+              )}
+            </div>
           </div>
         </div>
       )}
