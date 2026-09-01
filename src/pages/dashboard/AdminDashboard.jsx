@@ -15,13 +15,14 @@ import NoteManager from '../../components/NoteManager';
 import StaffDashboard from './StaffDashboard';
 import StudentDashboard from './StudentDashboard';
 import NotificationCenter from './NotificationCenter';
+import AdminBulkPrint from '../../components/AdminBulkPrint';
 import { expandStudent } from '../../utils/firestoreSchema';
 import { 
   Users, User, UserPlus, GraduationCap, Briefcase, DollarSign, Calendar, TrendingUp, Eye, ArrowLeft, 
   BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, 
   CheckCircle, CheckCircle2, XCircle, Loader2, Search, RefreshCw, BarChart3, FileText, BookMarked, Globe, 
   Mail, Inbox, CreditCard, FileSpreadsheet, FolderOpen, UserCheck, School, ClipboardList, Library, Send, Award,
-  X, Clock, Wallet
+  X, Clock, Wallet, Printer
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useGlobalClasses, normalizeClassName } from '../../utils/classUtils';
@@ -1397,6 +1398,16 @@ const AdminDashboard = () => {
             >
               <BookOpen size={15} /> Learning Materials & Notes
             </button>
+            <button
+              onClick={() => setAcademicSubTab('bulk-printing')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs transition-all ${
+                academicSubTab === 'bulk-printing'
+                  ? 'bg-white text-indigo-600 shadow-md scale-[1.02]'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              }`}
+            >
+              <Printer size={15} /> Bulk Printing
+            </button>
           </div>
 
           {academicSubTab === 'marksheet' && (
@@ -1422,6 +1433,12 @@ const AdminDashboard = () => {
           {academicSubTab === 'materials' && (
             <div className="animate-in fade-in duration-300">
               <NoteManager />
+            </div>
+          )}
+
+          {academicSubTab === 'bulk-printing' && (
+            <div className="animate-in fade-in duration-300">
+              <AdminBulkPrint />
             </div>
           )}
         </div>
