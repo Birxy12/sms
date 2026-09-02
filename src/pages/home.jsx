@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Star, LogIn, Users, Trophy, GraduationCap, Shield, BookOpen, Award, MapPin, Phone, Mail, ChevronRight, Quote, Sparkles, Search, CheckCircle, X } from 'lucide-react';
+import { ArrowRight, Star, LogIn, Users, Trophy, GraduationCap, Shield, BookOpen, Award, MapPin, Phone, Mail, ChevronRight, Quote, Sparkles, Search, CheckCircle, X, Lightbulb, Target, Lock, TrendingUp } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { db } from '../lib/firebase';
 import { doc, getDoc, collection, addDoc, query, where, getDocs, orderBy } from 'firebase/firestore';
@@ -100,10 +100,10 @@ const Home = () => {
   const stats = landingContent.stats;
 
   const features = [
-    { icon: <BookOpen size={24} />, title: "Smart Learning", desc: "Modern and personalized education system that adapts to each student's unique learning style and pace.", backDesc: "Explore interactive modules, AI-assisted study plans, and continuous real-time assessments tailored just for you.", color: "blue" },
-    { icon: <Users size={24} />, title: "Expert Teachers", desc: "Highly qualified and experienced educators dedicated to mentoring the next generation of leaders.", backDesc: "Our faculty comprises industry veterans and certified pedagogues who foster critical thinking and creativity.", color: "emerald" },
-    { icon: <Shield size={24} />, title: "Safe Environment", desc: "Secure and student-friendly campus with state-of-the-art facilities and 24/7 security monitoring.", backDesc: "Equipped with CCTV, strict access controls, and emergency response teams to ensure your child's complete safety.", color: "amber" },
-    { icon: <Award size={24} />, title: "Proven Excellence", desc: "Consistently ranked among top institutions with award-winning programs and outstanding results.", backDesc: "Over 95% of our graduates gain admission to top-tier universities globally with scholarship opportunities.", color: "indigo" }
+    { icon: <BookOpen size={24} />, backIcon: <Lightbulb size={28} />, title: "Smart Learning", desc: "Modern and personalized education system that adapts to each student's unique learning style and pace.", backDesc: "Explore interactive modules, AI-assisted study plans, and continuous real-time assessments tailored just for you.", color: "blue" },
+    { icon: <Users size={24} />, backIcon: <Target size={28} />, title: "Expert Teachers", desc: "Highly qualified and experienced educators dedicated to mentoring the next generation of leaders.", backDesc: "Our faculty comprises industry veterans and certified pedagogues who foster critical thinking and creativity.", color: "emerald" },
+    { icon: <Shield size={24} />, backIcon: <Lock size={28} />, title: "Safe Environment", desc: "Secure and student-friendly campus with state-of-the-art facilities and 24/7 security monitoring.", backDesc: "Equipped with CCTV, strict access controls, and emergency response teams to ensure your child's complete safety.", color: "amber" },
+    { icon: <Award size={24} />, backIcon: <TrendingUp size={28} />, title: "Proven Excellence", desc: "Consistently ranked among top institutions with award-winning programs and outstanding results.", backDesc: "Over 95% of our graduates gain admission to top-tier universities globally with scholarship opportunities.", color: "indigo" }
   ];
 
   const [flippedCardIndex, setFlippedCardIndex] = useState(null);
@@ -429,8 +429,8 @@ const Home = () => {
                   </div>
                   {/* BACK */}
                   <div className={`flip-card-back bg-back-${f.color}`}>
-                    <div className={`home-feature-icon ${f.color}`} style={{ marginBottom: '1rem' }}>
-                      {f.icon}
+                    <div className={`home-feature-icon ${f.color}`} style={{ marginBottom: '1rem', background: 'transparent' }}>
+                      {f.backIcon}
                     </div>
                     <h3 className="home-feature-title" style={{ color: 'white', marginBottom: '1rem' }}>{f.title}</h3>
                     <p className="home-feature-desc" style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '1.5rem' }}>
