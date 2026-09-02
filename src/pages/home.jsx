@@ -410,7 +410,6 @@ const Home = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
                 className="home-feature-card"
-                onClick={() => setFlippedCardIndex(flippedCardIndex === i ? null : i)}
               >
                 <div className={`flip-card-inner ${flippedCardIndex === i ? 'flipped' : ''}`}>
                   {/* FRONT */}
@@ -437,7 +436,7 @@ const Home = () => {
                     <p className="home-feature-desc" style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '1.5rem' }}>
                       {f.backDesc}
                     </p>
-                    <div className="home-feature-link" style={{ color: 'white', justifyContent: 'center' }}>
+                    <div className="home-feature-link" style={{ color: 'white', justifyContent: 'center', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setFlippedCardIndex(null); }}>
                       <ChevronRight size={14} style={{ transform: 'rotate(180deg)' }}/>
                       Back
                     </div>
