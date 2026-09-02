@@ -100,11 +100,13 @@ const Home = () => {
   const stats = landingContent.stats;
 
   const features = [
-    { icon: <BookOpen size={24} />, title: "Smart Learning", desc: "Modern and personalized education system that adapts to each student's unique learning style and pace.", color: "blue" },
-    { icon: <Users size={24} />, title: "Expert Teachers", desc: "Highly qualified and experienced educators dedicated to mentoring the next generation of leaders.", color: "emerald" },
-    { icon: <Shield size={24} />, title: "Safe Environment", desc: "Secure and student-friendly campus with state-of-the-art facilities and 24/7 security monitoring.", color: "amber" },
-    { icon: <Award size={24} />, title: "Proven Excellence", desc: "Consistently ranked among top institutions with award-winning programs and outstanding results.", color: "indigo" }
+    { icon: <BookOpen size={24} />, title: "Smart Learning", desc: "Modern and personalized education system that adapts to each student's unique learning style and pace.", backDesc: "Explore interactive modules, AI-assisted study plans, and continuous real-time assessments tailored just for you.", color: "blue" },
+    { icon: <Users size={24} />, title: "Expert Teachers", desc: "Highly qualified and experienced educators dedicated to mentoring the next generation of leaders.", backDesc: "Our faculty comprises industry veterans and certified pedagogues who foster critical thinking and creativity.", color: "emerald" },
+    { icon: <Shield size={24} />, title: "Safe Environment", desc: "Secure and student-friendly campus with state-of-the-art facilities and 24/7 security monitoring.", backDesc: "Equipped with CCTV, strict access controls, and emergency response teams to ensure your child's complete safety.", color: "amber" },
+    { icon: <Award size={24} />, title: "Proven Excellence", desc: "Consistently ranked among top institutions with award-winning programs and outstanding results.", backDesc: "Over 95% of our graduates gain admission to top-tier universities globally with scholarship opportunities.", color: "indigo" }
   ];
+
+  const [flippedCardIndex, setFlippedCardIndex] = useState(null);
 
   const [testimonials, setTestimonials] = useState([
     { name: "Blessing Okon", role: "Alumna, Class of 2023", content: "The discipline and academic rigor here shaped me into who I am today. I am forever grateful." },
@@ -407,19 +409,38 @@ const Home = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
-                whileHover={{ y: -8 }}
                 className="home-feature-card"
+                onClick={() => setFlippedCardIndex(flippedCardIndex === i ? null : i)}
               >
-                <div className="home-feature-card-accent"></div>
-                <div className="home-feature-card-body">
-                  <div className={`home-feature-icon ${f.color}`}>
-                    {f.icon}
+                <div className={`flip-card-inner ${flippedCardIndex === i ? 'flipped' : ''}`}>
+                  {/* FRONT */}
+                  <div className={`flip-card-front bg-front-${f.color}`}>
+                    <div className="home-feature-card-accent"></div>
+                    <div className="home-feature-card-body">
+                      <div className={`home-feature-icon ${f.color}`}>
+                        {f.icon}
+                      </div>
+                      <h3 className="home-feature-title">{f.title}</h3>
+                      <p className="home-feature-desc">{f.desc}</p>
+                      <div className="home-feature-link" onClick={(e) => { e.stopPropagation(); setFlippedCardIndex(i); }}>
+                        Learn More
+                        <ChevronRight size={14} />
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="home-feature-title">{f.title}</h3>
-                  <p className="home-feature-desc">{f.desc}</p>
-                  <div className="home-feature-link">
-                    Learn More
-                    <ChevronRight size={14} />
+                  {/* BACK */}
+                  <div className={`flip-card-back bg-back-${f.color}`}>
+                    <div className={`home-feature-icon ${f.color}`} style={{ marginBottom: '1rem' }}>
+                      {f.icon}
+                    </div>
+                    <h3 className="home-feature-title" style={{ color: 'white', marginBottom: '1rem' }}>{f.title}</h3>
+                    <p className="home-feature-desc" style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '1.5rem' }}>
+                      {f.backDesc}
+                    </p>
+                    <div className="home-feature-link" style={{ color: 'white', justifyContent: 'center' }}>
+                      <ChevronRight size={14} style={{ transform: 'rotate(180deg)' }}/>
+                      Back
+                    </div>
                   </div>
                 </div>
               </motion.div>
