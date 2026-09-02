@@ -362,10 +362,7 @@ const Home = () => {
               whileHover={{ y: -8 }}
               className="home-stat-card"
             >
-              <div className="home-stat-watermark">
-                {s.icon}
-              </div>
-              <div className="home-stat-card-header" style={{ display: 'flex', alignItems: 'flex-start', gap: '1.25rem', position: 'relative', zIndex: 1 }}>
+              <div className="home-stat-card-header" style={{ display: 'flex', alignItems: 'flex-start', gap: '1.25rem' }}>
                 <div className={`home-stat-icon ${s.accent}`}>
                   {s.icon}
                 </div>
@@ -376,7 +373,7 @@ const Home = () => {
                   <p className="home-stat-label">{s.label}</p>
                 </div>
               </div>
-              <div className="home-stat-desc" style={{ position: 'relative', zIndex: 1 }}>
+              <div className="home-stat-desc">
                 {i === 0 && "A diverse community of learners from various backgrounds and cultures."}
                 {i === 1 && "Outstanding academic performance across all examination boards."}
                 {i === 2 && "Recognition for excellence in academics, sports, and innovation."}
