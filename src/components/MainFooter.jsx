@@ -436,6 +436,7 @@ const MainFooter = () => {
             <img 
               src={sealLogo} 
               alt="GlobixTech CEO Seal" 
+              className="seal-img"
               style={{ 
                 width: '120px', 
                 height: 'auto', 
