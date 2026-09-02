@@ -47,7 +47,7 @@ const Home = () => {
     heroSubtext: 'We nurture excellence, discipline, and innovation—raising a generation of leaders prepared for the future.',
     stats: [
       { label: 'Students', value: 500, suffix: '+', icon: <Users size={20} />, color: "bg-orange-50 text-orange-600", accent: "bg-orange-600" },
-      { label: 'Success Rate', value: 98, suffix: '%', icon: <TrendingUp size={20} />, color: "bg-emerald-50 text-emerald-600", accent: "bg-emerald-600" },
+      { label: 'Success Rate', value: 98, suffix: '%', icon: <TrendingUp size={20} />, color: "bg-green-50 text-green-600", accent: "bg-green-600" },
       { label: 'Awards', value: 150, suffix: '+', icon: <Award size={20} />, color: "bg-indigo-50 text-indigo-600", accent: "bg-indigo-600" }
     ]
   });
@@ -62,7 +62,7 @@ const Home = () => {
             const icons = [<Users size={20} />, <TrendingUp size={20} />, <Award size={20} />];
             const colors = [
               { color: "bg-orange-50 text-orange-600", accent: "bg-orange-600" },
-              { color: "bg-emerald-50 text-emerald-600", accent: "bg-emerald-600" },
+              { color: "bg-green-50 text-green-600", accent: "bg-green-600" },
               { color: "bg-indigo-50 text-indigo-600", accent: "bg-indigo-600" }
             ];
             setLandingContent(prev => {
