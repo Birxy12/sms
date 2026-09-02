@@ -373,7 +373,7 @@ const Home = () => {
                   </p>
                   <div className="home-stat-label" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.25rem' }}>
                     {i === 0 && <Globe size={16} style={{ color: 'var(--color-slate-400)' }} />}
-                    {i === 1 && <TrendingUp size={16} style={{ color: 'var(--color-emerald-500)' }} />}
+                    {i === 1 && <TrendingUp size={16} style={{ color: 'green' }} />}
                     {i === 2 && <Sparkles size={16} style={{ color: 'var(--color-indigo-500)' }} />}
                     {s.label}
                   </div>
