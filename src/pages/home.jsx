@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Star, LogIn, Users, Trophy, GraduationCap, Shield, BookOpen, Award, MapPin, Phone, Mail, ChevronRight, Quote, Sparkles, Search, CheckCircle, X, Lightbulb, Target, Lock, TrendingUp } from 'lucide-react';
+import { ArrowRight, Star, LogIn, Users, Trophy, GraduationCap, Shield, BookOpen, Award, MapPin, Phone, Mail, ChevronRight, Quote, Sparkles, Search, CheckCircle, X, Lightbulb, Target, Lock, TrendingUp, Globe } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { db } from '../lib/firebase';
 import { doc, getDoc, collection, addDoc, query, where, getDocs, orderBy } from 'firebase/firestore';
@@ -373,10 +373,10 @@ const Home = () => {
                   <p className="home-stat-label">{s.label}</p>
                 </div>
               </div>
-              <div className="home-stat-desc">
-                {i === 0 && "A diverse community of learners from various backgrounds and cultures."}
-                {i === 1 && "Outstanding academic performance across all examination boards."}
-                {i === 2 && "Recognition for excellence in academics, sports, and innovation."}
+              <div className="home-stat-desc" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginTop: '1rem' }}>
+                {i === 0 && <><Globe size={16} style={{ flexShrink: 0, marginTop: '3px', color: 'var(--color-orange-500)' }} /> <span>A diverse community of learners from various backgrounds and cultures.</span></>}
+                {i === 1 && <><CheckCircle size={16} style={{ flexShrink: 0, marginTop: '3px', color: 'var(--color-emerald-500)' }} /> <span>Outstanding academic performance across all examination boards.</span></>}
+                {i === 2 && <><Sparkles size={16} style={{ flexShrink: 0, marginTop: '3px', color: 'var(--color-indigo-500)' }} /> <span>Recognition for excellence in academics, sports, and innovation.</span></>}
               </div>
             </motion.div>
           ))}
