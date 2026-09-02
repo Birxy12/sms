@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Star, LogIn, Users, Trophy, GraduationCap, Shield, BookOpen, Award, MapPin, Phone, Mail, ChevronRight, Quote, Sparkles, Search, CheckCircle, X, Lightbulb, Target, Lock, TrendingUp, Globe } from 'lucide-react';
+import { ArrowRight, Star, LogIn, Users, Trophy, GraduationCap, Shield, BookOpen, Award, MapPin, Phone, Mail, ChevronRight, Quote, Sparkles, Search, CheckCircle, X, Lightbulb, Target, Lock, TrendingUp } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { db } from '../lib/firebase';
-import { doc, getDoc, collection, addDoc, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, query, getDocs } from 'firebase/firestore';
 
 import Navbar from '../components/Navbar';
 import Footer from '../components/MainFooter';
@@ -46,8 +47,8 @@ const Home = () => {
     heroSubtext: 'We nurture excellence, discipline, and innovation—raising a generation of leaders prepared for the future.',
     stats: [
       { label: 'Students', value: 500, suffix: '+', icon: <Users size={20} />, color: "bg-orange-50 text-orange-600", accent: "bg-orange-600" },
-      { label: 'Success Rate', value: 98, suffix: '%', icon: <GraduationCap size={20} />, color: "bg-emerald-50 text-emerald-600", accent: "bg-emerald-600" },
-      { label: 'Awards', value: 150, suffix: '+', icon: <Trophy size={20} />, color: "bg-indigo-50 text-indigo-600", accent: "bg-indigo-600" }
+      { label: 'Success Rate', value: 98, suffix: '%', icon: <TrendingUp size={20} />, color: "bg-emerald-50 text-emerald-600", accent: "bg-emerald-600" },
+      { label: 'Awards', value: 150, suffix: '+', icon: <Award size={20} />, color: "bg-indigo-50 text-indigo-600", accent: "bg-indigo-600" }
     ]
   });
 
@@ -58,7 +59,7 @@ const Home = () => {
         if (docSnap.exists()) {
           const data = docSnap.data().landingPage;
           if (data) {
-            const icons = [<Users size={20} />, <GraduationCap size={20} />, <Trophy size={20} />];
+            const icons = [<Users size={20} />, <TrendingUp size={20} />, <Award size={20} />];
             const colors = [
               { color: "bg-orange-50 text-orange-600", accent: "bg-orange-600" },
               { color: "bg-emerald-50 text-emerald-600", accent: "bg-emerald-600" },
@@ -370,12 +371,7 @@ const Home = () => {
                   <p className="home-stat-value">
                     <AnimatedCounter end={s.value} suffix={s.suffix} />
                   </p>
-                  <div className="home-stat-label" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.25rem' }}>
-                    {i === 0 && <Globe size={16} style={{ color: 'var(--color-slate-400)' }} />}
-                    {i === 1 && <TrendingUp size={16} style={{ color: 'var(--color-emerald-500)' }} />}
-                    {i === 2 && <Sparkles size={16} style={{ color: 'var(--color-indigo-500)' }} />}
-                    {s.label}
-                  </div>
+                  <p className="home-stat-label">{s.label}</p>
                 </div>
               </div>
               <div className="home-stat-desc">
