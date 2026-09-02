@@ -48,7 +48,7 @@ const Home = () => {
     stats: [
       { label: 'Students', value: 500, suffix: '+', icon: <Users size={20} />, color: "bg-orange-50 text-orange-600", accent: "bg-orange-600" },
       { label: 'Success Rate', value: 98, suffix: '%', icon: <TrendingUp size={20} />, color: "bg-green-50 text-green-600", accent: "bg-green-600" },
-      { label: 'Awards', value: 150, suffix: '+', icon: <Award size={20} />, color: "bg-indigo-50 text-indigo-600", accent: "bg-indigo-600" }
+      { label: 'Awards', value: 150, suffix: '+', icon: <Award size={20} />, color: "bg-yellow-50 text-yellow-600", accent: "bg-yellow-500" }
     ]
   });
 
@@ -63,7 +63,7 @@ const Home = () => {
             const colors = [
               { color: "bg-orange-50 text-orange-600", accent: "bg-orange-600" },
               { color: "bg-green-50 text-green-600", accent: "bg-green-600" },
-              { color: "bg-indigo-50 text-indigo-600", accent: "bg-indigo-600" }
+              { color: "bg-yellow-50 text-yellow-600", accent: "bg-yellow-500" }
             ];
             setLandingContent(prev => {
               const safeStats = Array.isArray(data.stats) ? data.stats : (prev.stats || []);
@@ -374,7 +374,7 @@ const Home = () => {
                   <div className="home-stat-label" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.25rem' }}>
                     {i === 0 && <Globe size={16} style={{ color: 'var(--color-slate-400)' }} />}
                     {i === 1 && <TrendingUp size={16} style={{ color: 'green' }} />}
-                    {i === 2 && <Sparkles size={16} style={{ color: 'var(--color-indigo-500)' }} />}
+                    {i === 2 && <Sparkles size={16} style={{ color: 'gold' }} />}
                     {s.label}
                   </div>
                 </div>
