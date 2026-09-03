@@ -195,6 +195,12 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated();
     }
 
+    // ========== STORE ==========
+    match /store_sales/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
     // ========== ATTENDANCE ==========
     match /attendance/{id} {
       allow read: if true;
