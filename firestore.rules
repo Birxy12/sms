@@ -44,6 +44,11 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    match /bursar_expenses/{id} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
     // ========== STUDENTS ==========
     match /students/{id} {
       allow read: if true;
