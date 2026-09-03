@@ -33,6 +33,13 @@ const DEFAULT_INVENTORY = {
 
 const ITEM_CATEGORIES = Object.keys(DEFAULT_INVENTORY);
 
+const HOUSES = [
+  'Cherry House (Red)',
+  'Alamanda House (Yellow)',
+  'Blue Bell House (Blue)',
+  'Rose House (Orange)'
+];
+
 const StoreView = ({ allStudents = [] }) => {
   const [activeTab, setActiveTab] = useState('sell'); // 'sell', 'inventory', 'history'
   const [inventory, setInventory] = useState({});
@@ -41,6 +48,7 @@ const StoreView = ({ allStudents = [] }) => {
 
   // New Sale State
   const [selectedCategory, setSelectedCategory] = useState(ITEM_CATEGORIES[0]);
+  const [selectedHouse, setSelectedHouse] = useState('');
   const [itemName, setItemName] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState('');
@@ -118,9 +126,14 @@ const StoreView = ({ allStudents = [] }) => {
         finalRegNo = selectedStudent.regNo || selectedStudent.REGNO;
       }
 
+      let finalItemName = itemName;
+      if (selectedCategory === 'Sports Wear' && selectedHouse) {
+        finalItemName = `${itemName} - ${selectedHouse}`;
+      }
+
       await addDoc(collection(db, 'store_sales'), {
         category: selectedCategory,
-        itemName,
+        itemName: finalItemName,
         quantity: Number(quantity),
         unitPrice: Number(unitPrice),
         totalAmount,
@@ -140,6 +153,7 @@ const StoreView = ({ allStudents = [] }) => {
       setStudentRef('');
       setSelectedStudent(null);
       setSearchTerm('');
+      setSelectedHouse('');
       
       fetchStoreData(); // Refresh history
     } catch (err) {
@@ -217,15 +231,35 @@ const StoreView = ({ allStudents = [] }) => {
           )}
 
           <form onSubmit={handleRecordSale} className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Category</label>
-              <select 
-                value={selectedCategory} 
-                onChange={e => setSelectedCategory(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700"
-              >
-                {ITEM_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Category</label>
+                <select 
+                  value={selectedCategory} 
+                  onChange={e => {
+                    setSelectedCategory(e.target.value);
+                    if (e.target.value !== 'Sports Wear') setSelectedHouse('');
+                  }}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700"
+                >
+                  {ITEM_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              {selectedCategory === 'Sports Wear' && (
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Student House</label>
+                  <select 
+                    value={selectedHouse} 
+                    onChange={e => setSelectedHouse(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700"
+                    required
+                  >
+                    <option value="" disabled>Select House</option>
+                    {HOUSES.map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
