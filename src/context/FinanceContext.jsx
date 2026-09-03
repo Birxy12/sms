@@ -70,6 +70,12 @@ export const FinanceProvider = ({ children }) => {
         const rawData = docSnap.data();
         const data = expandStudent(rawData) || {};
         const merged = { id: docSnap.id, ...rawData, ...data };
+        
+        // Exclude test students from financial calculations
+        const studentName = String(merged.name || merged.studentName || merged.firstName || '').toLowerCase();
+        if (studentName.includes('test')) {
+          return; // Skip this student
+        }
 
         const cls = normalizeClassName(merged.className || 'Unassigned');
         if (!classMap[cls]) {
@@ -87,10 +93,15 @@ export const FinanceProvider = ({ children }) => {
 
         const fallbackFee = getExpectedFeeForStudent(merged, undefined, currentFeeSettings);
         
-        const expectedStr = String(merged.expectedFee || fallbackFee || '0').replace(/,/g, '');
+        // Use custom expectedFee if set and > 0, otherwise fallback to class default
+        const expectedVal = (merged.expectedFee && Number(merged.expectedFee) > 0) ? merged.expectedFee : fallbackFee;
+        const expectedStr = String(expectedVal || '0').replace(/,/g, '');
         const expected = parseFloat(expectedStr) || 0;
         
-        const paidStr = String(merged.paidFee || merged.paidAmount || '0').replace(/,/g, '');
+        const explicitPaid = (merged.paidFee !== undefined && merged.paidFee !== null && merged.paidFee !== '')
+          ? merged.paidFee
+          : (merged.paidAmount !== undefined && merged.paidAmount !== null && merged.paidAmount !== '' ? merged.paidAmount : '0');
+        const paidStr = String(explicitPaid).replace(/,/g, '');
         const paid = parseFloat(paidStr) || 0;
         
         const balance = Math.max(0, expected - paid);
