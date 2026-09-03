@@ -107,7 +107,7 @@ export default function AnalyticsReportModal({
         return {
           title: 'TREASURY LEDGER, FEE REVENUE & EXPENSE AUDIT REPORT',
           subtitle: 'Fiscal Health, Collections Velocity, Debtor Schedule & Payroll Outlay',
-          executiveSummary: `The Bursary Directorate reports total school fee collections of ${data.kpis?.[0]?.value || '₦0'} against expected revenue, with an outstanding receivables balance of ${data.kpis?.[1]?.value || '₦0'}. Net operational liquidity after payroll expenses is certified at ${data.kpis?.[3]?.value || '₦0'}.`,
+          executiveSummary: `The Bursary Directorate reports total school fee collections of ${data.kpis?.[0]?.value || '₦0'} against expected revenue, with an outstanding receivables balance of ${data.kpis?.[1]?.value || '₦0'}. Net operational liquidity after total expenses is certified at ${data.kpis?.[3]?.value || '₦0'}.`,
           keyInsights: [
             {
               title: 'Revenue Collection Performance',
@@ -118,8 +118,8 @@ export default function AnalyticsReportModal({
               desc: `${data.pendingPayments?.length || 0} student accounts currently carry pending fee balances requiring active administrative recovery.`
             },
             {
-              title: 'Disbursements & Payroll Outlay',
-              desc: `Total staff salary disbursements of ${data.kpis?.[2]?.value || '₦0'} have been settled on schedule with zero pending payroll disputes.`
+              title: 'Disbursements & Operational Outlay',
+              desc: `Total expenses (including salaries and operations) amount to ${data.kpis?.[2]?.value || '₦0'}, securely tracked via the dashboard.`
             }
           ],
           recommendations: [

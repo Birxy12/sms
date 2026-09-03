@@ -912,8 +912,8 @@ export default function SchoolManagementDashboard({ userRole = 'student', showRo
       kpis: [
         { title: 'Total Collected', value: `₦${financeData.totalCollected.toLocaleString()}`, change: `${financeData.collectionRate}%`, isPositive: true, icon: Wallet, subText: 'Net Collections' },
         { title: 'Outstanding Fees', value: `₦${financeData.totalOutstanding.toLocaleString()}`, change: `${financeData.owingCount} Debtors`, isPositive: false, icon: AlertCircle, subText: 'Unpaid Invoices' },
-        { title: 'Payroll Disbursed', value: `₦${totalSalaries.toLocaleString()}`, change: `${staffPayments.length} Payments`, isPositive: false, icon: Receipt, subText: 'Staff Expenses' },
-        { title: 'Net Balance', value: `₦${Math.max(0, financeData.totalCollected - totalSalaries).toLocaleString()}`, change: '+Surplus', isPositive: true, icon: DollarSign, subText: 'Treasury Reserves' },
+        { title: 'Total Expenses', value: `₦${((financeData.totalExpenses || 0) + totalSalaries).toLocaleString()}`, change: 'Operations & Payroll', isPositive: false, icon: Receipt, subText: 'Total Outflow' },
+        { title: 'Net Balance', value: `₦${Math.max(0, financeData.totalCollected - ((financeData.totalExpenses || 0) + totalSalaries)).toLocaleString()}`, change: '+Surplus', isPositive: true, icon: DollarSign, subText: 'Treasury Reserves' },
       ],
       monthlyRevenue: monthlyRev,
       feeBreakdown: [

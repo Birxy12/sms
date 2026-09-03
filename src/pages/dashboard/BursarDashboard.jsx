@@ -26,6 +26,7 @@ import {
 } from '../../utils/prospectusFees';
 import SchoolManagementDashboard from '../../components/SchoolManagementDashboard';
 import Papa from 'papaparse';
+import ExpensesView from './ExpensesView';
 import { useFinance } from '../../context/FinanceContext';
 
 const ADMIN_WHATSAPP_PHONE = '2349066202949';
@@ -516,14 +517,17 @@ const BursarDashboard = () => {
   };
 
   const statCards = [
-    { label: 'Total Expected (₦)', value: stats.totalExpected, icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { label: 'Total Collected (₦)', value: stats.totalCollected, icon: Wallet, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Outstanding (₦)', value: stats.totalOutstanding, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Total Students', value: stats.totalStudents, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-  ];
+      { label: 'Total Expected', value: stats.totalExpected, icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+      { label: 'Total Collected', value: stats.totalCollected, icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+      { label: 'Total Expenses', value: stats.totalExpenses || 0, icon: Banknote, color: 'text-rose-600', bg: 'bg-rose-50' },
+      { label: 'Net Balance', value: stats.netBalance || 0, icon: Wallet, color: 'text-teal-600', bg: 'bg-teal-50' },
+      { label: 'Total Debt', value: stats.totalOutstanding, icon: TrendingDown, color: 'text-orange-600', bg: 'bg-orange-50' },
+      { label: 'Total Students', value: stats.totalStudents, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+    ];
 
   const sidebarTabs = [
     { id: 'overview', label: 'Overview', icon: TrendingUp, color: 'indigo' },
+    { id: 'expenses', label: 'Expenses', icon: Wallet, color: 'rose' },
     { id: 'feesetting', label: 'Fee Setting', icon: Settings, color: 'blue' },
     { id: 'cashpay', label: 'Cash Payment', icon: Banknote, color: 'green' },
     { id: 'bulkpay', label: 'Bulk Upload', icon: Download, color: 'blue' },
@@ -2493,7 +2497,7 @@ const BursarDashboard = () => {
           {activeView === 'overview' && (
             <div className="space-y-8">
               {/* Stats Grid with Analytics */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
                 {statCards.map((stat, idx) => (
                   <div key={idx} className={`p-6 rounded-3xl border border-slate-100 bg-white shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group overflow-hidden relative`}>
                     <div className="flex justify-between items-start mb-4 relative z-10">
@@ -2503,7 +2507,7 @@ const BursarDashboard = () => {
                     </div>
                     <div className="relative z-10">
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
-                      <h3 className="text-3xl font-black text-slate-900">{typeof stat.value === 'number' && idx !== 3 ? '₦' : ''}{stat.value.toLocaleString()}</h3>
+                      <h3 className="text-3xl font-black text-slate-900">{typeof stat.value === 'number' && idx !== 5 ? '₦' : ''}{stat.value.toLocaleString()}</h3>
                     </div>
                   </div>
                 ))}
@@ -2526,7 +2530,7 @@ const BursarDashboard = () => {
                     <div>
                       <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-2 text-slate-400">
                         <span>Collection Progress</span>
-                        <span>{stats.totalExpected > 0 ? Math.round((stats.totalCollected / stats.totalExpected) * 100) : 0}% Collected</span>
+                        <span>{stats.totalExpected > 0 ? Math.round((stats.totalCollected / stats.totalExpected) * 100) : 0}% (₦{stats.totalCollected.toLocaleString()} / ₦{stats.totalExpected.toLocaleString()})</span>
                       </div>
                       <div className="h-3 w-full bg-slate-700/50 rounded-full overflow-hidden border border-slate-600/50 p-0.5">
                         <div 
@@ -2621,6 +2625,7 @@ const BursarDashboard = () => {
             </div>
           )}
 
+          {activeView === 'expenses' && <ExpensesView />}
           {activeView === 'feesetting' && <FeeSettingView />}
           {activeView === 'receipts' && <PrintReceiptView />}
           {activeView === 'debtors' && <DebtorsView />}

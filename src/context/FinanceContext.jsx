@@ -23,16 +23,22 @@ export const FinanceProvider = ({ children }) => {
     collectionRate: 0,
     classBreakdown: [],
     debtorsList: [],
-    recentPayments: []
+    recentPayments: [],
+    totalExpenses: 0,
+    netBalance: 0,
+    allExpenses: []
   });
 
   useEffect(() => {
     let unsubscribeStudents = null;
     let unsubscribeFees = null;
+    let unsubscribeExpenses = null;
     let currentFeeSettings = {};
+    let currentStudentsDocs = [];
+    let currentExpensesDocs = [];
     let isMounted = true;
 
-    const processFinance = (studentsDocs) => {
+    const processFinance = (studentsDocs, expensesDocs) => {
       let totalExpected = 0;
       let totalCollected = 0;
       let totalDebt = 0;
@@ -41,6 +47,24 @@ export const FinanceProvider = ({ children }) => {
       const classMap = {};
       const debtorsList = [];
       const recentPayments = [];
+      
+      let totalExpenses = 0;
+      const allExpenses = [];
+
+      (expensesDocs || []).forEach(docSnap => {
+        const data = docSnap.data();
+        const amountStr = String(data.amount || '0').replace(/,/g, '');
+        const amount = parseFloat(amountStr) || 0;
+        totalExpenses += amount;
+        allExpenses.push({ id: docSnap.id, ...data });
+      });
+
+      // sort expenses by date (newest first)
+      allExpenses.sort((a, b) => {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA;
+      });
 
       studentsDocs.forEach(docSnap => {
         const rawData = docSnap.data();
@@ -62,8 +86,13 @@ export const FinanceProvider = ({ children }) => {
         classMap[cls].studentCount++;
 
         const fallbackFee = getExpectedFeeForStudent(merged, undefined, currentFeeSettings);
-        const expected = parseFloat(merged.expectedFee) || parseFloat(fallbackFee) || 0;
-        const paid = parseFloat(merged.paidFee) || parseFloat(merged.paidAmount) || 0;
+        
+        const expectedStr = String(merged.expectedFee || fallbackFee || '0').replace(/,/g, '');
+        const expected = parseFloat(expectedStr) || 0;
+        
+        const paidStr = String(merged.paidFee || merged.paidAmount || '0').replace(/,/g, '');
+        const paid = parseFloat(paidStr) || 0;
+        
         const balance = Math.max(0, expected - paid);
 
         classMap[cls].expected += expected;
@@ -107,6 +136,7 @@ export const FinanceProvider = ({ children }) => {
       recentPayments.sort((a, b) => (b.lastPaymentDate || '').localeCompare(a.lastPaymentDate || ''));
 
       const collectionRate = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0;
+      const netBalance = totalCollected - totalExpenses;
 
       if (isMounted) {
         setFinanceData({
@@ -120,7 +150,10 @@ export const FinanceProvider = ({ children }) => {
           collectionRate,
           classBreakdown,
           debtorsList,
-          recentPayments
+          recentPayments,
+          totalExpenses,
+          netBalance,
+          allExpenses
         });
       }
     };
@@ -133,9 +166,20 @@ export const FinanceProvider = ({ children }) => {
       // Setup students listener only after getting fees (or if fees don't exist yet)
       if (!unsubscribeStudents) {
         unsubscribeStudents = onSnapshot(collection(db, 'students'), (snapshot) => {
-          processFinance(snapshot.docs);
+          currentStudentsDocs = snapshot.docs;
+          processFinance(currentStudentsDocs, currentExpensesDocs);
         }, (error) => {
           console.error("Finance Context students snapshot error:", error);
+        });
+      }
+      
+      // Setup expenses listener
+      if (!unsubscribeExpenses) {
+        unsubscribeExpenses = onSnapshot(collection(db, 'bursar_expenses'), (snapshot) => {
+          currentExpensesDocs = snapshot.docs;
+          processFinance(currentStudentsDocs, currentExpensesDocs);
+        }, (error) => {
+          console.error("Finance Context expenses snapshot error:", error);
         });
       }
     }, (error) => {
@@ -146,6 +190,7 @@ export const FinanceProvider = ({ children }) => {
       isMounted = false;
       if (unsubscribeStudents) unsubscribeStudents();
       if (unsubscribeFees) unsubscribeFees();
+      if (unsubscribeExpenses) unsubscribeExpenses();
     };
   }, []);
 
