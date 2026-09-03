@@ -7,7 +7,7 @@ import {
   Search, Download, Plus, ArrowUpRight, 
   CheckCircle, AlertCircle, Loader2, Briefcase, Settings, Printer, MessageSquare, AlertTriangle, FileText, UserPlus, Banknote,
   FileSpreadsheet, User, ShieldCheck, Key, Lock, Clock, History, CheckCheck, RefreshCw, X, ShieldAlert,
-  Sparkles, ListChecks, CheckCircle2, ChevronDown, ChevronUp, Layers, Check, HelpCircle, UserCheck
+  Sparkles, ListChecks, CheckCircle2, ChevronDown, ChevronUp, Layers, Check, HelpCircle, UserCheck, ShoppingBag, BarChart3
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
@@ -28,6 +28,8 @@ import SchoolManagementDashboard from '../../components/SchoolManagementDashboar
 import Papa from 'papaparse';
 import ExpensesView from './ExpensesView';
 import ClassManagement from './ClassManagement';
+import StoreView from './StoreView';
+import DailyIncomeView from './DailyIncomeView';
 import { useFinance } from '../../context/FinanceContext';
 
 const ADMIN_WHATSAPP_PHONE = '2349066202949';
@@ -535,6 +537,8 @@ const BursarDashboard = () => {
     { id: 'receipts', label: 'Print Receipt', icon: Printer, color: 'emerald' },
     { id: 'register', label: 'Register Student', icon: UserPlus, color: 'violet' },
     { id: 'messages', label: 'Message Hub', icon: MessageSquare, color: 'purple' },
+    { id: 'store', label: 'Store (Trading)', icon: ShoppingBag, color: 'emerald' },
+    { id: 'dailyincome', label: 'Daily Income', icon: BarChart3, color: 'indigo' },
     { id: 'debtors', label: 'Debtors', icon: AlertTriangle, color: 'rose' },
     { id: 'newintakes', label: 'New Intakes', icon: UserCheck, color: 'blue' },
     { id: 'classmanage', label: 'Manage Class', icon: Layers, color: 'blue' },
@@ -2743,6 +2747,8 @@ const BursarDashboard = () => {
           {activeView === 'receipts' && <PrintReceiptView />}
           {activeView === 'debtors' && <DebtorsView />}
           {activeView === 'newintakes' && <NewIntakesView />}
+          {activeView === 'store' && <StoreView />}
+          {activeView === 'dailyincome' && <DailyIncomeView />}
           {activeView === 'messages' && <MessageHubView />}
           {activeView === 'cashpay' && <CashPaymentView />}
           {activeView === 'register' && <RegisterStudentView />}
