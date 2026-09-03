@@ -6,7 +6,8 @@ import { formatNaira } from '../../utils/prospectusFees';
 
 const DailyIncomeView = () => {
   const [loading, setLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState('today'); // 'today', 'week', 'month'
+  const [dateFilter, setDateFilter] = useState('today'); // 'today', 'week', 'month', 'year', 'custom'
+  const [customDate, setCustomDate] = useState(new Date().toISOString().split('T')[0]);
   
   const [feesIncome, setFeesIncome] = useState(0);
   const [storeIncome, setStoreIncome] = useState(0);
@@ -15,13 +16,15 @@ const DailyIncomeView = () => {
 
   useEffect(() => {
     fetchIncomeData();
-  }, [dateFilter]);
+  }, [dateFilter, customDate]);
 
   const fetchIncomeData = async () => {
     setLoading(true);
     try {
       const now = new Date();
       let startDate = new Date();
+      let endDate = new Date();
+      let useEndDate = false;
       
       if (dateFilter === 'today') {
         startDate.setHours(0, 0, 0, 0);
@@ -31,16 +34,39 @@ const DailyIncomeView = () => {
       } else if (dateFilter === 'month') {
         startDate.setDate(1); // Start of month
         startDate.setHours(0, 0, 0, 0);
+      } else if (dateFilter === 'year') {
+        startDate.setMonth(0, 1);
+        startDate.setHours(0, 0, 0, 0);
+      } else if (dateFilter === 'custom') {
+        if (customDate) {
+          startDate = new Date(customDate);
+          startDate.setHours(0, 0, 0, 0);
+          endDate = new Date(customDate);
+          endDate.setHours(23, 59, 59, 999);
+          useEndDate = true;
+        } else {
+          startDate.setHours(0, 0, 0, 0);
+        }
       }
       
       const startTimestamp = Timestamp.fromDate(startDate);
+      const endTimestamp = Timestamp.fromDate(endDate);
 
       // Fetch Fee Payments
-      const feesQ = query(
+      let feesQ = query(
         collection(db, 'payment_messages'),
         where('createdAt', '>=', startTimestamp),
         orderBy('createdAt', 'desc')
       );
+      if (useEndDate) {
+        feesQ = query(
+          collection(db, 'payment_messages'),
+          where('createdAt', '>=', startTimestamp),
+          where('createdAt', '<=', endTimestamp),
+          orderBy('createdAt', 'desc')
+        );
+      }
+      
       const feesSnap = await getDocs(feesQ);
       let totalFees = 0;
       const fTxns = [];
@@ -51,11 +77,19 @@ const DailyIncomeView = () => {
       });
 
       // Fetch Store Sales (Trading Income)
-      const storeQ = query(
+      let storeQ = query(
         collection(db, 'store_sales'),
         where('createdAt', '>=', startTimestamp),
         orderBy('createdAt', 'desc')
       );
+      if (useEndDate) {
+        storeQ = query(
+          collection(db, 'store_sales'),
+          where('createdAt', '>=', startTimestamp),
+          where('createdAt', '<=', endTimestamp),
+          orderBy('createdAt', 'desc')
+        );
+      }
       const storeSnap = await getDocs(storeQ);
       let totalStore = 0;
       const sTxns = [];
@@ -88,7 +122,7 @@ const DailyIncomeView = () => {
           </h2>
           <p className="text-slate-500 mt-1 font-medium">Overview of school fees and trading income.</p>
         </div>
-        <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+        <div className="flex flex-wrap items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
           <button
             onClick={() => setDateFilter('today')}
             className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${dateFilter === 'today' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-200'}`}
@@ -107,6 +141,30 @@ const DailyIncomeView = () => {
           >
             This Month
           </button>
+          <button
+            onClick={() => setDateFilter('year')}
+            className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${dateFilter === 'year' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-200'}`}
+          >
+            This Year
+          </button>
+          <div className="flex items-center ml-2 border-l border-slate-200 pl-2">
+            <button
+              onClick={() => setDateFilter('custom')}
+              className={`px-3 py-2 text-sm font-bold rounded-lg transition-colors ${dateFilter === 'custom' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-200'}`}
+            >
+              Specific Date
+            </button>
+            {dateFilter === 'custom' && (
+              <input 
+                type="date" 
+                value={customDate} 
+                onChange={(e) => {
+                  setCustomDate(e.target.value);
+                }}
+                className="ml-2 px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-lg font-bold text-slate-700 outline-none focus:border-emerald-500"
+              />
+            )}
+          </div>
         </div>
       </div>
 
