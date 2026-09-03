@@ -4,15 +4,34 @@ import { collection, query, getDocs, addDoc, setDoc, doc, getDoc, serverTimestam
 import { ShoppingCart, Settings, Plus, Loader2, Search, CheckCircle, Tag } from 'lucide-react';
 import { formatNaira } from '../../utils/prospectusFees';
 
-// Default categories
-const ITEM_CATEGORIES = [
-  'Uniforms',
-  'P.E. Wear',
-  'Jackets',
-  'Sports Wear',
-  'Exercise Books',
-  'Textbooks'
-];
+const DEFAULT_INVENTORY = {
+  'Uniforms': {
+    'Nursery': 8000,
+    'Primary': 10000,
+    'Junior Secondary': 15000,
+    'Senior Secondary': 15000
+  },
+  'P.E. Wear': {
+    'Nursery': 7000,
+    'Primary': 7000,
+    'Junior Secondary': 10000,
+    'Senior Secondary': 10000
+  },
+  'Jackets': {
+    'Nursery': 3000,
+    'Primary': 3000
+  },
+  'Sports Wear': {
+    'Nursery': 6000,
+    'Primary': 6000,
+    'Junior Secondary': 7000,
+    'Senior Secondary': 7000
+  },
+  'Exercise Books': {},
+  'Textbooks': {}
+};
+
+const ITEM_CATEGORIES = Object.keys(DEFAULT_INVENTORY);
 
 const StoreView = () => {
   const [activeTab, setActiveTab] = useState('sell'); // 'sell', 'inventory', 'history'
@@ -53,10 +72,10 @@ const StoreView = () => {
     try {
       // 1. Fetch Inventory Pricing
       const invDoc = await getDoc(doc(db, 'settings', 'store_inventory'));
-      if (invDoc.exists()) {
+      if (invDoc.exists() && Object.keys(invDoc.data()).length > 0) {
         setInventory(invDoc.data());
       } else {
-        setInventory({});
+        setInventory(DEFAULT_INVENTORY);
       }
 
       // 2. Fetch Recent Sales

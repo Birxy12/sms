@@ -2742,7 +2742,7 @@ const BursarDashboard = () => {
           )}
 
           {activeView === 'expenses' && <ExpensesView />}
-          {activeView === 'classmanage' && <ClassManagement />}
+          {activeView === 'classmanage' && <ClassManagement isBursar={true} />}
           {activeView === 'feesetting' && <FeeSettingView />}
           {activeView === 'receipts' && <PrintReceiptView />}
           {activeView === 'debtors' && <DebtorsView />}

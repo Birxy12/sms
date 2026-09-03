@@ -16,7 +16,7 @@ import { expandStudent, sanitizeFirestoreData, expandMarks, MARKS_KEYS } from '.
 import { normalizeClassName } from '../../utils/classUtils';
 import { getAverageDivisor } from '../../utils/averageDivisor';
 
-const ClassManagement = () => {
+const ClassManagement = ({ isBursar = false }) => {
   const { currentSession } = useTheme();
   const [classStats, setClassStats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1052,7 +1052,7 @@ const ClassManagement = () => {
               </div>
 
               {/* Delete custom class */}
-              {cls.isCustom && (
+              {!isBursar && cls.isCustom && (
                 <button
                   onClick={() => handleDeleteClass(cls.id)}
                   disabled={deletingClass === cls.id}
@@ -1269,26 +1269,30 @@ const ClassManagement = () => {
                               </button>
 
                               {/* Batch Transfer Button */}
-                              <button
-                                onClick={() => setBatchActionModal({ type: 'transfer', targetClass: classes.find(c => c !== selectedClass) || '' })}
-                                disabled={batchProcessing}
-                                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-indigo-900/20 transition-all cursor-pointer disabled:opacity-50"
-                                title="Move selected students to another class"
-                              >
-                                <ArrowRightLeft size={14} />
-                                <span>Move to Class…</span>
-                              </button>
+                              {!isBursar && (
+                                <>
+                                  <button
+                                    onClick={() => setBatchActionModal({ type: 'transfer', targetClass: classes.find(c => c !== selectedClass) || '' })}
+                                    disabled={batchProcessing}
+                                    className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-indigo-900/20 transition-all cursor-pointer disabled:opacity-50"
+                                    title="Move selected students to another class"
+                                  >
+                                    <ArrowRightLeft size={14} />
+                                    <span>Move to Class…</span>
+                                  </button>
 
-                              {/* Batch Delete Button */}
-                              <button
-                                onClick={() => setBatchActionModal({ type: 'delete' })}
-                                disabled={batchProcessing}
-                                className="px-3.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
-                                title="Permanently delete selected student records"
-                              >
-                                <Trash2 size={14} />
-                                <span>Delete</span>
-                              </button>
+                                  {/* Batch Delete Button */}
+                                  <button
+                                    onClick={() => setBatchActionModal({ type: 'delete' })}
+                                    disabled={batchProcessing}
+                                    className="px-3.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                                    title="Permanently delete selected student records"
+                                  >
+                                    <Trash2 size={14} />
+                                    <span>Delete</span>
+                                  </button>
+                                </>
+                              )}
 
                               {/* Deselect All */}
                               <button
@@ -1394,27 +1398,31 @@ const ClassManagement = () => {
                                         </td>
                                         <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                                           <div className="flex items-center justify-end gap-1">
-                                            <button
-                                              onClick={() => setBatchActionModal({ type: 'remove', singleStudent: s })}
-                                              className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
-                                              title={`Remove ${s.name} from ${selectedClass}`}
-                                            >
-                                              <UserMinus size={15} />
-                                            </button>
-                                            <button
-                                              onClick={() => setBatchActionModal({ type: 'transfer', targetClass: classes.find(c => c !== selectedClass) || '', singleStudent: s })}
-                                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
-                                              title={`Move ${s.name} to another class`}
-                                            >
-                                              <ArrowRightLeft size={15} />
-                                            </button>
-                                            <button
-                                              onClick={() => setBatchActionModal({ type: 'delete', singleStudent: s })}
-                                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                                              title={`Delete ${s.name}`}
-                                            >
-                                              <Trash2 size={15} />
-                                            </button>
+                                            {!isBursar && (
+                                              <>
+                                                <button
+                                                  onClick={() => setBatchActionModal({ type: 'remove', singleStudent: s })}
+                                                  className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                                                  title={`Remove ${s.name} from ${selectedClass}`}
+                                                >
+                                                  <UserMinus size={15} />
+                                                </button>
+                                                <button
+                                                  onClick={() => setBatchActionModal({ type: 'transfer', targetClass: classes.find(c => c !== selectedClass) || '', singleStudent: s })}
+                                                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                                                  title={`Move ${s.name} to another class`}
+                                                >
+                                                  <ArrowRightLeft size={15} />
+                                                </button>
+                                                <button
+                                                  onClick={() => setBatchActionModal({ type: 'delete', singleStudent: s })}
+                                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                                  title={`Delete ${s.name}`}
+                                                >
+                                                  <Trash2 size={15} />
+                                                </button>
+                                              </>
+                                            )}
                                           </div>
                                         </td>
                                       </tr>
