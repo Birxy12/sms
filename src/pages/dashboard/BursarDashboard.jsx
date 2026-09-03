@@ -2747,7 +2747,7 @@ const BursarDashboard = () => {
           {activeView === 'receipts' && <PrintReceiptView />}
           {activeView === 'debtors' && <DebtorsView />}
           {activeView === 'newintakes' && <NewIntakesView />}
-          {activeView === 'store' && <StoreView />}
+          {activeView === 'store' && <StoreView allStudents={allStudents} />}
           {activeView === 'dailyincome' && <DailyIncomeView />}
           {activeView === 'messages' && <MessageHubView />}
           {activeView === 'cashpay' && <CashPaymentView />}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, query, getDocs, addDoc, setDoc, doc, getDoc, serverTimestamp, orderBy, limit } from 'firebase/firestore';
-import { ShoppingCart, Settings, Plus, Loader2, Search, CheckCircle, Tag } from 'lucide-react';
+import { ShoppingCart, Settings, Plus, Loader2, Search, CheckCircle, Tag, X } from 'lucide-react';
 import { formatNaira } from '../../utils/prospectusFees';
 
 const DEFAULT_INVENTORY = {
@@ -33,7 +33,7 @@ const DEFAULT_INVENTORY = {
 
 const ITEM_CATEGORIES = Object.keys(DEFAULT_INVENTORY);
 
-const StoreView = () => {
+const StoreView = ({ allStudents = [] }) => {
   const [activeTab, setActiveTab] = useState('sell'); // 'sell', 'inventory', 'history'
   const [inventory, setInventory] = useState({});
   const [salesHistory, setSalesHistory] = useState([]);
@@ -44,6 +44,8 @@ const StoreView = () => {
   const [itemName, setItemName] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentRef, setStudentRef] = useState('');
   const [savingSale, setSavingSale] = useState(false);
   const [saleSuccess, setSaleSuccess] = useState('');
@@ -90,6 +92,12 @@ const StoreView = () => {
     }
   };
 
+  const filteredStudents = allStudents.filter(s => {
+    const name = (s.name || s['STUDENT NAME'] || '').toLowerCase();
+    const reg = (s.regNo || s.REGNO || '').toLowerCase();
+    return (name.includes(searchTerm.toLowerCase()) || reg.includes(searchTerm.toLowerCase())) && searchTerm.length > 0;
+  }).slice(0, 10);
+
   const handleRecordSale = async (e) => {
     e.preventDefault();
     if (!itemName || !unitPrice || quantity < 1) return;
@@ -97,13 +105,29 @@ const StoreView = () => {
     setSavingSale(true);
     try {
       const totalAmount = Number(unitPrice) * Number(quantity);
+      
+      let finalStudentRef = studentRef || 'Walk-in / Cash';
+      let finalStudentId = null;
+      let finalClassName = null;
+      let finalRegNo = null;
+
+      if (selectedStudent) {
+        finalStudentRef = `${selectedStudent.name || selectedStudent['STUDENT NAME']} (${selectedStudent.className || selectedStudent.class_name || selectedStudent.CLASS} - ${selectedStudent.regNo || selectedStudent.REGNO})`;
+        finalStudentId = selectedStudent.id;
+        finalClassName = selectedStudent.className || selectedStudent.class_name || selectedStudent.CLASS;
+        finalRegNo = selectedStudent.regNo || selectedStudent.REGNO;
+      }
+
       await addDoc(collection(db, 'store_sales'), {
         category: selectedCategory,
         itemName,
         quantity: Number(quantity),
         unitPrice: Number(unitPrice),
         totalAmount,
-        studentRef: studentRef || 'Walk-in / Cash',
+        studentRef: finalStudentRef,
+        studentId: finalStudentId,
+        className: finalClassName,
+        regNo: finalRegNo,
         createdAt: serverTimestamp(),
       });
       
@@ -114,6 +138,8 @@ const StoreView = () => {
       setQuantity(1);
       setUnitPrice('');
       setStudentRef('');
+      setSelectedStudent(null);
+      setSearchTerm('');
       
       fetchStoreData(); // Refresh history
     } catch (err) {
@@ -229,15 +255,54 @@ const StoreView = () => {
                 )}
               </div>
               
-              <div>
+              <div className="relative z-20">
                 <label className="block text-sm font-bold text-slate-700 mb-1">Student / Reference (Optional)</label>
-                <input 
-                  type="text" 
-                  value={studentRef} 
-                  onChange={e => setStudentRef(e.target.value)}
-                  placeholder="Student Name or Cash"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700"
-                />
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    value={selectedStudent ? `${selectedStudent.name || selectedStudent['STUDENT NAME']} - ${selectedStudent.regNo || selectedStudent.REGNO}` : searchTerm} 
+                    onChange={e => {
+                      setSearchTerm(e.target.value);
+                      setStudentRef(e.target.value);
+                      if (selectedStudent) setSelectedStudent(null);
+                    }}
+                    placeholder="Search Student or enter Cash/Ref"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:border-blue-500 focus:bg-white transition-colors"
+                  />
+                  {selectedStudent && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStudent(null)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500"
+                    >
+                      <X size={18} />
+                    </button>
+                  )}
+                </div>
+
+                {!selectedStudent && filteredStudents.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-slate-100 shadow-xl overflow-hidden max-h-60 overflow-y-auto">
+                    {filteredStudents.map(s => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedStudent(s);
+                          setSearchTerm('');
+                        }}
+                        className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-50 flex justify-between items-center"
+                      >
+                        <div>
+                          <div className="font-bold text-slate-700">{s.name || s['STUDENT NAME']}</div>
+                          <div className="text-xs text-slate-500">{s.className || s.class_name || s.CLASS}</div>
+                        </div>
+                        <div className="text-xs font-mono font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
+                          {s.regNo || s.REGNO}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
