@@ -7,7 +7,7 @@ import {
   Search, Download, Plus, ArrowUpRight, 
   CheckCircle, AlertCircle, Loader2, Briefcase, Settings, Printer, MessageSquare, AlertTriangle, FileText, UserPlus, Banknote,
   FileSpreadsheet, User, ShieldCheck, Key, Lock, Clock, History, CheckCheck, RefreshCw, X, ShieldAlert,
-  Sparkles, ListChecks, CheckCircle2, ChevronDown, ChevronUp, Layers, Check, HelpCircle
+  Sparkles, ListChecks, CheckCircle2, ChevronDown, ChevronUp, Layers, Check, HelpCircle, UserCheck
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
@@ -536,6 +536,7 @@ const BursarDashboard = () => {
     { id: 'register', label: 'Register Student', icon: UserPlus, color: 'violet' },
     { id: 'messages', label: 'Message Hub', icon: MessageSquare, color: 'purple' },
     { id: 'debtors', label: 'Debtors', icon: AlertTriangle, color: 'rose' },
+    { id: 'newintakes', label: 'New Intakes', icon: UserCheck, color: 'blue' },
     { id: 'classmanage', label: 'Manage Class', icon: Layers, color: 'blue' },
     { id: 'analysis', label: 'Financial Analysis', icon: Briefcase, color: 'indigo' },
     { id: 'staffpay', label: 'Staff Payment', icon: Users, color: 'violet' },
@@ -1195,6 +1196,87 @@ const BursarDashboard = () => {
               ))}
               {targetStudents.length === 0 && (
                 <tr><td colSpan="4" className="text-center py-8 text-slate-400 font-bold">No students found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  const NewIntakesView = () => {
+    const [filterClass, setFilterClass] = useState('All');
+    const newIntakes = allStudents.filter(s => {
+      return s.studentType === 'new_intake' || s.isNewIntake === true || String(s.studentType || '').toLowerCase().includes('new');
+    });
+    
+    const filteredIntakes = newIntakes.filter(s => {
+      if (filterClass === 'All') return true;
+      return (s.className || s.class_name || s.CLASS) === filterClass;
+    });
+
+    return (
+      <div className="card-white p-6 mt-8 shadow-sm rounded-3xl border border-blue-100 bg-gradient-to-b from-white to-blue-50/30">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
+              <UserCheck size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-800">New Intakes List</h2>
+              <p className="text-slate-500 font-medium text-sm">Admitted students classified as new intakes</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <select
+              value={filterClass}
+              onChange={e => setFilterClass(e.target.value)}
+              className="flex-1 md:flex-none px-4 py-2.5 bg-white border-2 border-blue-100 rounded-xl font-bold text-blue-900 outline-none focus:border-blue-300 cursor-pointer text-sm"
+            >
+              <option value="All">All Classes</option>
+              {classes.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <div className="px-4 py-2.5 bg-blue-600 text-white font-black rounded-xl text-sm shadow-md">
+              Total: {filteredIntakes.length}
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-sm">
+          <table className="w-full text-left border-collapse whitespace-nowrap">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 font-bold uppercase text-[11px] tracking-wider">
+                <th className="py-4 px-4">Student Name</th>
+                <th className="py-4 px-4">Reg No</th>
+                <th className="py-4 px-4">Class</th>
+                <th className="py-4 px-4">Expected Fee</th>
+                <th className="py-4 px-4">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {filteredIntakes.map(s => {
+                const config = getClassFees(s.className || s.class_name || s.CLASS, feeSettings);
+                return (
+                  <tr key={s.id} className="hover:bg-blue-50/30 transition-colors">
+                    <td className="py-3.5 px-4 font-black text-slate-700">{s.studentName || s.name || s.firstName || 'Unknown'}</td>
+                    <td className="py-3.5 px-4 text-slate-500 font-mono text-xs font-bold">{s.regNo || 'N/A'}</td>
+                    <td className="py-3.5 px-4">
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                        {s.className || s.class_name || s.CLASS}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-blue-600 font-black">{formatNaira(config.prospectiveTotal)}</td>
+                    <td className="py-3.5 px-4">
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 flex items-center gap-1 w-max">
+                        <CheckCircle2 size={12} /> New Intake
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filteredIntakes.length === 0 && (
+                <tr><td colSpan="5" className="text-center py-8 text-slate-400 font-bold">No new intakes found.</td></tr>
               )}
             </tbody>
           </table>
@@ -2660,6 +2742,7 @@ const BursarDashboard = () => {
           {activeView === 'feesetting' && <FeeSettingView />}
           {activeView === 'receipts' && <PrintReceiptView />}
           {activeView === 'debtors' && <DebtorsView />}
+          {activeView === 'newintakes' && <NewIntakesView />}
           {activeView === 'messages' && <MessageHubView />}
           {activeView === 'cashpay' && <CashPaymentView />}
           {activeView === 'register' && <RegisterStudentView />}
