@@ -964,9 +964,24 @@ const BursarDashboard = () => {
                         <span className="font-black text-slate-900 text-sm">{cls}</span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                          {cfg.sectionTitle}
-                        </span>
+                        {(() => {
+                          const c = cls.toUpperCase().replace(/\s+/g,'');
+                          let badgeCls = 'bg-slate-800 text-slate-200';
+                          if (c.startsWith('NURSERY') || c.startsWith('NUR')) badgeCls = 'bg-pink-900 text-pink-200';
+                          else if (c.startsWith('BASIC1')||c.startsWith('BASIC2')||c.startsWith('BASIC3')) badgeCls = 'bg-blue-900 text-blue-200';
+                          else if (c.startsWith('BASIC4')||c.startsWith('BASIC5')) badgeCls = 'bg-cyan-900 text-cyan-200';
+                          else if (c.startsWith('BASIC')) badgeCls = 'bg-sky-900 text-sky-200';
+                          else if (c.startsWith('JSS')) badgeCls = 'bg-violet-900 text-violet-200';
+                          else if (c.startsWith('SS1')||c.startsWith('SSS1')) badgeCls = 'bg-emerald-900 text-emerald-200';
+                          else if (c.startsWith('SS2')||c.startsWith('SSS2')) badgeCls = 'bg-teal-900 text-teal-200';
+                          else if (c.startsWith('SS3')||c.startsWith('SSS3')) badgeCls = 'bg-green-900 text-green-200';
+                          else if (c.startsWith('SS')||c.startsWith('SSS')) badgeCls = 'bg-emerald-900 text-emerald-200';
+                          return (
+                            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${badgeCls}`}>
+                              {cfg.sectionTitle}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="py-3 px-4 font-mono text-slate-600">
                         {clsStudents.length} Students
@@ -2681,6 +2696,23 @@ const BursarDashboard = () => {
               const collected = students.reduce((sum, s) => sum + (parseFloat(s.paidFee) || parseFloat(s.paidAmount) || 0), 0);
               return { cls, students: students.length, expected, collected };
             });
+
+            // Section color helper — dark themed, unique per level
+            const getClassColors = (cls) => {
+              const c = cls.toUpperCase().replace(/\s+/g, '');
+              if (c.startsWith('NURSERY') || c.startsWith('NUR'))  return { bg: 'bg-pink-900',   bar: 'from-pink-400 to-pink-600',   badge: 'bg-pink-900 text-pink-200',   label: 'Nursery' };
+              if (c.startsWith('BASIC1') || c.startsWith('BASIC2') || c.startsWith('BASIC3')) return { bg: 'bg-blue-900', bar: 'from-blue-400 to-blue-600', badge: 'bg-blue-900 text-blue-200', label: 'Basic (Lower)' };
+              if (c.startsWith('BASIC4') || c.startsWith('BASIC5')) return { bg: 'bg-cyan-900',   bar: 'from-cyan-400 to-cyan-600',   badge: 'bg-cyan-900 text-cyan-200',   label: 'Basic (Upper)' };
+              if (c.startsWith('BASIC')) return { bg: 'bg-sky-900',    bar: 'from-sky-400 to-sky-600',   badge: 'bg-sky-900 text-sky-200',   label: 'Basic' };
+              if (c.startsWith('JSS1') || c.startsWith('JSS2') || c.startsWith('JSS3')) return { bg: 'bg-violet-900',  bar: 'from-violet-400 to-violet-600',  badge: 'bg-violet-900 text-violet-200', label: 'JSS' };
+              if (c.startsWith('JSS'))  return { bg: 'bg-purple-900', bar: 'from-purple-400 to-purple-600', badge: 'bg-purple-900 text-purple-200', label: 'JSS' };
+              if (c.startsWith('SS1') || c.startsWith('SSS1')) return { bg: 'bg-emerald-900', bar: 'from-emerald-400 to-emerald-600', badge: 'bg-emerald-900 text-emerald-200', label: 'SS' };
+              if (c.startsWith('SS2') || c.startsWith('SSS2')) return { bg: 'bg-teal-900',    bar: 'from-teal-400 to-teal-600',    badge: 'bg-teal-900 text-teal-200',    label: 'SS' };
+              if (c.startsWith('SS3') || c.startsWith('SSS3')) return { bg: 'bg-green-900',   bar: 'from-green-400 to-green-600',  badge: 'bg-green-900 text-green-200',  label: 'SS' };
+              if (c.startsWith('SS') || c.startsWith('SSS')) return { bg: 'bg-emerald-900',  bar: 'from-emerald-400 to-emerald-600', badge: 'bg-emerald-900 text-emerald-200', label: 'SS' };
+              return { bg: 'bg-slate-800', bar: 'from-slate-400 to-slate-600', badge: 'bg-slate-800 text-slate-200', label: '' };
+            };
+
             const collectedPct = stats.totalExpected > 0 ? Math.round((stats.totalCollected / stats.totalExpected) * 100) : 0;
             const r = 60, cx = 75, cy = 75;
             const angle = (collectedPct / 100) * 2 * Math.PI;
@@ -2710,21 +2742,26 @@ const BursarDashboard = () => {
                       <p className="text-xs text-slate-400">Outstanding: <span className="font-black text-rose-500">₦{stats.totalOutstanding.toLocaleString()}</span></p>
                     </div>
                   </div>
-                  <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-                    <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4">Collection by Class</h4>
+                  <div className="lg:col-span-2 bg-slate-900 rounded-3xl shadow-sm p-6">
+                    <h4 className="text-sm font-black text-slate-300 uppercase tracking-widest mb-5">Collection by Class</h4>
                     <div className="space-y-3">
-                      {classBreakdown.map(c => (
-                        <div key={c.cls}>
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-black text-slate-600">{c.cls}</span>
-                            <span className="text-xs font-bold text-slate-400">₦{c.collected.toLocaleString()} / ₦{c.expected.toLocaleString()}</span>
+                      {classBreakdown.map(c => {
+                        const colors = getClassColors(c.cls);
+                        const pct = c.expected > 0 ? Math.min(100, Math.round((c.collected / c.expected) * 100)) : 0;
+                        return (
+                          <div key={c.cls} className={`rounded-xl px-3 py-2 ${colors.bg} bg-opacity-80`}>
+                            <div className="flex justify-between items-center mb-1.5">
+                              <span className="text-xs font-black text-white">{c.cls}</span>
+                              <span className="text-xs font-bold text-slate-400">₦{c.collected.toLocaleString()} / ₦{c.expected.toLocaleString()}</span>
+                            </div>
+                            <div className="h-2.5 w-full bg-black/30 rounded-full overflow-hidden">
+                              <div className={`h-full bg-gradient-to-r ${colors.bar} rounded-full`}
+                                style={{ width: `${pct}%` }} />
+                            </div>
+                            <div className="text-right text-[10px] font-bold text-slate-400 mt-0.5">{pct}%</div>
                           </div>
-                          <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full"
-                              style={{ width: c.expected > 0 ? `${Math.min(100, Math.round((c.collected / c.expected) * 100))}%` : '0%' }} />
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                       {classBreakdown.length === 0 && <p className="text-sm text-slate-400 text-center py-4">No fee data yet.</p>}
                     </div>
                   </div>
