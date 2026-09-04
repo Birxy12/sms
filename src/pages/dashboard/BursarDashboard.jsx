@@ -825,20 +825,45 @@ const BursarDashboard = () => {
             </div>
 
             {/* Sync Scope Options & Enrolled Class Stats */}
-            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-4">
-              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 pb-3 border-b border-slate-200">
-                <p className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                  Enrolled in {selectedClass}: <span className="text-indigo-600">{targetStudents.length} Students</span>
+            {(() => {
+              const sc = (selectedClass || '').toUpperCase().replace(/\s+/g, '');
+              let panelColor = { bg: '#1e293b', border: '#334155', headerText: '#f1f5f9', subText: '#94a3b8', strongText: '#e2e8f0' };
+              if (sc.startsWith('NURSERY') || sc.startsWith('NUR'))
+                panelColor = { bg: '#831843', border: '#9d174d', headerText: '#fdf2f8', subText: '#fbcfe8', strongText: '#fce7f3' };
+              else if (sc.startsWith('BASIC1') || sc.startsWith('BASIC2') || sc.startsWith('BASIC3'))
+                panelColor = { bg: '#1e3a8a', border: '#1d4ed8', headerText: '#eff6ff', subText: '#bfdbfe', strongText: '#dbeafe' };
+              else if (sc.startsWith('BASIC4') || sc.startsWith('BASIC5'))
+                panelColor = { bg: '#164e63', border: '#0e7490', headerText: '#ecfeff', subText: '#a5f3fc', strongText: '#cffafe' };
+              else if (sc.startsWith('BASIC'))
+                panelColor = { bg: '#0c4a6e', border: '#0369a1', headerText: '#f0f9ff', subText: '#bae6fd', strongText: '#e0f2fe' };
+              else if (sc.startsWith('JSS'))
+                panelColor = { bg: '#4c1d95', border: '#6d28d9', headerText: '#f5f3ff', subText: '#ddd6fe', strongText: '#ede9fe' };
+              else if (sc.startsWith('SS1') || sc.startsWith('SSS1'))
+                panelColor = { bg: '#064e3b', border: '#047857', headerText: '#ecfdf5', subText: '#a7f3d0', strongText: '#d1fae5' };
+              else if (sc.startsWith('SS2') || sc.startsWith('SSS2'))
+                panelColor = { bg: '#134e4a', border: '#0f766e', headerText: '#f0fdfa', subText: '#99f6e4', strongText: '#ccfbf1' };
+              else if (sc.startsWith('SS3') || sc.startsWith('SSS3'))
+                panelColor = { bg: '#14532d', border: '#15803d', headerText: '#f0fdf4', subText: '#86efac', strongText: '#dcfce7' };
+              else if (sc.startsWith('SS') || sc.startsWith('SSS'))
+                panelColor = { bg: '#064e3b', border: '#047857', headerText: '#ecfdf5', subText: '#a7f3d0', strongText: '#d1fae5' };
+              return (
+            <div
+              className="p-5 rounded-2xl space-y-4"
+              style={{ backgroundColor: panelColor.bg, border: `1px solid ${panelColor.border}` }}
+            >
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 pb-3" style={{ borderBottom: `1px solid ${panelColor.border}` }}>
+                <p className="text-xs font-black uppercase tracking-wider" style={{ color: panelColor.headerText }}>
+                  Enrolled in {selectedClass}: <span style={{ color: panelColor.subText }}>{targetStudents.length} Students</span>
                 </p>
-                <div className="flex gap-3 text-xs font-bold text-slate-500">
-                  <span>🎓 Returning: <strong className="text-slate-800">{returningCount}</strong></span>
+                <div className="flex gap-3 text-xs font-bold" style={{ color: panelColor.subText }}>
+                  <span>🎓 Returning: <strong style={{ color: panelColor.strongText }}>{returningCount}</strong></span>
                   <span>•</span>
-                  <span>🌟 New Intakes: <strong className="text-slate-800">{intakeCount}</strong></span>
+                  <span>🌟 New Intakes: <strong style={{ color: panelColor.strongText }}>{intakeCount}</strong></span>
                 </div>
               </div>
 
               <div>
-                <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block mb-2">
+                <label className="text-[11px] font-black uppercase tracking-wider block mb-2" style={{ color: panelColor.subText }}>
                   When Applying Fee to Class Students:
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -901,6 +926,8 @@ const BursarDashboard = () => {
                 </div>
               </div>
             </div>
+              );
+            })()}
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
