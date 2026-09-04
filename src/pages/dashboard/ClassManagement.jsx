@@ -17,7 +17,7 @@ import { normalizeClassName } from '../../utils/classUtils';
 import { getAverageDivisor } from '../../utils/averageDivisor';
 
 const ClassManagement = ({ isBursar = false }) => {
-  const { currentSession } = useTheme();
+  const { currentSession, rolePermissions } = useTheme();
   const [classStats, setClassStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [staff, setStaff] = useState([]);
@@ -943,12 +943,14 @@ const ClassManagement = ({ isBursar = false }) => {
           >
             <Trash2 size={16} /> Remove Duplicates
           </button>
-          <button
-            onClick={() => setShowAddClass(true)}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
-          >
-            <Plus size={16} /> Add Class
-          </button>
+          {(!isBursar || rolePermissions?.bursarAddClass) && (
+            <button
+              onClick={() => setShowAddClass(true)}
+              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+            >
+              <Plus size={16} /> Add Class
+            </button>
+          )}
         </div>
       </div>
 
@@ -1066,16 +1068,18 @@ const ClassManagement = ({ isBursar = false }) => {
         ))}
 
         {/* Add Class placeholder card */}
-        <button
-          onClick={() => setShowAddClass(true)}
-          className="group h-full min-h-[260px] bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center gap-3 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer p-6"
-        >
-          <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-center group-hover:bg-indigo-600 group-hover:border-indigo-600 transition-all">
-            <Plus size={22} className="text-slate-400 group-hover:text-white transition-colors" />
-          </div>
-          <span className="text-sm font-black text-slate-500 group-hover:text-indigo-600 transition-colors">Add New Class</span>
-          <p className="text-xs text-slate-400 text-center font-medium">Create a custom class for early years, junior, or senior arms.</p>
-        </button>
+        {(!isBursar || rolePermissions?.bursarAddClass) && (
+          <button
+            onClick={() => setShowAddClass(true)}
+            className="group h-full min-h-[260px] bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center gap-3 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer p-6"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-center group-hover:bg-indigo-600 group-hover:border-indigo-600 transition-all">
+              <Plus size={22} className="text-slate-400 group-hover:text-white transition-colors" />
+            </div>
+            <span className="text-sm font-black text-slate-500 group-hover:text-indigo-600 transition-colors">Add New Class</span>
+            <p className="text-xs text-slate-400 text-center font-medium">Create a custom class for early years, junior, or senior arms.</p>
+          </button>
+        )}
       </div>
 
       {/* Add Class Modal */}

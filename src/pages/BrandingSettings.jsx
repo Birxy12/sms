@@ -63,6 +63,8 @@ const BrandingSettings = () => {
     autoCommentsEnabled, setAutoCommentsEnabled,
     commentTemplates, setCommentTemplates,
     averageDivisors, setAverageDivisors,
+    demoMode, setDemoMode,
+    rolePermissions, setRolePermissions,
     darkMode, toggleDarkMode
   } = useTheme();
 
@@ -191,6 +193,9 @@ const BrandingSettings = () => {
     ...(portalPermissions || {})
   });
 
+  const [isDemoMode, setIsDemoMode] = useState(demoMode || false);
+  const [rolesPerm, setRolesPerm] = useState(rolePermissions || { bursarAddClass: false });
+
   // Media & Landing Page CMS
   const [heroImages, setHeroImages] = useState([]);
   const [slideDuration, setSlideDuration] = useState(4);
@@ -248,6 +253,8 @@ const BrandingSettings = () => {
     setPStamp(principalStamp);
     setBSig(bursarSignature);
     setBStamp(bursarStamp);
+    if (demoMode !== undefined) setIsDemoMode(demoMode);
+    if (rolePermissions) setRolesPerm(prev => ({ ...prev, ...rolePermissions }));
     setCat1Val(cat1Limit ?? 20);
     setCat2Val(cat2Limit ?? 20);
     setExamVal(examLimit ?? 60);
@@ -500,6 +507,8 @@ const BrandingSettings = () => {
       setAutoCommentsEnabled(commentsEnabled);
       setCommentTemplates(tpls);
       setAverageDivisors(divisorInputs);
+      setDemoMode(isDemoMode);
+      setRolePermissions(rolesPerm);
 
       // 2. Persist to settings/branding
       await setDoc(doc(db, 'settings', 'branding'), {
@@ -536,6 +545,8 @@ const BrandingSettings = () => {
         autoCommentsEnabled: commentsEnabled,
         commentTemplates: tpls,
         averageDivisors: divisorInputs,
+        demoMode: isDemoMode,
+        rolePermissions: rolesPerm,
         lastUpdated: new Date().toISOString()
       }, { merge: true });
 
@@ -1827,6 +1838,73 @@ const BrandingSettings = () => {
                 </div>
               );
             })}
+          </div>
+
+          <div className="mt-8 border-t border-slate-700 pt-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center shadow-md">
+                <AlertTriangle size={22} className="text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white m-0">System Overrides & Role Limits</h3>
+                <p className="text-xs text-slate-300 m-0 mt-0.5 font-medium">
+                  Global data locks and specific role access limitations
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Demo Mode Toggle */}
+              <div className="p-5 rounded-2xl bg-rose-950/20 border-2 border-rose-900/40 text-white shadow-lg flex flex-col justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-rose-900/50">
+                    <ShieldCheck size={20} className="text-rose-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-sm m-0 text-white flex items-center gap-2">
+                      Global Demo / Read-Only Mode
+                    </h4>
+                    <p className="text-[11px] text-slate-400 m-0 mt-1 leading-snug">
+                      Blocks all real-time financial database writes across the system. 
+                      Simulates success in UI without altering actual records. Perfect for test accounts.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button 
+                    onClick={() => setIsDemoMode(!isDemoMode)}
+                    className={`w-12 h-6 rounded-full transition-colors flex items-center focus:outline-none ${isDemoMode ? 'bg-rose-500' : 'bg-slate-700'}`}
+                  >
+                    <div className={`w-5 h-5 rounded-full bg-white shadow-sm transform transition-transform ${isDemoMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Bursar Role Toggle */}
+              <div className="p-5 rounded-2xl bg-slate-950/90 border-2 border-slate-700/80 text-white shadow-lg flex flex-col justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-indigo-950/60">
+                    <Users size={20} className="text-indigo-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-sm m-0 text-white">
+                      Bursar Can Create Classes
+                    </h4>
+                    <p className="text-[11px] text-slate-400 m-0 mt-1 leading-snug">
+                      If disabled, Bursar accounts can only view classes and set fees, but cannot add or delete them.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button 
+                    onClick={() => setRolesPerm(prev => ({ ...prev, bursarAddClass: !prev.bursarAddClass }))}
+                    className={`w-12 h-6 rounded-full transition-colors flex items-center focus:outline-none ${rolesPerm.bursarAddClass ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                  >
+                    <div className={`w-5 h-5 rounded-full bg-white shadow-sm transform transition-transform ${rolesPerm.bursarAddClass ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

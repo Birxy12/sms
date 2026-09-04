@@ -21,7 +21,9 @@ const ThemeContext = createContext({
   principalStamp: null,
   bursarSignature: null,
   bursarStamp: null,
-  currentSession: '2025/2026'
+  currentSession: '2025/2026',
+  demoMode: false,
+  rolePermissions: { bursarAddClass: false }
 });
 
 export const ThemeProvider = ({ children }) => {
@@ -87,6 +89,8 @@ export const ThemeProvider = ({ children }) => {
     'SS3 SCIENCE': 9,
     'SS3 ART': 9,
   });
+  const [demoMode, setDemoMode] = useState(false);
+  const [rolePermissions, setRolePermissions] = useState({ bursarAddClass: false });
   const [whiteColor] = useState('#ffffff');
   const [loading, setLoading] = useState(true);
 
@@ -159,6 +163,8 @@ export const ThemeProvider = ({ children }) => {
           if (data.autoCommentsEnabled !== undefined) setAutoCommentsEnabled(data.autoCommentsEnabled);
           if (data.commentTemplates) setCommentTemplates(data.commentTemplates);
           if (data.averageDivisors) setAverageDivisors(data.averageDivisors);
+          if (data.demoMode !== undefined) setDemoMode(data.demoMode);
+          if (data.rolePermissions) setRolePermissions(prev => ({ ...prev, ...data.rolePermissions }));
         }
       } catch (e) {
         console.warn('Could not load branding from Firestore. Using local defaults.', e.code || e.message);
@@ -200,6 +206,7 @@ export const ThemeProvider = ({ children }) => {
           currentSession, cat1Limit, cat2Limit, examLimit,
           currentTerm, termStartDate, termEndDate, nextTermBeginsDate,
           promotionPassMark, autoCommentsEnabled, commentTemplates, averageDivisors,
+          demoMode, rolePermissions,
           lastUpdated: new Date().toISOString()
         }, { merge: true });
       } catch (e) {
@@ -215,7 +222,7 @@ export const ThemeProvider = ({ children }) => {
     principalSignature, principalStamp, bursarSignature, bursarStamp,
     currentSession, cat1Limit, cat2Limit, examLimit,
     currentTerm, termStartDate, termEndDate, nextTermBeginsDate,
-    promotionPassMark, autoCommentsEnabled, commentTemplates, averageDivisors, loading
+    promotionPassMark, autoCommentsEnabled, commentTemplates, averageDivisors, demoMode, rolePermissions, loading
   ]);
 
   // Wrapped setters that mark the state as user-edited before updating
@@ -277,6 +284,8 @@ export const ThemeProvider = ({ children }) => {
       autoCommentsEnabled, setAutoCommentsEnabled: handleSet(setAutoCommentsEnabled),
       commentTemplates, setCommentTemplates: handleSet(setCommentTemplates),
       averageDivisors, setAverageDivisors: handleSet(setAverageDivisors),
+      demoMode, setDemoMode: handleSet(setDemoMode),
+      rolePermissions, setRolePermissions: handleSet(setRolePermissions),
       whiteColor,
       darkMode,
       toggleDarkMode

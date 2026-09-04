@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../lib/firebase';
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
-import { collection, query, getDocs, orderBy, where, doc, updateDoc, writeBatch, addDoc, serverTimestamp, setDoc, getDoc, limit } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, where, doc, updateDoc as fbUpdateDoc, writeBatch as fbWriteBatch, addDoc as fbAddDoc, serverTimestamp, setDoc as fbSetDoc, getDoc, limit } from 'firebase/firestore';
 import { 
   Wallet, DollarSign, TrendingUp, TrendingDown, Users, 
   Search, Download, Plus, ArrowUpRight, 
@@ -153,8 +153,26 @@ const AnimatedCounter = ({ end }) => {
 
 const BursarDashboard = () => {
   const { currentAdmin } = useAdminAuth();
-  const { primaryColor, schoolName } = useTheme();
+  const { primaryColor, schoolName, demoMode } = useTheme();
   const location = window.location;
+
+  // --- DEMO MODE INTERCEPTORS ---
+  const showDemoWarning = () => {
+    console.warn('DEMO MODE ACTIVE: Database write intercepted.');
+    alert('DEMO MODE ACTIVE:\nReal-time financial database writes are blocked for this test account.');
+  };
+
+  const updateDoc = (...args) => demoMode ? showDemoWarning() : fbUpdateDoc(...args);
+  const setDoc = (...args) => demoMode ? showDemoWarning() : fbSetDoc(...args);
+  const addDoc = (...args) => demoMode ? showDemoWarning() : fbAddDoc(...args);
+  const writeBatch = (...args) => {
+    if (demoMode) {
+      showDemoWarning();
+      return { set: () => {}, update: () => {}, delete: () => {}, commit: async () => {} };
+    }
+    return fbWriteBatch(...args);
+  };
+  // ------------------------------
   const [activeView, setActiveView] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('tab') || localStorage.getItem('bursar_active_tab') || 'overview';
@@ -2662,18 +2680,22 @@ const BursarDashboard = () => {
           </button>
           <button 
             onClick={async () => {
+              if (demoMode) {
+                showDemoWarning();
+                return;
+              }
               const conf = window.confirm('Are you sure you want to HARD CLEAR ALL fees (expected and collected) to 0 for all students?');
               if (!conf) return;
               try {
-                const { writeBatch, doc } = await import('firebase/firestore');
-                let batch = writeBatch(db);
+                const { writeBatch: fsWriteBatch, doc } = await import('firebase/firestore');
+                let batch = fsWriteBatch(db);
                 let count = 0;
                 for (const student of allStudents) {
                   batch.update(doc(db, 'students', student.id), { paidFee: 0, paidAmount: 0, expectedFee: 0 });
                   count++;
                   if (count % 300 === 0) {
                     await batch.commit();
-                    batch = writeBatch(db);
+                    batch = fsWriteBatch(db);
                   }
                 }
                 if (count % 300 !== 0) await batch.commit();
