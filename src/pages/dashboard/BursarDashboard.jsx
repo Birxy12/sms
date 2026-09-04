@@ -159,6 +159,17 @@ const BursarDashboard = () => {
     const params = new URLSearchParams(window.location.search);
     return params.get('tab') || localStorage.getItem('bursar_active_tab') || 'overview';
   });
+  const [activeGroup, setActiveGroup] = useState(() => {
+    const saved = localStorage.getItem('bursar_active_tab') || 'overview';
+    // find which group this tab belongs to
+    const groups = [
+      { id: 'finance',    tabs: ['overview','cashpay','bulkpay','expenses','dailyincome','analysis','debtors'] },
+      { id: 'students',   tabs: ['register','newintakes','receipts'] },
+      { id: 'management', tabs: ['feesetting','classmanage','staffpay'] },
+      { id: 'comms',      tabs: ['messages','store'] },
+    ];
+    return groups.find(g => g.tabs.includes(saved))?.id || 'finance';
+  });
 
   // Navigate and persist tab to URL + localStorage so refresh restores last position
   const navigateTo = (tabId) => {
@@ -537,23 +548,58 @@ const BursarDashboard = () => {
       { label: 'Total Students', value: stats.totalStudents, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
     ];
 
-  const sidebarTabs = [
-    { id: 'overview', label: 'Overview', icon: TrendingUp, color: 'indigo' },
-    { id: 'expenses', label: 'Expenses', icon: Wallet, color: 'rose' },
-    { id: 'feesetting', label: 'Fee Setting', icon: Settings, color: 'blue' },
-    { id: 'cashpay', label: 'Cash Payment', icon: Banknote, color: 'green' },
-    { id: 'bulkpay', label: 'Bulk Upload', icon: Download, color: 'blue' },
-    { id: 'receipts', label: 'Print Receipt', icon: Printer, color: 'emerald' },
-    { id: 'register', label: 'Register Student', icon: UserPlus, color: 'violet' },
-    { id: 'messages', label: 'Message Hub', icon: MessageSquare, color: 'purple' },
-    { id: 'store', label: 'Store (Trading)', icon: ShoppingBag, color: 'emerald' },
-    { id: 'dailyincome', label: 'Daily Income', icon: BarChart3, color: 'indigo' },
-    { id: 'debtors', label: 'Debtors', icon: AlertTriangle, color: 'rose' },
-    { id: 'newintakes', label: 'New Intakes', icon: UserCheck, color: 'blue' },
-    { id: 'classmanage', label: 'Manage Class', icon: Layers, color: 'blue' },
-    { id: 'analysis', label: 'Financial Analysis', icon: Briefcase, color: 'indigo' },
-    { id: 'staffpay', label: 'Staff Payment', icon: Users, color: 'violet' },
+  const tabGroups = [
+    {
+      id: 'finance',
+      label: 'Finance',
+      icon: TrendingUp,
+      color: '#10b981',
+      tabs: [
+        { id: 'overview',    label: 'Overview',       icon: TrendingUp    },
+        { id: 'cashpay',     label: 'Cash Payment',   icon: Banknote      },
+        { id: 'bulkpay',     label: 'Bulk Upload',    icon: Download      },
+        { id: 'expenses',    label: 'Expenses',       icon: Wallet        },
+        { id: 'dailyincome', label: 'Daily Income',   icon: BarChart3     },
+        { id: 'analysis',   label: 'Analysis',       icon: Briefcase     },
+        { id: 'debtors',    label: 'Debtors',        icon: AlertTriangle },
+      ],
+    },
+    {
+      id: 'students',
+      label: 'Students',
+      icon: UserCheck,
+      color: '#6366f1',
+      tabs: [
+        { id: 'register',   label: 'Register Student', icon: UserPlus    },
+        { id: 'newintakes', label: 'New Intakes',       icon: UserCheck   },
+        { id: 'receipts',   label: 'Print Receipt',    icon: Printer     },
+      ],
+    },
+    {
+      id: 'management',
+      label: 'Management',
+      icon: Layers,
+      color: '#f59e0b',
+      tabs: [
+        { id: 'feesetting',  label: 'Fee Setting',    icon: Settings    },
+        { id: 'classmanage', label: 'View Classes',   icon: Layers      },
+        { id: 'staffpay',    label: 'Staff Payment',  icon: Users       },
+      ],
+    },
+    {
+      id: 'comms',
+      label: 'Communications',
+      icon: MessageSquare,
+      color: '#8b5cf6',
+      tabs: [
+        { id: 'messages', label: 'Message Hub',    icon: MessageSquare },
+        { id: 'store',    label: 'Store (Trading)', icon: ShoppingBag  },
+      ],
+    },
   ];
+
+  // Derive flat tab list for backwards compat
+  const sidebarTabs = tabGroups.flatMap(g => g.tabs);
 
   // --- Sub-Components for Tabs ---
 
@@ -2646,32 +2692,65 @@ const BursarDashboard = () => {
       </div>
 
       {/* Premium Navigation Tabs — Horizontally Scrollable Pills with Glassmorphism */}
-      <div className="flex overflow-x-auto hide-scrollbar gap-2 md:gap-3 p-2 bg-slate-100/70 backdrop-blur-md rounded-xl md:rounded-2xl w-full border border-white/60 shadow-inner">
-        {sidebarTabs.map((tab, index) => (
-          <button
-            key={tab.id}
-            onClick={() => navigateTo(tab.id)}
-            className={`flex items-center gap-2 md:gap-2.5 px-3.5 py-2.5 md:px-5 md:py-3 min-w-max rounded-xl transition-all duration-300 font-bold text-[13px] md:text-sm tracking-wide ${
-              activeView === tab.id 
-                ? 'bg-white text-green-700 shadow-sm ring-1 ring-slate-200/60 transform scale-[1.02]' 
-                : index < 4 
-                    ? 'text-green-600 hover:bg-white/60 hover:text-green-800 hover:shadow-sm' 
-                    : 'text-orange-500 hover:bg-white/60 hover:text-orange-700 hover:shadow-sm'
-            }`}
-          >
-            <div className={`transition-colors duration-300 ${
-              activeView === tab.id 
-                ? 'text-green-600' 
-                : index < 4 
-                    ? 'text-green-500 group-hover:text-green-600' 
-                    : 'text-orange-400 group-hover:text-orange-500'
-            }`}>
-              <tab.icon className="w-4 h-4 md:w-[18px] md:h-[18px]" strokeWidth={activeView === tab.id ? 2.5 : 2} />
-            </div>
-            <span className="whitespace-nowrap">{tab.label}</span>
-          </button>
-        ))}
+      {/* ── Group Navigation Bar (Level 1) ── */}
+      <div className="flex overflow-x-auto hide-scrollbar gap-2 p-1.5 bg-slate-900 rounded-2xl w-full shadow-lg">
+        {tabGroups.map(group => {
+          const isActiveGroup = activeGroup === group.id;
+          const GroupIcon = group.icon;
+          return (
+            <button
+              key={group.id}
+              onClick={() => {
+                setActiveGroup(group.id);
+                // auto-navigate to first tab of group if current tab not in this group
+                if (!group.tabs.find(t => t.id === activeView)) {
+                  navigateTo(group.tabs[0].id);
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 min-w-max rounded-xl transition-all duration-200 font-bold text-sm"
+              style={{
+                backgroundColor: isActiveGroup ? group.color : 'transparent',
+                color: isActiveGroup ? '#fff' : '#94a3b8',
+                boxShadow: isActiveGroup ? `0 4px 14px ${group.color}55` : 'none',
+              }}
+            >
+              <GroupIcon className="w-4 h-4" strokeWidth={2.5} />
+              <span className="whitespace-nowrap">{group.label}</span>
+            </button>
+          );
+        })}
       </div>
+
+      {/* ── Sub-Tab Row (Level 2) — tabs within active group ── */}
+      {(() => {
+        const currentGroup = tabGroups.find(g => g.id === activeGroup);
+        if (!currentGroup) return null;
+        return (
+          <div className="flex overflow-x-auto hide-scrollbar gap-2 p-2 rounded-xl w-full"
+            style={{ backgroundColor: `${currentGroup.color}18`, border: `1px solid ${currentGroup.color}33` }}
+          >
+            {currentGroup.tabs.map(tab => {
+              const isActive = activeView === tab.id;
+              const TabIcon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => navigateTo(tab.id)}
+                  className="flex items-center gap-2 px-4 py-2 min-w-max rounded-lg transition-all duration-200 font-bold text-sm"
+                  style={{
+                    backgroundColor: isActive ? currentGroup.color : 'transparent',
+                    color: isActive ? '#fff' : currentGroup.color,
+                    boxShadow: isActive ? `0 2px 8px ${currentGroup.color}44` : 'none',
+                  }}
+                >
+                  <TabIcon className="w-4 h-4" strokeWidth={isActive ? 2.5 : 2} />
+                  <span className="whitespace-nowrap">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Dynamic Content Area */}
       {loading && activeView !== 'overview' ? (
