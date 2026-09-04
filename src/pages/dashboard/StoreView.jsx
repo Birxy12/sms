@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, query, getDocs, addDoc, setDoc, doc, getDoc, serverTimestamp, limit } from 'firebase/firestore';
-import { ShoppingCart, Settings, Plus, Loader2, Search, CheckCircle, Tag, X, BarChart2, BookOpen, Shirt, BookText, Activity } from 'lucide-react';
+import { ShoppingCart, Settings, Plus, Loader2, Search, CheckCircle, Tag, X, BarChart2 } from 'lucide-react';
+import SchoolItemIcon from '../../components/SchoolItemIcon';
 import { formatNaira } from '../../utils/prospectusFees';
 
 const DEFAULT_INVENTORY = {
@@ -243,10 +244,10 @@ const StoreView = ({ allStudents = [] }) => {
           className={`px-4 py-2 font-bold rounded-lg ${activeTab === 'overview' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
         >
           {(() => {
-            if (overviewCategoryFilter === 'Uniforms') return <Shirt size={16} className="inline mr-2" />;
-            if (overviewCategoryFilter === 'Exercise Books') return <BookOpen size={16} className="inline mr-2" />;
-            if (overviewCategoryFilter === 'Textbooks') return <BookText size={16} className="inline mr-2" />;
-            if (overviewCategoryFilter === 'P.E. Wear' || overviewCategoryFilter === 'Sports Wear') return <Activity size={16} className="inline mr-2" />;
+            if (overviewCategoryFilter === 'Uniforms') return <SchoolItemIcon item="uniform" size={16} className="inline mr-2" />;
+            if (overviewCategoryFilter === 'Exercise Books') return <SchoolItemIcon item="exercise-book" size={16} className="inline mr-2" />;
+            if (overviewCategoryFilter === 'Textbooks') return <SchoolItemIcon item="textbook" size={16} className="inline mr-2" />;
+            if (overviewCategoryFilter === 'P.E. Wear' || overviewCategoryFilter === 'Sports Wear') return <SchoolItemIcon item="p.e-wear" size={16} className="inline mr-2" />;
             return <BarChart2 size={16} className="inline mr-2" />;
           })()} Overview
         </button>
@@ -313,11 +314,11 @@ const StoreView = ({ allStudents = [] }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-indigo-600 rounded-2xl p-6 shadow-sm text-white relative overflow-hidden group">
                 <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
-                  <BookOpen size={120} />
+                  <SchoolItemIcon item="exercise-book" size={120} />
                 </div>
                 <div className="text-sm font-bold text-indigo-200 uppercase tracking-widest mb-2 flex justify-between items-center relative z-10">
                   <span>Exercise Books Sold</span>
-                  <BookOpen size={20} className="text-indigo-300" />
+                  <SchoolItemIcon item="exercise-book" size={20} className="text-indigo-300" />
                 </div>
                 <div className="text-3xl font-black mb-2 relative z-10">{exerciseBooksAgg.count} <span className="text-lg font-bold text-indigo-300">units</span></div>
                 <div className="text-lg font-bold text-indigo-900 bg-white w-fit px-3 py-1 rounded-lg shadow-sm relative z-10">
@@ -327,11 +328,11 @@ const StoreView = ({ allStudents = [] }) => {
               
               <div className="bg-blue-600 rounded-2xl p-6 shadow-sm text-white relative overflow-hidden group">
                 <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
-                  <Shirt size={120} />
+                  <SchoolItemIcon item="uniform" size={120} />
                 </div>
                 <div className="text-sm font-bold text-blue-200 uppercase tracking-widest mb-2 flex justify-between items-center relative z-10">
                   <span>Uniforms Sold</span>
-                  <Shirt size={20} className="text-blue-300" />
+                  <SchoolItemIcon item="uniform" size={20} className="text-blue-300" />
                 </div>
                 <div className="text-3xl font-black mb-2 relative z-10">{uniformsAgg.count} <span className="text-lg font-bold text-blue-300">units</span></div>
                 <div className="text-lg font-bold text-blue-900 bg-white w-fit px-3 py-1 rounded-lg shadow-sm relative z-10">
@@ -341,11 +342,11 @@ const StoreView = ({ allStudents = [] }) => {
 
               <div className="bg-amber-600 rounded-2xl p-6 shadow-sm text-white relative overflow-hidden group">
                 <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
-                  <BookText size={120} />
+                  <SchoolItemIcon item="textbook" size={120} />
                 </div>
                 <div className="text-sm font-bold text-amber-200 uppercase tracking-widest mb-2 flex justify-between items-center relative z-10">
                   <span>Textbooks Sold</span>
-                  <BookText size={20} className="text-amber-300" />
+                  <SchoolItemIcon item="textbook" size={20} className="text-amber-300" />
                 </div>
                 <div className="text-3xl font-black mb-2 relative z-10">{textbooksAgg.count} <span className="text-lg font-bold text-amber-300">units</span></div>
                 <div className="text-lg font-bold text-amber-900 bg-white w-fit px-3 py-1 rounded-lg shadow-sm relative z-10">
