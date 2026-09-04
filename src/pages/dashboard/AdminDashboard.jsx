@@ -1754,26 +1754,56 @@ const AdminDashboard = () => {
               {/* Sub-Tab 2: Class Financial Breakdown */}
               {financeSubTab === 'classes' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {realFinance.classBreakdown.map(c => (
-                    <div key={c.className} className="p-5 bg-slate-50/70 rounded-2xl border border-slate-200/80 flex flex-col justify-between">
+                  {realFinance.classBreakdown.map(c => {
+                    const cls = (c.className || '').toUpperCase().replace(/\s+/g, '');
+                    let col = { bg: '#1e293b', border: '#334155', name: '#f1f5f9', badge: '#334155', badgeText: '#94a3b8', label: '#94a3b8', value: '#e2e8f0', collected: '#6ee7b7', debt: '#fca5a5', bar: '#6366f1', barBg: '#0f172a', rate: '#a5b4fc' };
+
+                    if (cls.startsWith('NURSERY') || cls.startsWith('NUR') || cls.startsWith('TODDLER'))
+                      col = { bg: '#831843', border: '#9d174d', name: '#fdf2f8', badge: '#9d174d', badgeText: '#fce7f3', label: '#fbcfe8', value: '#fce7f3', collected: '#86efac', debt: '#fca5a5', bar: '#f472b6', barBg: '#500724', rate: '#f9a8d4' };
+                    else if (cls.startsWith('BASIC1') || cls.startsWith('BASIC2') || cls.startsWith('BASIC3'))
+                      col = { bg: '#1e3a8a', border: '#1d4ed8', name: '#eff6ff', badge: '#1d4ed8', badgeText: '#dbeafe', label: '#bfdbfe', value: '#dbeafe', collected: '#6ee7b7', debt: '#fca5a5', bar: '#60a5fa', barBg: '#172554', rate: '#93c5fd' };
+                    else if (cls.startsWith('BASIC4') || cls.startsWith('BASIC5'))
+                      col = { bg: '#164e63', border: '#0e7490', name: '#ecfeff', badge: '#0e7490', badgeText: '#cffafe', label: '#a5f3fc', value: '#cffafe', collected: '#6ee7b7', debt: '#fca5a5', bar: '#22d3ee', barBg: '#083344', rate: '#67e8f9' };
+                    else if (cls.startsWith('BASIC'))
+                      col = { bg: '#0c4a6e', border: '#0369a1', name: '#f0f9ff', badge: '#0369a1', badgeText: '#e0f2fe', label: '#bae6fd', value: '#e0f2fe', collected: '#6ee7b7', debt: '#fca5a5', bar: '#38bdf8', barBg: '#082f49', rate: '#7dd3fc' };
+                    else if (cls.startsWith('JSS'))
+                      col = { bg: '#4c1d95', border: '#6d28d9', name: '#f5f3ff', badge: '#6d28d9', badgeText: '#ede9fe', label: '#ddd6fe', value: '#ede9fe', collected: '#6ee7b7', debt: '#fca5a5', bar: '#a78bfa', barBg: '#2e1065', rate: '#c4b5fd' };
+                    else if (cls.startsWith('SS1') || cls.startsWith('SSS1'))
+                      col = { bg: '#064e3b', border: '#047857', name: '#ecfdf5', badge: '#047857', badgeText: '#d1fae5', label: '#a7f3d0', value: '#d1fae5', collected: '#6ee7b7', debt: '#fca5a5', bar: '#34d399', barBg: '#022c22', rate: '#6ee7b7' };
+                    else if (cls.startsWith('SS2') || cls.startsWith('SSS2'))
+                      col = { bg: '#134e4a', border: '#0f766e', name: '#f0fdfa', badge: '#0f766e', badgeText: '#ccfbf1', label: '#99f6e4', value: '#ccfbf1', collected: '#6ee7b7', debt: '#fca5a5', bar: '#2dd4bf', barBg: '#042f2e', rate: '#5eead4' };
+                    else if (cls.startsWith('SS3') || cls.startsWith('SSS3'))
+                      col = { bg: '#14532d', border: '#15803d', name: '#f0fdf4', badge: '#15803d', badgeText: '#dcfce7', label: '#86efac', value: '#dcfce7', collected: '#6ee7b7', debt: '#fca5a5', bar: '#4ade80', barBg: '#052e16', rate: '#86efac' };
+                    else if (cls.startsWith('SS') || cls.startsWith('SSS'))
+                      col = { bg: '#064e3b', border: '#047857', name: '#ecfdf5', badge: '#047857', badgeText: '#d1fae5', label: '#a7f3d0', value: '#d1fae5', collected: '#6ee7b7', debt: '#fca5a5', bar: '#34d399', barBg: '#022c22', rate: '#6ee7b7' };
+
+                    return (
+                    <div
+                      key={c.className}
+                      className="p-5 rounded-2xl flex flex-col justify-between"
+                      style={{ backgroundColor: col.bg, border: `1px solid ${col.border}` }}
+                    >
                       <div>
                         <div className="flex justify-between items-center mb-3">
-                          <h4 className="font-black text-base text-slate-900">{c.className}</h4>
-                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                          <h4 className="font-black text-base" style={{ color: col.name }}>{c.className}</h4>
+                          <span
+                            className="text-[10px] font-black px-2 py-0.5 rounded-full"
+                            style={{ backgroundColor: col.badge, color: col.badgeText }}
+                          >
                             {c.studentCount} Students
                           </span>
                         </div>
 
                         <div className="space-y-2 text-xs font-bold mb-4">
-                          <div className="flex justify-between text-slate-500">
+                          <div className="flex justify-between" style={{ color: col.label }}>
                             <span>Expected:</span>
-                            <span className="text-slate-800 font-mono">₦{c.expected.toLocaleString()}</span>
+                            <span className="font-mono" style={{ color: col.value }}>₦{c.expected.toLocaleString()}</span>
                           </div>
-                          <div className="flex justify-between text-emerald-600">
+                          <div className="flex justify-between" style={{ color: col.collected }}>
                             <span>Collected:</span>
                             <span className="font-mono">₦{c.collected.toLocaleString()}</span>
                           </div>
-                          <div className="flex justify-between text-rose-600">
+                          <div className="flex justify-between" style={{ color: col.debt }}>
                             <span>Outstanding Debt:</span>
                             <span className="font-mono">₦{c.debt.toLocaleString()}</span>
                           </div>
@@ -1781,16 +1811,17 @@ const AdminDashboard = () => {
                       </div>
 
                       <div>
-                        <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 mb-1">
+                        <div className="flex justify-between text-[10px] font-black uppercase mb-1" style={{ color: col.label }}>
                           <span>Collection Rate</span>
-                          <span className="text-indigo-600">{c.collectionRate}%</span>
+                          <span style={{ color: col.rate }}>{c.collectionRate}%</span>
                         </div>
-                        <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
-                          <div style={{ width: `${c.collectionRate}%` }} className="h-full bg-indigo-600 rounded-full"></div>
+                        <div className="h-2 w-full rounded-full overflow-hidden" style={{ backgroundColor: col.barBg }}>
+                          <div style={{ width: `${c.collectionRate}%`, backgroundColor: col.bar }} className="h-full rounded-full" />
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
