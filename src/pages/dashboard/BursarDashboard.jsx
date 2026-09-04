@@ -952,44 +952,67 @@ const BursarDashboard = () => {
                   <th className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
+              <tbody className="divide-y divide-white/10 text-xs font-bold">
                 {classes.map((cls) => {
                   const cfg = getClassFees(cls, feeSettings);
                   const clsStudents = allStudents.filter(s => (s.className || s.class_name || s.CLASS) === cls);
                   const isSelected = selectedClass === cls;
 
+                  // Determine dark row color based on class section
+                  const c = cls.toUpperCase().replace(/\s+/g, '');
+                  let rowBg = 'bg-slate-800';
+                  let textColor = 'text-slate-100';
+                  let subTextColor = 'text-slate-300';
+                  let accentColor = 'text-slate-200';
+                  let badgeCls = 'bg-slate-700 text-slate-200';
+                  let btnCls = 'bg-slate-600 hover:bg-slate-500 text-white';
+
+                  if (c.startsWith('NURSERY') || c.startsWith('NUR')) {
+                    rowBg = 'bg-pink-900'; textColor = 'text-pink-50'; subTextColor = 'text-pink-200';
+                    accentColor = 'text-pink-100'; badgeCls = 'bg-pink-700 text-pink-100'; btnCls = 'bg-pink-700 hover:bg-pink-600 text-white';
+                  } else if (c.startsWith('BASIC1') || c.startsWith('BASIC2') || c.startsWith('BASIC3')) {
+                    rowBg = 'bg-blue-900'; textColor = 'text-blue-50'; subTextColor = 'text-blue-200';
+                    accentColor = 'text-blue-100'; badgeCls = 'bg-blue-700 text-blue-100'; btnCls = 'bg-blue-700 hover:bg-blue-600 text-white';
+                  } else if (c.startsWith('BASIC4') || c.startsWith('BASIC5')) {
+                    rowBg = 'bg-cyan-900'; textColor = 'text-cyan-50'; subTextColor = 'text-cyan-200';
+                    accentColor = 'text-cyan-100'; badgeCls = 'bg-cyan-700 text-cyan-100'; btnCls = 'bg-cyan-700 hover:bg-cyan-600 text-white';
+                  } else if (c.startsWith('BASIC')) {
+                    rowBg = 'bg-sky-900'; textColor = 'text-sky-50'; subTextColor = 'text-sky-200';
+                    accentColor = 'text-sky-100'; badgeCls = 'bg-sky-700 text-sky-100'; btnCls = 'bg-sky-700 hover:bg-sky-600 text-white';
+                  } else if (c.startsWith('JSS')) {
+                    rowBg = 'bg-violet-900'; textColor = 'text-violet-50'; subTextColor = 'text-violet-200';
+                    accentColor = 'text-violet-100'; badgeCls = 'bg-violet-700 text-violet-100'; btnCls = 'bg-violet-700 hover:bg-violet-600 text-white';
+                  } else if (c.startsWith('SS1') || c.startsWith('SSS1')) {
+                    rowBg = 'bg-emerald-900'; textColor = 'text-emerald-50'; subTextColor = 'text-emerald-200';
+                    accentColor = 'text-emerald-100'; badgeCls = 'bg-emerald-700 text-emerald-100'; btnCls = 'bg-emerald-700 hover:bg-emerald-600 text-white';
+                  } else if (c.startsWith('SS2') || c.startsWith('SSS2')) {
+                    rowBg = 'bg-teal-900'; textColor = 'text-teal-50'; subTextColor = 'text-teal-200';
+                    accentColor = 'text-teal-100'; badgeCls = 'bg-teal-700 text-teal-100'; btnCls = 'bg-teal-700 hover:bg-teal-600 text-white';
+                  } else if (c.startsWith('SS3') || c.startsWith('SSS3')) {
+                    rowBg = 'bg-green-900'; textColor = 'text-green-50'; subTextColor = 'text-green-200';
+                    accentColor = 'text-green-100'; badgeCls = 'bg-green-700 text-green-100'; btnCls = 'bg-green-700 hover:bg-green-600 text-white';
+                  } else if (c.startsWith('SS') || c.startsWith('SSS')) {
+                    rowBg = 'bg-emerald-900'; textColor = 'text-emerald-50'; subTextColor = 'text-emerald-200';
+                    accentColor = 'text-emerald-100'; badgeCls = 'bg-emerald-700 text-emerald-100'; btnCls = 'bg-emerald-700 hover:bg-emerald-600 text-white';
+                  }
+
                   return (
-                    <tr key={cls} className={`hover:bg-indigo-50/40 transition-colors ${isSelected ? 'bg-indigo-50/60' : ''}`}>
+                    <tr key={cls} className={`transition-colors ${rowBg} ${isSelected ? 'ring-2 ring-inset ring-white/30' : ''}`}>
                       <td className="py-3 px-4">
-                        <span className="font-black text-slate-900 text-sm">{cls}</span>
+                        <span className={`font-black text-sm ${textColor}`}>{cls}</span>
                       </td>
                       <td className="py-3 px-4">
-                        {(() => {
-                          const c = cls.toUpperCase().replace(/\s+/g,'');
-                          let badgeCls = 'bg-slate-800 text-slate-200';
-                          if (c.startsWith('NURSERY') || c.startsWith('NUR')) badgeCls = 'bg-pink-900 text-pink-200';
-                          else if (c.startsWith('BASIC1')||c.startsWith('BASIC2')||c.startsWith('BASIC3')) badgeCls = 'bg-blue-900 text-blue-200';
-                          else if (c.startsWith('BASIC4')||c.startsWith('BASIC5')) badgeCls = 'bg-cyan-900 text-cyan-200';
-                          else if (c.startsWith('BASIC')) badgeCls = 'bg-sky-900 text-sky-200';
-                          else if (c.startsWith('JSS')) badgeCls = 'bg-violet-900 text-violet-200';
-                          else if (c.startsWith('SS1')||c.startsWith('SSS1')) badgeCls = 'bg-emerald-900 text-emerald-200';
-                          else if (c.startsWith('SS2')||c.startsWith('SSS2')) badgeCls = 'bg-teal-900 text-teal-200';
-                          else if (c.startsWith('SS3')||c.startsWith('SSS3')) badgeCls = 'bg-green-900 text-green-200';
-                          else if (c.startsWith('SS')||c.startsWith('SSS')) badgeCls = 'bg-emerald-900 text-emerald-200';
-                          return (
-                            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${badgeCls}`}>
-                              {cfg.sectionTitle}
-                            </span>
-                          );
-                        })()}
+                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${badgeCls}`}>
+                          {cfg.sectionTitle}
+                        </span>
                       </td>
-                      <td className="py-3 px-4 font-mono text-slate-600">
+                      <td className={`py-3 px-4 font-mono ${subTextColor}`}>
                         {clsStudents.length} Students
                       </td>
-                      <td className="py-3 px-4 font-mono text-indigo-600 font-extrabold text-sm">
+                      <td className={`py-3 px-4 font-mono font-extrabold text-sm ${accentColor}`}>
                         ₦{cfg.schoolFee.toLocaleString()}
                       </td>
-                      <td className="py-3 px-4 font-mono text-amber-600 font-extrabold text-sm">
+                      <td className={`py-3 px-4 font-mono font-extrabold text-sm ${accentColor}`}>
                         ₦{cfg.prospectiveTotal.toLocaleString()}
                       </td>
                       <td className="py-3 px-4 text-right">
@@ -999,7 +1022,7 @@ const BursarDashboard = () => {
                             setSelectedClass(cls);
                             window.scrollTo({ top: 0, behavior: 'smooth' });
                           }}
-                          className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white font-black text-xs transition-colors"
+                          className={`px-3 py-1.5 rounded-lg font-black text-xs transition-colors ${btnCls}`}
                         >
                           Configure
                         </button>
