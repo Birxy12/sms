@@ -214,7 +214,7 @@ service cloud.firestore {
 
     // ========== FALLBACK ==========
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if true;
     }
   }
 }
