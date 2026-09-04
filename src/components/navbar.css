@@ -78,7 +78,7 @@
   align-items: center;
   gap: 0.75rem;
   text-decoration: none;
-  flex-shrink: 0;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -115,6 +115,10 @@
   letter-spacing: -0.02em;
   line-height: 1.2;
   color: var(--nav-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
 
 /* ───────────────────────────────────────────────────────────────
@@ -319,6 +323,7 @@
   align-items: center;
   gap: 0.5rem;
   margin-left: auto;
+  flex-shrink: 0;
 }
 
 @media (min-width: 1024px) {
