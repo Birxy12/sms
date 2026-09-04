@@ -273,9 +273,18 @@ const StoreView = ({ allStudents = [] }) => {
         const exerciseBooksAgg = getAggregate('Exercise Books');
         const textbooksAgg = getAggregate('Textbooks');
 
-        const availableSubGroups = Array.from(
-          new Set(salesHistory.filter(s => overviewCategoryFilter === 'All' || s.category === overviewCategoryFilter).map(s => s.itemName))
-        ).sort();
+        let availableSubGroups = [];
+        if (overviewCategoryFilter === 'All') {
+          const allItems = new Set();
+          Object.values(inventory).forEach(categoryItems => {
+            if (categoryItems) {
+              Object.keys(categoryItems).forEach(item => allItems.add(item));
+            }
+          });
+          availableSubGroups = Array.from(allItems).sort();
+        } else {
+          availableSubGroups = inventory[overviewCategoryFilter] ? Object.keys(inventory[overviewCategoryFilter]).sort() : [];
+        }
 
         return (
           <div className="card-white p-6 rounded-3xl border border-slate-100 shadow-sm">
