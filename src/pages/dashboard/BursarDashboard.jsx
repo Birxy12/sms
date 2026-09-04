@@ -157,8 +157,17 @@ const BursarDashboard = () => {
   const location = window.location;
   const [activeView, setActiveView] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('tab') || 'overview';
+    return params.get('tab') || localStorage.getItem('bursar_active_tab') || 'overview';
   });
+
+  // Navigate and persist tab to URL + localStorage so refresh restores last position
+  const navigateTo = (tabId) => {
+    setActiveView(tabId);
+    localStorage.setItem('bursar_active_tab', tabId);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tabId);
+    window.history.replaceState({}, '', url.toString());
+  };
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [preSelectedStudent, setPreSelectedStudent] = useState(null);
@@ -317,7 +326,7 @@ const BursarDashboard = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('tab')) {
-      setActiveView(params.get('tab'));
+      navigateTo(params.get('tab'));
     }
   }, [window.location.search]);
 
@@ -1182,7 +1191,7 @@ const BursarDashboard = () => {
                       <button 
                         onClick={() => {
                           setPreSelectedStudent(s);
-                          setActiveView('cashpay');
+                          navigateTo('cashpay');
                         }}
                         className="px-4 py-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg text-xs font-black uppercase tracking-wider transition-colors"
                       >
@@ -1410,7 +1419,7 @@ const BursarDashboard = () => {
                       <button 
                         onClick={() => {
                           setPreSelectedStudent(s);
-                          setActiveView('cashpay');
+                          navigateTo('cashpay');
                         }}
                         className="px-4 py-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg text-xs font-black uppercase tracking-wider transition-colors"
                       >
@@ -2579,7 +2588,7 @@ const BursarDashboard = () => {
         {sidebarTabs.map((tab, index) => (
           <button
             key={tab.id}
-            onClick={() => setActiveView(tab.id)}
+            onClick={() => navigateTo(tab.id)}
             className={`flex items-center gap-2 md:gap-2.5 px-3.5 py-2.5 md:px-5 md:py-3 min-w-max rounded-xl transition-all duration-300 font-bold text-[13px] md:text-sm tracking-wide ${
               activeView === tab.id 
                 ? 'bg-white text-green-700 shadow-sm ring-1 ring-slate-200/60 transform scale-[1.02]' 
