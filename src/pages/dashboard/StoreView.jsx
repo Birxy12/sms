@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
-import { collection, query, getDocs, addDoc, setDoc, doc, getDoc, serverTimestamp, orderBy, limit } from 'firebase/firestore';
-import { ShoppingCart, Settings, Plus, Loader2, Search, CheckCircle, Tag, X } from 'lucide-react';
+import { collection, query, getDocs, addDoc, setDoc, doc, getDoc, serverTimestamp, limit } from 'firebase/firestore';
+import { ShoppingCart, Settings, Plus, Loader2, Search, CheckCircle, Tag, X, BarChart2 } from 'lucide-react';
 import { formatNaira } from '../../utils/prospectusFees';
 
 const DEFAULT_INVENTORY = {
@@ -64,6 +64,10 @@ const StoreView = ({ allStudents = [] }) => {
   const [invPrice, setInvPrice] = useState('');
   const [savingInv, setSavingInv] = useState(false);
 
+  // Overview State
+  const [overviewCategoryFilter, setOverviewCategoryFilter] = useState('All');
+  const [overviewSubGroupFilter, setOverviewSubGroupFilter] = useState('All');
+
   useEffect(() => {
     fetchStoreData();
   }, []);
@@ -93,9 +97,9 @@ const StoreView = ({ allStudents = [] }) => {
         setInventory(DEFAULT_INVENTORY);
       }
 
-      // 2. Fetch Recent Sales (without orderBy to avoid index requirement)
+      // 2. Fetch Recent Sales
       try {
-        const salesQ = query(collection(db, 'store_sales'), limit(100));
+        const salesQ = query(collection(db, 'store_sales'), limit(2000));
         const salesSnap = await getDocs(salesQ);
         const sales = salesSnap.docs
           .map(d => ({ id: d.id, ...d.data() }))
@@ -234,7 +238,109 @@ const StoreView = ({ allStudents = [] }) => {
         >
           <Search size={16} className="inline mr-2" /> Sales History
         </button>
+        <button 
+          onClick={() => setActiveTab('overview')} 
+          className={`px-4 py-2 font-bold rounded-lg ${activeTab === 'overview' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+        >
+          <BarChart2 size={16} className="inline mr-2" /> Overview
+        </button>
       </div>
+
+      {activeTab === 'overview' && (() => {
+        const overviewSales = salesHistory.filter(s => {
+          if (overviewCategoryFilter !== 'All' && s.category !== overviewCategoryFilter) return false;
+          if (overviewSubGroupFilter !== 'All' && s.itemName !== overviewSubGroupFilter) return false;
+          return true;
+        });
+
+        const getAggregate = (category) => {
+          const items = overviewSales.filter(s => s.category === category);
+          return items.reduce((acc, curr) => {
+            acc.count += Number(curr.quantity || 0);
+            acc.amount += Number(curr.totalAmount || 0);
+            return acc;
+          }, { count: 0, amount: 0 });
+        };
+
+        const uniformsAgg = getAggregate('Uniforms');
+        const exerciseBooksAgg = getAggregate('Exercise Books');
+        const textbooksAgg = getAggregate('Textbooks');
+
+        const availableSubGroups = Array.from(
+          new Set(salesHistory.filter(s => overviewCategoryFilter === 'All' || s.category === overviewCategoryFilter).map(s => s.itemName))
+        ).sort();
+
+        return (
+          <div className="card-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+            <h2 className="text-xl font-black text-slate-800 mb-6 flex items-center">
+              <BarChart2 className="mr-3 text-blue-600" /> Store Sales Overview
+            </h2>
+
+            <div className="flex flex-wrap gap-4 mb-8 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Category Filter</label>
+                <select 
+                  value={overviewCategoryFilter}
+                  onChange={e => {
+                    setOverviewCategoryFilter(e.target.value);
+                    setOverviewSubGroupFilter('All');
+                  }}
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 outline-none"
+                >
+                  <option value="All">All Categories</option>
+                  {ITEM_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Sub-Group / Item Filter</label>
+                <select 
+                  value={overviewSubGroupFilter}
+                  onChange={e => setOverviewSubGroupFilter(e.target.value)}
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 outline-none"
+                >
+                  <option value="All">All Sub-Groups</option>
+                  {availableSubGroups.map(sg => <option key={sg} value={sg}>{sg}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white border-2 border-indigo-100 rounded-2xl p-6 shadow-sm">
+                <div className="text-sm font-bold text-indigo-500 uppercase tracking-widest mb-2">Exercise Books Sold</div>
+                <div className="text-3xl font-black text-slate-800 mb-2">{exerciseBooksAgg.count} <span className="text-lg font-bold text-slate-400">units</span></div>
+                <div className="text-lg font-bold text-emerald-600 bg-emerald-50 w-fit px-3 py-1 rounded-lg">
+                  {formatNaira(exerciseBooksAgg.amount)}
+                </div>
+              </div>
+              
+              <div className="bg-white border-2 border-blue-100 rounded-2xl p-6 shadow-sm">
+                <div className="text-sm font-bold text-blue-500 uppercase tracking-widest mb-2">Uniforms Sold</div>
+                <div className="text-3xl font-black text-slate-800 mb-2">{uniformsAgg.count} <span className="text-lg font-bold text-slate-400">units</span></div>
+                <div className="text-lg font-bold text-emerald-600 bg-emerald-50 w-fit px-3 py-1 rounded-lg">
+                  {formatNaira(uniformsAgg.amount)}
+                </div>
+              </div>
+
+              <div className="bg-white border-2 border-amber-100 rounded-2xl p-6 shadow-sm">
+                <div className="text-sm font-bold text-amber-500 uppercase tracking-widest mb-2">Textbooks Sold</div>
+                <div className="text-3xl font-black text-slate-800 mb-2">{textbooksAgg.count} <span className="text-lg font-bold text-slate-400">units</span></div>
+                <div className="text-lg font-bold text-emerald-600 bg-emerald-50 w-fit px-3 py-1 rounded-lg">
+                  {formatNaira(textbooksAgg.amount)}
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-8 pt-6 border-t border-slate-100 flex justify-between items-center">
+              <div className="text-sm font-bold text-slate-500">
+                Filtered Total Volume
+              </div>
+              <div className="text-2xl font-black text-slate-800">
+                {formatNaira(overviewSales.reduce((acc, curr) => acc + Number(curr.totalAmount || 0), 0))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {activeTab === 'sell' && (
         <div className="card-white p-6 rounded-3xl border border-slate-100 shadow-sm max-w-2xl">
