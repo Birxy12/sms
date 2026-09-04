@@ -5,10 +5,8 @@ import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from 'fir
 import { useTheme } from '../../context/ThemeContext';
 import { DollarSign, CreditCard, Clock, AlertTriangle, CheckCircle, ArrowRight, Printer, X, Wallet, ListChecks, Receipt, Building2 } from 'lucide-react';
 import ReceiptScanner from '../../components/ReceiptScanner';
-import { getStudentWallet, debitStudentWallet } from '../../utils/wallet';
 import { getProspectusFeeData, getClassFees, getExpectedFeeForStudent, formatNaira } from '../../utils/prospectusFees';
 import { payWithFirstBank, payWithMoniepoint, SUPPORTED_GATEWAYS, SCHOOL_BANK_ACCOUNTS } from '../../utils/paymentGateways';
-import ReactDOMServer from 'react-dom/server';
 import QRCodeDisplay from '../../components/QRCodeDisplay';
 
 const StudentFees = () => {
@@ -17,6 +15,8 @@ const StudentFees = () => {
   const [feeData, setFeeData] = useState({ expected: 0, paid: 0, lastDate: 'N/A', term: 'First Term', session: '', txnId: '', serialNo: '' });
   const [loading, setLoading] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const receiptRef = React.useRef(null);
   const [payAmount, setPayAmount] = useState('');
   const [paying, setPaying] = useState(false);
   const [selectedGateway, setSelectedGateway] = useState('firstbank');
@@ -273,119 +273,29 @@ const StudentFees = () => {
   };
 
   const handlePrintReceipt = () => {
-    const pFee = feeData.paid;
-    const eFee = feeData.expected;
-    const bal = eFee - pFee;
-    const term = feeData.term || 'First Term';
-    const session = feeData.session || currentSession || '2025/2026';
-    const txnId = feeData.txnId || 'TXN-' + Math.floor(10000000 + Math.random() * 90000000);
-    const serialNo = feeData.serialNo || 'SN-' + Math.floor(100000 + Math.random() * 900000);
-    const qrData = `Receipt: ${currentStudent?.name || 'Student'} | ${term} ${session} | Reg: ${currentStudent?.regNo || 'N/A'} | Paid: ₦${pFee} | Txn: ${txnId}`;
+    setShowReceiptModal(true);
+  };
 
+  const executePrint = () => {
+    if (!receiptRef.current) return;
     const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow pop-ups to print the receipt.');
+      return;
+    }
+    const receiptMarkup = receiptRef.current.outerHTML;
     printWindow.document.write(`
+      <!DOCTYPE html>
       <html>
         <head>
           <title>Receipt - ${currentStudent?.name || 'Student'}</title>
           <style>
-            body { font-family: 'Arial', sans-serif; padding: 40px; color: #1e293b; }
-            .receipt-box { border: 2px solid #e2e8f0; border-radius: 16px; padding: 40px; max-width: 600px; margin: 0 auto; }
-            .header { text-align: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 20px; margin-bottom: 30px; }
-            .school-name { font-size: 24px; font-weight: 900; margin-bottom: 5px; color: #0f172a; text-transform: uppercase; }
-            .title { font-size: 14px; font-weight: bold; letter-spacing: 2px; color: #64748b; text-transform: uppercase; }
-            .row { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 16px; }
-            .label { color: #64748b; font-weight: bold; }
-            .value { font-weight: 900; color: #0f172a; }
-            .total-box { margin-top: 30px; background: #f8fafc; padding: 20px; border-radius: 12px; }
-            .total-row { display: flex; justify-content: space-between; font-size: 20px; font-weight: 900; }
-            .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #94a3b8; }
-            .signature { margin-top: 45px; border-top: 1px solid #cbd5e1; width: 200px; padding-top: 10px; text-align: center; float: right; font-weight: bold; }
-            .qr-barcode-section { display: flex; justify-content: space-between; align-items: center; margin-top: 35px; padding-top: 25px; border-top: 2px dashed #e2e8f0; }
-            .barcode-visual { font-family: 'Courier New', monospace; font-size: 24px; letter-spacing: 1px; font-weight: bold; margin-bottom: 2px; }
+            body { margin: 0; padding: 24px; background: #fff; color: #111827; font-family: Arial, sans-serif; }
+            * { box-sizing: border-box; }
           </style>
         </head>
         <body>
-          <div class="receipt-box">
-            <div class="header">
-              <div class="school-name">Bonus Dominus School</div>
-              <div class="title">Official Payment Receipt</div>
-            </div>
-            <div class="row">
-              <span class="label">Date Printed:</span>
-              <span class="value">${new Date().toLocaleDateString()}</span>
-            </div>
-            <div class="row">
-              <span class="label">Session:</span>
-              <span class="value">${session}</span>
-            </div>
-            <div class="row">
-              <span class="label">Term:</span>
-              <span class="value">${term}</span>
-            </div>
-            <div class="row">
-              <span class="label">Serial No:</span>
-              <span class="value">${serialNo}</span>
-            </div>
-            <div class="row">
-              <span class="label">Transaction ID:</span>
-              <span class="value">${txnId}</span>
-            </div>
-            <div class="row">
-              <span class="label">Student Name:</span>
-              <span class="value">${currentStudent?.name || 'Student'}</span>
-            </div>
-            <div class="row">
-              <span class="label">Reg Number:</span>
-              <span class="value">${currentStudent?.regNo || 'N/A'}</span>
-            </div>
-            <div class="row">
-              <span class="label">Class:</span>
-              <span class="value">${currentStudent?.className || 'N/A'}</span>
-            </div>
-            
-            <div class="total-box">
-              <div class="row">
-                <span class="label">Expected Fee:</span>
-                <span class="value">₦${eFee.toLocaleString()}</span>
-              </div>
-              <div class="row">
-                <span class="label">Amount Paid:</span>
-                <span class="value" style="color: #10b981;">₦${pFee.toLocaleString()}</span>
-              </div>
-              <div class="total-row" style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed #cbd5e1;">
-                <span>Outstanding Balance:</span>
-                <span style="color: ${bal > 0 ? '#e11d48' : '#10b981'};">₦${Math.max(0, bal).toLocaleString()}</span>
-              </div>
-            </div>
-
-            <div class="qr-barcode-section">
-              <div>
-                ${ReactDOMServer.renderToString(
-                  <QRCodeDisplay
-                    value={qrData}
-                    size={80}
-                    label="SCAN TO VERIFY"
-                    sublabel={serialNo}
-                    fgColor="#1a237e"
-                  />
-                )}
-              </div>
-              <div style="text-align: right;">
-                <div class="barcode-visual">||| | |||| | || ||| ||</div>
-                <div style="font-size: 10px; color: #94a3b8; font-family: monospace;">SERIAL: ${serialNo}</div>
-              </div>
-            </div>
-
-            <div class="signature">
-              Bursar Signature
-            </div>
-            <div style="clear: both;"></div>
-
-            <div class="footer">
-              Thank you for your payment.<br/>
-              This is a computer generated receipt.
-            </div>
-          </div>
+          ${receiptMarkup}
           <script>window.print();</script>
         </body>
       </html>
@@ -760,6 +670,116 @@ const StudentFees = () => {
                 }}
                 userId={currentStudent?.id || 'anonymous'}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* On-Page Receipt Modal */}
+      {showReceiptModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-slate-100 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-4 bg-white border-b flex justify-between items-center shadow-sm z-10">
+              <div className="flex items-center gap-2">
+                <Receipt className="text-indigo-600" />
+                <h3 className="font-black text-slate-800 m-0">Official Receipt</h3>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={executePrint}
+                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all"
+                >
+                  <Printer size={16} /> Print
+                </button>
+                <button 
+                  onClick={() => setShowReceiptModal(false)}
+                  className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-rose-100 hover:text-rose-600 flex items-center justify-center transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-100 flex justify-center">
+              <div 
+                ref={receiptRef}
+                style={{
+                  background: '#ffffff',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '16px',
+                  padding: '40px',
+                  width: '100%',
+                  maxWidth: '520px',
+                  color: '#1e293b',
+                  fontFamily: 'Arial, sans-serif'
+                }}
+              >
+                <div style={{ textAlign: 'center', borderBottom: '2px dashed #cbd5e1', paddingBottom: '20px', marginBottom: '30px' }}>
+                  <div style={{ fontSize: '24px', fontWeight: '900', marginBottom: '5px', color: '#0f172a', textTransform: 'uppercase' }}>Bonus Dominus School</div>
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', letterSpacing: '2px', color: '#64748b', textTransform: 'uppercase' }}>Official Payment Receipt</div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {[
+                    ['Date Printed', new Date().toLocaleDateString()],
+                    ['Session', feeData.session || currentSession || '2025/2026'],
+                    ['Term', feeData.term || 'First Term'],
+                    ['Serial No', feeData.serialNo || 'SN-' + Math.floor(100000 + Math.random() * 900000)],
+                    ['Transaction ID', feeData.txnId || 'TXN-' + Math.floor(10000000 + Math.random() * 90000000)],
+                    ['Student Name', currentStudent?.name || 'Student'],
+                    ['Reg Number', currentStudent?.regNo || 'N/A'],
+                    ['Class', currentStudent?.className || 'N/A']
+                  ].map(([lbl, val]) => (
+                    <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px' }}>
+                      <span style={{ color: '#64748b', fontWeight: 'bold' }}>{lbl}:</span>
+                      <span style={{ fontWeight: '900', color: '#0f172a' }}>{val}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', marginTop: '25px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', marginBottom: '12px' }}>
+                    <span style={{ color: '#64748b', fontWeight: 'bold' }}>Expected Fee:</span>
+                    <span style={{ fontWeight: '900' }}>₦{feeData.expected.toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px' }}>
+                    <span style={{ color: '#64748b', fontWeight: 'bold' }}>Amount Paid:</span>
+                    <span style={{ fontWeight: '900', color: '#10b981' }}>₦{feeData.paid.toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: '900', marginTop: '15px', paddingTop: '15px', borderTop: '2px dashed #cbd5e1' }}>
+                    <span>Outstanding:</span>
+                    <span style={{ color: (feeData.expected - feeData.paid) > 0 ? '#e11d48' : '#10b981' }}>
+                      ₦{Math.max(0, feeData.expected - feeData.paid).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '35px', paddingTop: '25px', borderTop: '2px dashed #e2e8f0' }}>
+                  <div>
+                    <QRCodeDisplay
+                      value={`Receipt: ${currentStudent?.name || 'Student'} | ${feeData.term || 'First Term'} ${feeData.session || currentSession} | Reg: ${currentStudent?.regNo} | Paid: ₦${feeData.paid}`}
+                      size={80}
+                      label="SCAN TO VERIFY"
+                      sublabel={feeData.serialNo || 'SN-X'}
+                      fgColor="#1a237e"
+                    />
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontFamily: "'Courier New', monospace", fontSize: '24px', letterSpacing: '1px', fontWeight: 'bold', marginBottom: '2px' }}>||| | |||| | || ||| ||</div>
+                    <div style={{ fontSize: '10px', color: '#94a3b8', fontFamily: 'monospace' }}>SERIAL: {feeData.serialNo || 'SN-X'}</div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '45px', borderTop: '1px solid #cbd5e1', width: '200px', paddingTop: '10px', textAlign: 'center', float: 'right', fontWeight: 'bold' }}>
+                  Bursar Signature
+                </div>
+                <div style={{ clear: 'both' }}></div>
+
+                <div style={{ marginTop: '40px', textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>
+                  Thank you for your payment.<br/>
+                  This is a computer generated receipt.
+                </div>
+              </div>
             </div>
           </div>
         </div>
