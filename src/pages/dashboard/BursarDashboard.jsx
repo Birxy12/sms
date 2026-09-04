@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../lib/firebase';
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
-import { collection, query, getDocs, orderBy, where, doc, updateDoc as fbUpdateDoc, writeBatch as fbWriteBatch, addDoc as fbAddDoc, serverTimestamp, setDoc as fbSetDoc, getDoc, limit } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, where, doc, updateDoc as fbUpdateDoc, writeBatch as fbWriteBatch, addDoc as fbAddDoc, serverTimestamp, setDoc as fbSetDoc, getDoc, limit, arrayUnion } from 'firebase/firestore';
 import { 
   Wallet, DollarSign, TrendingUp, TrendingDown, Users, 
   Search, Download, Plus, ArrowUpRight, 
@@ -1607,6 +1607,14 @@ const BursarDashboard = () => {
     const [paymentSession, setPaymentSession] = useState('2025/2026');
     const [saving, setSaving] = useState(false);
     const [receipt, setReceipt] = useState(null);
+    const [coveredItems, setCoveredItems] = useState({
+      uniform: false,
+      'p.e-wear': false,
+      'sport-wear': false,
+      jacket: false
+    });
+
+    const isNewIntake = selectedStudent?.studentType === 'new_intake' || selectedStudent?.isNewIntake === true || String(selectedStudent?.studentType || '').toLowerCase().includes('new');
 
     useEffect(() => {
       if (preSelectedStudent) {
@@ -1638,6 +1646,9 @@ const BursarDashboard = () => {
         const serialNo = 'SN-' + Math.floor(100000 + Math.random() * 900000);
         const ref = doc(db, 'students', selectedStudent.id);
         const isPendingAdmission = selectedStudent.status === 'pending_activation' || selectedStudent.requiresAdminConfirmation || selectedStudent.admissionConfirmed === false || selectedStudent.paymentConfirmed === false;
+        
+        const selectedPaidItems = Object.keys(coveredItems).filter(k => coveredItems[k]);
+
         await updateDoc(ref, {
           paidFee: newPaid, paidAmount: newPaid,
           expectedFee: newExpected,
@@ -1645,6 +1656,9 @@ const BursarDashboard = () => {
           lastPaymentDate: new Date().toLocaleDateString('en-NG'),
           lastTransactionId: txnId, lastSerialNo: serialNo,
           lastPaymentTerm: paymentTerm, lastPaymentSession: paymentSession,
+          ...(selectedPaidItems.length > 0 ? {
+            paidIntakeItems: arrayUnion(...selectedPaidItems)
+          } : {}),
           ...(isPendingAdmission ? {
             paymentConfirmed: true,
             admissionConfirmed: true,
@@ -1665,7 +1679,7 @@ const BursarDashboard = () => {
           message: `Cash payment of \u20a6${amount.toLocaleString()} received for ${paymentTerm}, ${paymentSession}.${discount > 0 ? ` A discount of \u20a6${discount.toLocaleString()} was applied.` : ''}`,
           createdAt: serverTimestamp(),
         });
-        setReceipt({ student: selectedStudent, amount, discount, newPaid, date: new Date().toLocaleDateString('en-NG'), term: paymentTerm, session: paymentSession, txnId, serialNo });
+        setReceipt({ student: selectedStudent, amount, discount, newPaid, date: new Date().toLocaleDateString('en-NG'), term: paymentTerm, session: paymentSession, txnId, serialNo, coveredItems: selectedPaidItems });
         fetchFinancialData();
         setCashAmount(''); setDiscountAmount(''); setSelectedStudent(null); setSearchTerm('');
         setPreSelectedStudent(null);
@@ -1705,6 +1719,7 @@ const BursarDashboard = () => {
         <div class="row"><span class="lbl">Class:</span><span class="val">${s.className||s.CLASS||'N/A'}</span></div>
         <div class="row"><span class="lbl">Method:</span><span class="val">CASH</span></div>
         ${receipt.discount > 0 ? `<div class="row"><span class="lbl">Discount Applied:</span><span class="val" style="color:#ef4444">-\u20a6${receipt.discount.toLocaleString()}</span></div>` : ''}
+        ${receipt.coveredItems && receipt.coveredItems.length > 0 ? `<div class="row" style="background:#f0f9ff;padding:12px;margin-top:10px;border-radius:8px"><span class="lbl">Items Covered:</span><span class="val" style="color:#0284c7">${receipt.coveredItems.map(i => i.replace('-',' ').toUpperCase()).join(', ')}</span></div>` : ''}
         <div class="total"><span>Amount Paid:</span><span style="color:#10b981">\u20a6${receipt.amount.toLocaleString()}</span></div>
         <div class="row" style="margin-top:12px"><span class="lbl">Total Paid to Date:</span><span class="val">\u20a6${receipt.newPaid.toLocaleString()}</span></div>
         
@@ -1799,6 +1814,32 @@ const BursarDashboard = () => {
                   className="w-full px-4 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-rose-400 outline-none font-black text-2xl text-slate-900 transition-all" />
               </div>
             </div>
+            {isNewIntake && (
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-4">
+                <h4 className="text-sm font-bold text-blue-900 mb-3 flex items-center">
+                  <CheckCircle2 size={16} className="mr-2 text-blue-600" />
+                  New Intake Package Checklist (Select items covered by this payment)
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { key: 'uniform', label: 'Uniform' },
+                    { key: 'p.e-wear', label: 'P.E. Wear' },
+                    { key: 'sport-wear', label: 'Sport Wear' },
+                    { key: 'jacket', label: 'Jacket' }
+                  ].map(item => (
+                    <label key={item.key} className={`flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${coveredItems[item.key] ? 'border-blue-500 bg-blue-100/50' : 'border-transparent bg-white hover:border-blue-200'}`}>
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" 
+                        checked={coveredItems[item.key]}
+                        onChange={e => setCoveredItems({...coveredItems, [item.key]: e.target.checked})}
+                      />
+                      <span className="text-sm font-bold text-slate-700">{item.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
             <button disabled={!selectedStudent||!cashAmount||saving} onClick={handlePay}
               className="w-full bg-green-600 text-white font-black py-4 rounded-xl hover:bg-green-700 transition-all shadow-lg disabled:opacity-40 flex items-center justify-center gap-2">
               {saving ? <Loader2 size={20} className="animate-spin"/> : <Banknote size={20}/>} Record Cash Payment
