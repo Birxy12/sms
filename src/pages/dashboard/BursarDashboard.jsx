@@ -2678,38 +2678,40 @@ const BursarDashboard = () => {
             <ShieldAlert size={18} />
             Reset All Fees
           </button>
-          <button 
-            onClick={async () => {
-              if (demoMode) {
-                showDemoWarning();
-                return;
-              }
-              const conf = window.confirm('Are you sure you want to HARD CLEAR ALL fees (expected and collected) to 0 for all students?');
-              if (!conf) return;
-              try {
-                const { writeBatch: fsWriteBatch, doc } = await import('firebase/firestore');
-                let batch = fsWriteBatch(db);
-                let count = 0;
-                for (const student of allStudents) {
-                  batch.update(doc(db, 'students', student.id), { paidFee: 0, paidAmount: 0, expectedFee: 0 });
-                  count++;
-                  if (count % 300 === 0) {
-                    await batch.commit();
-                    batch = fsWriteBatch(db);
-                  }
+          {currentAdmin?.role !== 'bursar' && (
+            <button 
+              onClick={async () => {
+                if (demoMode) {
+                  showDemoWarning();
+                  return;
                 }
-                if (count % 300 !== 0) await batch.commit();
-                alert(`Successfully cleared all fees (expected & collected) for ${count} students.`);
-              } catch (e) {
-                console.error(e);
-                alert('Error clearing fees: ' + e.message);
-              }
-            }}
-            className="flex items-center gap-2 bg-orange-600 text-white px-6 py-3.5 rounded-2xl font-bold hover:bg-orange-700 transition-all active:scale-95 text-sm shadow-xl shadow-orange-200"
-          >
-            <RefreshCw size={18} />
-            Hard Clear ALL Fees
-          </button>
+                const conf = window.confirm('Are you sure you want to HARD CLEAR ALL fees (expected and collected) to 0 for all students?');
+                if (!conf) return;
+                try {
+                  const { writeBatch: fsWriteBatch, doc } = await import('firebase/firestore');
+                  let batch = fsWriteBatch(db);
+                  let count = 0;
+                  for (const student of allStudents) {
+                    batch.update(doc(db, 'students', student.id), { paidFee: 0, paidAmount: 0, expectedFee: 0 });
+                    count++;
+                    if (count % 300 === 0) {
+                      await batch.commit();
+                      batch = fsWriteBatch(db);
+                    }
+                  }
+                  if (count % 300 !== 0) await batch.commit();
+                  alert(`Successfully cleared all fees (expected & collected) for ${count} students.`);
+                } catch (e) {
+                  console.error(e);
+                  alert('Error clearing fees: ' + e.message);
+                }
+              }}
+              className="flex items-center gap-2 bg-orange-600 text-white px-6 py-3.5 rounded-2xl font-bold hover:bg-orange-700 transition-all active:scale-95 text-sm shadow-xl shadow-orange-200"
+            >
+              <RefreshCw size={18} />
+              Hard Clear ALL Fees
+            </button>
+          )}
         </div>
       </div>
 
