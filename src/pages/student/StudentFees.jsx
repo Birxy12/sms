@@ -8,6 +8,8 @@ import ReceiptScanner from '../../components/ReceiptScanner';
 import { getStudentWallet, debitStudentWallet } from '../../utils/wallet';
 import { getProspectusFeeData, getClassFees, getExpectedFeeForStudent, formatNaira } from '../../utils/prospectusFees';
 import { payWithFirstBank, payWithMoniepoint, SUPPORTED_GATEWAYS, SCHOOL_BANK_ACCOUNTS } from '../../utils/paymentGateways';
+import ReactDOMServer from 'react-dom/server';
+import QRCodeDisplay from '../../components/QRCodeDisplay';
 
 const StudentFees = () => {
   const { currentStudent } = useStudentAuth();
@@ -358,8 +360,15 @@ const StudentFees = () => {
 
             <div class="qr-barcode-section">
               <div>
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}" alt="QR Code" style="width: 80px; height: 80px;" />
-                <div style="font-size: 9px; color: #94a3b8; margin-top: 4px; text-align: center;">Scan to Verify</div>
+                ${ReactDOMServer.renderToString(
+                  <QRCodeDisplay
+                    value={qrData}
+                    size={80}
+                    label="SCAN TO VERIFY"
+                    sublabel={serialNo}
+                    fgColor="#1a237e"
+                  />
+                )}
               </div>
               <div style="text-align: right;">
                 <div class="barcode-visual">||| | |||| | || ||| ||</div>

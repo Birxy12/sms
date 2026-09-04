@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/MainFooter';
+import QRCodeDisplay from '../../components/QRCodeDisplay';
 import {
   ClipboardSignature, Loader2, CheckCircle, AlertTriangle, XCircle,
   GraduationCap, Printer, ChevronRight, ChevronLeft, Timer,
@@ -1903,7 +1906,13 @@ const AdmissionPortal = () => {
 
                   {/* Signatures & Barcode */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: 16 }}>
-                    <AppBarcode value={feePaidState?.ref || appData?.appNo || 'BDS-PAID'} />
+                    <QRCodeDisplay 
+                      value={feePaidState?.ref || appData?.appNo || 'BDS-PAID'} 
+                      size={80} 
+                      label="SCAN TO VERIFY"
+                      sublabel={feePaidState?.ref || appData?.appNo}
+                      includeMargin={false}
+                    />
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ width: 140, height: 1, background: '#94a3b8', marginBottom: 6, marginLeft: 'auto' }} />
                       <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#334155' }}>Bursar / Finance Officer</p>

@@ -1386,3 +1386,4 @@ img[class*="photo"],
   object-fit: cover !important;
 }
 
+@media print { .qr-code-wrapper { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; break-inside: avoid; page-break-inside: avoid; } }

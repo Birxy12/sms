@@ -7,6 +7,7 @@ import {
   Fingerprint, Sparkles, CheckCircle2, AlertCircle 
 } from 'lucide-react';
 import bdsLogo from '../../assets/bdslogo.jpg';
+import QRCodeDisplay from '../../components/QRCodeDisplay';
 import StudentAvatar from '../../components/StudentAvatar';
 
 const StudentIDCard = () => {
@@ -265,10 +266,13 @@ const StudentIDCard = () => {
 
                     <div className="card-footer-row">
                       <div className="qr-section">
-                        <div className="qr-box">
-                          <QrCode size={20} className="text-white" />
-                        </div>
-                        <div>
+                        <QRCodeDisplay 
+                          value={currentStudent?.regNo || 'BDS-ID'} 
+                          size={40} 
+                          includeMargin={false}
+                          bgColor="transparent"
+                        />
+                        <div style={{marginLeft: '10px'}}>
                           <p className="qr-label">Scan to Verify</p>
                           <p className="qr-desc">Encrypted Data</p>
                         </div>
@@ -332,14 +336,16 @@ const StudentIDCard = () => {
                     </div>
                   </div>
 
-                  <div className="back-qr">
-                    <div className="qr-box large">
-                      <QrCode size={24} className="text-white" />
-                    </div>
+                  <div className="back-qr" style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+                    <QRCodeDisplay 
+                      value={generateQRData()} 
+                      size={60} 
+                      label="VERIFY ID"
+                      fgColor="#1e293b"
+                    />
                     <div>
                       <p className="qr-title">Digital Verification</p>
                       <p className="qr-subtitle">Scan with school app</p>
-                      <p className="qr-data">{generateQRData().substring(0, 30)}...</p>
                     </div>
                   </div>
                 </div>
