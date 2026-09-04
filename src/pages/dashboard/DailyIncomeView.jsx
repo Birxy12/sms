@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
-import { collection, query, getDocs, orderBy, where, Timestamp } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { BarChart3, TrendingUp, Calendar, Loader2, ArrowRight, Wallet, ShoppingBag } from 'lucide-react';
 import { formatNaira } from '../../utils/prospectusFees';
 
@@ -29,10 +29,10 @@ const DailyIncomeView = () => {
       if (dateFilter === 'today') {
         startDate.setHours(0, 0, 0, 0);
       } else if (dateFilter === 'week') {
-        startDate.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+        startDate.setDate(now.getDate() - now.getDay());
         startDate.setHours(0, 0, 0, 0);
       } else if (dateFilter === 'month') {
-        startDate.setDate(1); // Start of month
+        startDate.setDate(1);
         startDate.setHours(0, 0, 0, 0);
       } else if (dateFilter === 'year') {
         startDate.setMonth(0, 1);
@@ -48,56 +48,60 @@ const DailyIncomeView = () => {
           startDate.setHours(0, 0, 0, 0);
         }
       }
-      
-      const startTimestamp = Timestamp.fromDate(startDate);
-      const endTimestamp = Timestamp.fromDate(endDate);
 
-      // Fetch Fee Payments
-      let feesQ = query(
-        collection(db, 'payment_messages'),
-        where('createdAt', '>=', startTimestamp),
-        orderBy('createdAt', 'desc')
-      );
-      if (useEndDate) {
-        feesQ = query(
-          collection(db, 'payment_messages'),
-          where('createdAt', '>=', startTimestamp),
-          where('createdAt', '<=', endTimestamp),
-          orderBy('createdAt', 'desc')
-        );
-      }
-      
-      const feesSnap = await getDocs(feesQ);
+      const startMs = startDate.getTime();
+      const endMs = useEndDate ? endDate.getTime() : null;
+
+      // Helper: check if a Firestore Timestamp or date value is in range
+      const inRange = (tsField) => {
+        if (!tsField) return false;
+        const ms = tsField?.seconds ? tsField.seconds * 1000 : new Date(tsField).getTime();
+        if (ms < startMs) return false;
+        if (endMs !== null && ms > endMs) return false;
+        return true;
+      };
+
+      // Fetch Fee Payments — no orderBy to avoid index requirement
       let totalFees = 0;
       const fTxns = [];
-      feesSnap.forEach(doc => {
-        const data = doc.data();
-        totalFees += Number(data.amount || 0);
-        fTxns.push({ id: doc.id, type: 'Fee', ...data });
-      });
-
-      // Fetch Store Sales (Trading Income)
-      let storeQ = query(
-        collection(db, 'store_sales'),
-        where('createdAt', '>=', startTimestamp),
-        orderBy('createdAt', 'desc')
-      );
-      if (useEndDate) {
-        storeQ = query(
-          collection(db, 'store_sales'),
-          where('createdAt', '>=', startTimestamp),
-          where('createdAt', '<=', endTimestamp),
-          orderBy('createdAt', 'desc')
-        );
+      try {
+        const feesSnap = await getDocs(collection(db, 'payment_messages'));
+        feesSnap.forEach(d => {
+          const data = d.data();
+          if (inRange(data.createdAt)) {
+            totalFees += Number(data.amount || 0);
+            fTxns.push({ id: d.id, type: 'Fee', ...data });
+          }
+        });
+        fTxns.sort((a, b) => {
+          const aMs = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0;
+          const bMs = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0;
+          return bMs - aMs;
+        });
+      } catch (feeErr) {
+        console.warn('Fee payments not accessible - check Firebase Rules are deployed:', feeErr.code);
       }
-      const storeSnap = await getDocs(storeQ);
+
+      // Fetch Store Sales — no orderBy to avoid index requirement
       let totalStore = 0;
       const sTxns = [];
-      storeSnap.forEach(doc => {
-        const data = doc.data();
-        totalStore += Number(data.totalAmount || 0);
-        sTxns.push({ id: doc.id, type: 'Store', ...data });
-      });
+      try {
+        const storeSnap = await getDocs(collection(db, 'store_sales'));
+        storeSnap.forEach(d => {
+          const data = d.data();
+          if (inRange(data.createdAt)) {
+            totalStore += Number(data.totalAmount || 0);
+            sTxns.push({ id: d.id, type: 'Store', ...data });
+          }
+        });
+        sTxns.sort((a, b) => {
+          const aMs = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0;
+          const bMs = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0;
+          return bMs - aMs;
+        });
+      } catch (storeErr) {
+        console.warn('Store sales not accessible - check Firebase Rules are deployed:', storeErr.code);
+      }
 
       setFeesIncome(totalFees);
       setStoreIncome(totalStore);

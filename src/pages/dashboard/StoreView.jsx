@@ -80,19 +80,37 @@ const StoreView = ({ allStudents = [] }) => {
   const fetchStoreData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch Inventory Pricing
-      const invDoc = await getDoc(doc(db, 'settings', 'store_inventory'));
-      if (invDoc.exists() && Object.keys(invDoc.data()).length > 0) {
-        setInventory(invDoc.data());
-      } else {
+      // 1. Fetch Inventory Pricing from settings
+      try {
+        const invDoc = await getDoc(doc(db, 'settings', 'store_inventory'));
+        if (invDoc.exists() && Object.keys(invDoc.data()).length > 0) {
+          setInventory(invDoc.data());
+        } else {
+          setInventory(DEFAULT_INVENTORY);
+        }
+      } catch (invErr) {
+        // If settings collection blocked, use default inventory
         setInventory(DEFAULT_INVENTORY);
       }
 
-      // 2. Fetch Recent Sales
-      const salesQ = query(collection(db, 'store_sales'), orderBy('createdAt', 'desc'), limit(50));
-      const salesSnap = await getDocs(salesQ);
-      const sales = salesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setSalesHistory(sales);
+      // 2. Fetch Recent Sales (without orderBy to avoid index requirement)
+      try {
+        const salesQ = query(collection(db, 'store_sales'), limit(100));
+        const salesSnap = await getDocs(salesQ);
+        const sales = salesSnap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => {
+            const aTime = a.createdAt?.seconds || 0;
+            const bTime = b.createdAt?.seconds || 0;
+            return bTime - aTime;
+          })
+          .slice(0, 50);
+        setSalesHistory(sales);
+      } catch (salesErr) {
+        // If permission denied, show empty sales history
+        setSalesHistory([]);
+        console.warn('Store sales not accessible yet - check Firebase Rules are deployed:', salesErr.code);
+      }
     } catch (err) {
       console.error("Error fetching store data:", err);
     } finally {
