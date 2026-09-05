@@ -331,8 +331,12 @@ const StudentResults = ({ isPublic }) => {
         const cumSubjectTotals = {}; 
         
         (allMarksData || []).forEach(d => {
+          const s1 = (d.session || '').replace(/[^0-9]/g, '');
+          const s2 = (selectedPub.session || '').replace(/[^0-9]/g, '');
           const isSameSession = d.session === selectedPub.session || 
-                                (d.session || '').replace(/[^a-zA-Z0-9]/g, '') === (selectedPub.session || '').replace(/[^a-zA-Z0-9]/g, '');
+                                s1 === s2 || 
+                                (s1.length >= 4 && s2.length >= 4 && (s1.includes(s2.substring(0,4)) || s2.includes(s1.substring(0,4))));
+          
           if (isSameSession) {
             const reg = d.regNo;
             if (!cumTotals[reg]) cumTotals[reg] = 0;
