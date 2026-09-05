@@ -359,7 +359,16 @@ const StudentResults = ({ isPublic }) => {
                 const subT = parseFloat(m[k].total || 0);
                 if (!(m._meta && m._meta.overallTotal)) sum += subT;
                 
-                const upSub = k.toUpperCase().trim();
+                let upSub = k.toUpperCase().trim();
+                // Normalize common subject aliases to prevent duplicates
+                if (upSub === 'AGRIC SCIENCE') upSub = 'AGRICULTURAL SCIENCE';
+                else if (upSub === 'IGBO') upSub = 'IGBO LANGUAGE';
+                else if (upSub === 'ENGLISH') upSub = 'ENGLISH LANGUAGE';
+                else if (upSub === 'MATHS' || upSub === 'GENERAL MATHEMATICS') upSub = 'MATHEMATICS';
+                else if (upSub === 'LIT-IN-ENGLISH' || upSub === 'LITERATURE IN ENGLISH') upSub = 'LITERATURE';
+                else if (upSub === 'CRS' || upSub === 'C.R.K' || upSub === 'CRK' || upSub === 'CHRISTIAN RELIGIOUS STUDIES') upSub = 'C.R.S';
+                else if (upSub === 'PHE' || upSub === 'PHYSICAL AND HEALTH EDUCATION') upSub = 'PHYSICAL EDUCATION';
+                
                 if (!cumSubjectTotals[reg][upSub]) {
                   cumSubjectTotals[reg][upSub] = { t1: 0, t2: 0, t3: 0 };
                 }
