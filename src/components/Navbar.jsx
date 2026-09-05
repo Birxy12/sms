@@ -219,7 +219,7 @@ const Navbar = ({ hideHamburger = false }) => {
               {/* Dark Mode Toggle Button */}
               <button 
                 onClick={toggleDarkMode} 
-                className="theme-toggle-btn hidden md:flex items-center justify-center mr-3 p-2 rounded-full"
+                className="theme-toggle-btn flex items-center justify-center mr-3 p-2 rounded-full"
                 title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
                 style={{
                   background: 'none',
@@ -232,7 +232,7 @@ const Navbar = ({ hideHamburger = false }) => {
               </button>
 
               {user ? (
-                <div className="user-bar hidden md:flex">
+                <div className="user-bar">
                   <button onClick={handleProfileClick} className="user-chip">
                     <div className="user-info">
                       <span className="user-role">{userRole}</span>
@@ -256,30 +256,6 @@ const Navbar = ({ hideHamburger = false }) => {
 
             {/* Mobile Toggle */}
             <div className="mobile-toggle-wrap">
-              {/* Mobile Dark Mode Toggle */}
-              <button 
-                onClick={toggleDarkMode} 
-                className="theme-toggle-btn"
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: textColor,
-                  cursor: 'pointer',
-                  padding: '6px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {darkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} />}
-              </button>
-
-              {user && (
-                <button onClick={handleProfileClick} className="mobile-avatar-btn">
-                  {userPhoto ? <img src={userPhoto} alt="" /> : userInitial}
-                </button>
-              )}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className={`mobile-toggle ${isMobileMenuOpen ? 'mobile-toggle--active' : ''}`}
