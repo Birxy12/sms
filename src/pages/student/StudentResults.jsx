@@ -34,6 +34,9 @@ const StudentResults = ({ isPublic }) => {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [classStats, setClassStats] = useState({ position: 'N/A', population: 0, historicalClass: '' });
   const [formTeacher, setFormTeacher] = useState('CLASS TEACHER');
+  const [cumulativeMarks, setCumulativeMarks] = useState(null);
+  const [cumulativeClassStats, setCumulativeClassStats] = useState({ position: 'N/A', population: 0, historicalClass: '' });
+  const [viewMode, setViewMode] = useState('termly'); // 'termly' | 'cumulative'
   const [resultsError, setResultsError] = useState('');
 
   const location = useLocation();
@@ -322,6 +325,124 @@ const StudentResults = ({ isPublic }) => {
           average: (totalScore / divisor).toFixed(1),
           raw: foundMarksDoc
         });
+
+        // --- CUMULATIVE CALCULATION START ---
+        const cumTotals = {}; 
+        const cumSubjectTotals = {}; 
+        
+        (allMarksData || []).forEach(d => {
+          if (d.session === selectedPub.session) {
+            const reg = d.regNo;
+            if (!cumTotals[reg]) cumTotals[reg] = 0;
+            if (!cumSubjectTotals[reg]) cumSubjectTotals[reg] = {};
+            
+            let sum = 0;
+            const m = d.marks || {};
+            const dTerm = normTerm(d.term);
+            let termKey = 't3';
+            if (dTerm.includes('first') || dTerm.includes('1st')) termKey = 't1';
+            else if (dTerm.includes('second') || dTerm.includes('2nd')) termKey = 't2';
+            else if (dTerm.includes('third') || dTerm.includes('3rd')) termKey = 't3';
+            
+            if (m._meta && m._meta.overallTotal) {
+              sum = parseFloat(m._meta.overallTotal);
+            }
+            
+            Object.keys(m).forEach(k => {
+              if (k !== '_meta' && m[k] && m[k].total) {
+                const subT = parseFloat(m[k].total || 0);
+                if (!(m._meta && m._meta.overallTotal)) sum += subT;
+                
+                const upSub = k.toUpperCase().trim();
+                if (!cumSubjectTotals[reg][upSub]) {
+                  cumSubjectTotals[reg][upSub] = { t1: 0, t2: 0, t3: 0, total: 0, count: 0 };
+                }
+                cumSubjectTotals[reg][upSub][termKey] = subT;
+                cumSubjectTotals[reg][upSub].total += subT;
+                cumSubjectTotals[reg][upSub].count += 1;
+              }
+            });
+            
+            cumTotals[reg] += sum;
+          }
+        });
+        
+        const cumSorted = Object.entries(cumTotals).sort((a, b) => b[1] - a[1]);
+        let cumPosStr = 'N/A';
+        const getOrdinal2 = (n) => {
+          if (isNaN(n) || n <= 0) return 'N/A';
+          const s = ["th", "st", "nd", "rd"];
+          const v = n % 100;
+          return n + (s[(v - 20) % 10] || s[v] || s[0]);
+        };
+        
+        let rank2 = 1;
+        for (let i = 0; i < cumSorted.length; i++) {
+          if (i > 0 && cumSorted[i][1] < cumSorted[i - 1][1]) rank2 = i + 1;
+          if (cumSorted[i][0] === regNum) {
+            cumPosStr = cumSorted[i][1] > 0 ? getOrdinal2(rank2) : 'N/A';
+            break;
+          }
+        }
+        
+        setCumulativeClassStats({
+          position: cumPosStr,
+          population: cumSorted.length > 0 ? cumSorted.length : classPopSnap.size,
+          historicalClass: historicalClass
+        });
+        
+        const myCumSubjectsObj = cumSubjectTotals[regNum] || {};
+        const myCumSubjects = Object.keys(myCumSubjectsObj).map(subj => {
+          const sObj = myCumSubjectsObj[subj];
+          const cumAvg = sObj.total / 3;
+          
+          let grade = 'F9';
+          let remark = 'Fail';
+          if (cumAvg >= 75) { grade = 'A'; remark = 'Excellent'; }
+          else if (cumAvg >= 70) { grade = 'B1'; remark = 'Very Good'; }
+          else if (cumAvg >= 65) { grade = 'B2'; remark = 'Good'; }
+          else if (cumAvg >= 60) { grade = 'B3'; remark = 'Credit'; }
+          else if (cumAvg >= 50) { grade = 'C4'; remark = 'Credit'; }
+          else if (cumAvg >= 45) { grade = 'C5'; remark = 'Pass'; }
+          else if (cumAvg >= 40) { grade = 'D7'; remark = 'Pass'; }
+          else if (cumAvg >= 35) { grade = 'E8'; remark = 'Poor'; }
+          
+          let subRank = 1;
+          const allSt = Object.keys(cumSubjectTotals);
+          const subjScores = [];
+          allSt.forEach(stReg => {
+             if (cumSubjectTotals[stReg][subj]) {
+               subjScores.push({ reg: stReg, score: cumSubjectTotals[stReg][subj].total });
+             }
+          });
+          subjScores.sort((a,b) => b.score - a.score);
+          for(let i=0; i<subjScores.length; i++){
+             if(i>0 && subjScores[i].score < subjScores[i-1].score) subRank = i+1;
+             if(subjScores[i].reg === regNum) break;
+          }
+          
+          return {
+             subject: subj,
+             t1: sObj.t1,
+             t2: sObj.t2,
+             t3: sObj.t3,
+             total: sObj.total,
+             average: cumAvg.toFixed(1),
+             grade: grade,
+             remark: remark,
+             position: getOrdinal2(subRank)
+          };
+        }).sort((a, b) => a.subject.localeCompare(b.subject));
+        
+        const myCumTotal = cumTotals[regNum] || 0;
+        const myCumAvg = (myCumTotal / (divisor * 3)).toFixed(1);
+        
+        setCumulativeMarks({
+          subjects: myCumSubjects,
+          overallTotal: myCumTotal,
+          average: myCumAvg
+        });
+        // --- CUMULATIVE CALCULATION END ---
 
       } catch (error) {
         if (error?.code === 'permission-denied') {
@@ -982,10 +1103,10 @@ const StudentResults = ({ isPublic }) => {
           <div className="rc-stat"><span className="rc-stat-label">Name:</span> <span className="rc-stat-value">{currentStudent?.name}</span></div>
           <div className="rc-stat"><span className="rc-stat-label">Reg No:</span> <span className="rc-stat-value">{regNum}</span></div>
           <div className="rc-stat"><span className="rc-stat-label">Sex:</span> <span className="rc-stat-value">{(currentStudent?.gender === 'M' || (currentStudent?.gender && currentStudent?.gender.toLowerCase().startsWith('m'))) ? 'Male' : (currentStudent?.gender === 'F' || (currentStudent?.gender && currentStudent?.gender.toLowerCase().startsWith('f'))) ? 'Female' : (currentStudent?.gender || 'N/A')}</span></div>
-          <div className="rc-stat"><span className="rc-stat-label">Average:</span> <span className="rc-stat-value accent">{studentMarks?.average}%</span></div>
-          <div className="rc-stat"><span className="rc-stat-label">Position:</span> <span className="rc-stat-value accent">{classStats.position}</span></div>
+          <div className="rc-stat"><span className="rc-stat-label">Average:</span> <span className="rc-stat-value accent">{viewMode === 'cumulative' ? cumulativeMarks?.average : studentMarks?.average}%</span></div>
+          <div className="rc-stat"><span className="rc-stat-label">Position:</span> <span className="rc-stat-value accent">{viewMode === 'cumulative' ? cumulativeClassStats?.position : classStats?.position}</span></div>
           <div className="rc-stat"><span className="rc-stat-label">Class:</span> <span className="rc-stat-value">{classStats.historicalClass || currentStudent?.className}</span></div>
-          <div className="rc-stat"><span className="rc-stat-label">Population:</span> <span className="rc-stat-value">{classStats.population}</span></div>
+          <div className="rc-stat"><span className="rc-stat-label">Population:</span> <span className="rc-stat-value">{viewMode === 'cumulative' ? cumulativeClassStats?.population : classStats?.population}</span></div>
           <div className="rc-stat"><span className="rc-stat-label">DOB:</span> <span className="rc-stat-value">{formatDOB(currentStudent?.dob)}</span></div>
           <div className="rc-stat"><span className="rc-stat-label">House:</span> <span className="rc-stat-value">{currentStudent?.house || 'ALAMANDA'}</span></div>
         </div>
@@ -993,25 +1114,51 @@ const StudentResults = ({ isPublic }) => {
 
       {/* BODY */}
       <div className="rc-body">
-        <div className="rc-section-title">Academic Performance</div>
+        <div className="rc-section-title">{viewMode === 'cumulative' ? 'Cumulative Performance' : 'Academic Performance'}</div>
 
         <div className="rc-main-grid">
           {/* TABLE */}
           <div className="rc-table-wrap">
             <table className="rc-table">
               <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', paddingLeft: '8px' }}>Subjects</th>
-                  <th>CA1 (20)</th>
-                  <th>CA2 (20)</th>
-                  <th>Exam (60)</th>
-                  <th>Total (100)</th>
-                  <th>Grade</th>
-                  <th>Remarks</th>
-                </tr>
+                {viewMode === 'cumulative' ? (
+                  <tr>
+                    <th style={{ textAlign: 'left', paddingLeft: '8px' }}>Subjects</th>
+                    <th>1st Term</th>
+                    <th>2nd Term</th>
+                    <th>3rd Term</th>
+                    <th>Total (300)</th>
+                    <th>Average</th>
+                    <th>Grade</th>
+                    <th>Pos</th>
+                    <th>Remarks</th>
+                  </tr>
+                ) : (
+                  <tr>
+                    <th style={{ textAlign: 'left', paddingLeft: '8px' }}>Subjects</th>
+                    <th>CA1 (20)</th>
+                    <th>CA2 (20)</th>
+                    <th>Exam (60)</th>
+                    <th>Total (100)</th>
+                    <th>Grade</th>
+                    <th>Remarks</th>
+                  </tr>
+                )}
               </thead>
               <tbody>
-                {studentMarks?.subjects.map((sub, idx) => (
+                {viewMode === 'cumulative' ? cumulativeMarks?.subjects.map((sub, idx) => (
+                  <tr key={idx}>
+                    <td className="subject-name">{sub.subject}</td>
+                    <td>{sub.t1}</td>
+                    <td>{sub.t2}</td>
+                    <td>{sub.t3}</td>
+                    <td style={{ fontWeight: 800 }}>{sub.total}</td>
+                    <td style={{ fontWeight: 800 }}>{sub.average}</td>
+                    <td className="rc-grade">{sub.grade}</td>
+                    <td style={{ fontWeight: 800 }}>{sub.position}</td>
+                    <td style={{ fontSize: '6px', fontWeight: 700, textTransform: 'uppercase' }}>{sub.remark}</td>
+                  </tr>
+                )) : studentMarks?.subjects.map((sub, idx) => (
                   <tr key={idx}>
                     <td className="subject-name">{sub.subject}</td>
                     <td>{sub.cat1}</td>
@@ -1199,15 +1346,31 @@ const StudentResults = ({ isPublic }) => {
             <h3 className="text-lg font-bold text-slate-800 dark:text-white m-0">Term Reports</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Select a published session to view your report card.</p>
           </div>
-          <select
-            value={selectedTermId}
-            onChange={(e) => setSelectedTermId(e.target.value)}
-            className="w-full sm:w-auto px-4 py-3 rounded-xl border-2 border-slate-100 dark:border-slate-700 outline-none bg-slate-50 dark:bg-slate-800 font-black text-slate-700 dark:text-slate-200 focus:border-indigo-500 transition-all"
-          >
-            {publishedTerms.map(pub => (
-              <option key={pub.id} value={pub.id}>{pub.examName} ({pub.session})</option>
-            ))}
-          </select>
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+              <button 
+                onClick={() => setViewMode('termly')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'termly' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+              >
+                Termly View
+              </button>
+              <button 
+                onClick={() => setViewMode('cumulative')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'cumulative' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+              >
+                Cumulative View
+              </button>
+            </div>
+            <select
+              value={selectedTermId}
+              onChange={(e) => setSelectedTermId(e.target.value)}
+              className="w-full sm:w-auto px-4 py-3 rounded-xl border-2 border-slate-100 dark:border-slate-700 outline-none bg-slate-50 dark:bg-slate-800 font-black text-slate-700 dark:text-slate-200 focus:border-indigo-500 transition-all"
+            >
+              {publishedTerms.map(pub => (
+                <option key={pub.id} value={pub.id}>{pub.examName} ({pub.session})</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {!studentMarks ? (
