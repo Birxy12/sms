@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { ensureFirebaseAuth } from '../lib/ensureAuth';
-import { doc, setDoc, onSnapshot, collection, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, collection, deleteDoc, query, limit } from 'firebase/firestore';
 
 /**
  * Cutoff threshold for real-time online presence (75 seconds).
@@ -232,7 +232,7 @@ class PresenceManager {
     }
 
     try {
-      const presenceCol = collection(db, 'presence');
+      const presenceCol = query(collection(db, 'presence'), limit(200));
       this.unsubscribeSnapshot = onSnapshot(presenceCol, (snapshot) => {
         const now = Date.now();
         const activeUsers = new Set();
