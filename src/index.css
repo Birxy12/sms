@@ -2,56 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════
+   LIGHT MODE (DEFAULT)
+   ═══════════════════════════════════════════ */
 :root {
+  /* Brand primary — vivid indigo-violet */
   --primary-h: 238; --primary-s: 83%; --primary-l: 59%;
   --primary: hsl(var(--primary-h), var(--primary-s), var(--primary-l));
   --primary-hover: hsl(var(--primary-h), var(--primary-s), 50%);
   --primary-light: hsla(var(--primary-h), var(--primary-s), var(--primary-l), 0.12);
   --primary-glow: hsla(var(--primary-h), var(--primary-s), var(--primary-l), 0.3);
-  --secondary: #0a0f1e;
+  --secondary: #0d1526;
   --accent: #10b981;
   --accent-amber: #f59e0b;
-  
+
+  /* Text */
   --text-main: #0d1526;
-  --text-muted: #64748b;
+  --text-muted: #475569;
   --text-inverse: #ffffff;
-  
+
+  /* Backgrounds — warm white + soft periwinkle tints */
   --bg-primary: #ffffff;
-  --bg-secondary: #f0f4ff;
-  --bg-tertiary: #e8edff;
-  
-  --border-color: #dde3f0;
+  --bg-secondary: #f4f6ff;
+  --bg-tertiary: #eaeeff;
+
+  /* Borders */
+  --border-color: #d8def0;
   --border-focus: hsl(var(--primary-h), var(--primary-s), var(--primary-l));
-  
-  --sidebar-bg: #070c1a;
-  --sidebar-text: #6e7d96;
+
+  /* Sidebar stays dark for brand contrast */
+  --sidebar-bg: #0f172a;
+  --sidebar-text: #7c8fa8;
   --sidebar-active: #ffffff;
-  
+
+  /* Shadows */
   --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
   --shadow-sm: 0 2px 8px rgba(10,15,40,0.07);
   --shadow-md: 0 4px 16px -2px rgba(10,15,40,0.1);
   --shadow-lg: 0 12px 32px -8px rgba(10,15,40,0.14);
   --shadow-xl: 0 24px 48px -12px rgba(10,15,40,0.18);
+  --shadow-2xl: 0 25px 50px -12px rgba(0,0,0,0.25);
   --shadow-premium: 0 32px 64px -16px rgba(79,70,229,0.1);
   --shadow-glow: 0 0 0 4px var(--primary-glow);
+  --shadow-orange: 0 10px 40px -10px rgba(249,115,22,0.3);
 
-  --glass-bg: rgba(255,255,255,0.82);
-  --glass-border: rgba(255,255,255,0.55);
-  
-  --sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
-  --radius-xs: 0.375rem;
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
-  --radius-2xl: 2rem;
-  --radius-3xl: 2.5rem;
+  /* Glass */
+  --glass-bg: rgba(255,255,255,0.85);
+  --glass-border: rgba(200,210,240,0.7);
 
-  /* Mobile layout heights */
-  --bottom-nav-h: 72px;
-  --top-strip-h: 60px;
-
-  /* Added global variables */
+  /* Navbar / Footer */
+  --navbar-bg: #00003c;
+  --footer-bg: #000000;
   --nav-accent: #ea580c;
   --nav-accent-hover: #c2410c;
   --nav-dark: #0f172a;
@@ -59,7 +60,9 @@
   --nav-text-light: #64748b;
   --nav-border: #e2e8f0;
   --nav-bg: #ffffff;
-  --nav-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  --nav-shadow: 0 2px 10px rgba(0,0,0,0.08);
+
+  /* Palette tokens */
   --color-indigo-600: #4f46e5;
   --color-primary: #f97316;
   --color-primary-dark: #ea580c;
@@ -82,33 +85,77 @@
   --color-amber-50: #fffbeb;
   --color-indigo-500: #6366f1;
   --color-indigo-50: #eef2ff;
-  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  --shadow-orange: 0 10px 40px -10px rgba(249, 115, 22, 0.3);
+
+  /* Slate scale (light mode — normal direction) */
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+
+  /* Typography */
+  --sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Border radii */
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
   --radius-3xl: 2.5rem;
+
+  /* Mobile layout heights */
+  --bottom-nav-h: 72px;
+  --top-strip-h: 60px;
+
+  /* Transitions */
   --transition-fast: 150ms ease;
   --transition-base: 300ms ease;
   --transition-slow: 500ms ease;
+}
+
+/* ═══════════════════════════════════════════
+   DARK MODE OVERRIDES
+   ═══════════════════════════════════════════ */
+body.dark-mode {
   --primary: #ff6b00;
   --primary-hover: #eb5700;
-  --primary-light: #ff6b001a;
-  --navbar-bg: #00003c;
-  --footer-bg: #000000;
+  --primary-light: rgba(255,107,0,0.15);
+  --primary-glow: rgba(255,107,0,0.25);
+
   --bg-primary: #1e293b;
   --bg-secondary: #0f172a;
-  --bg-tertiary: #334155;
-  --text-main: #f8fafc;
+  --bg-tertiary: #1a2540;
+
+  --text-main: #f0f4ff;
   --text-muted: #94a3b8;
   --text-inverse: #0f172a;
-  --secondary: #f8fafc;
-  --border-color: #334155;
+
+  --secondary: #f0f4ff;
+  --border-color: #2a3a55;
+  --border-focus: #ff6b00;
+
   --sidebar-bg: #020617;
   --sidebar-text: #94a3b8;
   --sidebar-active: #ffffff;
-  --glass-bg: #1e293b;
-  --glass-border: #334155;
+
+  --glass-bg: rgba(15,23,42,0.92);
+  --glass-border: rgba(255,255,255,0.07);
+
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.25);
+  --shadow-md: 0 4px 16px -2px rgba(0,0,0,0.35);
+  --shadow-lg: 0 12px 32px -8px rgba(0,0,0,0.4);
+  --shadow-xl: 0 24px 48px -12px rgba(0,0,0,0.5);
+
+  /* Slate scale inverted for dark mode */
   --slate-50: #0f172a;
   --slate-100: #1e293b;
-  --slate-200: #334155;
+  --slate-200: #2d3f5e;
   --slate-400: #94a3b8;
   --slate-500: #cbd5e1;
   --slate-600: #e2e8f0;
@@ -116,6 +163,91 @@
   --slate-800: #f8fafc;
   --slate-900: #ffffff;
 }
+/* ═══════════════════════════════════════════
+   LIGHT MODE ENHANCEMENTS — vivid, readable
+   ═══════════════════════════════════════════ */
+
+/* Beautiful gradient page background in light mode */
+body:not(.dark-mode) {
+  background: linear-gradient(135deg, #f4f6ff 0%, #eaeeff 50%, #f0f7ff 100%);
+  min-height: 100vh;
+}
+
+/* Light mode main content area */
+body:not(.dark-mode) .main-content {
+  background: linear-gradient(160deg, #f6f8ff 0%, #edf0ff 100%);
+}
+
+/* Light mode cards get a crisp white with soft indigo border */
+body:not(.dark-mode) .card-white {
+  background: #ffffff;
+  border-color: #dde4f8;
+  color: #0d1526;
+  box-shadow: 0 2px 12px rgba(79,70,229,0.07), 0 1px 3px rgba(0,0,0,0.04);
+}
+
+/* Light mode card headings clearly visible */
+body:not(.dark-mode) .card-white h1,
+body:not(.dark-mode) .card-white h2,
+body:not(.dark-mode) .card-white h3,
+body:not(.dark-mode) .card-white h4 {
+  color: #0d1526;
+}
+
+/* Light mode page headings */
+body:not(.dark-mode) h1,
+body:not(.dark-mode) h2,
+body:not(.dark-mode) h3 {
+  color: #0d1526;
+}
+
+/* Stat cards in light mode */
+body:not(.dark-mode) .stat-card {
+  background: #ffffff;
+  border-color: #dde4f8;
+  box-shadow: 0 2px 12px rgba(79,70,229,0.07);
+}
+
+/* Light mode inputs */
+body:not(.dark-mode) input,
+body:not(.dark-mode) select,
+body:not(.dark-mode) textarea {
+  background: #ffffff;
+  border-color: #c9d3f0;
+  color: #0d1526;
+}
+
+body:not(.dark-mode) input:focus,
+body:not(.dark-mode) select:focus,
+body:not(.dark-mode) textarea:focus {
+  border-color: hsl(238, 83%, 59%);
+  box-shadow: 0 0 0 4px hsla(238, 83%, 59%, 0.12);
+  background: #fafbff;
+}
+
+body:not(.dark-mode) input::placeholder,
+body:not(.dark-mode) textarea::placeholder {
+  color: #8898b8;
+}
+
+/* Light mode tab bar */
+body:not(.dark-mode) .modern-tabs-container {
+  background: #e4e9ff;
+}
+
+body:not(.dark-mode) .modern-tab-item.active {
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(79,70,229,0.12);
+}
+
+/* Light mode table rows */
+body:not(.dark-mode) table tbody tr:hover {
+  background: #f0f3ff !important;
+}
+
+/* ═══════════════════════════════════════════
+   END LIGHT MODE ENHANCEMENTS
+   ═══════════════════════════════════════════ */
 
 * {
   box-sizing: border-box;
