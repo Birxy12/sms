@@ -434,7 +434,7 @@ const StudentResults = ({ isPublic }) => {
           };
         }).sort((a, b) => a.subject.localeCompare(b.subject));
         
-        const myCumTotal = cumTotals[regNum] || 0;
+        const myCumTotal = myCumSubjects.reduce((sum, sub) => sum + sub.total, 0);
         const myCumAvg = (myCumTotal / (divisor * 3)).toFixed(1);
         
         setCumulativeMarks({
