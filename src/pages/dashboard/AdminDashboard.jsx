@@ -1045,7 +1045,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="p-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-lg shadow-slate-200/40 hide-scrollbar overflow-x-auto max-w-full flex flex-wrap gap-2.5 mb-6">
+      <div className="p-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-lg shadow-slate-200/40 hide-scrollbar overflow-x-auto max-w-full flex flex-nowrap gap-2.5 mb-6">
         {adminTabs.map((tab, idx) => {
           const isActive = activeTab === tab.id;
           const Icon = tab.icon;
@@ -1053,7 +1053,7 @@ const AdminDashboard = () => {
             <React.Fragment key={tab.id}>
               <button
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2.5 px-4 md:px-5 py-2.5 rounded-xl font-black text-xs md:text-sm transition-all duration-300 whitespace-nowrap group hover:scale-[1.02] active:scale-95 border ${
+                className={`flex items-center gap-2.5 px-4 md:px-5 py-2.5 rounded-xl shrink-0 font-black text-xs md:text-sm transition-all duration-300 whitespace-nowrap group hover:scale-[1.02] active:scale-95 border ${
                   isActive 
                     ? `bg-gradient-to-r ${tab.activeGradient} text-white shadow-lg ${tab.activeShadow} ${tab.activeBorder}` 
                     : `${tab.inactiveStyle}`

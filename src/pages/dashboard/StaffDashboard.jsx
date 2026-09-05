@@ -152,7 +152,7 @@ const StaffDashboard = () => {
             <p className="text-slate-500 font-medium mt-1">Welcome back, {currentAdmin?.name || 'Staff'}. Manage your academic workflows.</p>
           </div>
         </div>
-        <div className="p-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-lg shadow-slate-200/40 hide-scrollbar overflow-x-auto max-w-full flex flex-wrap gap-2">
+        <div className="p-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-lg shadow-slate-200/40 hide-scrollbar overflow-x-auto max-w-full flex flex-nowrap gap-2">
           {tabs.map(tab => {
             const isActive = activeTab === tab.id;
             const Icon = tab.icon;
@@ -160,7 +160,7 @@ const StaffDashboard = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs md:text-sm transition-all duration-300 whitespace-nowrap group hover:scale-[1.02] active:scale-95 border ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl shrink-0 font-black text-xs md:text-sm transition-all duration-300 whitespace-nowrap group hover:scale-[1.02] active:scale-95 border ${
                   isActive 
                     ? `bg-gradient-to-r ${tab.activeGradient} text-white shadow-lg ${tab.activeShadow} ${tab.activeBorder}` 
                     : `${tab.inactiveStyle}`
