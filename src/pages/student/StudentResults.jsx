@@ -181,7 +181,7 @@ const StudentResults = ({ isPublic }) => {
         ]);
 
         const allDocMap = new Map();
-        [...snapC.docs, ...snapClassName.docs, ...snapClass_Name.docs].forEach(doc => {
+        [...snapC.docs, ...snapClassName.docs, ...snapClass_Name.docs, ...snapR.docs, ...snapRegNo.docs, ...snapReg_No.docs].forEach(doc => {
           allDocMap.set(doc.id, doc.data());
         });
         const allMarksData = Array.from(allDocMap.values()).map(data => expandMarks(data));
@@ -331,7 +331,9 @@ const StudentResults = ({ isPublic }) => {
         const cumSubjectTotals = {}; 
         
         (allMarksData || []).forEach(d => {
-          if (d.session === selectedPub.session) {
+          const isSameSession = d.session === selectedPub.session || 
+                                (d.session || '').replace(/[^a-zA-Z0-9]/g, '') === (selectedPub.session || '').replace(/[^a-zA-Z0-9]/g, '');
+          if (isSameSession) {
             const reg = d.regNo;
             if (!cumTotals[reg]) cumTotals[reg] = 0;
             if (!cumSubjectTotals[reg]) cumSubjectTotals[reg] = {};
