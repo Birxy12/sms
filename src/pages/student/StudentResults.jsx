@@ -357,7 +357,7 @@ const StudentResults = ({ isPublic }) => {
                 if (!cumSubjectTotals[reg][upSub]) {
                   cumSubjectTotals[reg][upSub] = { t1: 0, t2: 0, t3: 0 };
                 }
-                cumSubjectTotals[reg][upSub][termKey] = subT;
+                cumSubjectTotals[reg][upSub][termKey] = Math.max(cumSubjectTotals[reg][upSub][termKey] || 0, subT);
               }
             });
             
