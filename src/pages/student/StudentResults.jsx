@@ -1085,7 +1085,11 @@ const StudentResults = ({ isPublic }) => {
             <h1>{schoolName || 'BONUS  DOMINUS  SCHOOL'}</h1>
             <h2>Primary & Secondary School</h2>
             <p>5A — 5C Uzoanya Crescent, Amuzukwu, Umuahia, Abia State</p>
-            <div className="rc-badge">{selectedPub?.term} Report Card &mdash; {selectedPub?.session}</div>
+            <div className="rc-badge">
+              {viewMode === 'cumulative' 
+                ? `CUMULATIVE RESULT FOR ${selectedPub?.session}` 
+                : `${selectedPub?.term} Report Card \u2014 ${selectedPub?.session}`}
+            </div>
           </div>
           <div className="rc-photo-wrap">
             {currentStudent?.photo ? (
@@ -1128,9 +1132,7 @@ const StudentResults = ({ isPublic }) => {
                     <th>2nd Term</th>
                     <th>3rd Term</th>
                     <th>Total (300)</th>
-                    <th>Average</th>
                     <th>Grade</th>
-                    <th>Pos</th>
                     <th>Remarks</th>
                   </tr>
                 ) : (
@@ -1153,9 +1155,7 @@ const StudentResults = ({ isPublic }) => {
                     <td>{sub.t2}</td>
                     <td>{sub.t3}</td>
                     <td style={{ fontWeight: 800 }}>{sub.total}</td>
-                    <td style={{ fontWeight: 800 }}>{sub.average}</td>
                     <td className="rc-grade">{sub.grade}</td>
-                    <td style={{ fontWeight: 800 }}>{sub.position}</td>
                     <td style={{ fontSize: '6px', fontWeight: 700, textTransform: 'uppercase' }}>{sub.remark}</td>
                   </tr>
                 )) : studentMarks?.subjects.map((sub, idx) => (
