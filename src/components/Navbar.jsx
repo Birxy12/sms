@@ -219,26 +219,20 @@ const Navbar = ({ hideHamburger = false }) => {
               {/* Dark Mode Toggle Button */}
               <button 
                 onClick={toggleDarkMode} 
-                className="theme-toggle-btn"
+                className="theme-toggle-btn hidden md:flex items-center justify-center mr-3 p-2 rounded-full"
                 title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
                 style={{
                   background: 'none',
                   border: 'none',
                   color: textColor,
                   cursor: 'pointer',
-                  padding: '8px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '12px',
                 }}
               >
                 {darkMode ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} />}
               </button>
 
               {user ? (
-                <div className="user-bar">
+                <div className="user-bar hidden md:flex">
                   <button onClick={handleProfileClick} className="user-chip">
                     <div className="user-info">
                       <span className="user-role">{userRole}</span>

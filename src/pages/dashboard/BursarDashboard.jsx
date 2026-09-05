@@ -2772,7 +2772,7 @@ const BursarDashboard = () => {
                   navigateTo(group.tabs[0].id);
                 }
               }}
-              className="flex items-center gap-2 px-4 py-2.5 min-w-max rounded-xl transition-all duration-200 font-bold text-sm"
+              className="flex items-center gap-2 px-4 py-2.5 min-w-max shrink-0 rounded-xl transition-all duration-200 font-bold text-sm"
               style={{
                 backgroundColor: isActiveGroup ? group.color : 'transparent',
                 color: isActiveGroup ? '#fff' : '#94a3b8',
@@ -2801,7 +2801,7 @@ const BursarDashboard = () => {
                 <button
                   key={tab.id}
                   onClick={() => navigateTo(tab.id)}
-                  className="flex items-center gap-2 px-4 py-2 min-w-max rounded-lg transition-all duration-200 font-bold text-sm"
+                  className="flex items-center gap-2 px-4 py-2 min-w-max shrink-0 rounded-lg transition-all duration-200 font-bold text-sm"
                   style={{
                     backgroundColor: isActive ? currentGroup.color : 'transparent',
                     color: isActive ? '#fff' : currentGroup.color,
