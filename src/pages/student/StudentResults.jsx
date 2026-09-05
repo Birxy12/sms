@@ -1245,12 +1245,12 @@ const StudentResults = ({ isPublic }) => {
             <div className="rc-summary">
               <div className="rc-summary-box">
                 <label>Total Score</label>
-                <div className="value">{studentMarks?.overallTotal}</div>
+                <div className="value">{viewMode === 'cumulative' ? cumulativeMarks?.overallTotal : studentMarks?.overallTotal}</div>
               </div>
-              <div className={`rc-summary-box ${studentMarks?.average < 45 ? 'status-repeat' : 'status'}`}>
+              <div className={`rc-summary-box ${(viewMode === 'cumulative' ? cumulativeMarks?.average : studentMarks?.average) < 45 ? 'status-repeat' : 'status'}`}>
                 <label>Status</label>
                 <div className="value">
-                  {studentMarks?.average < 45 
+                  {(viewMode === 'cumulative' ? cumulativeMarks?.average : studentMarks?.average) < 45 
                     ? (selectedPub?.term?.toLowerCase().includes('third') ? 'REPEAT' : 'FAIL') 
                     : (selectedPub?.term?.toLowerCase().includes('third') ? 'PROMOTED' : 'PASS')}
                 </div>
