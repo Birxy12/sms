@@ -16,17 +16,14 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 async function run() {
-  const snap = await getDocs(query(collection(db, "marks"), where("r", "==", "BDS/22/001")));
-  const snap2 = await getDocs(query(collection(db, "marks"), where("regNo", "==", "BDS/22/001")));
-  const snap3 = await getDocs(query(collection(db, "marks"), where("reg_no", "==", "BDS/22/001")));
-  console.log("Documents for BDS/22/001:");
-  [...snap.docs, ...snap2.docs, ...snap3.docs].forEach(doc => {
+  const snap = await getDocs(query(collection(db, "marks"), where("t", "==", "Third Term")));
+  snap.forEach(doc => {
      const d = expandMarks(doc.data());
-     console.log(`\nDOC ID: ${doc.id}`);
-     console.log(`Term: ${d.term}, Session: ${d.session}`);
      Object.keys(d.marks || {}).forEach(k => {
-        if (k !== '_meta') {
-           console.log(`  Subj: '${k}', Total: ${d.marks[k].total}`);
+        if (k.toUpperCase().trim() === 'AGRIC SCIENCE') {
+           if (d.marks[k].total === 0 || d.marks[k].total === "0" || !d.marks[k].total) {
+              console.log(`Student ${d.regNo} has 0 for AGRIC SCIENCE in 3rd term!`);
+           }
         }
      });
   });

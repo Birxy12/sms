@@ -355,7 +355,7 @@ const StudentResults = ({ isPublic }) => {
             }
             
             Object.keys(m).forEach(k => {
-              if (k !== '_meta' && m[k] && m[k].total) {
+              if (k !== '_meta' && m[k] && m[k].total !== undefined) {
                 const subT = parseFloat(m[k].total || 0);
                 if (!(m._meta && m._meta.overallTotal)) sum += subT;
                 
