@@ -340,9 +340,9 @@ const StudentResults = ({ isPublic }) => {
             const m = d.marks || {};
             const dTerm = normTerm(d.term);
             let termKey = 't3';
-            if (dTerm.includes('first') || dTerm.includes('1st')) termKey = 't1';
-            else if (dTerm.includes('second') || dTerm.includes('2nd')) termKey = 't2';
-            else if (dTerm.includes('third') || dTerm.includes('3rd')) termKey = 't3';
+            if (dTerm.includes('first') || dTerm.includes('1st') || dTerm === 'term1' || dTerm === '1') termKey = 't1';
+            else if (dTerm.includes('second') || dTerm.includes('2nd') || dTerm === 'term2' || dTerm === '2') termKey = 't2';
+            else if (dTerm.includes('third') || dTerm.includes('3rd') || dTerm === 'term3' || dTerm === '3') termKey = 't3';
             
             if (m._meta && m._meta.overallTotal) {
               sum = parseFloat(m._meta.overallTotal);
@@ -355,11 +355,9 @@ const StudentResults = ({ isPublic }) => {
                 
                 const upSub = k.toUpperCase().trim();
                 if (!cumSubjectTotals[reg][upSub]) {
-                  cumSubjectTotals[reg][upSub] = { t1: 0, t2: 0, t3: 0, total: 0, count: 0 };
+                  cumSubjectTotals[reg][upSub] = { t1: 0, t2: 0, t3: 0 };
                 }
                 cumSubjectTotals[reg][upSub][termKey] = subT;
-                cumSubjectTotals[reg][upSub].total += subT;
-                cumSubjectTotals[reg][upSub].count += 1;
               }
             });
             
@@ -394,7 +392,8 @@ const StudentResults = ({ isPublic }) => {
         const myCumSubjectsObj = cumSubjectTotals[regNum] || {};
         const myCumSubjects = Object.keys(myCumSubjectsObj).map(subj => {
           const sObj = myCumSubjectsObj[subj];
-          const cumAvg = sObj.total / 3;
+          const sTotal = (sObj.t1 || 0) + (sObj.t2 || 0) + (sObj.t3 || 0);
+          const cumAvg = sTotal / 3;
           
           let grade = 'F9';
           let remark = 'Fail';
@@ -412,7 +411,9 @@ const StudentResults = ({ isPublic }) => {
           const subjScores = [];
           allSt.forEach(stReg => {
              if (cumSubjectTotals[stReg][subj]) {
-               subjScores.push({ reg: stReg, score: cumSubjectTotals[stReg][subj].total });
+               const sst = cumSubjectTotals[stReg][subj];
+               const sstTotal = (sst.t1 || 0) + (sst.t2 || 0) + (sst.t3 || 0);
+               subjScores.push({ reg: stReg, score: sstTotal });
              }
           });
           subjScores.sort((a,b) => b.score - a.score);
@@ -426,7 +427,7 @@ const StudentResults = ({ isPublic }) => {
              t1: sObj.t1,
              t2: sObj.t2,
              t3: sObj.t3,
-             total: sObj.total,
+             total: sTotal,
              average: cumAvg.toFixed(1),
              grade: grade,
              remark: remark,
