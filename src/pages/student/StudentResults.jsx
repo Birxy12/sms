@@ -411,15 +411,15 @@ const StudentResults = ({ isPublic }) => {
           const cumAvg = sTotal / 3;
           
           let grade = 'F9';
-          let remark = 'Fail';
-          if (cumAvg >= 75) { grade = 'A'; remark = 'Excellent'; }
-          else if (cumAvg >= 70) { grade = 'B1'; remark = 'Very Good'; }
-          else if (cumAvg >= 65) { grade = 'B2'; remark = 'Good'; }
-          else if (cumAvg >= 60) { grade = 'B3'; remark = 'Credit'; }
-          else if (cumAvg >= 50) { grade = 'C4'; remark = 'Credit'; }
-          else if (cumAvg >= 45) { grade = 'C5'; remark = 'Pass'; }
-          else if (cumAvg >= 40) { grade = 'D7'; remark = 'Pass'; }
-          else if (cumAvg >= 35) { grade = 'E8'; remark = 'Poor'; }
+          let remark = 'REPEAT';
+          if (cumAvg >= 75) { grade = 'A'; remark = 'PROMOTED'; }
+          else if (cumAvg >= 70) { grade = 'B1'; remark = 'PROMOTED'; }
+          else if (cumAvg >= 65) { grade = 'B2'; remark = 'PROMOTED'; }
+          else if (cumAvg >= 60) { grade = 'B3'; remark = 'PROMOTED'; }
+          else if (cumAvg >= 50) { grade = 'C4'; remark = 'PROMOTED'; }
+          else if (cumAvg >= 45) { grade = 'C5'; remark = 'PROMOTED'; }
+          else if (cumAvg >= 40) { grade = 'D7'; remark = 'PROMOTED'; }
+          else if (cumAvg >= 35) { grade = 'E8'; remark = 'REPEAT'; }
           
           let subRank = 1;
           const allSt = Object.keys(cumSubjectTotals);
@@ -1164,17 +1164,26 @@ const StudentResults = ({ isPublic }) => {
                 )}
               </thead>
               <tbody>
-                {viewMode === 'cumulative' ? cumulativeMarks?.subjects.map((sub, idx) => (
-                  <tr key={idx}>
-                    <td className="subject-name">{sub.subject}</td>
-                    <td>{sub.t1}</td>
-                    <td>{sub.t2}</td>
-                    <td>{sub.t3}</td>
-                    <td style={{ fontWeight: 800 }}>{sub.total}</td>
-                    <td className="rc-grade">{sub.grade}</td>
-                    <td style={{ fontSize: '6px', fontWeight: 700, textTransform: 'uppercase' }}>{sub.remark}</td>
-                  </tr>
-                )) : studentMarks?.subjects.map((sub, idx) => (
+                {viewMode === 'cumulative' ? (
+                  <>
+                    {cumulativeMarks?.subjects.map((sub, idx) => (
+                      <tr key={idx}>
+                        <td className="subject-name">{sub.subject}</td>
+                        <td>{sub.t1}</td>
+                        <td>{sub.t2}</td>
+                        <td>{sub.t3}</td>
+                        <td style={{ fontWeight: 800 }}>{sub.total}</td>
+                        <td className="rc-grade">{sub.grade}</td>
+                        <td style={{ fontSize: '6px', fontWeight: 700, textTransform: 'uppercase', color: sub.remark === 'PROMOTED' ? '#059669' : '#dc2626' }}>{sub.remark}</td>
+                      </tr>
+                    ))}
+                    <tr style={{ backgroundColor: '#1e3a5f', color: 'white', fontWeight: '900' }}>
+                      <td colSpan={4} style={{ textAlign: 'right', paddingRight: '12px', fontSize: '8px', color: 'white' }}>GRAND TOTAL</td>
+                      <td style={{ fontSize: '9px', color: 'white' }}>{cumulativeMarks?.overallTotal || 0}</td>
+                      <td colSpan={2} style={{ color: 'white' }}></td>
+                    </tr>
+                  </>
+                ) : studentMarks?.subjects.map((sub, idx) => (
                   <tr key={idx}>
                     <td className="subject-name">{sub.subject}</td>
                     <td>{sub.cat1}</td>
@@ -1377,15 +1386,33 @@ const StudentResults = ({ isPublic }) => {
                 Cumulative View
               </button>
             </div>
-            <select
-              value={selectedTermId}
-              onChange={(e) => setSelectedTermId(e.target.value)}
-              className="w-full sm:w-auto px-4 py-3 rounded-xl border-2 border-slate-100 dark:border-slate-700 outline-none bg-slate-50 dark:bg-slate-800 font-black text-slate-700 dark:text-slate-200 focus:border-indigo-500 transition-all"
-            >
-              {publishedTerms.map(pub => (
-                <option key={pub.id} value={pub.id}>{pub.examName} ({pub.session})</option>
-              ))}
-            </select>
+            {viewMode === 'cumulative' ? (
+              <select
+                value={selectedPub?.session || ''}
+                onChange={(e) => {
+                  const targetSession = e.target.value;
+                  const firstTermInSession = publishedTerms.find(p => p.session === targetSession);
+                  if (firstTermInSession) {
+                    setSelectedTermId(firstTermInSession.id);
+                  }
+                }}
+                className="w-full sm:w-auto px-4 py-3 rounded-xl border-2 border-slate-100 dark:border-slate-700 outline-none bg-slate-50 dark:bg-slate-800 font-black text-slate-700 dark:text-slate-200 focus:border-indigo-500 transition-all"
+              >
+                {[...new Set(publishedTerms.map(p => p.session))].map(session => (
+                  <option key={session} value={session}>Session {session}</option>
+                ))}
+              </select>
+            ) : (
+              <select
+                value={selectedTermId}
+                onChange={(e) => setSelectedTermId(e.target.value)}
+                className="w-full sm:w-auto px-4 py-3 rounded-xl border-2 border-slate-100 dark:border-slate-700 outline-none bg-slate-50 dark:bg-slate-800 font-black text-slate-700 dark:text-slate-200 focus:border-indigo-500 transition-all"
+              >
+                {publishedTerms.map(pub => (
+                  <option key={pub.id} value={pub.id}>{pub.examName} ({pub.session})</option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
