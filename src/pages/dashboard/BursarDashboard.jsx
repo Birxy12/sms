@@ -3117,15 +3117,15 @@ const BursarDashboard = () => {
     });
 
     return (
-      <div className="card-white p-6 mt-8 shadow-sm rounded-3xl border border-blue-100 bg-gradient-to-b from-white to-blue-50/30">
+      <div className="card-white p-6 mt-8 shadow-sm rounded-3xl border border-blue-100 bg-gradient-to-b from-white to-blue-50/30 dark:border-slate-700 dark:from-slate-800 dark:to-slate-900">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center dark:bg-rose-900/40 dark:text-rose-400">
               <TrendingDown size={24} />
             </div>
             <div>
-              <h2 className="text-xl font-black text-slate-800">Discount Records</h2>
-              <p className="text-slate-500 font-medium text-sm">Students with applied fee discounts</p>
+              <h2 className="text-xl font-black text-slate-800 dark:text-slate-100">Discount Records</h2>
+              <p className="text-slate-500 font-medium text-sm dark:text-slate-400">Students with applied fee discounts</p>
             </div>
           </div>
           
@@ -3133,21 +3133,21 @@ const BursarDashboard = () => {
             <select
               value={filterClass}
               onChange={e => setFilterClass(e.target.value)}
-              className="flex-1 md:flex-none px-4 py-2.5 bg-white border-2 border-blue-100 rounded-xl font-bold text-blue-900 outline-none focus:border-blue-300 cursor-pointer text-sm"
+              className="flex-1 md:flex-none px-4 py-2.5 bg-white border-2 border-blue-100 rounded-xl font-bold text-blue-900 outline-none focus:border-blue-300 cursor-pointer text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-blue-100 dark:focus:border-blue-500"
             >
               <option value="All">All Classes</option>
               {classes.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            <div className="px-4 py-2.5 bg-rose-600 text-white font-black rounded-xl text-sm shadow-md">
+            <div className="px-4 py-2.5 bg-rose-600 text-white font-black rounded-xl text-sm shadow-md dark:bg-rose-500">
               Total: {filtered.length}
             </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-sm">
+        <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-sm dark:border-slate-700">
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 font-bold uppercase text-[11px] tracking-wider">
+              <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 font-bold uppercase text-[11px] tracking-wider dark:bg-slate-900/50 dark:border-slate-700 dark:text-slate-500">
                 <th className="py-4 px-4">Student Name</th>
                 <th className="py-4 px-4">Reg No / Class</th>
                 <th className="py-4 px-4 text-right">Initial Amount</th>
@@ -3155,26 +3155,26 @@ const BursarDashboard = () => {
                 <th className="py-4 px-4 text-right">Final Expected</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
+            <tbody className="divide-y divide-slate-100 bg-white dark:bg-slate-800 dark:divide-slate-700">
               {filtered.map(s => {
                 const discountAmount = parseFloat(s.discountApplied) || 0;
                 const expected = parseFloat(s.expectedFee) || 0;
                 const initialAmount = expected + discountAmount;
                 return (
-                  <tr key={s.id} className="hover:bg-rose-50/30 transition-colors">
-                    <td className="py-3.5 px-4 font-black text-slate-700">{s.studentName || s.name || s.firstName || 'Unknown'}</td>
+                  <tr key={s.id} className="hover:bg-rose-50/30 transition-colors dark:hover:bg-slate-700/50">
+                    <td className="py-3.5 px-4 font-black text-slate-700 dark:text-slate-200">{s.studentName || s.name || s.firstName || 'Unknown'}</td>
                     <td className="py-3.5 px-4">
-                      <div className="text-slate-500 font-mono text-xs font-bold">{s.regNo || 'N/A'}</div>
-                      <div className="mt-1"><span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">{s.className || s.class_name || s.CLASS}</span></div>
+                      <div className="text-slate-500 font-mono text-xs font-bold dark:text-slate-400">{s.regNo || 'N/A'}</div>
+                      <div className="mt-1"><span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">{s.className || s.class_name || s.CLASS}</span></div>
                     </td>
-                    <td className="py-3.5 px-4 text-right text-slate-500 line-through decoration-rose-300 font-medium">{formatNaira(initialAmount)}</td>
-                    <td className="py-3.5 px-4 text-right text-rose-600 font-black">-{formatNaira(discountAmount)}</td>
-                    <td className="py-3.5 px-4 text-right text-emerald-600 font-black">{formatNaira(expected)}</td>
+                    <td className="py-3.5 px-4 text-right text-slate-500 line-through decoration-rose-300 font-medium dark:text-slate-400 dark:decoration-rose-500/60">{formatNaira(initialAmount)}</td>
+                    <td className="py-3.5 px-4 text-right text-rose-600 font-black dark:text-rose-400">-{formatNaira(discountAmount)}</td>
+                    <td className="py-3.5 px-4 text-right text-emerald-600 font-black dark:text-emerald-400">{formatNaira(expected)}</td>
                   </tr>
                 );
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan="5" className="text-center py-8 text-slate-400 font-bold">No discount records found.</td></tr>
+                <tr><td colSpan="5" className="text-center py-8 text-slate-400 font-bold dark:text-slate-500">No discount records found.</td></tr>
               )}
             </tbody>
           </table>
