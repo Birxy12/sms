@@ -179,6 +179,7 @@ const AdmissionPortal = () => {
   const [examScheduleActive, setExamScheduleActive] = useState(false);
   const [examStartDate, setExamStartDate] = useState('');
   const [examEndDate, setExamEndDate] = useState('');
+  const [shuffleQuestions, setShuffleQuestions] = useState(true);
 
   const [timeLeft, setTimeLeft] = useState(0);
   const [examDone, setExamDone] = useState(false);
@@ -229,6 +230,7 @@ const AdmissionPortal = () => {
           if (data.examScheduleActive !== undefined) setExamScheduleActive(!!data.examScheduleActive);
           if (data.examStartDate) setExamStartDate(data.examStartDate);
           if (data.examEndDate) setExamEndDate(data.examEndDate);
+          if (data.shuffleQuestions !== undefined) setShuffleQuestions(!!data.shuffleQuestions);
         } else {
           setAdmissionOpen(true);
         }
@@ -475,7 +477,12 @@ const AdmissionPortal = () => {
         }
       }
 
-      let selected = combinedPool.sort(() => Math.random() - 0.5).slice(0, Math.min(20, combinedPool.length));
+      let selected;
+      if (shuffleQuestions) {
+        selected = combinedPool.sort(() => Math.random() - 0.5).slice(0, Math.min(20, combinedPool.length));
+      } else {
+        selected = combinedPool.slice(0, Math.min(20, combinedPool.length));
+      }
       setQuestions(selected);
       setAnswers({});
       setCurrentQ(0);

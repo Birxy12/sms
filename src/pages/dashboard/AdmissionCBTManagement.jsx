@@ -60,6 +60,7 @@ const AdmissionCBTManagement = () => {
   const [examScheduleActive, setExamScheduleActive] = useState(false);
   const [examStartDate, setExamStartDate] = useState('');
   const [examEndDate, setExamEndDate] = useState('');
+  const [shuffleQuestions, setShuffleQuestions] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
 
   // Filters & Status
@@ -100,6 +101,7 @@ const AdmissionCBTManagement = () => {
         if (data.examScheduleActive !== undefined) setExamScheduleActive(!!data.examScheduleActive);
         if (data.examStartDate) setExamStartDate(data.examStartDate);
         if (data.examEndDate) setExamEndDate(data.examEndDate);
+        if (data.shuffleQuestions !== undefined) setShuffleQuestions(!!data.shuffleQuestions);
       }
     } catch (err) {
       console.error('Error fetching settings:', err);
@@ -169,8 +171,9 @@ const AdmissionCBTManagement = () => {
         examScheduleActive: !!examScheduleActive,
         examStartDate: examStartDate || null,
         examEndDate: examEndDate || null,
+        shuffleQuestions: !!shuffleQuestions,
       }, { merge: true });
-      showStatus('success', 'Exam duration and schedule settings updated.');
+      showStatus('success', 'Exam settings updated successfully.');
     } catch (err) {
       console.error(err);
       showStatus('error', 'Failed to update settings: ' + (err.message || 'Permission error'));
@@ -382,6 +385,17 @@ const AdmissionCBTManagement = () => {
               <input type="checkbox" checked={examScheduleActive} onChange={e => setExamScheduleActive(e.target.checked)}
                 style={{ width: 16, height: 16, accentColor: '#10b981', cursor: 'pointer' }} />
               Enforce Schedule Window
+            </label>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>
+              Question Delivery
+            </label>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700, color: shuffleQuestions ? '#059669' : '#64748b' }}>
+              <input type="checkbox" checked={shuffleQuestions} onChange={e => setShuffleQuestions(e.target.checked)}
+                style={{ width: 16, height: 16, accentColor: '#10b981', cursor: 'pointer' }} />
+              Shuffle Questions Randomly
             </label>
           </div>
         </div>
