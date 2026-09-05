@@ -170,7 +170,6 @@ const MainFooter = () => {
                 borderRadius: '8px',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
               }} 
-              loading="lazy"
             />
             <h2 style={{ 
               fontSize: '26px', 

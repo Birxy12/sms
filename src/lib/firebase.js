@@ -22,7 +22,7 @@ if (typeof window !== 'undefined') {
   try {
     if (window.navigator?.onLine) {
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        console.info('Firebase analytics disabled: running on localhost.');
+        // console.info('Firebase analytics disabled: running on localhost.');
       } else {
         isSupported().then(supported => {
           if (supported) analytics = getAnalytics(app);
