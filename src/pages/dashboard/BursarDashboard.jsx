@@ -1670,15 +1670,33 @@ const BursarDashboard = () => {
             activationConfirmedRole: 'bursar',
           } : {}),
         });
+        const receiptMessage = `Cash payment of \u20a6${amount.toLocaleString()} received for ${paymentTerm}, ${paymentSession}.${discount > 0 ? ` A discount of \u20a6${discount.toLocaleString()} was applied.` : ''}`;
+        
         await addDoc(collection(db, 'payment_messages'), {
           studentName: selectedStudent.name || selectedStudent['STUDENT NAME'],
           className: selectedStudent.className || selectedStudent.class_name || selectedStudent.CLASS,
           regNo: selectedStudent.regNo || selectedStudent.REGNO,
           amount, discount, method: 'Cash', term: paymentTerm, session: paymentSession,
           transactionId: txnId, serialNo,
-          message: `Cash payment of \u20a6${amount.toLocaleString()} received for ${paymentTerm}, ${paymentSession}.${discount > 0 ? ` A discount of \u20a6${discount.toLocaleString()} was applied.` : ''}`,
+          message: receiptMessage,
           createdAt: serverTimestamp(),
         });
+        
+        // Notify Student via Email
+        if (selectedStudent.email) {
+          try {
+            const { sendNotification } = await import('../../utils/notifications');
+            await sendNotification({
+              type: 'email',
+              subject: `Payment Receipt: \u20a6${amount.toLocaleString()}`,
+              message: `Dear ${selectedStudent.name || selectedStudent['STUDENT NAME']},\n\nWe have received your cash payment.\n\nAmount: \u20a6${amount.toLocaleString()}\nTerm: ${paymentTerm}, ${paymentSession}\nTransaction ID: ${txnId}\n\nThank you.\nBursary Department`,
+              recipients: [selectedStudent]
+            });
+          } catch (notifyErr) {
+            console.warn('Could not send payment email notification:', notifyErr);
+          }
+        }
+
         setReceipt({ student: selectedStudent, amount, discount, newPaid, date: new Date().toLocaleDateString('en-NG'), term: paymentTerm, session: paymentSession, txnId, serialNo, coveredItems: selectedPaidItems });
         fetchFinancialData();
         setCashAmount(''); setDiscountAmount(''); setSelectedStudent(null); setSearchTerm('');

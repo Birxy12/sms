@@ -51,6 +51,43 @@ const ResultPublisher = () => {
         status: 'published'
       }, { merge: true });
 
+      // Notify students via Email
+      try {
+        const { query, collection, where, getDocs } = await import('firebase/firestore');
+        const { sendNotification } = await import('../utils/notifications');
+        
+        let usersQuery;
+        if (targetClass === 'All Classes') {
+          usersQuery = query(collection(db, 'users'), where('role', '==', 'student'));
+        } else {
+          usersQuery = query(collection(db, 'users'), where('role', '==', 'student'), where('className', '==', targetClass));
+        }
+        
+        const usersSnap = await getDocs(usersQuery);
+        const recipients = [];
+        usersSnap.forEach(doc => {
+          const data = doc.data();
+          if (data.email) {
+            recipients.push({ email: data.email, name: data.name, regNo: data.regNo });
+          }
+        });
+
+        if (recipients.length > 0) {
+          // Chunk recipients into batches of 400 to avoid Firestore limits
+          for (let i = 0; i < recipients.length; i += 400) {
+            const chunk = recipients.slice(i, i + 400);
+            await sendNotification({
+              type: 'email',
+              subject: `Results Published: ${examName} (${term})`,
+              message: `Dear Student,\n\nYour results for ${term}, ${session} (${examName}) have been published and are now available on the portal.\n\nPlease log in to your dashboard to view your results.\n\nThank you,\nSchool Management`,
+              recipients: chunk
+            });
+          }
+        }
+      } catch (notifyErr) {
+        console.warn('Failed to send result publish emails:', notifyErr);
+      }
+
       setStatus({ type: 'success', message: `Great! ${term.toLowerCase()} results have been published successfully.` });
       setExamName('');
       fetchPublications();

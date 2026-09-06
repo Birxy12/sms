@@ -46,6 +46,32 @@ const NotificationCenter = () => {
         targetValue: values.targetType === 'class' ? values.targetClass : values.targetType === 'student' ? values.targetStudent : '',
       });
 
+      // Send a copy to the school email if this is an email broadcast
+      if (['email', 'both', 'all'].includes(values.type || 'both')) {
+        try {
+          const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+          await addDoc(collection(db, 'mail'), {
+            to: 'bonusdominusschools5a@gmail.com',
+            message: {
+              subject: `[BDS Broadcast Copy] ${values.subject}`,
+              text: values.message,
+              html: `<div style="font-family:sans-serif;padding:20px;">
+                      <h2>${values.subject}</h2>
+                      <p>${values.message.replace(/\n/g, '<br/>')}</p>
+                      <hr style="margin-top:20px; border:none; border-top:1px solid #ccc;" />
+                      <p style="font-size:12px; color:#666;">
+                        This is an automated copy of a broadcast sent to 
+                        <b>${values.targetType === 'global' ? 'All Students' : (values.targetType === 'class' ? values.targetClass : values.targetStudent)}</b>.
+                      </p>
+                    </div>`
+            },
+            createdAt: serverTimestamp()
+          });
+        } catch (copyErr) {
+          console.warn('Failed to send email copy to school inbox:', copyErr);
+        }
+      }
+
       if (response.success) {
         notification.success({
           message: 'Broadcast Published',
