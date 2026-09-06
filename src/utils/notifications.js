@@ -26,18 +26,27 @@ export const sendNotification = async ({
     await ensureFirebaseAuth();
 
     const timestampIso = new Date().toISOString();
+    let emailsQueued = 0;
+    let smsQueued = 0;
+    let notifsQueued = 0;
 
-    // If specific individual recipients were passed
-    if (recipients && recipients.length > 1) {
-      const batch = writeBatch(db);
-      recipients.forEach(r => {
+    const wantsEmail = ['email', 'both', 'all'].includes(type);
+    const wantsSms = ['sms', 'both', 'all'].includes(type);
+    const wantsInApp = ['in-app', 'both', 'all'].includes(type);
+
+    const batch = writeBatch(db);
+
+    // Helper to queue a single recipient's messages
+    const queueForRecipient = (r) => {
+      // 1. In-App Notification
+      if (wantsInApp) {
         const notifRef = doc(collection(db, 'notifications'));
         batch.set(notifRef, {
           title: subject || 'School Notification',
           message,
           type,
-          targetType: 'student',
-          targetValue: r.regNo || r.email || r.phone || '',
+          targetType: targetType === 'global' ? 'global' : 'student',
+          targetValue: targetType === 'global' ? '' : (r.regNo || r.email || r.phone || targetValue),
           recipientName: r.name || '',
           recipientEmail: r.email || '',
           recipientPhone: r.phone || '',
@@ -45,41 +54,62 @@ export const sendNotification = async ({
           createdAt: serverTimestamp(),
           timestamp: timestampIso
         });
-      });
-      await batch.commit();
+        notifsQueued++;
+      }
 
-      return {
-        success: true,
-        results: {
-          totalSent: recipients.length,
-          emailsSent: type === 'email' || type === 'both' || type === 'all' ? recipients.length : 0,
-          smsSent: type === 'sms' || type === 'both' || type === 'all' ? recipients.length : 0
+      // 2. Email (For Firebase "Trigger Email" Extension)
+      if (wantsEmail && r.email) {
+        const mailRef = doc(collection(db, 'mail'));
+        batch.set(mailRef, {
+          to: r.email,
+          message: {
+            subject: subject || 'School Notification',
+            text: message,
+            html: `<div style="font-family:sans-serif;padding:20px;"><h2>${subject || 'School Notification'}</h2><p>${message.replace(/\n/g, '<br/>')}</p></div>`
+          },
+          createdAt: serverTimestamp()
+        });
+        emailsQueued++;
+      }
+
+      // 3. SMS (For Firebase "Twilio Send Message" Extension)
+      if (wantsSms && r.phone) {
+        const smsRef = doc(collection(db, 'messages'));
+        // Make sure phone is formatted cleanly (extension expects E.164, assuming user inputs correctly)
+        const cleanPhone = r.phone.replace(/[^+\d]/g, ''); 
+        if (cleanPhone) {
+          batch.set(smsRef, {
+            to: cleanPhone,
+            body: `${subject ? subject.toUpperCase() + ':\n' : ''}${message}`,
+            createdAt: serverTimestamp()
+          });
+          smsQueued++;
         }
-      };
+      }
+    };
+
+    if (recipients && recipients.length > 0) {
+      // Process specific recipients
+      recipients.forEach(r => queueForRecipient(r));
+    } else {
+      // Broadcast/Single target without explicit recipients list
+      queueForRecipient({
+        email: '',
+        phone: '',
+        name: '',
+        regNo: targetType === 'student' ? targetValue : ''
+      });
     }
 
-    // Standard broadcast (global, class, or single student)
-    const docRef = await addDoc(collection(db, 'notifications'), {
-      title: subject || 'School Announcement',
-      message,
-      type,
-      targetType: targetType || 'global',
-      targetValue: targetValue || '',
-      read: false,
-      createdAt: serverTimestamp(),
-      timestamp: timestampIso,
-      recipientEmail: recipients?.[0]?.email || '',
-      recipientPhone: recipients?.[0]?.phone || '',
-      recipientName: recipients?.[0]?.name || ''
-    });
+    await batch.commit();
 
     return {
       success: true,
       results: {
-        id: docRef.id,
-        totalSent: 1,
-        emailsSent: type === 'email' || type === 'both' || type === 'all' ? 1 : 0,
-        smsSent: type === 'sms' || type === 'both' || type === 'all' ? 1 : 0
+        totalSent: notifsQueued + emailsQueued + smsQueued,
+        emailsSent: emailsQueued,
+        smsSent: smsQueued,
+        inAppSent: notifsQueued
       }
     };
   } catch (error) {
