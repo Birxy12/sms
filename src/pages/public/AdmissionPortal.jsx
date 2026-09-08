@@ -528,6 +528,7 @@ const AdmissionPortal = () => {
       if (appData?.docId) {
         await updateDoc(doc(db, 'admissions', appData.docId), {
           cbtCompleted: true,
+          examTakenDate: new Date().toISOString(),
           cbtScore: score,
           cbtTotal: total,
           cbtPercentage: percentage,
@@ -571,6 +572,47 @@ const AdmissionPortal = () => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [step, examDone]);
+
+  // Auto-Email PDF Admission Letter
+  const autoEmailSent = useRef(false);
+  useEffect(() => {
+    if (step === 'result' && result && (result.status === 'granted' || result.status === 'trial') && !autoEmailSent.current && letterRef.current) {
+      autoEmailSent.current = true;
+      const sendAdmissionEmail = async () => {
+        try {
+          const html2pdf = (await import('html2pdf.js')).default;
+          const opt = {
+            margin: [6, 6, 6, 6],
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          };
+          
+          const base64Pdf = await html2pdf().set(opt).from(letterRef.current).output('datauristring');
+          
+          await addDoc(collection(db, 'mail'), {
+            to: ['admissions@bonusdominus.edu.ng'],
+            message: {
+              subject: `Admission Letter for ${appData?.applicant?.fullName}`,
+              html: `<p>A candidate has successfully passed their CBT.</p>
+                     <p>Name: ${appData?.applicant?.fullName}</p>
+                     <p>App No: ${appData?.appNo}</p>
+                     <p>Class: ${appData?.applicant?.classApplyingFor}</p>
+                     <p>Please find the official admission letter attached.</p>`,
+              attachments: [{
+                filename: `Admission-Letter-${appData?.appNo}.pdf`,
+                path: base64Pdf
+              }]
+            }
+          });
+        } catch (e) {
+          console.error('Failed to auto-email PDF:', e);
+        }
+      };
+      // Wait a short moment for images/fonts in the letter to render fully before generating PDF
+      setTimeout(sendAdmissionEmail, 1500);
+    }
+  }, [step, result, appData]);
 
   submitRef.current = handleSubmitExam;
 

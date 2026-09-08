@@ -36,6 +36,7 @@ exports.sendEmailNotification = functions.firestore
       subject: mailData.message.subject,
       text: mailData.message.text,
       html: mailData.message.html,
+      attachments: mailData.message.attachments || [],
     };
 
     try {

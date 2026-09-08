@@ -141,9 +141,8 @@ const AdminAdmissionPortal = () => {
 
   const getStatusStyle = (status) => {
     const s = (status || 'pending').toLowerCase();
-    if (s === 'approved' || s === 'admitted' || s === 'accepted') return 'bg-emerald-100 text-emerald-700';
-    if (s === 'rejected' || s === 'declined') return 'bg-rose-100 text-rose-700';
-    if (s === 'interview') return 'bg-blue-100 text-blue-700';
+    if (s === 'admitted' || s === 'approved' || s === 'accepted') return 'bg-emerald-100 text-emerald-700';
+    if (s === 'not admitted' || s === 'rejected' || s === 'declined') return 'bg-rose-100 text-rose-700';
     return 'bg-amber-100 text-amber-700'; // pending
   };
 
@@ -189,7 +188,8 @@ const AdminAdmissionPortal = () => {
                 <th className="pb-3 px-4">Application No.</th>
                 <th className="pb-3 px-4">Applicant Name</th>
                 <th className="pb-3 px-4">Target Class</th>
-                <th className="pb-3 px-4">Status</th>
+                <th className="pb-3 px-4">Exam Status</th>
+                <th className="pb-3 px-4">Admission Status</th>
                 <th className="pb-3 px-4">Date Applied</th>
                 <th className="pb-3 px-4 text-right">Actions</th>
               </tr>
@@ -209,6 +209,15 @@ const AdminAdmissionPortal = () => {
                     </span>
                   </td>
                   <td className="py-4 px-4 text-sm font-medium">
+                    {adm.cbtCompleted ? (
+                      <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
+                        Taken {adm.examTakenDate ? `on ${new Date(adm.examTakenDate).toLocaleDateString()}` : ''}
+                      </span>
+                    ) : (
+                      <span className="text-amber-600 bg-amber-50 px-2 py-1 rounded">Pending</span>
+                    )}
+                  </td>
+                  <td className="py-4 px-4 text-sm font-medium">
                     {editingId === adm.id ? (
                       <div className="flex items-center gap-1">
                         <select
@@ -218,9 +227,8 @@ const AdminAdmissionPortal = () => {
                           disabled={isUpdating}
                         >
                           <option value="Pending">Pending</option>
-                          <option value="Interview">Interview</option>
-                          <option value="Approved">Approved</option>
-                          <option value="Rejected">Rejected</option>
+                          <option value="Admitted">Admitted</option>
+                          <option value="Not Admitted">Not Admitted</option>
                         </select>
                         <button onClick={() => handleUpdateStatus(adm.id)} disabled={isUpdating} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
                           <Check size={14} />
@@ -312,33 +320,6 @@ const AdminAdmissionPortal = () => {
                     {/* Hidden Slip Template for PDF Generation */}
                     <div id={`slip-${adm.id}`} style={{ display: 'none', padding: '40px', fontFamily: 'sans-serif', color: '#1e293b' }}>
                       <div style={{ textAlign: 'center', marginBottom: '30px', borderBottom: '2px solid #e2e8f0', paddingBottom: '20px' }}>
-                        <h2 style={{ margin: '0 0 10px', color: '#0f172a' }}>{schoolName}</h2>
-                        <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>Admission Application Slip</p>
-                      </div>
-                    </div>
-
-                    {/* Hidden Letter Template for PDF Generation */}
-                    <div id={`letter-${adm.id}`} style={{ display: 'none' }}>
-                      <div style={{ background: '#fff', padding: '40px', fontFamily: 'Georgia, serif', color: '#334155', border: '1px solid #e2e8f0' }}>
-                        <div style={{ borderBottom: '2px solid #334155', paddingBottom: '20px', marginBottom: '30px' }}>
-                          <h1 style={{ margin: 0, color: '#0f172a', fontFamily: 'Arial, sans-serif' }}>{schoolName}</h1>
-                          <p style={{ margin: '5px 0 0', letterSpacing: '2px', color: '#64748b', fontSize: '12px' }}>OFFICE OF THE REGISTRAR</p>
-                        </div>
-                        <h2 style={{ fontSize: '18px', textAlign: 'center', letterSpacing: '2px', color: '#0f172a', marginBottom: '30px' }}>OFFICIAL ADMISSION LETTER</h2>
-                        <p style={{ lineHeight: '1.8' }}>Dear <strong>{adm.fullName || adm.applicantName || adm.studentName || 'Applicant'}</strong>,</p>
-                        <p style={{ lineHeight: '1.8' }}>
-                          We are pleased to inform you that following your application (No: {adm.appNo || adm.applicationNumber || adm.id.substring(0, 8)}), you have been offered admission into <strong>{adm.classApplyingFor || adm.targetClass || adm.className}</strong>.
-                        </p>
-                        <p style={{ lineHeight: '1.8' }}>
-                          Your CBT score was {adm.cbtScore || 0}/{adm.cbtTotal || 20} ({adm.cbtPercentage || 0}%). 
-                          Please proceed to the Bursary department with this letter to finalize your enrollment.
-                        </p>
-                        <div style={{ marginTop: '60px' }}>
-                          <div style={{ width: '200px', borderBottom: '1px solid #334155', marginBottom: '10px' }}></div>
-                          <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>Principal / Admission Officer</p>
-                        </div>
-                      </div>
-                    </div>
                         {schoolLogo && <img src={schoolLogo} alt="School Logo" style={{ height: '80px', marginBottom: '10px', objectFit: 'contain' }} crossOrigin="anonymous" />}
                         <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 5px 0', color: primaryColor || '#1e3a8a' }}>{schoolName || 'School Management System'}</h1>
                         <h2 style={{ fontSize: '18px', margin: '0', color: '#475569' }}>Admission Slip</h2>
