@@ -281,6 +281,7 @@ const AdminAdmissionPortal = () => {
                 <th className="pb-3 px-4">Application No.</th>
                 <th className="pb-3 px-4">Applicant Name</th>
                 <th className="pb-3 px-4">Target Class</th>
+                <th className="pb-3 px-4">Reg No.</th>
                 <th className="pb-3 px-4">Exam Status</th>
                 <th className="pb-3 px-4">Score (%)</th>
                 <th className="pb-3 px-4">Admission Status</th>
@@ -312,6 +313,9 @@ const AdminAdmissionPortal = () => {
                     <span className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg font-medium">
                       {adm.classApplyingFor || adm.targetClass || adm.appliedClass || adm.class || adm.className || 'N/A'}
                     </span>
+                  </td>
+                  <td className="py-4 px-4 text-sm font-mono text-slate-700 dark:text-slate-300">
+                    {adm.status?.toLowerCase() === 'admitted' || adm.status?.toLowerCase() === 'granted' ? (adm.regNo || 'Pending') : 'N/A'}
                   </td>
                   <td className="py-4 px-4 text-sm font-medium">
                     {editingId === adm.id ? (
@@ -439,6 +443,27 @@ const AdminAdmissionPortal = () => {
                           >
                             <Trash2 size={14} /> Delete
                           </button>
+                          
+                          {(!adm.regNo && (adm.status?.toLowerCase() === 'admitted' || adm.status?.toLowerCase() === 'granted')) && (
+                            <button
+                              onClick={async () => {
+                                setActiveDropdown(null);
+                                setIsUpdating(true);
+                                try {
+                                  const reg = await ensureStudentEnrolled(adm, 'granted', null);
+                                  await updateDoc(doc(db, 'admissions', adm.id), { regNo: reg });
+                                  alert(`Student moved to class! Reg No generated: ${reg}`);
+                                } catch (e) {
+                                  console.error(e);
+                                  alert('Failed to generate Reg No / Move to Class');
+                                }
+                                setIsUpdating(false);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 flex items-center gap-2 transition-colors border-t border-slate-100 dark:border-slate-800"
+                            >
+                              <Check size={14} /> Move to Class / Gen RegNo
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
