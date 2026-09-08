@@ -429,13 +429,6 @@ const AdmissionPortal = () => {
           combinedPool.push(q);
         }
       }
-      if (combinedPool.length < 20) {
-        for (const q of allQs) {
-          if (!combinedPool.some(e => e.id === q.id)) {
-            combinedPool.push(q);
-          }
-        }
-      }
 
       let selected;
       if (shuffleQuestions) {
