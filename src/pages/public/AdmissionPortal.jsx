@@ -1769,26 +1769,11 @@ const AdmissionPortal = () => {
                           </div>
                         </div>
                       </div>
-                    </div>el}:</span>
-                                    <span style={{ color: '#0f172a', fontWeight: 900 }}>{value || '—'}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </>
-                        );
-                      })()}
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end', marginTop: 32, paddingTop: 24, borderTop: '1px solid #e2e8f0' }}>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ height: 1, width: 180, background: '#94a3b8', marginBottom: 7, marginLeft: 'auto' }} />
-                          <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', fontFamily: 'Arial', margin: 0 }}>Principal / Admission Officer</p>
-                          <p style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'Arial', margin: '3px 0 0' }}>{schoolName || 'Birxy SMS'}</p>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
               )}
+
 
               {result.status === 'rejected' && (
                 <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #fecaca', padding: '24px 28px', marginBottom: 24 }}>
