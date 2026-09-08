@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
-import { collection, query, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, getDocs, where } from 'firebase/firestore';
 import { Printer, Search, Loader2, Edit, Trash2, X, Check, MoreVertical } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { useTheme } from '../context/ThemeContext';
@@ -202,7 +202,25 @@ const AdminAdmissionPortal = () => {
           }
         }
       }
-      alert(`Successfully updated ${updated} admission records.`);
+
+      // Also fix any newly admitted students who are stuck in 'pending_activation'
+      let studentsUpdated = 0;
+      const qStud = query(collection(db, 'students'), where('isNewIntake', '==', true));
+      const studSnap = await getDocs(qStud);
+      for (const st of studSnap.docs) {
+        const sdata = st.data();
+        if (sdata.status === 'pending_activation' || sdata.classActivated === false) {
+          await updateDoc(doc(db, 'students', st.id), {
+            status: 'active',
+            classActivated: true,
+            admissionConfirmed: true,
+            requiresAdminConfirmation: false
+          });
+          studentsUpdated++;
+        }
+      }
+
+      alert(`Successfully updated ${updated} admission records and activated ${studentsUpdated} student profiles.`);
     } catch (e) {
       console.error('Error fixing records:', e);
       alert('Error updating records.');
