@@ -70,6 +70,46 @@ const AdminAdmissionPortal = () => {
     }
   };
 
+  const handlePrintLetter = (admission) => {
+    const element = document.getElementById(`letter-${admission.id}`);
+    if (!element) return;
+    const printWindow = window.open('', '_blank', 'width=900,height=900');
+    if (!printWindow) {
+      window.alert('Please allow pop-ups to print the admission letter.');
+      return;
+    }
+    const letterMarkup = element.innerHTML;
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Admission Letter</title><style>body{margin:0;padding:24px;background:#fff;color:#111827;font-family:Arial,sans-serif}*{box-sizing:border-box}img{max-width:100%}</style></head><body>${letterMarkup}</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 300);
+  };
+
+  const handleDownloadLetterPdf = async (admission) => {
+    setPrintingId(admission.id + '-letter');
+    try {
+      const element = document.getElementById(`letter-${admission.id}`);
+      if (!element) return;
+      element.style.display = 'block';
+
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: `Admission-Letter-${admission.applicationNumber || admission.id}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      await html2pdf().set(opt).from(element).save();
+      element.style.display = 'none';
+    } catch (err) {
+      console.error('PDF download failed:', err);
+      alert('Failed to generate admission letter.');
+    } finally {
+      setPrintingId(null);
+    }
+  };
+
   const handleUpdateStatus = async (id) => {
     if (!editStatus) return;
     setIsUpdating(true);
@@ -232,6 +272,30 @@ const AdminAdmissionPortal = () => {
                             {printingId === adm.id ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />}
                             Print Slip
                           </button>
+                          {adm.cbtCompleted && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  handlePrintLetter(adm);
+                                  setActiveDropdown(null);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-2 transition-colors"
+                              >
+                                <Printer size={14} /> Print Letter
+                              </button>
+                              <button
+                                onClick={() => {
+                                  handleDownloadLetterPdf(adm);
+                                  setActiveDropdown(null);
+                                }}
+                                disabled={printingId === adm.id + '-letter'}
+                                className="w-full text-left px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-2 transition-colors disabled:opacity-50"
+                              >
+                                {printingId === adm.id + '-letter' ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />}
+                                Download Letter
+                              </button>
+                            </>
+                          )}
                           <button
                             onClick={() => {
                               handleDelete(adm.id, adm.studentName || adm.fullName || adm.applicantName || 'Applicant');
@@ -248,6 +312,33 @@ const AdminAdmissionPortal = () => {
                     {/* Hidden Slip Template for PDF Generation */}
                     <div id={`slip-${adm.id}`} style={{ display: 'none', padding: '40px', fontFamily: 'sans-serif', color: '#1e293b' }}>
                       <div style={{ textAlign: 'center', marginBottom: '30px', borderBottom: '2px solid #e2e8f0', paddingBottom: '20px' }}>
+                        <h2 style={{ margin: '0 0 10px', color: '#0f172a' }}>{schoolName}</h2>
+                        <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>Admission Application Slip</p>
+                      </div>
+                    </div>
+
+                    {/* Hidden Letter Template for PDF Generation */}
+                    <div id={`letter-${adm.id}`} style={{ display: 'none' }}>
+                      <div style={{ background: '#fff', padding: '40px', fontFamily: 'Georgia, serif', color: '#334155', border: '1px solid #e2e8f0' }}>
+                        <div style={{ borderBottom: '2px solid #334155', paddingBottom: '20px', marginBottom: '30px' }}>
+                          <h1 style={{ margin: 0, color: '#0f172a', fontFamily: 'Arial, sans-serif' }}>{schoolName}</h1>
+                          <p style={{ margin: '5px 0 0', letterSpacing: '2px', color: '#64748b', fontSize: '12px' }}>OFFICE OF THE REGISTRAR</p>
+                        </div>
+                        <h2 style={{ fontSize: '18px', textAlign: 'center', letterSpacing: '2px', color: '#0f172a', marginBottom: '30px' }}>OFFICIAL ADMISSION LETTER</h2>
+                        <p style={{ lineHeight: '1.8' }}>Dear <strong>{adm.fullName || adm.applicantName || adm.studentName || 'Applicant'}</strong>,</p>
+                        <p style={{ lineHeight: '1.8' }}>
+                          We are pleased to inform you that following your application (No: {adm.appNo || adm.applicationNumber || adm.id.substring(0, 8)}), you have been offered admission into <strong>{adm.classApplyingFor || adm.targetClass || adm.className}</strong>.
+                        </p>
+                        <p style={{ lineHeight: '1.8' }}>
+                          Your CBT score was {adm.cbtScore || 0}/{adm.cbtTotal || 20} ({adm.cbtPercentage || 0}%). 
+                          Please proceed to the Bursary department with this letter to finalize your enrollment.
+                        </p>
+                        <div style={{ marginTop: '60px' }}>
+                          <div style={{ width: '200px', borderBottom: '1px solid #334155', marginBottom: '10px' }}></div>
+                          <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>Principal / Admission Officer</p>
+                        </div>
+                      </div>
+                    </div>
                         {schoolLogo && <img src={schoolLogo} alt="School Logo" style={{ height: '80px', marginBottom: '10px', objectFit: 'contain' }} crossOrigin="anonymous" />}
                         <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 5px 0', color: primaryColor || '#1e3a8a' }}>{schoolName || 'School Management System'}</h1>
                         <h2 style={{ fontSize: '18px', margin: '0', color: '#475569' }}>Admission Slip</h2>

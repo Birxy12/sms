@@ -450,6 +450,24 @@ const AdmissionPortal = () => {
 
     setLoadingQ(true);
     try {
+      const savedStateStr = localStorage.getItem('cbtState_' + appData?.appNo);
+      if (savedStateStr) {
+        try {
+          const savedState = JSON.parse(savedStateStr);
+          if (savedState && savedState.questions && savedState.questions.length > 0) {
+            setQuestions(savedState.questions);
+            setAnswers(savedState.answers || {});
+            setCurrentQ(savedState.currentQ || 0);
+            setTimeLeft(savedState.timeLeft || examDuration);
+            setExamDone(false);
+            setStep('cbt');
+            return;
+          }
+        } catch (err) {
+          console.warn('Failed to parse saved CBT state:', err);
+        }
+      }
+
       const applicantClass = appData?.applicant?.classApplyingFor || '';
       const snap = await getDocs(collection(db, 'admissionQuestions'));
       let allQs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -520,9 +538,39 @@ const AdmissionPortal = () => {
       }
     } catch (err) { console.error(err); }
 
+    try {
+      if (appData?.appNo) {
+        localStorage.removeItem('cbtState_' + appData.appNo);
+      }
+    } catch(e) {}
+
     setResult({ score, total, percentage, status, regNo });
     setStep('result');
   }, [examDone, questions, answers, appData]);
+
+  // Persist CBT State to localStorage
+  useEffect(() => {
+    if (step === 'cbt' && appData?.appNo && !examDone && questions.length > 0) {
+      localStorage.setItem('cbtState_' + appData.appNo, JSON.stringify({
+        questions,
+        answers,
+        currentQ,
+        timeLeft
+      }));
+    }
+  }, [step, appData?.appNo, examDone, questions, answers, currentQ, timeLeft]);
+
+  // Prevent accidental refresh during CBT
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (step === 'cbt' && !examDone) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [step, examDone]);
 
   submitRef.current = handleSubmitExam;
 
