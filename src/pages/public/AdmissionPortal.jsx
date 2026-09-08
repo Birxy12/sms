@@ -1653,15 +1653,24 @@ const AdmissionPortal = () => {
                   <div ref={letterRef} id="admission-letter" className="admission-letter-card" style={{ background: '#fff', borderRadius: 22, boxShadow: '0 20px 60px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', fontFamily: 'Georgia, serif', overflow: 'hidden', textAlign: 'left' }}>
                     <div className="admission-letter-header" style={{ background: 'linear-gradient(135deg, #475569, #64748b)', padding: '28px 36px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <img src={logoUrl} alt="Logo" style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'contain', border: '2px solid rgba(255,255,255,0.2)' }} />
+                        <img src={logoUrl} alt="Logo" style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'contain', border: '2px solid rgba(255,255,255,0.2)' }} crossOrigin="anonymous" />
                         <div>
                           <p style={{ color: '#fff', fontWeight: 900, fontSize: 16, textTransform: 'uppercase', margin: 0, fontFamily: 'Arial' }}>{schoolName || 'Birxy School'}</p>
                           <p style={{ color: '#e2e8f0', fontSize: 11, margin: '3px 0 0', fontFamily: 'Arial', letterSpacing: '1.5px', fontWeight: 700 }}>ADMISSION OFFICE</p>
                         </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <p style={{ color: '#cbd5e1', fontSize: 10, fontFamily: 'Arial', fontWeight: 700, margin: 0, letterSpacing: '1.5px' }}>DATE ISSUED</p>
-                        <p style={{ color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'Arial', margin: '3px 0 0' }}>{today}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <p style={{ color: '#cbd5e1', fontSize: 10, fontFamily: 'Arial', fontWeight: 700, margin: 0, letterSpacing: '1.5px' }}>DATE ISSUED</p>
+                          <p style={{ color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'Arial', margin: '3px 0 0' }}>{today}</p>
+                        </div>
+                        <div style={{ background: '#fff', padding: 4, borderRadius: 8 }}>
+                          <QRCodeDisplay 
+                            value={`ADMISSION LETTER\nName: ${appData?.applicant?.fullName}\nClass: ${appData?.applicant?.classApplyingFor}\nApp No: ${appData?.appNo}`} 
+                            size={60} 
+                            includeMargin={false}
+                          />
+                        </div>
                       </div>
                     </div>
                     <div className="admission-letter-status" style={{ background: '#f8fafc', color: '#334155', padding: '9px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0' }}>
@@ -1717,8 +1726,7 @@ const AdmissionPortal = () => {
                           </>
                         );
                       })()}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 32, paddingTop: 24, borderTop: '1px solid #e2e8f0' }}>
-                        <AppBarcode value={appData?.appNo || 'BDS'} />
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end', marginTop: 32, paddingTop: 24, borderTop: '1px solid #e2e8f0' }}>
                         <div style={{ textAlign: 'right' }}>
                           <div style={{ height: 1, width: 180, background: '#94a3b8', marginBottom: 7, marginLeft: 'auto' }} />
                           <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', fontFamily: 'Arial', margin: 0 }}>Principal / Admission Officer</p>

@@ -5,6 +5,7 @@ import { Printer, Search, Loader2, Edit, Trash2, X, Check, MoreVertical } from '
 import html2pdf from 'html2pdf.js';
 import { useTheme } from '../context/ThemeContext';
 import { ensureStudentEnrolled } from '../utils/studentEnroller';
+import QRCodeDisplay from './QRCodeDisplay';
 
 const AdminAdmissionPortal = () => {
   const [admissions, setAdmissions] = useState([]);
@@ -450,6 +451,53 @@ const AdminAdmissionPortal = () => {
                       </div>
                       <div style={{ marginTop: '50px', paddingTop: '20px', borderTop: '1px dashed #cbd5e1', textAlign: 'center', fontSize: '14px', color: '#64748b' }}>
                         <p>Please present this slip at the school administrative office for the next steps in your admission process.</p>
+                      </div>
+                    </div>
+
+                    {/* Hidden Letter Template for PDF Generation */}
+                    <div id={`letter-${adm.id}`} style={{ display: 'none', padding: '40px', fontFamily: 'Georgia, serif', color: '#1e293b' }}>
+                      <div style={{ background: 'linear-gradient(135deg, #475569, #64748b)', padding: '28px 36px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                          {schoolLogo && <img src={schoolLogo} alt="Logo" style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'contain', border: '2px solid rgba(255,255,255,0.2)' }} crossOrigin="anonymous" />}
+                          <div>
+                            <p style={{ color: '#fff', fontWeight: 900, fontSize: 16, textTransform: 'uppercase', margin: 0, fontFamily: 'Arial' }}>{schoolName || 'School Management System'}</p>
+                            <p style={{ color: '#e2e8f0', fontSize: 11, margin: '3px 0 0', fontFamily: 'Arial', letterSpacing: '1.5px', fontWeight: 700 }}>ADMISSION OFFICE</p>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                          <div style={{ textAlign: 'right' }}>
+                            <p style={{ color: '#cbd5e1', fontSize: 10, fontFamily: 'Arial', fontWeight: 700, margin: 0, letterSpacing: '1.5px' }}>DATE ISSUED</p>
+                            <p style={{ color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'Arial', margin: '3px 0 0' }}>{new Date().toLocaleDateString()}</p>
+                          </div>
+                          <div style={{ background: '#fff', padding: 4, borderRadius: 8 }}>
+                            <QRCodeDisplay 
+                              value={`ADMISSION LETTER\nName: ${adm.studentName || adm.fullName || adm.applicantName}\nClass: ${adm.classApplyingFor || adm.targetClass}\nApp No: ${adm.appNo || adm.applicationNumber || adm.id}`} 
+                              size={60} 
+                              includeMargin={false}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ background: '#f8fafc', color: '#334155', padding: '9px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0' }}>
+                        <p style={{ color: '#334155', fontWeight: 800, fontSize: 11, letterSpacing: '4px', margin: 0, fontFamily: 'Arial' }}>
+                          OFFER OF ADMISSION
+                        </p>
+                        <p style={{ color: '#475569', fontWeight: 700, fontSize: 11, margin: 0, fontFamily: 'monospace' }}>{adm.appNo || adm.applicationNumber || adm.id}</p>
+                      </div>
+                      <div style={{ padding: '36px' }}>
+                        <p style={{ fontFamily: 'Arial', marginBottom: 20, color: '#334155', fontSize: 14, lineHeight: 1.8 }}>Dear <strong>{adm.studentName || adm.fullName || adm.applicantName || 'Applicant'}</strong>,</p>
+                        <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>We are delighted to inform you that following your <strong>General Assessment Examination</strong>, you have been <strong>OFFERED ADMISSION</strong> into <strong>{schoolName || 'our school'}</strong> for <strong>{adm.classApplyingFor || adm.targetClass || 'your selected class'}</strong> for the upcoming academic session.</p>
+                        <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>Your student account has been automatically provisioned under <strong>{adm.classApplyingFor || adm.targetClass}</strong>{adm.regNo ? ` with Registration Number: ${adm.regNo}` : ''}.</p>
+                        <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>Please proceed to complete your fee payment online or at the Bursary to activate your student portal credentials.</p>
+                        <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial' }}>Please bring this letter along with your <strong>Birth Certificate</strong>, <strong>Previous School Report Card</strong>, and <strong>2 Passport Photographs</strong> to the Bursary office to finalise enrollment.</p>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end', marginTop: 32, paddingTop: 24, borderTop: '1px solid #e2e8f0' }}>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ height: 1, width: 180, background: '#94a3b8', marginBottom: 7, marginLeft: 'auto' }} />
+                            <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', fontFamily: 'Arial', margin: 0 }}>Principal / Admission Officer</p>
+                            <p style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'Arial', margin: '3px 0 0' }}>{schoolName || 'Birxy School'}</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </td>
