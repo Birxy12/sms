@@ -609,7 +609,7 @@ const AdminAdmissionPortal = () => {
                               </div>
                               <div style={{ textAlign: 'center' }}>
                                 <div style={{ height: 1, width: 200, background: '#1e293b', marginBottom: 8 }} />
-                                <p style={{ fontSize: 13, fontWeight: 'bold', fontFamily: 'Arial, sans-serif', margin: 0 }}>REGISTRAR / PRINCIPAL</p>
+                                <p style={{ fontSize: 13, fontWeight: 'bold', fontFamily: 'Arial, sans-serif', margin: 0 }}>Admission Officer: Anyaegbu Emmanuel</p>
                                 <p style={{ fontSize: 11, color: '#64748b', fontFamily: 'Arial, sans-serif', margin: '4px 0 0' }}>For: {schoolName || 'Management'}</p>
                               </div>
                             </div>
