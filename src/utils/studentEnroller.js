@@ -24,7 +24,31 @@ export const ensureStudentEnrolled = async (applicantInfo, status, existingRegNo
       const studSnap = await getDocs(qStud);
 
       if (!studSnap.empty) {
-        return studSnap.docs[0].data().regNo || existingRegNo;
+        const existingStudent = studSnap.docs[0];
+        const studentData = existingStudent.data();
+        let finalRegNo = studentData.regNo || existingRegNo;
+        
+        if (!finalRegNo) {
+          finalRegNo = await generateUniqueClassRegNo(className);
+        }
+        
+        // Try to update them if they need activation or a new regNo
+        if (!studentData.regNo || studentData.status !== 'active' || !studentData.classActivated) {
+          try {
+            const { updateDoc } = await import('firebase/firestore');
+            await updateDoc(doc(db, 'students', existingStudent.id), {
+              regNo: finalRegNo,
+              status: 'active',
+              classActivated: true,
+              admissionConfirmed: true,
+              requiresAdminConfirmation: false
+            });
+          } catch (e) {
+            console.warn('Could not auto-update existing student (likely permission issue):', e);
+          }
+        }
+        
+        return finalRegNo;
       }
     }
 
