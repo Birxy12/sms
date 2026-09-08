@@ -201,6 +201,7 @@ const AdminAdmissionPortal = () => {
                 <th className="pb-3 px-4">Applicant Name</th>
                 <th className="pb-3 px-4">Target Class</th>
                 <th className="pb-3 px-4">Exam Status</th>
+                <th className="pb-3 px-4">Score (%)</th>
                 <th className="pb-3 px-4">Admission Status</th>
                 <th className="pb-3 px-4">Date Applied</th>
                 <th className="pb-3 px-4 text-right">Actions</th>
@@ -237,6 +238,15 @@ const AdminAdmissionPortal = () => {
                       </span>
                     ) : (
                       <span className="text-amber-600 bg-amber-50 px-2 py-1 rounded">Pending</span>
+                    )}
+                  </td>
+                  <td className="py-4 px-4 text-sm font-medium">
+                    {adm.cbtCompleted && typeof adm.cbtPercentage === 'number' ? (
+                      <span className="text-slate-700 dark:text-slate-300 font-bold">
+                        {adm.cbtPercentage}%
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">-</span>
                     )}
                   </td>
                   <td className="py-4 px-4 text-sm font-medium">
