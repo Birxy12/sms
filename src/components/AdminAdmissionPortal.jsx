@@ -6,6 +6,8 @@ import html2pdf from 'html2pdf.js';
 import { useTheme } from '../context/ThemeContext';
 import { ensureStudentEnrolled } from '../utils/studentEnroller';
 import QRCodeDisplay from './QRCodeDisplay';
+import { getApplicantFeeBreakdown, formatNaira } from '../utils/prospectusFees';
+import { getDoc } from 'firebase/firestore';
 
 const AdminAdmissionPortal = () => {
   const [admissions, setAdmissions] = useState([]);
@@ -18,6 +20,7 @@ const AdminAdmissionPortal = () => {
   const [editExamStatus, setEditExamStatus] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [feeSettings, setFeeSettings] = useState({});
   const { schoolName, schoolLogo, primaryColor } = useTheme();
 
   // Close dropdown when clicking outside
@@ -45,6 +48,12 @@ const AdminAdmissionPortal = () => {
       console.error('Error fetching admissions:', error);
       setLoading(false);
     });
+    
+    // Fetch fee settings for letter rendering
+    getDoc(doc(db, 'settings', 'fees')).then(snap => {
+      if (snap.exists()) setFeeSettings(snap.data() || {});
+    }).catch(console.error);
+
     return () => unsub();
   }, []);
 
@@ -503,11 +512,40 @@ const AdminAdmissionPortal = () => {
                         <p style={{ color: '#475569', fontWeight: 700, fontSize: 11, margin: 0, fontFamily: 'monospace' }}>{adm.appNo || adm.applicationNumber || adm.id}</p>
                       </div>
                       <div style={{ padding: '36px' }}>
-                        <p style={{ fontFamily: 'Arial', marginBottom: 20, color: '#334155', fontSize: 14, lineHeight: 1.8 }}>Dear <strong>{adm.studentName || adm.fullName || adm.applicantName || 'Applicant'}</strong>,</p>
-                        <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>We are delighted to inform you that following your <strong>General Assessment Examination</strong>, you have been <strong>OFFERED ADMISSION</strong> into <strong>{schoolName || 'our school'}</strong> for <strong>{adm.classApplyingFor || adm.targetClass || 'your selected class'}</strong> for the upcoming academic session.</p>
-                        <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>Your student account has been automatically provisioned under <strong>{adm.classApplyingFor || adm.targetClass}</strong>{adm.regNo ? ` with Registration Number: ${adm.regNo}` : ''}.</p>
-                        <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>Please proceed to complete your fee payment online or at the Bursary to activate your student portal credentials.</p>
-                        <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial' }}>Please bring this letter along with your <strong>Birth Certificate</strong>, <strong>Previous School Report Card</strong>, and <strong>2 Passport Photographs</strong> to the Bursary office to finalise enrollment.</p>
+                        {(() => {
+                          const letterTargetClass = adm.classApplyingFor || adm.targetClass || '';
+                          const letterFeeDetails = getApplicantFeeBreakdown(letterTargetClass, feeSettings);
+                          
+                          return (
+                            <>
+                              <p style={{ fontFamily: 'Arial', marginBottom: 20, color: '#334155', fontSize: 14, lineHeight: 1.8 }}>Dear <strong>{adm.studentName || adm.fullName || adm.applicantName || 'Applicant'}</strong>,</p>
+                              <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>We are delighted to inform you that following your <strong>General Assessment Examination</strong>, you have been <strong>OFFERED ADMISSION</strong> into <strong>{schoolName || 'our school'}</strong> for <strong>{letterTargetClass || 'your selected class'}</strong> for the upcoming academic session.</p>
+                              <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>Your student account has been automatically provisioned under <strong>{letterTargetClass}</strong>{adm.regNo ? ` with Registration Number: ` : ''}{adm.regNo && <strong>{adm.regNo}</strong>}.</p>
+                              <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial', marginBottom: 16 }}>The total approved new intake fee for <strong>{letterTargetClass}</strong> is <strong>{formatNaira(letterFeeDetails.total)}</strong> (Tuition: {formatNaira(letterFeeDetails.schoolFee)} + Admission, Uniforms, P.E, Sports & Requisites) as scheduled in the school prospectus. Please complete fee payment online or at the Bursary to activate your student portal credentials.</p>
+                              <p style={{ fontSize: 14, lineHeight: 1.9, color: '#475569', fontFamily: 'Arial' }}>Please bring this letter along with your <strong>Birth Certificate</strong>, <strong>Previous School Report Card</strong>, and <strong>2 Passport Photographs</strong> to the Bursary office to finalise enrollment.</p>
+                              
+                              <div style={{ marginTop: 24, background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', padding: '20px 24px' }}>
+                                <p style={{ fontSize: 10, fontWeight: 900, letterSpacing: '3px', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 12, fontFamily: 'Arial' }}>Applicant Details & Fee Summary</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 28px' }}>
+                                  {[
+                                    ['Full Name', adm.studentName || adm.fullName || adm.applicantName],
+                                    ['Class Admitted', letterTargetClass],
+                                    ['Section / Category', `${letterFeeDetails.sectionTitle} (New Intake)`],
+                                    ['CBT Score', typeof adm.cbtPercentage === 'number' ? `${adm.cbtPercentage}%` : 'N/A'],
+                                    ['Total Fees Payable', formatNaira(letterFeeDetails.total)],
+                                    ...(adm.regNo ? [['Registration No.', adm.regNo]] : []),
+                                    ['Application No.', adm.appNo || adm.applicationNumber || adm.id],
+                                  ].map(([label, value]) => (
+                                    <div key={label} style={{ display: 'flex', gap: 8, fontSize: 13, fontFamily: 'Arial', padding: '5px 0', borderBottom: '1px solid #f1f5f9' }}>
+                                      <span style={{ color: '#94a3b8', fontWeight: 700, minWidth: 140 }}>{label}:</span>
+                                      <span style={{ color: '#0f172a', fontWeight: 900 }}>{value || '—'}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
                         
                         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end', marginTop: 32, paddingTop: 24, borderTop: '1px solid #e2e8f0' }}>
                           <div style={{ textAlign: 'right' }}>

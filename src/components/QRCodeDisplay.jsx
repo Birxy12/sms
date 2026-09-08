@@ -1,5 +1,5 @@
 import React from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 
 /**
  * QRCodeDisplay - Reusable QR code for receipts, admission letters, ID cards
@@ -41,7 +41,7 @@ const QRCodeDisplay = ({
         border: '1px solid #e0e0e0',
       }}
     >
-      <QRCodeSVG
+      <QRCodeCanvas
         value={qrValue}
         size={size}
         bgColor={bgColor}
