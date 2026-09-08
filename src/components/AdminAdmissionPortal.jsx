@@ -197,7 +197,9 @@ const AdminAdmissionPortal = () => {
       for (const adm of admissions) {
         if (adm.cbtCompleted && typeof adm.cbtPercentage === 'number') {
           const correctStatus = adm.cbtPercentage >= 40 ? 'Admitted' : 'Not Admitted';
-          if (adm.status !== correctStatus) {
+          const needsRegNo = correctStatus === 'Admitted' && !adm.regNo;
+          
+          if (adm.status !== correctStatus || needsRegNo) {
             let regNo = adm.regNo || null;
             if (correctStatus === 'Admitted' && !regNo) {
                regNo = await ensureStudentEnrolled(adm, 'granted', regNo);
@@ -209,6 +211,11 @@ const AdminAdmissionPortal = () => {
             });
             updated++;
           }
+        } else if (adm.status === 'Admitted' && !adm.regNo) {
+          // Manual admits without RegNo
+          const regNo = await ensureStudentEnrolled(adm, 'granted', null);
+          await updateDoc(doc(db, 'admissions', adm.id), { regNo });
+          updated++;
         }
       }
 
@@ -246,9 +253,9 @@ const AdminAdmissionPortal = () => {
             <button
               onClick={handleFixStatuses}
               disabled={isUpdating}
-              className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors"
+              className="text-xs px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors shadow-sm flex items-center gap-1"
             >
-              {isUpdating ? 'Updating...' : 'Sync Statuses'}
+              {isUpdating ? 'Generating...' : 'Auto-Gen Missing RegNos'}
             </button>
           </h2>
           <p className="text-sm text-slate-500">Manage student applications and print admission slips.</p>
