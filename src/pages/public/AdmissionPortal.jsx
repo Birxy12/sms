@@ -533,6 +533,7 @@ const AdmissionPortal = () => {
           cbtTotal: total,
           cbtPercentage: percentage,
           admissionStatus: status,
+          status: status === 'granted' ? 'Admitted' : 'Not Admitted',
           regNo: regNo || null,
           studentCreated: status !== 'rejected'
         });
