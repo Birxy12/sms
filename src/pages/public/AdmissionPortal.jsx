@@ -37,6 +37,7 @@ import {
   SUPPORTED_GATEWAYS, 
   SCHOOL_BANK_ACCOUNTS 
 } from '../../utils/paymentGateways';
+import { ensureStudentEnrolled } from '../../utils/studentEnroller';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const generateAppNo = async (db) => {
@@ -307,66 +308,7 @@ const AdmissionPortal = () => {
     return { isAllowed: true };
   };
 
-  // Auto enroll student if passed
-  const ensureStudentEnrolled = async (applicantInfo, status, existingRegNo) => {
-    if (status === 'rejected') return existingRegNo || null;
-    try {
-      let feeSettings = {};
-      try {
-        const feeSnap = await getDoc(doc(db, 'settings', 'fees'));
-        if (feeSnap.exists()) feeSettings = feeSnap.data() || {};
-      } catch (e) {}
-
-      // Calculate accurate section prospectus fee for candidate's class
-      const prospectusData = getProspectusFeeData(applicantInfo.classApplyingFor);
-      const expectedFee = getExpectedFeeForStudent(applicantInfo.classApplyingFor, true, feeSettings);
-
-      // Check if student with this application number already exists in students collection
-      const qStud = query(collection(db, 'students'), where('appNo', '==', applicantInfo.appNo));
-      const studSnap = await getDocs(qStud);
-
-      if (!studSnap.empty) {
-        return studSnap.docs[0].data().regNo || existingRegNo;
-      }
-
-      // Generate unique class-dependent registration number
-      const regNo = existingRegNo || await generateUniqueClassRegNo(applicantInfo.classApplyingFor);
-
-      await addDoc(collection(db, 'students'), {
-        name: applicantInfo.fullName,
-        regNo,
-        className: applicantInfo.classApplyingFor,
-        studentType: 'new_intake',
-        isNewIntake: true,
-        dateOfBirth: applicantInfo.dateOfBirth || '',
-        gender: applicantInfo.gender || '',
-        stateOfOrigin: applicantInfo.stateOfOrigin || '',
-        localGovernment: applicantInfo.localGovernment || '',
-        phone: applicantInfo.phone || '',
-        guardianPhone: applicantInfo.phone || '',
-        guardianName: applicantInfo.fullName,
-        admissionStatus: status,
-        appNo: applicantInfo.appNo,
-        paidFee: 0,
-        paidAmount: 0,
-        expectedFee: expectedFee,
-        classSection: prospectusData.sectionTitle,
-        admissionConfirmed: false,
-        paymentConfirmed: false,
-        requiresAdminConfirmation: true,
-        classActivated: false,
-        status: 'pending_activation',
-        pendingAdmissionMessage: `Pending bursar payment confirmation for ${prospectusData.sectionTitle} (${formatNaira(expectedFee)}).`,
-        createdAt: serverTimestamp(),
-        createdBy: 'admission_portal_auto',
-      });
-
-      return regNo;
-    } catch (err) {
-      console.error('Error auto-enrolling student:', err);
-      return existingRegNo;
-    }
-  };
+  // Auto enroll student if passed logic moved to utils/studentEnroller.js
 
   const handleApply = async (e) => {
     e.preventDefault();
