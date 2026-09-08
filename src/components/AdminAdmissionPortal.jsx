@@ -165,11 +165,45 @@ const AdminAdmissionPortal = () => {
     return name.includes(s) || appNo.includes(s);
   });
 
+  const handleFixStatuses = async () => {
+    if (!window.confirm("This will auto-update the Admission Status for all students who scored 40% and above. Proceed?")) return;
+    setIsUpdating(true);
+    try {
+      let updated = 0;
+      for (const adm of admissions) {
+        if (adm.cbtCompleted && typeof adm.cbtPercentage === 'number') {
+          const correctStatus = adm.cbtPercentage >= 40 ? 'Admitted' : 'Not Admitted';
+          if (adm.status !== correctStatus) {
+            await updateDoc(doc(db, 'admissions', adm.id), {
+              status: correctStatus,
+              admissionStatus: adm.cbtPercentage >= 40 ? 'granted' : 'rejected'
+            });
+            updated++;
+          }
+        }
+      }
+      alert(`Successfully updated ${updated} admission records.`);
+    } catch (e) {
+      console.error('Error fixing records:', e);
+      alert('Error updating records.');
+    }
+    setIsUpdating(false);
+  };
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <h2 className="text-xl font-bold text-slate-800 dark:text-white">Admission Portal</h2>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
+            Admission Portal
+            <button
+              onClick={handleFixStatuses}
+              disabled={isUpdating}
+              className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors"
+            >
+              {isUpdating ? 'Updating...' : 'Sync Statuses'}
+            </button>
+          </h2>
           <p className="text-sm text-slate-500">Manage student applications and print admission slips.</p>
         </div>
         <div className="relative w-full md:w-72">
@@ -313,7 +347,7 @@ const AdminAdmissionPortal = () => {
                             {printingId === adm.id ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />}
                             Print Slip
                           </button>
-                          {adm.cbtCompleted && (
+                          {adm.status?.toLowerCase() === 'admitted' && (
                             <>
                               <button
                                 onClick={() => {
