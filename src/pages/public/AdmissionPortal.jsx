@@ -517,7 +517,7 @@ const AdmissionPortal = () => {
     const score = questions.reduce((acc, q, i) => acc + (answers[i] === q.correctIndex ? 1 : 0), 0);
     const total = questions.length || 20;
     const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
-    const status = percentage >= 50 ? 'granted' : percentage >= 40 ? 'trial' : 'rejected';
+    const status = percentage >= 40 ? 'granted' : 'rejected';
     
     let regNo = null;
     if (status !== 'rejected' && appData?.applicant) {

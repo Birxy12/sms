@@ -12,6 +12,7 @@ const AdminAdmissionPortal = () => {
   const [printingId, setPrintingId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editStatus, setEditStatus] = useState('');
+  const [editExamStatus, setEditExamStatus] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const { schoolName, schoolLogo, primaryColor } = useTheme();
@@ -43,6 +44,16 @@ const AdminAdmissionPortal = () => {
     });
     return () => unsub();
   }, []);
+
+  const formatDate = (dateVal) => {
+    if (!dateVal) return 'N/A';
+    try {
+      if (typeof dateVal.toDate === 'function') return dateVal.toDate().toLocaleDateString();
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return 'Invalid Date';
+      return d.toLocaleDateString();
+    } catch { return 'Invalid Date'; }
+  };
 
   const handlePrint = async (admission) => {
     setPrintingId(admission.id);
@@ -116,6 +127,7 @@ const AdminAdmissionPortal = () => {
     try {
       await updateDoc(doc(db, 'admissions', id), {
         status: editStatus,
+        cbtCompleted: editExamStatus,
         updatedAt: new Date().toISOString()
       });
       setEditingId(null);
@@ -209,9 +221,19 @@ const AdminAdmissionPortal = () => {
                     </span>
                   </td>
                   <td className="py-4 px-4 text-sm font-medium">
-                    {adm.cbtCompleted ? (
+                    {editingId === adm.id ? (
+                      <select
+                        className="px-2 py-1 border border-slate-300 rounded text-xs focus:outline-none"
+                        value={editExamStatus}
+                        onChange={(e) => setEditExamStatus(e.target.value === 'true')}
+                        disabled={isUpdating}
+                      >
+                        <option value="false">Pending</option>
+                        <option value="true">Taken</option>
+                      </select>
+                    ) : adm.cbtCompleted ? (
                       <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
-                        Taken {adm.examTakenDate ? `on ${new Date(adm.examTakenDate).toLocaleDateString()}` : ''}
+                        Taken {adm.examTakenDate ? `on ${formatDate(adm.examTakenDate)}` : ''}
                       </span>
                     ) : (
                       <span className="text-amber-600 bg-amber-50 px-2 py-1 rounded">Pending</span>
@@ -244,7 +266,7 @@ const AdminAdmissionPortal = () => {
                     )}
                   </td>
                   <td className="py-4 px-4 text-sm text-slate-500">
-                    {adm.createdAt ? new Date(adm.createdAt).toLocaleDateString() : 'N/A'}
+                    {formatDate(adm.createdAt)}
                   </td>
                   <td className="py-4 px-4 text-right">
                     <div className="relative inline-block text-left" onClick={(e) => e.stopPropagation()}>
@@ -262,6 +284,7 @@ const AdminAdmissionPortal = () => {
                               onClick={() => {
                                 setEditingId(adm.id);
                                 setEditStatus(adm.status || 'Pending');
+                                setEditExamStatus(adm.cbtCompleted || false);
                                 setActiveDropdown(null);
                               }}
                               className="w-full text-left px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-2 transition-colors"
