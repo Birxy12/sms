@@ -32,6 +32,17 @@ const DEFAULT_INVENTORY = {
   'Textbooks': {}
 };
 
+const DEFAULT_BOOK_PACKS = {
+  'Toddler 1': 'Block Exercise 20 Leaves (4pcs)',
+  'Nursery 1 & 2': '4pcs of Block Exercise 20 Leaves, 1 20 Leaves',
+  'Basic 1 & 2': '15 20 Leaves, 5 60 Leaves, 3 20 Leaves',
+  'Basic 3, 4 & 5': '10 60 Leaves, 10 40 Leaves, 3 20 Leaves',
+  'JSS 1': '15 80 Leaves, 5 20 Leaves',
+  'JSS 2 & 3': '17 80 Leaves, 5 20 Leaves',
+  'SS 1': '20 80 Leaves, 5 20 Leaves',
+  'SS 2 & 3': '10 80 Leaves, 5 20 Leaves'
+};
+
 const ITEM_CATEGORIES = Object.keys(DEFAULT_INVENTORY);
 
 const HOUSES = [
@@ -66,6 +77,11 @@ const StoreView = ({ allStudents = [] }) => {
   const [savingInv, setSavingInv] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
+  // Exercise Book Packs State
+  const [bookPacks, setBookPacks] = useState({});
+  const [editingPackClass, setEditingPackClass] = useState(null);
+  const [editingPackText, setEditingPackText] = useState('');
+
   // Overview State
   const [overviewCategoryFilter, setOverviewCategoryFilter] = useState('All');
   const [overviewSubGroupFilter, setOverviewSubGroupFilter] = useState('All');
@@ -97,6 +113,17 @@ const StoreView = ({ allStudents = [] }) => {
       } catch (invErr) {
         // If settings collection blocked, use default inventory
         setInventory(DEFAULT_INVENTORY);
+      }
+
+      try {
+        const bpDoc = await getDoc(doc(db, 'settings', 'exercise_book_packs'));
+        if (bpDoc.exists() && Object.keys(bpDoc.data()).length > 0) {
+          setBookPacks(bpDoc.data());
+        } else {
+          setBookPacks(DEFAULT_BOOK_PACKS);
+        }
+      } catch (bpErr) {
+        setBookPacks(DEFAULT_BOOK_PACKS);
       }
 
       // 2. Fetch Recent Sales
@@ -260,6 +287,18 @@ const StoreView = ({ allStudents = [] }) => {
       alert("Failed to update item.");
     } finally {
       setSavingInv(false);
+    }
+  };
+
+  const handleSaveBookPack = async (className) => {
+    try {
+      const updatedPacks = { ...bookPacks, [className]: editingPackText };
+      await setDoc(doc(db, 'settings', 'exercise_book_packs'), updatedPacks);
+      setBookPacks(updatedPacks);
+      setEditingPackClass(null);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save book pack.");
     }
   };
 
@@ -587,6 +626,63 @@ const StoreView = ({ allStudents = [] }) => {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {activeTab === 'sell' && selectedCategory === 'Exercise Books' && (
+        <div className="card-white p-6 rounded-3xl border border-slate-100 shadow-sm max-w-2xl mt-6">
+          <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+            <Settings className="text-slate-400" size={20} />
+            Configure New Intakes Exercise Book Packs
+          </h3>
+          <p className="text-sm text-slate-500 mb-6 font-medium">
+            These configurations will automatically appear on candidate Admission Letters and Bursary Receipts.
+          </p>
+          
+          <div className="grid md:grid-cols-2 gap-4">
+            {Object.keys(bookPacks).map(className => (
+              <div key={className} className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="font-bold text-slate-700">{className}</div>
+                  {editingPackClass !== className ? (
+                    <button 
+                      onClick={() => { setEditingPackClass(className); setEditingPackText(bookPacks[className] || ''); }}
+                      className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded"
+                    >
+                      Edit
+                    </button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleSaveBookPack(className)}
+                        className="text-xs font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-2 py-1 rounded"
+                      >
+                        Save
+                      </button>
+                      <button 
+                        onClick={() => setEditingPackClass(null)}
+                        className="text-xs font-bold text-slate-600 bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+                
+                {editingPackClass === className ? (
+                  <textarea
+                    value={editingPackText}
+                    onChange={e => setEditingPackText(e.target.value)}
+                    className="w-full text-sm p-2 border border-blue-300 rounded outline-none focus:ring-2 focus:ring-blue-100 min-h-[60px]"
+                  />
+                ) : (
+                  <div className="text-sm text-slate-600">
+                    {bookPacks[className] || <span className="text-slate-400 italic">No configuration set</span>}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

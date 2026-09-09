@@ -198,6 +198,7 @@ const AdmissionPortal = () => {
   const [showRequirementsModal, setShowRequirementsModal] = useState(false);
   const [isReceiptPdfGenerating, setIsReceiptPdfGenerating] = useState(false);
   const [feeSettings, setFeeSettings] = useState({});
+  const [exerciseBookPacks, setExerciseBookPacks] = useState({});
   const receiptRef = useRef(null);
 
   const defaultClasses = () => [
@@ -247,6 +248,16 @@ const AdmissionPortal = () => {
         console.warn('Could not load settings/fees in AdmissionPortal:', fErr);
       }
 
+      // Fetch dynamic exercise book packs
+      try {
+        const bpSnap = await getDoc(doc(db, 'settings', 'exercise_book_packs'));
+        if (bpSnap.exists() && Object.keys(bpSnap.data()).length > 0) {
+          setExerciseBookPacks(bpSnap.data());
+        }
+      } catch (bpErr) {
+        console.warn('Could not load settings/exercise_book_packs:', bpErr);
+      }
+
       try {
         const snap = await getDocs(query(collection(db, 'classes')));
         if (!snap.empty) {
@@ -284,6 +295,31 @@ const AdmissionPortal = () => {
     }, 1000);
     return () => clearInterval(timerRef.current);
   }, [step, examDone]);
+
+  // Helper: Get configured exercise book pack for class
+  const getBookPackForClass = (className) => {
+    if (!className) return null;
+    const lower = className.toLowerCase();
+    
+    // Mapping keys to match classes (same logic as store configuration)
+    const mappings = [
+      { keys: ['toddler'], configKey: 'Toddler 1' },
+      { keys: ['nursery'], configKey: 'Nursery 1 & 2' },
+      { keys: ['basic 1', 'basic 2', 'primary 1', 'primary 2'], configKey: 'Basic 1 & 2' },
+      { keys: ['basic 3', 'basic 4', 'basic 5', 'primary 3', 'primary 4', 'primary 5'], configKey: 'Basic 3, 4 & 5' },
+      { keys: ['jss 1', 'jss1', 'jss.1', 'basic 7'], configKey: 'JSS 1' },
+      { keys: ['jss 2', 'jss2', 'jss 3', 'jss3', 'basic 8', 'basic 9'], configKey: 'JSS 2 & 3' },
+      { keys: ['ss 1', 'ss1', 'ss.1'], configKey: 'SS 1' },
+      { keys: ['ss 2', 'ss2', 'ss 3', 'ss3'], configKey: 'SS 2 & 3' }
+    ];
+
+    for (const mapping of mappings) {
+      if (mapping.keys.some(k => lower.includes(k))) {
+        return exerciseBookPacks[mapping.configKey] || null;
+      }
+    }
+    return null;
+  };
 
   // Helper: Schedule window check
   const getScheduleStatus = () => {
@@ -1780,6 +1816,11 @@ const AdmissionPortal = () => {
                                   <li>Previous school's Last Report Card / Transfer Certificate</li>
                                   <li>Two (2) recent passport-sized photographs</li>
                                   <li>Evidence of fee payment (bank teller or online receipt)</li>
+                                  {getBookPackForClass(letterTargetClass) && (
+                                    <li>
+                                      <strong style={{ color: '#0f172a' }}>Exercise Books Pack:</strong> {getBookPackForClass(letterTargetClass)}
+                                    </li>
+                                  )}
                                 </ol>
 
                                 <p style={{ textAlign: 'justify', marginBottom: 28 }}>This offer lapses if not accepted within the stipulated period. Congratulations, and we look forward to welcoming you to our family of academic excellence.</p>
@@ -2011,6 +2052,21 @@ const AdmissionPortal = () => {
                               <span style={{ textAlign: 'right', fontWeight: 800, fontFamily: 'monospace', color: '#0f172a' }}>{formatNaira(item.amount)}</span>
                             </div>
                           ))}
+                          
+                          {/* Exercise Book Pack Row if configured */}
+                          {getBookPackForClass(receiptTargetClass) && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 120px', padding: '9px 16px', borderBottom: '1px solid #f1f5f9', fontSize: 12, background: breakdownItems.length % 2 === 0 ? '#fff' : '#fafafa' }}>
+                              <span style={{ color: '#94a3b8' }}>{breakdownItems.length + 1}</span>
+                              <span style={{ color: '#1e293b', fontWeight: 600 }}>
+                                Exercise Book Pack
+                                <span style={{ display: 'block', fontSize: 10, color: '#64748b', fontWeight: 400, marginTop: 2 }}>
+                                  {getBookPackForClass(receiptTargetClass)}
+                                </span>
+                              </span>
+                              <span style={{ textAlign: 'right', fontWeight: 800, fontFamily: 'monospace', color: '#0f172a' }}>PAID</span>
+                            </div>
+                          )}
+
                           <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 120px', padding: '14px 16px', background: '#ecfdf5', fontWeight: 900, fontSize: 14, color: '#065f46', borderTop: '2px solid #a7f3d0' }}>
                             <span></span>
                             <span>TOTAL PAID IN FULL</span>
