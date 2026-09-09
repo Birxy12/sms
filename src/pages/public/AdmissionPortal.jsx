@@ -199,6 +199,7 @@ const AdmissionPortal = () => {
   const [isReceiptPdfGenerating, setIsReceiptPdfGenerating] = useState(false);
   const [feeSettings, setFeeSettings] = useState({});
   const [exerciseBookPacks, setExerciseBookPacks] = useState({});
+  const [storeInventory, setStoreInventory] = useState({});
   const receiptRef = useRef(null);
 
   const defaultClasses = () => [
@@ -256,6 +257,16 @@ const AdmissionPortal = () => {
         }
       } catch (bpErr) {
         console.warn('Could not load settings/exercise_book_packs:', bpErr);
+      }
+
+      // Fetch store inventory
+      try {
+        const invSnap = await getDoc(doc(db, 'settings', 'store_inventory'));
+        if (invSnap.exists() && Object.keys(invSnap.data()).length > 0) {
+          setStoreInventory(invSnap.data());
+        }
+      } catch (invErr) {
+        console.warn('Could not load settings/store_inventory:', invErr);
       }
 
       try {
@@ -319,6 +330,22 @@ const AdmissionPortal = () => {
       }
     }
     return null;
+  };
+
+  // Helper: Format book pack array to string
+  const formatBookPackString = (packArray) => {
+    if (!Array.isArray(packArray) || packArray.length === 0) return null;
+    return packArray.map(item => `${item.qty}x ${item.item}`).join(', ');
+  };
+
+  // Helper: Calculate book pack price
+  const calculateBookPackCost = (packArray) => {
+    if (!Array.isArray(packArray)) return 0;
+    const exerciseBooksInv = storeInventory['Exercise Books'] || {};
+    return packArray.reduce((total, item) => {
+      const price = Number(exerciseBooksInv[item.item]) || 0;
+      return total + (price * Number(item.qty));
+    }, 0);
   };
 
   // Helper: Schedule window check
@@ -1818,7 +1845,7 @@ const AdmissionPortal = () => {
                                   <li>Evidence of fee payment (bank teller or online receipt)</li>
                                   {getBookPackForClass(letterTargetClass) && (
                                     <li>
-                                      <strong style={{ color: '#0f172a' }}>Exercise Books Pack:</strong> {getBookPackForClass(letterTargetClass)}
+                                      <strong style={{ color: '#0f172a' }}>Exercise Books Pack:</strong> {formatBookPackString(getBookPackForClass(letterTargetClass))}
                                     </li>
                                   )}
                                 </ol>
@@ -2012,8 +2039,18 @@ const AdmissionPortal = () => {
                   {(() => {
                     const receiptTargetClass = appData?.applicant?.classApplyingFor || '';
                     const receiptFeeDetails = getApplicantFeeBreakdown(receiptTargetClass, feeSettings);
-                    const breakdownItems = appData?.applicant?.feeBreakdown || receiptFeeDetails.items;
-                    const totalPaid = feePaidState?.amount || receiptFeeDetails.total;
+                    let breakdownItems = [...(appData?.applicant?.feeBreakdown || receiptFeeDetails.items || [])];
+                    
+                    const bookPackConfig = getBookPackForClass(receiptTargetClass);
+                    const bookPackCost = calculateBookPackCost(bookPackConfig);
+                    if (bookPackConfig && bookPackCost > 0) {
+                      breakdownItems.push({ name: 'Exercise Book Pack (' + formatBookPackString(bookPackConfig) + ')', amount: bookPackCost });
+                    }
+                    
+                    let totalPaid = feePaidState?.amount || receiptFeeDetails.total || 0;
+                    if (bookPackCost > 0) {
+                      totalPaid += bookPackCost;
+                    }
 
                     return (
                       <>
@@ -2052,20 +2089,6 @@ const AdmissionPortal = () => {
                               <span style={{ textAlign: 'right', fontWeight: 800, fontFamily: 'monospace', color: '#0f172a' }}>{formatNaira(item.amount)}</span>
                             </div>
                           ))}
-                          
-                          {/* Exercise Book Pack Row if configured */}
-                          {getBookPackForClass(receiptTargetClass) && (
-                            <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 120px', padding: '9px 16px', borderBottom: '1px solid #f1f5f9', fontSize: 12, background: breakdownItems.length % 2 === 0 ? '#fff' : '#fafafa' }}>
-                              <span style={{ color: '#94a3b8' }}>{breakdownItems.length + 1}</span>
-                              <span style={{ color: '#1e293b', fontWeight: 600 }}>
-                                Exercise Book Pack
-                                <span style={{ display: 'block', fontSize: 10, color: '#64748b', fontWeight: 400, marginTop: 2 }}>
-                                  {getBookPackForClass(receiptTargetClass)}
-                                </span>
-                              </span>
-                              <span style={{ textAlign: 'right', fontWeight: 800, fontFamily: 'monospace', color: '#0f172a' }}>PAID</span>
-                            </div>
-                          )}
 
                           <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 120px', padding: '14px 16px', background: '#ecfdf5', fontWeight: 900, fontSize: 14, color: '#065f46', borderTop: '2px solid #a7f3d0' }}>
                             <span></span>

@@ -33,14 +33,14 @@ const DEFAULT_INVENTORY = {
 };
 
 const DEFAULT_BOOK_PACKS = {
-  'Toddler 1': 'Block Exercise 20 Leaves (4pcs)',
-  'Nursery 1 & 2': '4pcs of Block Exercise 20 Leaves, 1 20 Leaves',
-  'Basic 1 & 2': '15 20 Leaves, 5 60 Leaves, 3 20 Leaves',
-  'Basic 3, 4 & 5': '10 60 Leaves, 10 40 Leaves, 3 20 Leaves',
-  'JSS 1': '15 80 Leaves, 5 20 Leaves',
-  'JSS 2 & 3': '17 80 Leaves, 5 20 Leaves',
-  'SS 1': '20 80 Leaves, 5 20 Leaves',
-  'SS 2 & 3': '10 80 Leaves, 5 20 Leaves'
+  'Toddler 1': [{ item: 'block exercise 20 leaves', qty: 4 }],
+  'Nursery 1 & 2': [{ item: 'block exercise 20 leaves', qty: 4 }, { item: '20 leaves', qty: 1 }],
+  'Basic 1 & 2': [{ item: '20 leaves', qty: 15 }, { item: '60 leaves', qty: 5 }, { item: '20 leaves', qty: 3 }],
+  'Basic 3, 4 & 5': [{ item: '60 leaves', qty: 10 }, { item: '40 leaves', qty: 10 }, { item: '20 leaves', qty: 3 }],
+  'JSS 1': [{ item: '80 Leaves', qty: 15 }, { item: '20 leaves', qty: 5 }],
+  'JSS 2 & 3': [{ item: '80 Leaves', qty: 17 }, { item: '20 leaves', qty: 5 }],
+  'SS 1': [{ item: '80 Leaves', qty: 20 }, { item: '20 leaves', qty: 5 }],
+  'SS 2 & 3': [{ item: '80 Leaves', qty: 10 }, { item: '20 leaves', qty: 5 }]
 };
 
 const ITEM_CATEGORIES = Object.keys(DEFAULT_INVENTORY);
@@ -80,7 +80,7 @@ const StoreView = ({ allStudents = [] }) => {
   // Exercise Book Packs State
   const [bookPacks, setBookPacks] = useState({});
   const [editingPackClass, setEditingPackClass] = useState(null);
-  const [editingPackText, setEditingPackText] = useState('');
+  const [editingPackItems, setEditingPackItems] = useState([]);
 
   // Overview State
   const [overviewCategoryFilter, setOverviewCategoryFilter] = useState('All');
@@ -292,7 +292,7 @@ const StoreView = ({ allStudents = [] }) => {
 
   const handleSaveBookPack = async (className) => {
     try {
-      const updatedPacks = { ...bookPacks, [className]: editingPackText };
+      const updatedPacks = { ...bookPacks, [className]: editingPackItems };
       await setDoc(doc(db, 'settings', 'exercise_book_packs'), updatedPacks);
       setBookPacks(updatedPacks);
       setEditingPackClass(null);
@@ -646,7 +646,10 @@ const StoreView = ({ allStudents = [] }) => {
                   <div className="font-bold text-slate-700">{className}</div>
                   {editingPackClass !== className ? (
                     <button 
-                      onClick={() => { setEditingPackClass(className); setEditingPackText(bookPacks[className] || ''); }}
+                      onClick={() => { 
+                        setEditingPackClass(className); 
+                        setEditingPackItems(Array.isArray(bookPacks[className]) ? [...bookPacks[className]] : []); 
+                      }}
                       className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded"
                     >
                       Edit
@@ -670,14 +673,63 @@ const StoreView = ({ allStudents = [] }) => {
                 </div>
                 
                 {editingPackClass === className ? (
-                  <textarea
-                    value={editingPackText}
-                    onChange={e => setEditingPackText(e.target.value)}
-                    className="w-full text-sm p-2 border border-blue-300 rounded outline-none focus:ring-2 focus:ring-blue-100 min-h-[60px]"
-                  />
+                  <div className="space-y-2 mt-3">
+                    {editingPackItems.map((bpItem, i) => (
+                      <div key={i} className="flex gap-2">
+                        <select
+                          value={bpItem.item}
+                          onChange={e => {
+                            const newItems = [...editingPackItems];
+                            newItems[i].item = e.target.value;
+                            setEditingPackItems(newItems);
+                          }}
+                          className="flex-1 text-xs p-2 border border-slate-200 rounded outline-none"
+                        >
+                          <option value="">Select Item...</option>
+                          {Object.keys(inventory['Exercise Books'] || {}).map(k => (
+                            <option key={k} value={k}>{k}</option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          value={bpItem.qty}
+                          onChange={e => {
+                            const newItems = [...editingPackItems];
+                            newItems[i].qty = Number(e.target.value);
+                            setEditingPackItems(newItems);
+                          }}
+                          min="1"
+                          className="w-16 text-xs p-2 border border-slate-200 rounded outline-none"
+                        />
+                        <button 
+                          onClick={() => setEditingPackItems(editingPackItems.filter((_, idx) => idx !== i))}
+                          className="p-2 text-rose-500 hover:bg-rose-50 rounded"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => setEditingPackItems([...editingPackItems, { item: '', qty: 1 }])}
+                      className="text-xs font-bold text-blue-600 flex items-center gap-1 hover:underline mt-2"
+                    >
+                      <Plus size={12} /> Add Item
+                    </button>
+                  </div>
                 ) : (
-                  <div className="text-sm text-slate-600">
-                    {bookPacks[className] || <span className="text-slate-400 italic">No configuration set</span>}
+                  <div className="text-sm text-slate-600 space-y-1 mt-2">
+                    {Array.isArray(bookPacks[className]) && bookPacks[className].length > 0 ? (
+                      bookPacks[className].map((bpItem, idx) => (
+                        <div key={idx} className="flex justify-between border-b border-slate-100 pb-1 last:border-0 last:pb-0">
+                          <span>{bpItem.qty}x {bpItem.item}</span>
+                          <span className="font-mono text-xs font-bold text-slate-400">
+                            {formatNaira(Number(bpItem.qty) * Number(inventory['Exercise Books']?.[bpItem.item] || 0))}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-slate-400 italic">No configuration set</span>
+                    )}
                   </div>
                 )}
               </div>
