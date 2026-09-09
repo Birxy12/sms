@@ -30,6 +30,7 @@ import ExpensesView from './ExpensesView';
 import ClassManagement from './ClassManagement';
 import StoreView from './StoreView';
 import DailyIncomeView from './DailyIncomeView';
+import StaffLoanView from './StaffLoanView';
 import { useFinance } from '../../context/FinanceContext';
 
 const ADMIN_WHATSAPP_PHONE = '2349066202949';
@@ -181,7 +182,7 @@ const BursarDashboard = () => {
     const saved = localStorage.getItem('bursar_active_tab') || 'overview';
     // find which group this tab belongs to
     const groups = [
-      { id: 'finance',    tabs: ['overview','cashpay','bulkpay','expenses','dailyincome','analysis','debtors'] },
+      { id: 'finance',    tabs: ['overview','cashpay','bulkpay','expenses','dailyincome','analysis','debtors','staffloan'] },
       { id: 'students',   tabs: ['register','newintakes','receipts', 'discounts'] },
       { id: 'management', tabs: ['feesetting','classmanage','staffpay'] },
       { id: 'comms',      tabs: ['messages','store'] },
@@ -580,6 +581,7 @@ const BursarDashboard = () => {
         { id: 'dailyincome', label: 'Daily Income',   icon: BarChart3     },
         { id: 'analysis',   label: 'Analysis',       icon: Briefcase     },
         { id: 'debtors',    label: 'Debtors',        icon: AlertTriangle },
+        { id: 'staffloan',  label: 'Staff Loans',    icon: Banknote      },
       ],
     },
     {
@@ -3011,6 +3013,7 @@ const BursarDashboard = () => {
           {activeView === 'bulkpay' && <BulkPayView />}
           {activeView === 'analysis' && <AnalysisView />}
           {activeView === 'staffpay' && <StaffPayView />}
+          {activeView === 'staffloan' && <StaffLoanView />}
 
         </div>
       )}

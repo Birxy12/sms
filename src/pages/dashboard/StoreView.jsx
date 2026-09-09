@@ -64,6 +64,7 @@ const StoreView = ({ allStudents = [] }) => {
   const [invItemName, setInvItemName] = useState('');
   const [invPrice, setInvPrice] = useState('');
   const [savingInv, setSavingInv] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
 
   // Overview State
   const [overviewCategoryFilter, setOverviewCategoryFilter] = useState('All');
@@ -208,6 +209,55 @@ const StoreView = ({ allStudents = [] }) => {
     } catch (err) {
       console.error("Error saving inventory:", err);
       alert("Failed to save inventory.");
+    } finally {
+      setSavingInv(false);
+    }
+  };
+
+  const handleDeleteInventory = async (category, itemName) => {
+    if (!window.confirm(`Are you sure you want to delete ${itemName} from ${category}?`)) return;
+    
+    setSavingInv(true);
+    try {
+      const updatedInv = { ...inventory };
+      if (updatedInv[category]) {
+        delete updatedInv[category][itemName];
+      }
+      await setDoc(doc(db, 'settings', 'store_inventory'), updatedInv);
+      setInventory(updatedInv);
+    } catch (err) {
+      console.error("Error deleting inventory:", err);
+      alert("Failed to delete item.");
+    } finally {
+      setSavingInv(false);
+    }
+  };
+
+  const handleUpdateInventory = async (e) => {
+    e.preventDefault();
+    if (!editingItem || !editingItem.name || !editingItem.price) return;
+
+    setSavingInv(true);
+    try {
+      const updatedInv = { ...inventory };
+      const cat = editingItem.category;
+      
+      if (!updatedInv[cat]) {
+        updatedInv[cat] = {};
+      }
+      
+      if (editingItem.name !== editingItem.originalName) {
+        delete updatedInv[cat][editingItem.originalName];
+      }
+      
+      updatedInv[cat][editingItem.name] = Number(editingItem.price);
+
+      await setDoc(doc(db, 'settings', 'store_inventory'), updatedInv);
+      setInventory(updatedInv);
+      setEditingItem(null);
+    } catch (err) {
+      console.error("Error updating inventory:", err);
+      alert("Failed to update item.");
     } finally {
       setSavingInv(false);
     }
@@ -606,9 +656,48 @@ const StoreView = ({ allStudents = [] }) => {
                       </div>
                       <div className="divide-y divide-slate-100">
                         {Object.entries(items).map(([name, price]) => (
-                          <div key={name} className="flex justify-between items-center px-4 py-2">
-                            <span className="text-sm font-medium text-slate-600">{name}</span>
-                            <span className="text-sm font-bold text-emerald-600">{formatNaira(price)}</span>
+                          <div key={name} className="px-4 py-3 hover:bg-slate-50 transition-colors group">
+                            {editingItem && editingItem.category === category && editingItem.originalName === name ? (
+                              <form onSubmit={handleUpdateInventory} className="flex gap-2">
+                                <input 
+                                  type="text" 
+                                  value={editingItem.name} 
+                                  onChange={e => setEditingItem({...editingItem, name: e.target.value})}
+                                  className="flex-1 px-2 py-1 text-sm border border-slate-300 rounded"
+                                  required
+                                />
+                                <input 
+                                  type="number" 
+                                  value={editingItem.price} 
+                                  onChange={e => setEditingItem({...editingItem, price: e.target.value})}
+                                  className="w-24 px-2 py-1 text-sm border border-slate-300 rounded"
+                                  required
+                                />
+                                <button type="submit" disabled={savingInv} className="text-emerald-600 font-bold px-2 py-1 bg-emerald-50 rounded hover:bg-emerald-100 disabled:opacity-50 text-xs">Save</button>
+                                <button type="button" onClick={() => setEditingItem(null)} className="text-slate-600 font-bold px-2 py-1 bg-slate-100 rounded hover:bg-slate-200 text-xs">Cancel</button>
+                              </form>
+                            ) : (
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-slate-600">{name}</span>
+                                <div className="flex items-center gap-4">
+                                  <span className="text-sm font-bold text-emerald-600">{formatNaira(price)}</span>
+                                  <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                                    <button 
+                                      onClick={() => setEditingItem({ category, originalName: name, name, price })}
+                                      className="text-blue-600 hover:text-blue-800 text-xs font-bold"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button 
+                                      onClick={() => handleDeleteInventory(category, name)}
+                                      className="text-rose-600 hover:text-rose-800 text-xs font-bold"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
