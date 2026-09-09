@@ -80,6 +80,7 @@ const StoreView = ({ allStudents = [] }) => {
   // Exercise Book Packs State
   const [bookPacks, setBookPacks] = useState({});
   const [editingPackClass, setEditingPackClass] = useState(null);
+  const [editingPackNewClassName, setEditingPackNewClassName] = useState('');
   const [editingPackItems, setEditingPackItems] = useState([]);
 
   // Overview State
@@ -290,15 +291,38 @@ const StoreView = ({ allStudents = [] }) => {
     }
   };
 
-  const handleSaveBookPack = async (className) => {
+  const handleSaveBookPack = async (originalClassName) => {
     try {
-      const updatedPacks = { ...bookPacks, [className]: editingPackItems };
+      const updatedPacks = { ...bookPacks };
+      
+      // If the class name was changed, delete the old one
+      if (originalClassName !== editingPackNewClassName && originalClassName !== 'NEW_CLASS') {
+        delete updatedPacks[originalClassName];
+      }
+      
+      if (editingPackNewClassName.trim()) {
+        updatedPacks[editingPackNewClassName.trim()] = editingPackItems;
+      }
+      
       await setDoc(doc(db, 'settings', 'exercise_book_packs'), updatedPacks);
       setBookPacks(updatedPacks);
       setEditingPackClass(null);
     } catch (err) {
       console.error(err);
       alert("Failed to save book pack.");
+    }
+  };
+
+  const handleDeleteBookPack = async (className) => {
+    if (!window.confirm(`Are you sure you want to delete the configuration for ${className}?`)) return;
+    try {
+      const updatedPacks = { ...bookPacks };
+      delete updatedPacks[className];
+      await setDoc(doc(db, 'settings', 'exercise_book_packs'), updatedPacks);
+      setBookPacks(updatedPacks);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete book pack.");
     }
   };
 
@@ -635,30 +659,141 @@ const StoreView = ({ allStudents = [] }) => {
             <Settings className="text-slate-400" size={20} />
             Configure New Intakes Exercise Book Packs
           </h3>
-          <p className="text-sm text-slate-500 mb-6 font-medium">
-            These configurations will automatically appear on candidate Admission Letters and Bursary Receipts.
-          </p>
+          <div className="flex justify-between items-center mb-6">
+            <p className="text-sm text-slate-500 font-medium">
+              These configurations will automatically appear on candidate Admission Letters and Bursary Receipts.
+            </p>
+            <button 
+              onClick={() => {
+                setEditingPackClass('NEW_CLASS');
+                setEditingPackNewClassName('');
+                setEditingPackItems([{ item: '', qty: 1 }]);
+              }}
+              className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg flex items-center"
+            >
+              <Plus size={14} className="mr-1" /> Add Class Group
+            </button>
+          </div>
           
           <div className="grid md:grid-cols-2 gap-4">
+            {editingPackClass === 'NEW_CLASS' && (
+              <div className="bg-slate-50 p-4 rounded-xl border border-blue-300 ring-2 ring-blue-100">
+                <div className="flex justify-between items-start mb-2">
+                  <input 
+                    type="text" 
+                    value={editingPackNewClassName}
+                    onChange={e => setEditingPackNewClassName(e.target.value)}
+                    placeholder="Enter Class Name (e.g. JSS 1)"
+                    className="font-bold text-slate-700 bg-white border border-slate-200 px-2 py-1 rounded text-sm w-full mr-2"
+                  />
+                  <div className="flex gap-2 shrink-0">
+                    <button 
+                      onClick={() => handleSaveBookPack('NEW_CLASS')}
+                      disabled={!editingPackNewClassName.trim()}
+                      className="text-xs font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-2 py-1 rounded disabled:opacity-50"
+                    >
+                      Save
+                    </button>
+                    <button 
+                      onClick={() => setEditingPackClass(null)}
+                      className="text-xs font-bold text-slate-600 bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="space-y-2 mt-3">
+                  {editingPackItems.map((bpItem, i) => (
+                    <div key={i} className="flex gap-2">
+                      <select
+                        value={bpItem.item}
+                        onChange={e => {
+                          const newItems = [...editingPackItems];
+                          newItems[i].item = e.target.value;
+                          setEditingPackItems(newItems);
+                        }}
+                        className="flex-1 text-xs p-2 border border-slate-200 rounded outline-none bg-white"
+                      >
+                        <option value="">Select Item...</option>
+                        {Object.keys(inventory['Exercise Books'] || {}).map(k => (
+                          <option key={k} value={k}>{k}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        value={bpItem.qty}
+                        onChange={e => {
+                          const newItems = [...editingPackItems];
+                          newItems[i].qty = Number(e.target.value);
+                          setEditingPackItems(newItems);
+                        }}
+                        min="1"
+                        className="w-16 text-xs p-2 border border-slate-200 rounded outline-none bg-white"
+                      />
+                      <button 
+                        onClick={() => setEditingPackItems(editingPackItems.filter((_, idx) => idx !== i))}
+                        className="p-2 text-rose-500 hover:bg-rose-50 rounded"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setEditingPackItems([...editingPackItems, { item: '', qty: 1 }])}
+                    className="text-xs font-bold text-blue-600 flex items-center gap-1 hover:underline mt-2"
+                  >
+                    <Plus size={12} /> Add Item
+                  </button>
+                  
+                  <div className="mt-3 pt-2 border-t border-slate-200 flex justify-between items-center text-sm">
+                    <span className="font-bold text-slate-600">Total Sum:</span>
+                    <span className="font-bold text-emerald-600">
+                      {formatNaira(editingPackItems.reduce((sum, item) => sum + (Number(item.qty) * Number(inventory['Exercise Books']?.[item.item] || 0)), 0))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {Object.keys(bookPacks).map(className => (
               <div key={className} className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                 <div className="flex justify-between items-start mb-2">
-                  <div className="font-bold text-slate-700">{className}</div>
                   {editingPackClass !== className ? (
-                    <button 
-                      onClick={() => { 
-                        setEditingPackClass(className); 
-                        setEditingPackItems(Array.isArray(bookPacks[className]) ? [...bookPacks[className]] : []); 
-                      }}
-                      className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded"
-                    >
-                      Edit
-                    </button>
+                    <div className="font-bold text-slate-700">{className}</div>
                   ) : (
-                    <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={editingPackNewClassName}
+                      onChange={e => setEditingPackNewClassName(e.target.value)}
+                      className="font-bold text-slate-700 bg-white border border-slate-300 px-2 py-1 rounded text-sm w-full mr-2 outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  )}
+                  {editingPackClass !== className ? (
+                    <div className="flex gap-2 shrink-0">
+                      <button 
+                        onClick={() => { 
+                          setEditingPackClass(className);
+                          setEditingPackNewClassName(className); 
+                          setEditingPackItems(Array.isArray(bookPacks[className]) ? [...bookPacks[className]] : []); 
+                        }}
+                        className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded"
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteBookPack(className)}
+                        className="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 px-2 py-1 rounded"
+                      >
+                        Del
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2 shrink-0">
                       <button 
                         onClick={() => handleSaveBookPack(className)}
-                        className="text-xs font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-2 py-1 rounded"
+                        disabled={!editingPackNewClassName.trim()}
+                        className="text-xs font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-2 py-1 rounded disabled:opacity-50"
                       >
                         Save
                       </button>
@@ -715,21 +850,37 @@ const StoreView = ({ allStudents = [] }) => {
                     >
                       <Plus size={12} /> Add Item
                     </button>
+
+                    <div className="mt-3 pt-2 border-t border-slate-200 flex justify-between items-center text-sm">
+                      <span className="font-bold text-slate-600">Total Sum:</span>
+                      <span className="font-bold text-emerald-600">
+                        {formatNaira(editingPackItems.reduce((sum, item) => sum + (Number(item.qty) * Number(inventory['Exercise Books']?.[item.item] || 0)), 0))}
+                      </span>
+                    </div>
                   </div>
                 ) : (
-                  <div className="text-sm text-slate-600 space-y-1 mt-2">
-                    {Array.isArray(bookPacks[className]) && bookPacks[className].length > 0 ? (
-                      bookPacks[className].map((bpItem, idx) => (
-                        <div key={idx} className="flex justify-between border-b border-slate-100 pb-1 last:border-0 last:pb-0">
-                          <span>{bpItem.qty}x {bpItem.item}</span>
-                          <span className="font-mono text-xs font-bold text-slate-400">
-                            {formatNaira(Number(bpItem.qty) * Number(inventory['Exercise Books']?.[bpItem.item] || 0))}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <span className="text-slate-400 italic">No configuration set</span>
-                    )}
+                  <div className="text-sm text-slate-600 mt-2 flex flex-col h-full">
+                    <div className="space-y-1 mb-3">
+                      {Array.isArray(bookPacks[className]) && bookPacks[className].length > 0 ? (
+                        bookPacks[className].map((bpItem, idx) => (
+                          <div key={idx} className="flex justify-between border-b border-slate-100 pb-1 last:border-0 last:pb-0">
+                            <span>{bpItem.qty}x {bpItem.item}</span>
+                            <span className="font-mono text-xs font-bold text-slate-400">
+                              {formatNaira(Number(bpItem.qty) * Number(inventory['Exercise Books']?.[bpItem.item] || 0))}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <span className="text-slate-400 italic">No configuration set</span>
+                      )}
+                    </div>
+                    
+                    <div className="mt-auto pt-2 border-t border-slate-200 flex justify-between items-center text-sm">
+                      <span className="font-bold text-slate-600">Total Sum:</span>
+                      <span className="font-bold text-emerald-600">
+                        {formatNaira((bookPacks[className] || []).reduce((sum, item) => sum + (Number(item.qty) * Number(inventory['Exercise Books']?.[item.item] || 0)), 0))}
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
