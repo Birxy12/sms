@@ -1638,135 +1638,176 @@ const AdmissionPortal = () => {
 
               {/* Admission Letter */}
               {(result.status === 'granted' || result.status === 'trial') && (
-                  <div style={{ marginBottom: 32 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
-                      <p style={{ fontWeight: 900, fontSize: 11, letterSpacing: '3px', textTransform: 'uppercase', color: '#64748b', margin: 0 }}>Official Admission Letter</p>
-                      <div className="admission-letter-actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
-                        <button onClick={handlePrintLetter} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#1e3a8a', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.12)' }}>
-                          <Printer size={15} /> Print Official Letter
-                        </button>
-                        <button onClick={handleDownloadLetterPdf} disabled={isLetterPdfGenerating} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#0f766e', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: isLetterPdfGenerating ? 'wait' : 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.12)', opacity: isLetterPdfGenerating ? 0.8 : 1 }}>
-                          {isLetterPdfGenerating ? <Loader2 size={15} className="admission-spin" /> : <Download size={15} />} {isLetterPdfGenerating ? 'Preparing PDF...' : 'Download PDF'}
-                        </button>
-                      </div>
+                <div style={{ marginBottom: 32 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
+                    <p style={{ fontWeight: 900, fontSize: 11, letterSpacing: '3px', textTransform: 'uppercase', color: '#64748b', margin: 0 }}>Official Admission Letter</p>
+                    <div className="admission-letter-actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <button onClick={handlePrintLetter} style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#1e3a8a', color: '#fff', border: 'none', padding: '10px 22px', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 14px rgba(30,58,138,0.25)' }}>
+                        <Printer size={15} /> Print Letter
+                      </button>
+                      <button onClick={handleDownloadLetterPdf} disabled={isLetterPdfGenerating} style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#0f766e', color: '#fff', border: 'none', padding: '10px 22px', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: isLetterPdfGenerating ? 'wait' : 'pointer', boxShadow: '0 4px 14px rgba(15,118,110,0.25)', opacity: isLetterPdfGenerating ? 0.8 : 1 }}>
+                        {isLetterPdfGenerating ? <Loader2 size={15} className="admission-spin" /> : <Download size={15} />}
+                        {isLetterPdfGenerating ? 'Generating...' : 'Download PDF'}
+                      </button>
                     </div>
-                  
-                    <div ref={letterRef} id="admission-letter" className="admission-letter-card" style={{ background: '#fff', padding: '0', fontFamily: '"Times New Roman", Times, serif', color: '#111827', position: 'relative' }}>
-                      <div style={{ border: '8px double #1e3a8a', padding: '40px', margin: '20px', minHeight: '1020px', position: 'relative' }}>
-                        {/* Watermark */}
-                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-45deg)', fontSize: '80px', color: 'rgba(30, 58, 138, 0.03)', fontWeight: 'bold', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 0 }}>
-                          {schoolName?.toUpperCase() || 'OFFICIAL'}
-                        </div>
-                        
-                        <div style={{ position: 'relative', zIndex: 1 }}>
-                        {/* Header section */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '2px solid #1e3a8a', paddingBottom: '20px', marginBottom: '25px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-                            <img src={logoUrl} alt="Logo" style={{ width: 85, height: 85, objectFit: 'contain' }} crossOrigin="anonymous" />
+                  </div>
+
+                  <div
+                    ref={letterRef}
+                    id="admission-letter"
+                    className="admission-letter-card"
+                    style={{ background: '#fff', fontFamily: '"Times New Roman", Georgia, serif', color: '#0f172a', position: 'relative', maxWidth: 820, margin: '0 auto' }}
+                  >
+                    <div style={{ border: '3px solid #1e3a8a', margin: 12, position: 'relative', minHeight: 1080 }}>
+                      {[{ top: -7, left: -7 }, { top: -7, right: -7 }, { bottom: -7, left: -7 }, { bottom: -7, right: -7 }].map((pos, i) => (
+                        <div key={i} style={{ position: 'absolute', width: 14, height: 14, background: '#1e3a8a', borderRadius: 2, ...pos }} />
+                      ))}
+                      <div style={{ border: '1px solid #bfdbfe', margin: 8, minHeight: 1040, display: 'flex', flexDirection: 'column' }}>
+
+                        {/* HEADER BAND */}
+                        <div style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 60%, #1e3a8a 100%)', padding: '18px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                            <div style={{ background: '#fff', borderRadius: 6, padding: 4, flexShrink: 0 }}>
+                              <img src={logoUrl} alt="Logo" crossOrigin="anonymous" style={{ width: 68, height: 68, objectFit: 'contain', display: 'block', borderRadius: 3 }} />
+                            </div>
                             <div>
-                              <h1 style={{ color: '#1e3a8a', fontWeight: 900, fontSize: 24, textTransform: 'uppercase', margin: 0, fontFamily: 'Arial, sans-serif' }}>{schoolName || 'Birxy School'}</h1>
-                              <p style={{ color: '#475569', fontSize: 13, margin: '6px 0 0', fontFamily: 'Arial, sans-serif', letterSpacing: '2px', fontWeight: 700 }}>OFFICE OF THE REGISTRAR</p>
+                              <p style={{ color: '#fbbf24', fontWeight: 900, fontSize: 19, textTransform: 'uppercase', margin: 0, fontFamily: 'Arial Black, Arial, sans-serif', letterSpacing: '1px', lineHeight: 1.2 }}>{schoolName || 'School Name'}</p>
+                              <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, margin: '5px 0 0', fontFamily: 'Arial, sans-serif', letterSpacing: '2px', fontWeight: 600 }}>OFFICE OF THE REGISTRAR - ADMISSIONS DIVISION</p>
+                              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, margin: '3px 0 0', fontFamily: 'Arial, sans-serif' }}>admissions@school.edu.ng | Tel: 08012345678</p>
                             </div>
                           </div>
-                          <div style={{ textAlign: 'center' }}>
-                            <QRCodeDisplay 
-                              value={`ADMISSION LETTER\nName: ${appData?.applicant?.fullName}\nClass: ${appData?.applicant?.classApplyingFor}\nApp No: ${appData?.appNo}\nReg No: ${result.regNo || 'Pending'}`} 
-                              size={75} 
-                              includeMargin={false}
-                            />
-                            <p style={{ color: '#64748b', fontSize: 10, fontFamily: 'Arial, sans-serif', marginTop: '6px', fontWeight: 'bold' }}>VERIFY</p>
+                          <div style={{ flexShrink: 0, textAlign: 'center' }}>
+                            <div style={{ background: '#fff', borderRadius: 6, padding: 6, display: 'inline-block' }}>
+                              <QRCodeDisplay
+                                value={[
+                                  `SCHOOL: ${schoolName || 'SCHOOL'}`,
+                                  `STUDENT: ${appData?.applicant?.fullName}`,
+                                  `CLASS: ${appData?.applicant?.classApplyingFor}`,
+                                  `APP NO: ${appData?.appNo}`,
+                                  `REG NO: ${result.regNo || 'PENDING'}`,
+                                  `STATUS: ${result.status === 'granted' ? 'ADMITTED' : 'TRIAL'}`,
+                                  `SCORE: ${result.percentage}%`,
+                                ].join('\n')}
+                                size={75}
+                                bgColor="#ffffff"
+                                fgColor="#1e3a8a"
+                                level="H"
+                                includeMargin={false}
+                                label="SCAN TO VERIFY"
+                                sublabel={appData?.appNo}
+                              />
+                            </div>
                           </div>
                         </div>
 
-                        {/* Date & Ref */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial, sans-serif', fontSize: 13, marginBottom: '30px' }}>
-                          <div><strong>REF NO:</strong> {appData?.appNo || 'ADM/TEMP'}</div>
-                          <div><strong>DATE:</strong> {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
-                        </div>
+                        <div style={{ height: 5, background: 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 50%, #fbbf24 100%)' }} />
 
-                        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-                          <h2 style={{ fontSize: 20, fontWeight: 'bold', color: '#1e3a8a', margin: 0, textDecoration: 'underline', letterSpacing: '1px' }}>
-                            {result.status === 'granted' ? 'OFFER OF PROVISIONAL ADMISSION' : 'PROVISIONAL TRIAL ADMISSION'}
-                          </h2>
-                        </div>
-                        
-                        <div style={{ fontSize: '15px', lineHeight: '1.8' }}>
+                        <div style={{ padding: '30px 40px', flex: 1, position: 'relative' }}>
+                          <div style={{ position: 'absolute', top: '42%', left: '50%', transform: 'translate(-50%, -50%) rotate(-35deg)', fontSize: 88, fontWeight: 900, color: 'rgba(30,58,138,0.03)', whiteSpace: 'nowrap', pointerEvents: 'none', userSelect: 'none', fontFamily: 'Arial Black, sans-serif', letterSpacing: 6 }}>
+                            {result.status === 'granted' ? 'ADMITTED' : 'PROVISIONAL'}
+                          </div>
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial, sans-serif', fontSize: 12, marginBottom: 18, color: '#334155' }}>
+                            <span><strong>REF:</strong> {appData?.appNo || 'ADM/REF'}</span>
+                            <span><strong>DATE:</strong> {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                          </div>
+
+                          <div style={{ textAlign: 'center', marginBottom: 26 }}>
+                            <div style={{ display: 'inline-block', borderTop: '2.5px double #1e3a8a', borderBottom: '2.5px double #1e3a8a', padding: '7px 28px' }}>
+                              <h2 style={{ fontSize: 16, fontWeight: 900, color: '#1e3a8a', margin: 0, letterSpacing: '2.5px', textTransform: 'uppercase', fontFamily: 'Arial Black, Arial, sans-serif' }}>
+                                {result.status === 'granted' ? 'Letter of Admission' : 'Letter of Provisional Admission'}
+                              </h2>
+                            </div>
+                          </div>
+
                           {(() => {
                             const letterTargetClass = appData?.applicant?.classApplyingFor || '';
                             const letterFeeDetails = getApplicantFeeBreakdown(letterTargetClass, feeSettings);
-
+                            const session = '2025/2026';
                             return (
-                              <>
-                                <p style={{ marginBottom: '20px' }}>Dear <strong>{appData?.applicant?.fullName || 'Applicant'}</strong>,</p>
-                                
-                                {result.status === 'granted' ? (
-                                  <>
-                                    <p style={{ marginBottom: '20px', textAlign: 'justify' }}>
-                                      Following your successful performance in the General Assessment Examination (where you scored <strong>{result.score}/{result.total} ({result.percentage}%)</strong>), we are pleased to inform you that you have been offered provisional admission into <strong>{schoolName || 'our prestigious institution'}</strong>.
-                                    </p>
-
-                                    <p style={{ marginBottom: '20px', textAlign: 'justify' }}>
-                                      You have been admitted into <strong>{letterTargetClass || 'your selected class'}</strong> for the upcoming academic session. Your student profile has been automatically provisioned, and your official Registration Number is <strong>{result.regNo || 'Pending Issuance'}</strong>.
-                                    </p>
-                                  </>
-                                ) : (
-                                  <>
-                                    <p style={{ marginBottom: '20px', textAlign: 'justify' }}>
-                                      Following your performance in the General Assessment Examination (where you scored <strong>{result.score}/{result.total} ({result.percentage}%)</strong>), we are pleased to inform you that you have been offered a provisional (trial) admission into <strong>{schoolName || 'our prestigious institution'}</strong>.
-                                    </p>
-
-                                    <p style={{ marginBottom: '20px', textAlign: 'justify' }}>
-                                      You have been admitted into <strong>{letterTargetClass || 'your selected class'}</strong> for a monitored trial period. Your student profile has been automatically provisioned, and your official Registration Number is <strong>{result.regNo || 'Pending Issuance'}</strong>.
-                                    </p>
-                                  </>
-                                )}
-
-                                <p style={{ marginBottom: '25px', textAlign: 'justify' }}>
-                                  Please note that this admission remains provisional until you have completed your registration and paid the required fees. You are expected to bring this letter along with your Birth Certificate, Previous School Report Card, and two (2) recent passport photographs to the Bursary to finalise your enrollment.
+                              <div style={{ fontSize: 14.5, lineHeight: 1.85 }}>
+                                <p style={{ marginBottom: 14 }}>Dear <strong>{appData?.applicant?.fullName || 'Applicant'}</strong>,</p>
+                                <p style={{ marginBottom: 14, textAlign: 'justify' }}>
+                                  We are pleased to inform you that following your performance in the <strong>General Entrance Assessment Examination</strong>, the Management of <strong>{schoolName || 'our institution'}</strong> has offered you {result.status === 'granted' ? <strong>Full Admission</strong> : <strong>Provisional (Trial) Admission</strong>} into this institution for the <strong>{session}</strong> academic session.
+                                </p>
+                                <p style={{ marginBottom: 18, textAlign: 'justify' }}>
+                                  {result.status === 'granted'
+                                    ? `Your examination score of ${result.score}/${result.total} (${result.percentage}%) meets our academic standard. We are confident you will thrive here.`
+                                    : `Your examination score of ${result.score}/${result.total} (${result.percentage}%) qualifies you for a monitored trial period. Continued enrolment is subject to satisfactory academic performance at the end of the first term.`}
                                 </p>
 
-                                <div style={{ border: '1px solid #cbd5e1', borderRadius: '0px', marginBottom: '30px' }}>
-                                  <div style={{ background: '#f1f5f9', padding: '10px 15px', borderBottom: '1px solid #cbd5e1', fontWeight: 'bold', fontFamily: 'Arial, sans-serif', fontSize: '13px', color: '#334155', textTransform: 'uppercase' }}>
-                                    Applicant & Fee Summary
-                                  </div>
-                                  <div style={{ padding: '15px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 30px', fontFamily: 'Arial, sans-serif', fontSize: '13px' }}>
+                                <div style={{ marginBottom: 20, border: '1.5px solid #1e3a8a' }}>
+                                  <div style={{ background: '#1e3a8a', color: '#fff', padding: '7px 14px', fontFamily: 'Arial, sans-serif', fontSize: 11, fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase' }}>Student Information</div>
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', fontFamily: 'Arial, sans-serif', fontSize: 13 }}>
                                     {[
                                       ['Full Name', appData?.applicant?.fullName],
+                                      ['Registration No.', result.regNo || 'PENDING ISSUANCE'],
+                                      ['Date of Birth', appData?.applicant?.dateOfBirth || '---'],
+                                      ['Gender', appData?.applicant?.gender || '---'],
                                       ['Class Admitted', letterTargetClass],
-                                      ['Section', `${letterFeeDetails.sectionTitle}`],
-                                      ['Admission Status', result.status === 'granted' ? 'GRANTED' : 'TRIAL'],
-                                      ['CBT Score', `${result.percentage}%`],
-                                      ...(result.regNo ? [['Registration No.', result.regNo]] : []),
+                                      ['Academic Session', session],
+                                      ['State of Origin', appData?.applicant?.stateOfOrigin || '---'],
                                       ['Application No.', appData?.appNo],
-                                    ].map(([label, value]) => (
-                                      <div key={label} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #cbd5e1', paddingBottom: '4px' }}>
-                                        <span style={{ color: '#64748b' }}>{label}:</span>
-                                        <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{value || '—'}</span>
+                                    ].map(([label, val], idx) => (
+                                      <div key={label} style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', borderRight: idx % 2 === 0 ? '1px solid #e2e8f0' : 'none', background: Math.floor(idx / 2) % 2 === 0 ? '#f8fafc' : '#fff' }}>
+                                        <span style={{ minWidth: 130, padding: '7px 12px', color: '#475569', fontWeight: 700, borderRight: '1px solid #e2e8f0', flexShrink: 0, fontSize: 12 }}>{label}</span>
+                                        <span style={{ padding: '7px 12px', fontWeight: 800, color: '#0f172a', wordBreak: 'break-word' }}>{val || '---'}</span>
                                       </div>
                                     ))}
                                   </div>
-                                  <div style={{ background: '#1e3a8a', color: '#fff', padding: '10px 15px', fontFamily: 'Arial, sans-serif', fontSize: '13px', display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                                    <span>TOTAL APPROVED NEW INTAKE FEE:</span>
-                                    <span>{formatNaira(letterFeeDetails.total)}</span>
+                                </div>
+
+                                <div style={{ marginBottom: 20, border: '1.5px solid #1e3a8a' }}>
+                                  <div style={{ background: '#1e3a8a', color: '#fff', padding: '7px 14px', fontFamily: 'Arial, sans-serif', fontSize: 11, fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase' }}>School Fees Schedule - {letterFeeDetails.sectionTitle}</div>
+                                  <div style={{ fontFamily: 'Arial, sans-serif', fontSize: 13 }}>
+                                    {(letterFeeDetails.items || []).map((item, i) => (
+                                      <div key={item.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 14px', borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#f8fafc' : '#fff' }}>
+                                        <span style={{ color: '#334155' }}>{item.name}</span>
+                                        <span style={{ fontWeight: 700, fontFamily: 'monospace' }}>{formatNaira(item.amount)}</span>
+                                      </div>
+                                    ))}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: '#fbbf24', fontWeight: 900, fontSize: 14, fontFamily: 'Arial, sans-serif' }}>
+                                      <span style={{ color: '#1e1b4b' }}>TOTAL PAYABLE</span>
+                                      <span style={{ color: '#1e1b4b', fontFamily: 'monospace' }}>{formatNaira(letterFeeDetails.total)}</span>
+                                    </div>
                                   </div>
                                 </div>
-                              </>
+
+                                <p style={{ marginBottom: 10, textAlign: 'justify' }}>To complete your enrolment, please report to the <strong>Bursary Office</strong> within <strong>two (2) weeks</strong> with the following:</p>
+                                <ol style={{ paddingLeft: 20, marginBottom: 18, color: '#334155', lineHeight: 2, fontSize: 14 }}>
+                                  <li>This original Admission Letter</li>
+                                  <li>Original and photocopies of Birth Certificate / Age Declaration</li>
+                                  <li>Previous school's Last Report Card / Transfer Certificate</li>
+                                  <li>Two (2) recent passport-sized photographs</li>
+                                  <li>Evidence of fee payment (bank teller or online receipt)</li>
+                                </ol>
+
+                                <p style={{ textAlign: 'justify', marginBottom: 28 }}>This offer lapses if not accepted within the stipulated period. Congratulations, and we look forward to welcoming you to our family of academic excellence.</p>
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 44, paddingTop: 16, borderTop: '1px solid #e2e8f0' }}>
+                                  <div style={{ textAlign: 'center' }}>
+                                    <div style={{ height: 1, width: 200, background: '#1e293b', marginBottom: 6 }} />
+                                    <p style={{ margin: 0, fontFamily: 'Arial, sans-serif', fontSize: 12, fontWeight: 700 }}>STUDENT / PARENT SIGNATURE</p>
+                                    <p style={{ margin: '3px 0 0', fontFamily: 'Arial, sans-serif', fontSize: 11, color: '#64748b' }}>Date: _______________</p>
+                                  </div>
+                                  <div style={{ textAlign: 'center' }}>
+                                    <div style={{ height: 1, width: 200, background: '#1e293b', marginBottom: 6 }} />
+                                    <p style={{ margin: 0, fontFamily: 'Arial, sans-serif', fontSize: 12, fontWeight: 700 }}>Admission Officer: Anyaegbu Emmanuel</p>
+                                    <p style={{ margin: '3px 0 0', fontFamily: 'Arial, sans-serif', fontSize: 11, color: '#64748b' }}>For: {schoolName || 'Management'}</p>
+                                    <p style={{ margin: '2px 0 0', fontFamily: 'Arial, sans-serif', fontSize: 10, color: '#94a3b8', letterSpacing: '1px' }}>OFFICE OF THE REGISTRAR</p>
+                                  </div>
+                                </div>
+                              </div>
                             );
                           })()}
+                        </div>
 
-                          <p style={{ marginBottom: '40px' }}>Congratulations on your admission, and we look forward to welcoming you.</p>
+                        <div style={{ height: 5, background: 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 50%, #fbbf24 100%)' }} />
 
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '60px' }}>
-                            <div style={{ textAlign: 'center' }}>
-                              <div style={{ height: 1, width: 200, background: '#1e293b', marginBottom: 8 }} />
-                              <p style={{ fontSize: 13, fontWeight: 'bold', fontFamily: 'Arial, sans-serif', margin: 0 }}>STUDENT / PARENT SIGNATURE</p>
-                            </div>
-                            <div style={{ textAlign: 'center' }}>
-                              <div style={{ height: 1, width: 200, background: '#1e293b', marginBottom: 8 }} />
-                              <p style={{ fontSize: 13, fontWeight: 'bold', fontFamily: 'Arial, sans-serif', margin: 0 }}>REGISTRAR / PRINCIPAL</p>
-                              <p style={{ fontSize: 11, color: '#64748b', fontFamily: 'Arial, sans-serif', margin: '4px 0 0' }}>For: {schoolName || 'Management'}</p>
-                            </div>
-                          </div>
+                        <div style={{ background: '#1e3a8a', color: 'rgba(255,255,255,0.55)', padding: '9px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'Arial, sans-serif', fontSize: 10, letterSpacing: '0.5px' }}>
+                          <span>{schoolName ? schoolName.toUpperCase() : 'SCHOOL'} - OFFICIAL ADMISSION LETTER</span>
+                          <span style={{ fontFamily: 'monospace', color: '#fbbf24' }}>{appData?.appNo}</span>
+                          <span>Valid only with school stamp and authorized signature</span>
                         </div>
                       </div>
                     </div>
