@@ -483,14 +483,22 @@ const AdmissionPortal = () => {
       }
 
       // Filter questions specifically for candidate's class or general ('All')
-      let classQs = allQs.filter(q => (q.targetClass || 'All') === applicantClass);
-      let generalQs = allQs.filter(q => !q.targetClass || q.targetClass === 'All');
+      const normalizeClass = (c) => (c || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const applicantClassNorm = normalizeClass(applicantClass);
+
+      let classQs = allQs.filter(q => normalizeClass(q.targetClass || 'All') === applicantClassNorm);
+      let generalQs = allQs.filter(q => !q.targetClass || normalizeClass(q.targetClass) === 'all');
 
       let combinedPool = [...classQs];
       for (const q of generalQs) {
         if (!combinedPool.some(e => e.id === q.id)) {
           combinedPool.push(q);
         }
+      }
+
+      if (!combinedPool.length) {
+        alert(`No exam questions available for ${applicantClass || 'your class'}. Please contact the school.`);
+        return;
       }
 
       let selected;
