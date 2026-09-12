@@ -1000,7 +1000,7 @@ const AdminDashboard = () => {
           <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Eye size={18} /> Viewing as <strong>Student</strong></span>
           <button onClick={() => setViewMode('admin')} className="btn-outline" style={{ background: 'white', padding: '4px 12px', fontSize: '13px' }}>Back to Admin</button>
         </div>
-        <StudentDashboard />
+        <StudentDashboard asAdminTest={true} />
       </div>
     );
   }

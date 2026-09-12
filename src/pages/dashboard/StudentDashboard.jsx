@@ -19,8 +19,19 @@ import SchoolManagementDashboard from '../../components/SchoolManagementDashboar
 
 import { useSearchParams } from 'react-router-dom';
 
-const StudentDashboard = () => {
-  const { currentStudent, authError, authReady } = useStudentAuth();
+const StudentDashboard = ({ asAdminTest = false }) => {
+  const { currentStudent: authStudent, authError, authReady: authContextReady } = useStudentAuth();
+
+  const testStudent = {
+    id: "BDS/B3/2026/038",
+    name: "test student",
+    className: "BASIC 3",
+    regNo: "BDS/B3/2026/038",
+    pin: "BDS/APN/2026/6526"
+  };
+
+  const currentStudent = asAdminTest ? testStudent : authStudent;
+  const authReady = asAdminTest ? true : authContextReady;
   const { primaryColor, currentSession } = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
