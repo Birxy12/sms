@@ -2732,12 +2732,6 @@ const BursarDashboard = () => {
           </div>
         </div>
         <div className="flex gap-3">
-          <button 
-            onClick={handleRequestResetPin}
-            className="flex items-center gap-2 bg-rose-600 text-white px-6 py-3.5 rounded-2xl font-bold hover:bg-rose-700 transition-all active:scale-95 text-sm shadow-xl shadow-rose-200"
-          >
-            Reset All Fees
-          </button>
           {currentAdmin?.role !== 'bursar' && (
             <button 
               onClick={async () => {
