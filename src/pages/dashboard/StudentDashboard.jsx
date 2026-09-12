@@ -19,13 +19,13 @@ import SchoolManagementDashboard from '../../components/SchoolManagementDashboar
 
 import { useSearchParams } from 'react-router-dom';
 
-const StudentDashboard = ({ asAdminTest = false }) => {
+const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' }) => {
   const { currentStudent: authStudent, authError, authReady: authContextReady } = useStudentAuth();
 
   const testStudent = {
-    id: "BDS/B3/2026/038",
+    id: "test_student_id",
     name: "test student",
-    className: "BASIC 3",
+    className: testStudentClass,
     regNo: "BDS/B3/2026/038",
     pin: "BDS/APN/2026/6526"
   };
@@ -160,6 +160,22 @@ const StudentDashboard = ({ asAdminTest = false }) => {
 
         // Filter results with published terms if publications exist, or use all recorded term exams
         const resultsToAnalyze = (publishedMarks.length > 0) ? publishedMarks : allResults.filter(d => d.marks && Object.keys(d.marks).length > 0);
+        
+        if (asAdminTest && resultsToAnalyze.length === 0) {
+          const mockMarks = {
+            _meta: { average: "85.5", total: "855" },
+            "Mathematics": { ca1: "15", ca2: "15", exam: "60", total: "90" },
+            "English Language": { ca1: "12", ca2: "14", exam: "55", total: "81" },
+            "Basic Science": { ca1: "14", ca2: "13", exam: "58", total: "85" },
+            "Civic Education": { ca1: "10", ca2: "15", exam: "50", total: "75" },
+            "Social Studies": { ca1: "13", ca2: "12", exam: "62", total: "87" },
+          };
+          resultsToAnalyze.push(
+            { session: currentSession || '2025/2026', term: 'First Term', marks: mockMarks },
+            { session: currentSession || '2025/2026', term: 'Second Term', marks: mockMarks },
+            { session: currentSession || '2025/2026', term: 'Third Term', marks: mockMarks }
+          );
+        }
         
         setResultsCount(resultsToAnalyze.length);
         const currentSessionResults = resultsToAnalyze.filter(d => d.session === (currentSession || '2025/2026'));

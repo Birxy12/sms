@@ -81,6 +81,7 @@ const AdminDashboard = () => {
   const onlineCount = useOnlineUsers(currentAdmin);
   const globalClasses = useGlobalClasses();
   const [viewMode, setViewMode] = useState('admin'); // admin, staff, student
+  const [testStudentClass, setTestStudentClass] = useState('BASIC 3');
   const [selectedClass, setSelectedClass] = useState('JSS1');
   const [activeTab, setActiveTab] = useState('Overview');
   const [academicSubTab, setAcademicSubTab] = useState('marksheet'); // marksheet, assignments, materials
@@ -997,10 +998,33 @@ const AdminDashboard = () => {
     return (
       <div className="admin-view-as">
         <div className="view-as-banner" style={{ background: '#1e293b', color: 'white', padding: '10px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Eye size={18} /> Viewing as <strong>Student</strong></span>
-          <button onClick={() => setViewMode('admin')} className="btn-outline" style={{ background: 'white', padding: '4px 12px', fontSize: '13px' }}>Back to Admin</button>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Eye size={18} /> Viewing as <strong>Student</strong>
+            <select 
+              value={testStudentClass}
+              onChange={e => setTestStudentClass(e.target.value)}
+              style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '4px 8px', borderRadius: '4px', marginLeft: '16px', fontSize: '13px' }}
+            >
+              {globalClasses?.length > 0 ? globalClasses.map(c => <option key={c} value={c} style={{ color: 'black' }}>{c}</option>) : (
+                <>
+                  <option value="BASIC 1" style={{ color: 'black' }}>BASIC 1</option>
+                  <option value="BASIC 2" style={{ color: 'black' }}>BASIC 2</option>
+                  <option value="BASIC 3" style={{ color: 'black' }}>BASIC 3</option>
+                  <option value="BASIC 4" style={{ color: 'black' }}>BASIC 4</option>
+                  <option value="BASIC 5" style={{ color: 'black' }}>BASIC 5</option>
+                  <option value="JSS 1" style={{ color: 'black' }}>JSS 1</option>
+                  <option value="JSS 2" style={{ color: 'black' }}>JSS 2</option>
+                  <option value="JSS 3" style={{ color: 'black' }}>JSS 3</option>
+                  <option value="SS 1" style={{ color: 'black' }}>SS 1</option>
+                  <option value="SS 2" style={{ color: 'black' }}>SS 2</option>
+                  <option value="SS 3" style={{ color: 'black' }}>SS 3</option>
+                </>
+              )}
+            </select>
+          </span>
+          <button onClick={() => setViewMode('admin')} className="btn-outline" style={{ background: 'white', padding: '4px 12px', fontSize: '13px', color: '#1e293b' }}>Back to Admin</button>
         </div>
-        <StudentDashboard asAdminTest={true} />
+        <StudentDashboard asAdminTest={true} testStudentClass={testStudentClass} />
       </div>
     );
   }
