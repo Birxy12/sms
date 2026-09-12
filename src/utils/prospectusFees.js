@@ -332,3 +332,55 @@ export function formatNaira(amount) {
   return `₦${Number(amount || 0).toLocaleString('en-NG')}`;
 }
 
+
+/**
+ * Helper: Get configured exercise book pack for class
+ * @param {string} className
+ * @param {object} exerciseBookPacks
+ */
+export const getBookPackForClass = (className, exerciseBookPacks = {}) => {
+  if (!className || !exerciseBookPacks) return null;
+  const lower = className.toLowerCase();
+  
+  const mappings = [
+    { keys: ['toddler'], configKey: 'Toddler 1' },
+    { keys: ['nursery'], configKey: 'Nursery 1 & 2' },
+    { keys: ['basic 1', 'basic 2', 'primary 1', 'primary 2'], configKey: 'Basic 1 & 2' },
+    { keys: ['basic 3', 'basic 4', 'basic 5', 'primary 3', 'primary 4', 'primary 5'], configKey: 'Basic 3, 4 & 5' },
+    { keys: ['jss 1', 'jss1', 'jss.1', 'basic 7'], configKey: 'JSS 1' },
+    { keys: ['jss 2', 'jss2', 'jss 3', 'jss3', 'basic 8', 'basic 9'], configKey: 'JSS 2 & 3' },
+    { keys: ['ss 1', 'ss1', 'ss.1'], configKey: 'SS 1' },
+    { keys: ['ss 2', 'ss2', 'ss 3', 'ss3'], configKey: 'SS 2 & 3' }
+  ];
+
+  for (const mapping of mappings) {
+    if (mapping.keys.some(k => lower.includes(k))) {
+      return exerciseBookPacks[mapping.configKey] || null;
+    }
+  }
+  return null;
+};
+
+/**
+ * Helper: Format book pack array to string
+ * @param {Array} packArray
+ */
+export const formatBookPackString = (packArray) => {
+  if (!Array.isArray(packArray) || packArray.length === 0) return null;
+  return packArray.map(item => `${item.qty}x ${item.item}`).join(', ');
+};
+
+/**
+ * Helper: Calculate book pack cost
+ * @param {Array} packArray
+ * @param {object} storeInventory
+ */
+export const calculateBookPackCost = (packArray, storeInventory = {}) => {
+  if (!Array.isArray(packArray)) return 0;
+  const exerciseBooksInv = storeInventory['Exercise Books'] || {};
+  return packArray.reduce((total, item) => {
+    const price = Number(exerciseBooksInv[item.item]) || 0;
+    return total + (price * Number(item.qty));
+  }, 0);
+};
+

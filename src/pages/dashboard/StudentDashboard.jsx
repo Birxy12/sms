@@ -26,7 +26,7 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
     id: "test_student_id",
     name: "test student",
     className: testStudentClass,
-    regNo: "BDS/B3/2026/038",
+    regNo: "BDS/TEST/001",
     pin: "BDS/APN/2026/6526"
   };
 
@@ -275,22 +275,38 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
           console.warn('Could not fetch settings/fees:', fErr);
         }
 
-        if (currentStudent?.id) {
-          const studentRef = doc(db, 'students', currentStudent.id);
+        // Fetch fresh student data directly to ensure real-time accuracy for fees
+        let studentSnapData = null;
+        if (regNum.includes('/')) {
+          let q = query(collection(db, 'students'), where(STUDENT_KEYS?.regNo || 'r', '==', regNum));
+          let sSnap = await getDocs(q);
+          if (sSnap.empty) {
+            q = query(collection(db, 'students'), where('regNo', '==', regNum));
+            sSnap = await getDocs(q);
+          }
+          if (!sSnap.empty) {
+            studentSnapData = sSnap.docs[0].data();
+          }
+        } else {
+          const studentRef = doc(db, 'students', regNum);
           const studentSnap = await getDoc(studentRef);
           if (studentSnap.exists()) {
-            const sData = studentSnap.data();
-            const isIntake = sData.isNewIntake === true || sData.studentType === 'new_intake';
-            const calculatedFee = getExpectedFeeForStudent(sData.className || className, isIntake, feeSettings);
-
-            expected = (sData.expectedFee !== undefined && sData.expectedFee !== null && Number(sData.expectedFee) > 0)
-              ? Number(sData.expectedFee)
-              : calculatedFee;
-
-            paid = parseFloat(sData.paidFee) || parseFloat(sData.paidAmount) || 0;
-            lastDate = sData.lastPaymentDate || 'N/A';
-            isVerified = sData.feeVerified === true || sData.isVerified === true;
+            studentSnapData = studentSnap.data();
           }
+        }
+
+        if (studentSnapData) {
+          const sData = studentSnapData;
+          const isIntake = sData.isNewIntake === true || sData.studentType === 'new_intake';
+          const calculatedFee = getExpectedFeeForStudent(sData.className || className, isIntake, feeSettings);
+
+          expected = (sData.expectedFee !== undefined && sData.expectedFee !== null && Number(sData.expectedFee) > 0)
+            ? Number(sData.expectedFee)
+            : calculatedFee;
+
+          paid = parseFloat(sData.paidFee) || parseFloat(sData.paidAmount) || 0;
+          lastDate = sData.lastPaymentDate || 'N/A';
+          isVerified = sData.feeVerified === true || sData.isVerified === true;
         } else {
           const isIntake = currentStudent?.isNewIntake === true || currentStudent?.studentType === 'new_intake';
           const calculatedFee = getExpectedFeeForStudent(className, isIntake, feeSettings);

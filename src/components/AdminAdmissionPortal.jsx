@@ -6,7 +6,7 @@ import html2pdf from 'html2pdf.js';
 import { useTheme } from '../context/ThemeContext';
 import { ensureStudentEnrolled } from '../utils/studentEnroller';
 import QRCodeDisplay from './QRCodeDisplay';
-import { getApplicantFeeBreakdown, formatNaira } from '../utils/prospectusFees';
+import { getApplicantFeeBreakdown, formatNaira, getBookPackForClass, formatBookPackString, calculateBookPackCost } from '../utils/prospectusFees';
 import { getDoc } from 'firebase/firestore';
 import AnalyticsReportModal from './AnalyticsReportModal';
 
@@ -22,6 +22,8 @@ const AdminAdmissionPortal = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [feeSettings, setFeeSettings] = useState({});
+  const [storeInventory, setStoreInventory] = useState({});
+  const [exerciseBookPacks, setExerciseBookPacks] = useState({});
   const { schoolName, schoolLogo, primaryColor } = useTheme();
 
   // Tab & Filter States
@@ -59,6 +61,15 @@ const AdminAdmissionPortal = () => {
     // Fetch fee settings for letter rendering
     getDoc(doc(db, 'settings', 'fees')).then(snap => {
       if (snap.exists()) setFeeSettings(snap.data() || {});
+    }).catch(console.error);
+
+    // Fetch store inventory and book packs for complete fee breakdown
+    getDoc(doc(db, 'settings', 'store_inventory')).then(snap => {
+      if (snap.exists()) setStoreInventory(snap.data() || {});
+    }).catch(console.error);
+    
+    getDoc(doc(db, 'settings', 'exercise_book_packs')).then(snap => {
+      if (snap.exists()) setExerciseBookPacks(snap.data() || {});
     }).catch(console.error);
 
     return () => unsub();
@@ -108,8 +119,16 @@ const AdminAdmissionPortal = () => {
       window.alert('Please allow pop-ups to print the admission letter.');
       return;
     }
-    const letterMarkup = element.innerHTML;
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>Admission Letter</title><style>body{margin:0;padding:24px;background:#fff;color:#111827;font-family:Arial,sans-serif}*{box-sizing:border-box}img{max-width:100%}</style></head><body>${letterMarkup}</body></html>`);
+    const letterMarkup = element.outerHTML;
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Admission Letter</title><style>
+      @media print {
+        @page { size: A4; margin: 10mm; }
+        body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; background: white !important; }
+      }
+      body { margin:0; padding: 20px; background:#fff; color:#111827; font-family:Arial,sans-serif; -webkit-print-color-adjust: exact; }
+      * { box-sizing:border-box }
+      img { max-width:100% }
+    </style></head><body>${letterMarkup}</body></html>`);
     printWindow.document.close();
     printWindow.focus();
     setTimeout(() => printWindow.print(), 300);
@@ -123,11 +142,20 @@ const AdminAdmissionPortal = () => {
       element.style.display = 'block';
 
       const opt = {
-        margin: [10, 10, 10, 10],
-        filename: `Admission-Letter-${admission.applicationNumber || admission.id}.pdf`,
+        margin: [6, 6, 6, 6],
+        filename: `admission-letter-${(admission.studentName || admission.fullName || admission.applicantName || 'candidate').replace(/\s+/g, '-').toLowerCase()}-${admission.applicationNumber || admission.id}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+          allowTaint: true,
+          scrollY: 0,
+          scrollX: 0,
+          windowWidth: 900
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       };
 
       await html2pdf().set(opt).from(element).save();
@@ -685,30 +713,53 @@ const AdminAdmissionPortal = () => {
 
                                   <p style={{ marginBottom: '25px', textAlign: 'justify' }}>
                                     Please note that this admission remains provisional until you have completed your registration and paid the required fees. You are expected to bring this letter along with your Birth Certificate, Previous School Report Card, and two (2) recent passport photographs to the Bursary to finalise your enrollment.
+                                    {getBookPackForClass(letterTargetClass, exerciseBookPacks) && (
+                                      <> Furthermore, you are required to purchase the <strong>Exercise Books Pack ({formatBookPackString(getBookPackForClass(letterTargetClass, exerciseBookPacks))})</strong>.</>
+                                    )}
                                   </p>
                                   
                                   <div style={{ border: '1px solid #cbd5e1', borderRadius: '0px', marginBottom: '30px' }}>
                                     <div style={{ background: '#f1f5f9', padding: '10px 15px', borderBottom: '1px solid #cbd5e1', fontWeight: 'bold', fontFamily: 'Arial, sans-serif', fontSize: '13px', color: '#334155', textTransform: 'uppercase' }}>
                                       Applicant & Fee Summary
                                     </div>
-                                    <div style={{ padding: '15px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 30px', fontFamily: 'Arial, sans-serif', fontSize: '13px' }}>
-                                      {[
-                                        ['Full Name', adm.studentName || adm.fullName || adm.applicantName],
-                                        ['Class Admitted', letterTargetClass],
-                                        ['Section', `${letterFeeDetails.sectionTitle}`],
-                                        ['Admission Status', 'GRANTED'],
-                                        ...(adm.regNo ? [['Registration No.', adm.regNo]] : []),
-                                        ['Application No.', adm.appNo || adm.applicationNumber || adm.id],
-                                      ].map(([label, value]) => (
-                                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #cbd5e1', paddingBottom: '4px' }}>
-                                          <span style={{ color: '#64748b' }}>{label}:</span>
-                                          <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{value || '—'}</span>
-                                        </div>
-                                      ))}
+                                    <div style={{ padding: '15px', fontFamily: 'Arial, sans-serif', fontSize: '13px' }}>
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 30px', marginBottom: '15px', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px' }}>
+                                        {[
+                                          ['Full Name', adm.studentName || adm.fullName || adm.applicantName],
+                                          ['Class Admitted', letterTargetClass],
+                                          ['Section', `${letterFeeDetails.sectionTitle}`],
+                                          ['Admission Status', 'GRANTED'],
+                                          ...(adm.regNo ? [['Registration No.', adm.regNo]] : []),
+                                          ['Application No.', adm.appNo || adm.applicationNumber || adm.id],
+                                        ].map(([label, value]) => (
+                                          <div key={label} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #cbd5e1', paddingBottom: '4px' }}>
+                                            <span style={{ color: '#64748b' }}>{label}:</span>
+                                            <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{value || '—'}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+
+                                      <div style={{ fontWeight: 'bold', color: '#1e3a8a', marginBottom: '8px', fontSize: '12px', textTransform: 'uppercase' }}>Fee Breakdown:</div>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        {(() => {
+                                          const feeList = Array.isArray(letterFeeDetails.items) ? [...letterFeeDetails.items] : [];
+                                          const bookPackConfig = getBookPackForClass(letterTargetClass, exerciseBookPacks);
+                                          const bookPackCost = calculateBookPackCost(bookPackConfig, storeInventory);
+                                          if (bookPackConfig && bookPackCost > 0) {
+                                            feeList.push({ name: 'Exercise Book Pack (' + formatBookPackString(bookPackConfig) + ')', amount: bookPackCost });
+                                          }
+                                          return feeList.map((item, idx) => (
+                                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #cbd5e1', paddingBottom: '4px' }}>
+                                              <span style={{ color: '#334155' }}>{item.name || item.title || 'Fee Item'}:</span>
+                                              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{formatNaira(item.amount || 0)}</span>
+                                            </div>
+                                          ));
+                                        })()}
+                                      </div>
                                     </div>
                                     <div style={{ background: '#1e3a8a', color: '#fff', padding: '10px 15px', fontFamily: 'Arial, sans-serif', fontSize: '13px', display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
                                       <span>TOTAL APPROVED NEW INTAKE FEE:</span>
-                                      <span>{formatNaira(letterFeeDetails.total)}</span>
+                                      <span>{formatNaira((letterFeeDetails.prospectiveTotal || letterFeeDetails.total || 0) + (calculateBookPackCost(getBookPackForClass(letterTargetClass, exerciseBookPacks), storeInventory) || 0))}</span>
                                     </div>
                                   </div>
                                 </>

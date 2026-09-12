@@ -165,10 +165,12 @@ const StoreView = ({ allStudents = [] }) => {
     const name = String(s.name || s['STUDENT NAME'] || '').toLowerCase();
     const reg = String(s.regNo || s.REGNO || '').toLowerCase();
     const term = (searchTerm || '').toLowerCase().trim();
-    if (term.length === 0) return false;
+    if (term.length === 0) return true;
     
     return name.includes(term) || reg.includes(term) || reg.replace(/[^a-z0-9]/g, '').includes(term.replace(/[^a-z0-9]/g, ''));
-  }).slice(0, 10);
+  }).slice(0, 50);
+
+  const [isStudentDropdownOpen, setIsStudentDropdownOpen] = useState(false);
 
   const handleRecordSale = async (e) => {
     e.preventDefault();
@@ -493,6 +495,21 @@ const StoreView = ({ allStudents = [] }) => {
               </div>
             </div>
 
+            {overviewSubGroupFilter.startsWith('Exercise Book Pack - ') && (
+              <div className="mb-8 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                <h4 className="text-sm font-black text-indigo-800 mb-2 flex items-center gap-2">
+                  <SchoolItemIcon item="exercise-book" size={16} /> Pack Configuration Analysis
+                </h4>
+                <div className="flex flex-wrap gap-3 text-sm font-bold text-indigo-700">
+                  {bookPacks[overviewSubGroupFilter.replace('Exercise Book Pack - ', '')]?.map((item, idx) => (
+                    <span key={idx} className="bg-white px-3 py-1 rounded-lg border border-indigo-100 shadow-sm">
+                      {item.qty}x {item.item}
+                    </span>
+                  )) || <span className="text-indigo-400 italic">No configuration found for this pack.</span>}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-indigo-600 rounded-2xl p-6 shadow-sm text-white relative overflow-hidden group">
                 <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
@@ -713,6 +730,8 @@ const StoreView = ({ allStudents = [] }) => {
                       setStudentRef(e.target.value);
                       if (selectedStudent) setSelectedStudent(null);
                     }}
+                    onFocus={() => setIsStudentDropdownOpen(true)}
+                    onBlur={() => setTimeout(() => setIsStudentDropdownOpen(false), 200)}
                     placeholder="Search by Student Name or Reg No (or enter Cash/Ref)"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:border-blue-500 focus:bg-white transition-colors"
                   />
@@ -727,7 +746,7 @@ const StoreView = ({ allStudents = [] }) => {
                   )}
                 </div>
 
-                {!selectedStudent && filteredStudents.length > 0 && (
+                {!selectedStudent && isStudentDropdownOpen && filteredStudents.length > 0 && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-slate-100 shadow-xl overflow-hidden max-h-60 overflow-y-auto">
                     {filteredStudents.map(s => (
                       <button

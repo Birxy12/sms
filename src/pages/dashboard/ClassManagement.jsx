@@ -114,7 +114,7 @@ const ClassManagement = ({ isBursar = false }) => {
         const appCheck = (student.appNo || student.applicationNumber || '').toUpperCase();
         const nameCheck = (student.name || '').toLowerCase();
         const isTestStudent = regCheck === 'TEST-STUDENT' || regCheck === 'TESTSTUDENT' || 
-                              regCheck === 'BDS/APN/2026/6526' || regCheck === 'BDS/B3/2026/038' ||
+                              regCheck === 'BDS/APN/2026/6526' || regCheck === 'BDS/TEST/001' ||
                               appCheck === 'BDS/APN/2026/6526' || nameCheck === 'test student';
         if (isTestStudent) return;
 
@@ -143,7 +143,7 @@ const ClassManagement = ({ isBursar = false }) => {
         const appCheck = (adm.appNo || adm.applicationNumber || adm.id || '').toUpperCase();
         const nameCheck = (adm.studentName || adm.fullName || adm.applicantName || '').toLowerCase();
         const isTestStudent = regCheck === 'TEST-STUDENT' || regCheck === 'TESTSTUDENT' || 
-                              regCheck === 'BDS/APN/2026/6526' || regCheck === 'BDS/B3/2026/038' ||
+                              regCheck === 'BDS/APN/2026/6526' || regCheck === 'BDS/TEST/001' ||
                               appCheck === 'BDS/APN/2026/6526' || nameCheck === 'test student';
         if (isTestStudent) return;
         
