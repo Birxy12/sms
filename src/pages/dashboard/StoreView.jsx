@@ -388,7 +388,18 @@ const StoreView = ({ allStudents = [] }) => {
         const getAggregate = (category) => {
           const items = overviewSales.filter(s => s.category === category);
           return items.reduce((acc, curr) => {
-            acc.count += Number(curr.quantity || 0);
+            let itemQty = Number(curr.quantity || 0);
+            
+            // Unpack if it's an Exercise Book Pack to show true volume
+            if (category === 'Exercise Books' && curr.itemName.startsWith('Exercise Book Pack - ')) {
+              const packClass = curr.itemName.replace('Exercise Book Pack - ', '');
+              if (bookPacks[packClass]) {
+                const totalItemsInPack = bookPacks[packClass].reduce((sum, p) => sum + Number(p.qty), 0);
+                itemQty = itemQty * totalItemsInPack;
+              }
+            }
+
+            acc.count += itemQty;
             acc.amount += Number(curr.totalAmount || 0);
             return acc;
           }, { count: 0, amount: 0 });
@@ -406,10 +417,47 @@ const StoreView = ({ allStudents = [] }) => {
               Object.keys(categoryItems).forEach(item => allItems.add(item));
             }
           });
+          Object.keys(bookPacks).forEach(k => allItems.add(`Exercise Book Pack - ${k}`));
           availableSubGroups = Array.from(allItems).sort();
         } else {
           availableSubGroups = inventory[overviewCategoryFilter] ? Object.keys(inventory[overviewCategoryFilter]).sort() : [];
+          if (overviewCategoryFilter === 'Exercise Books') {
+            const packNames = Object.keys(bookPacks).map(k => `Exercise Book Pack - ${k}`);
+            availableSubGroups = [...packNames, ...availableSubGroups];
+          }
         }
+
+        const generateItemBreakdown = () => {
+          const breakdown = {};
+          
+          overviewSales.forEach(s => {
+            if (s.category === 'Exercise Books' && s.itemName.startsWith('Exercise Book Pack - ')) {
+              const packClass = s.itemName.replace('Exercise Book Pack - ', '');
+              if (bookPacks[packClass]) {
+                bookPacks[packClass].forEach(pItem => {
+                   const qtySold = Number(s.quantity || 0) * Number(pItem.qty || 0);
+                   const unitPrice = Number(inventory['Exercise Books']?.[pItem.item] || 0);
+                   const rev = qtySold * unitPrice;
+                   
+                   if (!breakdown[pItem.item]) {
+                     breakdown[pItem.item] = { name: pItem.item, category: s.category, directQty: 0, packQty: 0, revenue: 0 };
+                   }
+                   breakdown[pItem.item].packQty += qtySold;
+                   breakdown[pItem.item].revenue += rev;
+                });
+              }
+            } else {
+               if (!breakdown[s.itemName]) {
+                 breakdown[s.itemName] = { name: s.itemName, category: s.category, directQty: 0, packQty: 0, revenue: 0 };
+               }
+               breakdown[s.itemName].directQty += Number(s.quantity || 0);
+               breakdown[s.itemName].revenue += Number(s.totalAmount || 0);
+            }
+          });
+          
+          return Object.values(breakdown).sort((a, b) => b.revenue - a.revenue);
+        };
+        const itemBreakdown = generateItemBreakdown();
 
         return (
           <div className="card-white p-6 rounded-3xl border border-slate-100 shadow-sm">
@@ -489,6 +537,49 @@ const StoreView = ({ allStudents = [] }) => {
               </div>
             </div>
             
+            {itemBreakdown.length > 0 && (
+              <div className="mt-8 border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                  <div>
+                    <h3 className="font-black text-slate-700">Detailed Item Analysis</h3>
+                    <p className="text-xs text-slate-500 font-medium mt-1">Deep analysis unpacking individual items inside Class Packs.</p>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-white text-slate-400 font-bold text-xs uppercase tracking-wider border-b border-slate-100">
+                        <th className="py-3 px-6">Item Name</th>
+                        <th className="py-3 px-6 text-right">Direct Sales</th>
+                        {(overviewCategoryFilter === 'Exercise Books' || overviewCategoryFilter === 'All') && (
+                          <th className="py-3 px-6 text-right text-indigo-400">From Packs</th>
+                        )}
+                        <th className="py-3 px-6 text-right">Total Volume (Qty)</th>
+                        <th className="py-3 px-6 text-right">Total Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 bg-white">
+                      {itemBreakdown.map(item => (
+                        <tr key={item.name} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-3 px-6 font-bold text-slate-700">
+                            {item.name} <span className="text-[10px] text-slate-400 font-bold uppercase ml-2 bg-slate-100 px-2 py-0.5 rounded">{item.category}</span>
+                          </td>
+                          <td className="py-3 px-6 text-right font-medium text-slate-600">{item.directQty}</td>
+                          {(overviewCategoryFilter === 'Exercise Books' || overviewCategoryFilter === 'All') && (
+                            <td className="py-3 px-6 text-right font-bold text-indigo-500">
+                              {item.packQty > 0 ? `+${item.packQty}` : '-'}
+                            </td>
+                          )}
+                          <td className="py-3 px-6 text-right font-black text-slate-800 bg-slate-50/50">{item.directQty + item.packQty}</td>
+                          <td className="py-3 px-6 text-right font-black text-emerald-600">{formatNaira(item.revenue)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             <div className="mt-8 pt-6 border-t border-slate-100 flex justify-between items-center">
               <div className="text-sm font-bold text-slate-500">
                 Filtered Total Volume
