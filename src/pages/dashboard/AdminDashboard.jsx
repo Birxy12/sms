@@ -1037,10 +1037,6 @@ const AdminDashboard = () => {
               <Eye size={14} /> Student View
             </button>
           </div>
-          <button className="btn-glow flex items-center gap-2">
-            <Download size={18} />
-            Generate MIS Report
-          </button>
         </div>
       </div>
 
