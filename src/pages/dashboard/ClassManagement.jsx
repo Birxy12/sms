@@ -103,12 +103,25 @@ const ClassManagement = ({ isBursar = false }) => {
       // Fetch All Students Once (Fast, 1 read request)
       const studentsSnap = await getDocs(collection(db, 'students'));
       const studentsByClass = {};
+      const regNos = new Set();
 
       studentsSnap.docs.forEach(doc => {
         const student = expandStudent(doc.data());
         if (!student) return;
+        
+        // Exclude test student
+        const regCheck = (student.regNo || '').toUpperCase();
+        const appCheck = (student.appNo || student.applicationNumber || '').toUpperCase();
+        const nameCheck = (student.name || '').toLowerCase();
+        const isTestStudent = regCheck === 'TEST-STUDENT' || regCheck === 'TESTSTUDENT' || 
+                              regCheck === 'BDS/APN/2026/6526' || regCheck === 'BDS/B3/2026/038' ||
+                              appCheck === 'BDS/APN/2026/6526' || nameCheck === 'test student';
+        if (isTestStudent) return;
+
         const normClass = normalizeClassName(student.className || '');
         if (!normClass) return;
+
+        if (student.regNo) regNos.add(student.regNo);
 
         if (!studentsByClass[normClass]) {
           studentsByClass[normClass] = [];
@@ -118,6 +131,41 @@ const ClassManagement = ({ isBursar = false }) => {
         // Discover any student classes not yet in classes list (e.g. NURSERY 3)
         if (!DEFAULT_CLASSES.includes(normClass) && !customClassNames.includes(normClass)) {
           customClassNames.push(normClass);
+        }
+      });
+
+      // Count students in admission portal who are admitted but maybe not yet fully activated in 'students'
+      const admissionsSnap = await getDocs(collection(db, 'admissions'));
+      admissionsSnap.docs.forEach(doc => {
+        const adm = doc.data();
+        // Exclude test student from admissions too
+        const regCheck = (adm.regNo || '').toUpperCase();
+        const appCheck = (adm.appNo || adm.applicationNumber || adm.id || '').toUpperCase();
+        const nameCheck = (adm.studentName || adm.fullName || adm.applicantName || '').toLowerCase();
+        const isTestStudent = regCheck === 'TEST-STUDENT' || regCheck === 'TESTSTUDENT' || 
+                              regCheck === 'BDS/APN/2026/6526' || regCheck === 'BDS/B3/2026/038' ||
+                              appCheck === 'BDS/APN/2026/6526' || nameCheck === 'test student';
+        if (isTestStudent) return;
+        
+        if (adm.status?.toLowerCase() === 'admitted' || adm.status?.toLowerCase() === 'granted') {
+           const normClass = normalizeClassName(adm.classApplyingFor || adm.targetClass || adm.appliedClass || adm.class || adm.className || '');
+           if (!normClass) return;
+           
+           if (!adm.regNo || !regNos.has(adm.regNo)) {
+             if (!studentsByClass[normClass]) {
+               studentsByClass[normClass] = [];
+             }
+             studentsByClass[normClass].push({
+               id: doc.id,
+               name: adm.studentName || adm.fullName || adm.applicantName || 'Applicant',
+               gender: adm.gender || 'Unknown',
+               className: normClass,
+               regNo: adm.regNo || ''
+             });
+             if (!DEFAULT_CLASSES.includes(normClass) && !customClassNames.includes(normClass)) {
+               customClassNames.push(normClass);
+             }
+           }
         }
       });
 

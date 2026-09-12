@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 
 /**
@@ -27,6 +27,21 @@ const QRCodeDisplay = ({
 }) => {
   // Ensure we always have a string value
   const qrValue = value ? String(value) : 'https://bonusdominus.edu.ng';
+  const canvasRef = useRef(null);
+  const [imgData, setImgData] = useState('');
+
+  useEffect(() => {
+    // Add a slight delay to ensure the canvas has rendered
+    const timer = setTimeout(() => {
+      if (canvasRef.current) {
+        const canvas = canvasRef.current.querySelector('canvas');
+        if (canvas) {
+          setImgData(canvas.toDataURL('image/png'));
+        }
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [qrValue, size, bgColor, fgColor, level, includeMargin]);
 
   return (
     <div 
@@ -41,14 +56,26 @@ const QRCodeDisplay = ({
         border: '1px solid #e0e0e0',
       }}
     >
-      <QRCodeCanvas
-        value={qrValue}
-        size={size}
-        bgColor={bgColor}
-        fgColor={fgColor}
-        level={level}
-        includeMargin={includeMargin}
-      />
+      <div ref={canvasRef} style={{ display: imgData ? 'none' : 'block' }}>
+        <QRCodeCanvas
+          value={qrValue}
+          size={size}
+          bgColor={bgColor}
+          fgColor={fgColor}
+          level={level}
+          includeMargin={includeMargin}
+        />
+      </div>
+
+      {imgData && (
+        <img 
+          src={imgData} 
+          alt="QR Code" 
+          width={size} 
+          height={size} 
+          style={{ display: 'block', maxWidth: '100%', objectFit: 'contain' }} 
+        />
+      )}
       
       {label && (
         <p

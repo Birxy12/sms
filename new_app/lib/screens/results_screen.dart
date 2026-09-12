@@ -1,9 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/auth_service.dart';
+import '../services/firestore_service.dart';
 import '../widgets/pinch_zoom_wrapper.dart';
 import '../models/result_model.dart';
 
-class ResultsScreen extends StatelessWidget {
+class ResultsScreen extends StatefulWidget {
   const ResultsScreen({super.key});
+
+  @override
+  State<ResultsScreen> createState() => _ResultsScreenState();
+}
+
+class _ResultsScreenState extends State<ResultsScreen> {
+  final FirestoreService _firestoreService = FirestoreService();
+  StudentResultModel? _resultModel;
+  bool _isLoading = true;
+  String _selectedSession = '2025/2026';
+  String _selectedTerm = '1st Term';
 
   final List<SubjectScore> mockScores = const [
     SubjectScore(subjectName: 'Mathematics', caScore: 28, examScore: 64, totalScore: 92, grade: 'A1', remark: 'Excellent'),
@@ -17,13 +31,52 @@ class ResultsScreen extends StatelessWidget {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _fetchLiveResults();
+  }
+
+  Future<void> _fetchLiveResults() async {
+    setState(() => _isLoading = true);
+    final auth = Provider.of<AuthService>(context, listen: false);
+    final user = auth.currentUser;
+
+    if (user != null) {
+      final regNo = user.regNo.isNotEmpty ? user.regNo : user.id;
+      final liveResult = await _firestoreService.getStudentResults(regNo, _selectedSession, _selectedTerm);
+
+      if (mounted) {
+        setState(() {
+          _resultModel = liveResult;
+          _isLoading = false;
+        });
+      }
+    } else {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthService>(context);
+    final user = auth.currentUser;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final scoresToDisplay = _resultModel?.scores.isNotEmpty == true ? _resultModel!.scores : mockScores;
+    final studentName = _resultModel?.studentName.isNotEmpty == true ? _resultModel!.studentName : (user?.name ?? 'Alex Johnson');
+    final regNo = _resultModel?.regNumber.isNotEmpty == true ? _resultModel!.regNumber : (user?.regNo ?? 'STU-2026-001');
+    final className = _resultModel?.className.isNotEmpty == true ? _resultModel!.className : (user?.className ?? 'JSS 1');
+    final position = _resultModel != null ? '${_resultModel!.position}th' : '1st out of 42';
+    final average = _resultModel?.averageScore ?? 88.2;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Student Result Sheet'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _fetchLiveResults,
+          ),
           IconButton(
             icon: const Icon(Icons.download_rounded),
             onPressed: () {
@@ -34,140 +87,184 @@ class ResultsScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: PinchZoomWrapper(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 15,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header Banner
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4F46E5).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(16),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : PinchZoomWrapper(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 15,
+                        offset: const Offset(0, 4),
                       ),
-                      child: const Icon(Icons.school_rounded, color: Color(0xFF4F46E5), size: 36),
-                    ),
-                    const SizedBox(width: 14),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'BDS INTERNATIONAL ACADEMY',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-                          ),
-                          Text(
-                            'Official Terminal Academic Report Card',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const Divider(height: 30),
-
-                // Student Metadata
-                const Wrap(
-                  spacing: 20,
-                  runSpacing: 10,
-                  children: [
-                    _MetaDetail(label: 'Student Name', value: 'Alex Johnson'),
-                    _MetaDetail(label: 'Reg Number', value: 'STU-2026-001'),
-                    _MetaDetail(label: 'Class', value: 'JSS 3 A'),
-                    _MetaDetail(label: 'Session', value: '2025/2026'),
-                    _MetaDetail(label: 'Term', value: '2nd Term'),
-                    _MetaDetail(label: 'Position', value: '1st out of 42'),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Scores Table
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    headingRowColor: WidgetStateProperty.all(
-                      const Color(0xFF4F46E5).withOpacity(0.1),
-                    ),
-                    columns: const [
-                      DataColumn(label: Text('Subject', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('C.A (30)', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Exam (70)', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Total (100)', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Grade', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Remark', style: TextStyle(fontWeight: FontWeight.bold))),
                     ],
-                    rows: mockScores.map((s) {
-                      return DataRow(
-                        cells: [
-                          DataCell(Text(s.subjectName, style: const TextStyle(fontWeight: FontWeight.w600))),
-                          DataCell(Text('${s.caScore.toInt()}')),
-                          DataCell(Text('${s.examScore.toInt()}')),
-                          DataCell(Text(
-                            '${s.totalScore.toInt()}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
-                          )),
-                          DataCell(
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF10B981).withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                s.grade,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF10B981),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header Banner
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4F46E5).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(Icons.school_rounded, color: Color(0xFF4F46E5), size: 36),
+                          ),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'BDS INTERNATIONAL ACADEMY',
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                                 ),
-                              ),
+                                Text(
+                                  'Official Terminal Academic Report Card',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
+                              ],
                             ),
                           ),
-                          DataCell(Text(s.remark)),
                         ],
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: 24),
+                      ),
+                      const Divider(height: 30),
 
-                // Grand Total & Average
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4F46E5).withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Overall Average:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                      Text('86.6%', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: Color(0xFF4F46E5))),
+                      // Session and Term Selectors
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: _selectedSession,
+                              decoration: const InputDecoration(
+                                labelText: 'Session',
+                                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                border: OutlineInputBorder(),
+                              ),
+                              items: ['2025/2026', '2024/2025'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() => _selectedSession = val);
+                                  _fetchLiveResults();
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: _selectedTerm,
+                              decoration: const InputDecoration(
+                                labelText: 'Term',
+                                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                border: OutlineInputBorder(),
+                              ),
+                              items: ['1st Term', '2nd Term', '3rd Term'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() => _selectedTerm = val);
+                                  _fetchLiveResults();
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Student Metadata
+                      Wrap(
+                        spacing: 20,
+                        runSpacing: 10,
+                        children: [
+                          _MetaDetail(label: 'Student Name', value: studentName),
+                          _MetaDetail(label: 'Reg Number', value: regNo),
+                          _MetaDetail(label: 'Class', value: className),
+                          _MetaDetail(label: 'Session', value: _selectedSession),
+                          _MetaDetail(label: 'Term', value: _selectedTerm),
+                          _MetaDetail(label: 'Position', value: position),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Scores Table
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          headingRowColor: WidgetStateProperty.all(
+                            const Color(0xFF4F46E5).withValues(alpha: 0.1),
+                          ),
+                          columns: const [
+                            DataColumn(label: Text('Subject', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('C.A (30)', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Exam (70)', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Total (100)', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Grade', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Remark', style: TextStyle(fontWeight: FontWeight.bold))),
+                          ],
+                          rows: scoresToDisplay.map((s) {
+                            return DataRow(
+                              cells: [
+                                DataCell(Text(s.subjectName, style: const TextStyle(fontWeight: FontWeight.w600))),
+                                DataCell(Text('${s.caScore.toInt()}')),
+                                DataCell(Text('${s.examScore.toInt()}')),
+                                DataCell(Text(
+                                  '${s.totalScore.toInt()}',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
+                                )),
+                                DataCell(
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      s.grade,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF10B981),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                DataCell(Text(s.remark)),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Grand Total & Average
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4F46E5).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Overall Average:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                            Text('$average%', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: Color(0xFF4F46E5))),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -1,5 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/auth_service.dart';
+import '../models/user_model.dart';
 import '../widgets/pinch_zoom_wrapper.dart';
 
 class IDCardScreen extends StatefulWidget {
@@ -41,6 +44,9 @@ class _IDCardScreenState extends State<IDCardScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthService>(context);
+    final user = auth.currentUser;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Digital Student ID Card'),
@@ -71,11 +77,11 @@ class _IDCardScreenState extends State<IDCardScreen> with SingleTickerProviderSt
                         transform: transform,
                         alignment: Alignment.center,
                         child: angle < pi / 2
-                            ? _buildCardFront()
+                            ? _buildCardFront(user)
                             : Transform(
                                 transform: Matrix4.identity()..rotateY(pi),
                                 alignment: Alignment.center,
-                                child: _buildCardBack(),
+                                child: _buildCardBack(user),
                               ),
                       );
                     },
@@ -101,7 +107,13 @@ class _IDCardScreenState extends State<IDCardScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildCardFront() {
+  Widget _buildCardFront(UserModel? user) {
+    final name = user?.name.toUpperCase() ?? 'ALEX JOHNSON';
+    final regNo = user?.regNo.isNotEmpty == true ? user!.regNo : (user?.id ?? 'STU-2026-001');
+    final className = user?.className.isNotEmpty == true ? user!.className : 'JSS 1';
+    final gender = user?.gender.toUpperCase() ?? 'MALE';
+    final avatarUrl = user?.avatarUrl;
+
     return Container(
       width: 320,
       height: 480,
@@ -115,7 +127,7 @@ class _IDCardScreenState extends State<IDCardScreen> with SingleTickerProviderSt
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF4F46E5).withOpacity(0.4),
+            color: const Color(0xFF4F46E5).withValues(alpha: 0.4),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -141,36 +153,39 @@ class _IDCardScreenState extends State<IDCardScreen> with SingleTickerProviderSt
             ],
           ),
           const SizedBox(height: 20),
-          const CircleAvatar(
+          CircleAvatar(
             radius: 46,
             backgroundColor: Colors.white24,
             child: CircleAvatar(
               radius: 42,
               backgroundColor: Colors.white,
-              child: Icon(Icons.person_rounded, size: 50, color: Color(0xFF4F46E5)),
+              backgroundImage: avatarUrl != null && avatarUrl.startsWith('http') ? NetworkImage(avatarUrl) : null,
+              child: avatarUrl == null || !avatarUrl.startsWith('http')
+                  ? const Icon(Icons.person_rounded, size: 50, color: Color(0xFF4F46E5))
+                  : null,
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'ALEX JOHNSON',
-            style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+          Text(
+            name,
+            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
-          const Text(
-            'REG: STU-2026-001',
-            style: TextStyle(color: Colors.cyanAccent, fontSize: 13, fontWeight: FontWeight.bold),
+          Text(
+            'REG: $regNo',
+            style: const TextStyle(color: Colors.cyanAccent, fontSize: 13, fontWeight: FontWeight.bold),
           ),
           const Divider(color: Colors.white24, height: 24),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _IdInfo(label: 'CLASS', value: 'JSS 3 A'),
-              _IdInfo(label: 'SEX', value: 'MALE'),
-              _IdInfo(label: 'SESSION', value: '2025/2026'),
+              _IdInfo(label: 'CLASS', value: className),
+              _IdInfo(label: 'SEX', value: gender),
+              const _IdInfo(label: 'SESSION', value: '2025/2026'),
             ],
           ),
           const Spacer(),
-          // Barcode indicator
           Container(
             height: 36,
             width: double.infinity,
@@ -181,7 +196,7 @@ class _IDCardScreenState extends State<IDCardScreen> with SingleTickerProviderSt
             child: const Center(
               child: Text(
                 '║▌│█║▌│ █║▌│█│║▌║',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 3),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 3, color: Colors.black),
               ),
             ),
           ),
@@ -190,7 +205,7 @@ class _IDCardScreenState extends State<IDCardScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildCardBack() {
+  Widget _buildCardBack(UserModel? user) {
     return Container(
       width: 320,
       height: 480,
@@ -218,9 +233,9 @@ class _IDCardScreenState extends State<IDCardScreen> with SingleTickerProviderSt
             style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Parent/Guardian: Mrs. Sarah Johnson\nPhone: +234 800 123 4567',
-            style: TextStyle(color: Colors.white70, fontSize: 12),
+          Text(
+            'House: ${user?.house ?? "Red House"}\nClub: ${user?.club ?? "JET Club"}',
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
           const Spacer(),
           Center(

@@ -8,6 +8,7 @@ import { ensureStudentEnrolled } from '../utils/studentEnroller';
 import QRCodeDisplay from './QRCodeDisplay';
 import { getApplicantFeeBreakdown, formatNaira } from '../utils/prospectusFees';
 import { getDoc } from 'firebase/firestore';
+import AnalyticsReportModal from './AnalyticsReportModal';
 
 const AdminAdmissionPortal = () => {
   const [admissions, setAdmissions] = useState([]);
@@ -22,6 +23,12 @@ const AdminAdmissionPortal = () => {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [feeSettings, setFeeSettings] = useState({});
   const { schoolName, schoolLogo, primaryColor } = useTheme();
+
+  // Tab & Filter States
+  const [activeTab, setActiveTab] = useState('All');
+  const [filterClass, setFilterClass] = useState('');
+  const [filterYear, setFilterYear] = useState('');
+  const [showAnalysis, setShowAnalysis] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -186,8 +193,63 @@ const AdminAdmissionPortal = () => {
     const s = searchTerm.toLowerCase();
     const name = (a.studentName || a.fullName || a.applicantName || '').toLowerCase();
     const appNo = (a.appNo || a.applicationNumber || a.id || '').toLowerCase();
-    return name.includes(s) || appNo.includes(s);
+    const matchesSearch = name.includes(s) || appNo.includes(s);
+    if (!matchesSearch) return false;
+
+    if (activeTab === 'Admitted') {
+      const isAdmitted = a.status?.toLowerCase() === 'admitted' || a.status?.toLowerCase() === 'granted';
+      if (!isAdmitted) return false;
+      const targetClass = a.classApplyingFor || a.targetClass || a.appliedClass || a.class || a.className;
+      if (filterClass && targetClass !== filterClass) return false;
+      if (filterYear && a.createdAt) {
+         const year = new Date(a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt).getFullYear().toString();
+         if (filterYear !== year) return false;
+      }
+      return true;
+    }
+
+    if (activeTab === 'PendingCBT') {
+      return !a.cbtCompleted;
+    }
+
+    return true; // All
   });
+
+  const totalAdmittedCount = admissions.filter(a => a.status?.toLowerCase() === 'admitted' || a.status?.toLowerCase() === 'granted').length;
+  const totalPendingCBTCount = admissions.filter(a => !a.cbtCompleted).length;
+
+  const analysisData = {
+    kpis: [
+      { title: 'Total Admissions', value: admissions.length, change: '100%', isPositive: true },
+      { title: 'Total Admitted', value: totalAdmittedCount, change: `${Math.round((totalAdmittedCount/Math.max(1, admissions.length))*100)}%`, isPositive: true },
+      { title: 'Pending CBT', value: totalPendingCBTCount, change: `${Math.round((totalPendingCBTCount/Math.max(1, admissions.length))*100)}%`, isPositive: false },
+      { title: 'Filtered View', value: filteredAdmissions.length, change: 'Current Selection', isPositive: true }
+    ],
+    enrollmentTrend: filteredAdmissions.slice(0, 10).map(a => ({
+      period: (a.studentName || a.fullName || a.applicantName || 'Unknown'),
+      students: a.cbtPercentage || 0,
+      teachers: a.status || 'Pending'
+    }))
+  };
+
+  const getAvailableClasses = () => {
+    const classes = new Set();
+    admissions.forEach(a => {
+      const c = a.classApplyingFor || a.targetClass || a.appliedClass || a.class || a.className;
+      if (c) classes.add(c);
+    });
+    return Array.from(classes).sort();
+  };
+
+  const getAvailableYears = () => {
+    const years = new Set();
+    admissions.forEach(a => {
+      if (a.createdAt) {
+        years.add(new Date(a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt).getFullYear().toString());
+      }
+    });
+    return Array.from(years).sort((a,b)=>b-a);
+  };
 
   const handleFixStatuses = async () => {
     if (!window.confirm("This will auto-update the Admission Status for all students who scored 40% and above. Proceed?")) return;
@@ -269,6 +331,59 @@ const AdminAdmissionPortal = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+        </div>
+      </div>
+
+      {/* Tabs and Filters */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('All')}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === 'All' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+          >
+            All Applications ({admissions.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('Admitted')}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === 'Admitted' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+          >
+            Admitted ({totalAdmittedCount})
+          </button>
+          <button
+            onClick={() => setActiveTab('PendingCBT')}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === 'PendingCBT' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+          >
+            Pending CBT ({totalPendingCBTCount})
+          </button>
+        </div>
+
+        <div className="flex gap-2 items-center">
+          {activeTab === 'Admitted' && (
+            <>
+              <select
+                value={filterClass}
+                onChange={(e) => setFilterClass(e.target.value)}
+                className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none"
+              >
+                <option value="">All Classes</option>
+                {getAvailableClasses().map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <select
+                value={filterYear}
+                onChange={(e) => setFilterYear(e.target.value)}
+                className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none"
+              >
+                <option value="">All Years</option>
+                {getAvailableYears().map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </>
+          )}
+          <button
+            onClick={() => setShowAnalysis(true)}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all shadow-md"
+          >
+            View Analysis
+          </button>
         </div>
       </div>
 
@@ -623,6 +738,18 @@ const AdminAdmissionPortal = () => {
             </tbody>
           </table>
         </div>
+      )}
+      
+      {showAnalysis && (
+        <AnalyticsReportModal
+          isOpen={showAnalysis}
+          onClose={() => setShowAnalysis(false)}
+          role="admin"
+          roleConfig={{ label: 'Admission Operations', color: '#4f46e5' }}
+          data={analysisData}
+          schoolName={schoolName}
+          schoolLogo={schoolLogo}
+        />
       )}
     </div>
   );

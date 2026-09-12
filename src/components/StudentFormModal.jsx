@@ -338,7 +338,7 @@ const StudentFormModal = ({
 
           <div className="space-y-1.5">
             <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgb(100, 116, 139)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Date of Birth</label>
-            <input type="date" value={formatDateForInput(currentStudent.dob)} onChange={(e) => setCurrentStudent({...currentStudent, dob: e.target.value})} style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '13px', fontWeight: 500, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }} />
+            <input type="date" value={formatDateForInput(currentStudent.dob) || ''} onChange={(e) => setCurrentStudent({...currentStudent, dob: e.target.value})} style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid rgb(226, 232, 240)', fontSize: '13px', fontWeight: 500, background: 'rgb(248, 250, 252)', outline: 'none', boxSizing: 'border-box', color: 'rgb(30, 41, 59)' }} />
           </div>
           
           <div className="space-y-1.5">

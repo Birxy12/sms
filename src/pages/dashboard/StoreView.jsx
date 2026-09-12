@@ -95,10 +95,19 @@ const StoreView = ({ allStudents = [] }) => {
   useEffect(() => {
     if (inventory[selectedCategory] && inventory[selectedCategory][itemName]) {
       setUnitPrice(inventory[selectedCategory][itemName]);
+    } else if (selectedCategory === 'Exercise Books' && itemName.startsWith('Exercise Book Pack - ')) {
+      const packClass = itemName.replace('Exercise Book Pack - ', '');
+      if (bookPacks[packClass]) {
+        const packItems = bookPacks[packClass];
+        const totalCost = packItems.reduce((sum, packItem) => sum + (Number(packItem.qty) * Number(inventory['Exercise Books']?.[packItem.item] || 0)), 0);
+        setUnitPrice(totalCost);
+      } else {
+        setUnitPrice('');
+      }
     } else {
       setUnitPrice('');
     }
-  }, [itemName, selectedCategory, inventory]);
+  }, [itemName, selectedCategory, inventory, bookPacks]);
 
   const fetchStoreData = async () => {
     setLoading(true);
@@ -153,9 +162,12 @@ const StoreView = ({ allStudents = [] }) => {
   };
 
   const filteredStudents = allStudents.filter(s => {
-    const name = (s.name || s['STUDENT NAME'] || '').toLowerCase();
-    const reg = (s.regNo || s.REGNO || '').toLowerCase();
-    return (name.includes(searchTerm.toLowerCase()) || reg.includes(searchTerm.toLowerCase())) && searchTerm.length > 0;
+    const name = String(s.name || s['STUDENT NAME'] || '').toLowerCase();
+    const reg = String(s.regNo || s.REGNO || '').toLowerCase();
+    const term = (searchTerm || '').toLowerCase().trim();
+    if (term.length === 0) return false;
+    
+    return name.includes(term) || reg.includes(term) || reg.replace(/[^a-z0-9]/g, '').includes(term.replace(/[^a-z0-9]/g, ''));
   }).slice(0, 10);
 
   const handleRecordSale = async (e) => {
@@ -546,16 +558,55 @@ const StoreView = ({ allStudents = [] }) => {
                 />
                 {/* Datalist for existing items in category */}
                 {inventory[selectedCategory] && Object.keys(inventory[selectedCategory]).length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {Object.keys(inventory[selectedCategory]).map(item => (
-                      <span 
-                        key={item} 
-                        onClick={() => setItemName(item)}
-                        className="px-2 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-lg cursor-pointer hover:bg-blue-100"
-                      >
-                        {item}
-                      </span>
-                    ))}
+                  <div className="mt-3 bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                    {selectedCategory === 'Exercise Books' && Object.keys(bookPacks).length > 0 && (
+                      <div className="mb-3">
+                        <div className="text-xs font-black text-emerald-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+                          <Tag size={12} /> Class Book Packs
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.keys(bookPacks).map(packClass => (
+                            <button
+                              type="button"
+                              key={`pack-${packClass}`}
+                              onClick={() => {
+                                setItemName(`Exercise Book Pack - ${packClass}`);
+                                setQuantity(1);
+                              }}
+                              className={`px-3 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition-all ${
+                                itemName === `Exercise Book Pack - ${packClass}` 
+                                  ? 'bg-emerald-600 text-white shadow-md' 
+                                  : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-100'
+                              }`}
+                            >
+                              {packClass} Pack
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <div className="text-xs font-black text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                        {selectedCategory === 'Exercise Books' ? 'Individual Items' : 'Available Items'}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.keys(inventory[selectedCategory]).map(item => (
+                          <button 
+                            type="button"
+                            key={item} 
+                            onClick={() => setItemName(item)}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition-all ${
+                              itemName === item 
+                                ? 'bg-blue-600 text-white shadow-md' 
+                                : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100'
+                            }`}
+                          >
+                            {item}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -571,7 +622,7 @@ const StoreView = ({ allStudents = [] }) => {
                       setStudentRef(e.target.value);
                       if (selectedStudent) setSelectedStudent(null);
                     }}
-                    placeholder="Search Student or enter Cash/Ref"
+                    placeholder="Search by Student Name or Reg No (or enter Cash/Ref)"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:border-blue-500 focus:bg-white transition-colors"
                   />
                   {selectedStudent && (

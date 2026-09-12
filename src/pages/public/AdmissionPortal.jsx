@@ -482,19 +482,13 @@ const AdmissionPortal = () => {
         return;
       }
 
-      // Filter questions specifically for candidate's class or general ('All')
+      // Filter questions specifically for candidate's class
       const normalizeClass = (c) => (c || '').toLowerCase().replace(/[^a-z0-9]/g, '');
       const applicantClassNorm = normalizeClass(applicantClass);
 
-      let classQs = allQs.filter(q => normalizeClass(q.targetClass || 'All') === applicantClassNorm);
-      let generalQs = allQs.filter(q => !q.targetClass || normalizeClass(q.targetClass) === 'all');
+      let classQs = allQs.filter(q => normalizeClass(q.targetClass) === applicantClassNorm);
 
       let combinedPool = [...classQs];
-      for (const q of generalQs) {
-        if (!combinedPool.some(e => e.id === q.id)) {
-          combinedPool.push(q);
-        }
-      }
 
       if (!combinedPool.length) {
         alert(`No exam questions available for ${applicantClass || 'your class'}. Please contact the school.`);
@@ -595,23 +589,39 @@ const AdmissionPortal = () => {
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
           };
           
-          const base64Pdf = await html2pdf().set(opt).from(letterRef.current).output('datauristring');
+          const base64Pdf = await html2pdf().set(opt).from(letterRef.current).toPdf().get('pdf').then(pdf => pdf.output('datauristring'));
           
-          await addDoc(collection(db, 'mail'), {
-            to: ['admissions@bonusdominus.edu.ng'],
-            message: {
-              subject: `Admission Letter for ${appData?.applicant?.fullName}`,
-              html: `<p>A candidate has successfully passed their CBT.</p>
-                     <p>Name: ${appData?.applicant?.fullName}</p>
-                     <p>App No: ${appData?.appNo}</p>
-                     <p>Class: ${appData?.applicant?.classApplyingFor}</p>
-                     <p>Please find the official admission letter attached.</p>`,
-              attachments: [{
-                filename: `Admission-Letter-${appData?.appNo}.pdf`,
-                path: base64Pdf
-              }]
-            }
-          });
+          // Truncate if too large to prevent Firestore 1MB limit crash, though ideally letters are small
+          if (base64Pdf && typeof base64Pdf === 'string' && base64Pdf.length < 900000) {
+            await addDoc(collection(db, 'mail'), {
+              to: ['admissions@bonusdominus.edu.ng'],
+              message: {
+                subject: `Admission Letter for ${appData?.applicant?.fullName}`,
+                html: `<p>A candidate has successfully passed their CBT.</p>
+                       <p>Name: ${appData?.applicant?.fullName}</p>
+                       <p>App No: ${appData?.appNo}</p>
+                       <p>Class: ${appData?.applicant?.classApplyingFor}</p>
+                       <p>Please find the official admission letter attached.</p>`,
+                attachments: [{
+                  filename: `Admission-Letter-${appData?.appNo}.pdf`,
+                  path: base64Pdf
+                }]
+              }
+            });
+          } else {
+            // Send email without attachment if it's too large
+            await addDoc(collection(db, 'mail'), {
+              to: ['admissions@bonusdominus.edu.ng'],
+              message: {
+                subject: `Admission Letter for ${appData?.applicant?.fullName}`,
+                html: `<p>A candidate has successfully passed their CBT.</p>
+                       <p>Name: ${appData?.applicant?.fullName}</p>
+                       <p>App No: ${appData?.appNo}</p>
+                       <p>Class: ${appData?.applicant?.classApplyingFor}</p>
+                       <p><strong>Note:</strong> The admission letter PDF was too large to attach. Please view it in the Admin Dashboard.</p>`
+              }
+            });
+          }
         } catch (e) {
           console.error('Failed to auto-email PDF:', e);
         }
@@ -639,7 +649,15 @@ const AdmissionPortal = () => {
     }
 
     const letterMarkup = letterRef.current.outerHTML;
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>Admission Letter</title><style>body{margin:0;padding:24px;background:#fff;color:#111827;font-family:Arial,sans-serif}*{box-sizing:border-box}img{max-width:100%}</style></head><body>${letterMarkup}</body></html>`);
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Admission Letter</title><style>
+      @media print {
+        @page { size: A4; margin: 10mm; }
+        body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; background: white !important; }
+      }
+      body { margin:0; padding: 20px; background:#fff; color:#111827; font-family:Arial,sans-serif; -webkit-print-color-adjust: exact; }
+      * { box-sizing:border-box }
+      img { max-width:100% }
+    </style></head><body>${letterMarkup}</body></html>`);
     printWindow.document.close();
     printWindow.focus();
     setTimeout(() => printWindow.print(), 300);
@@ -664,7 +682,8 @@ const AdmissionPortal = () => {
           logging: false,
           allowTaint: true,
           scrollY: 0,
-          scrollX: 0
+          scrollX: 0,
+          windowWidth: 900
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       };
