@@ -277,7 +277,7 @@ function App() {
         </ProtectedAdminRoute>
       } />
       <Route path="/admin/students" element={
-        <ProtectedAdminRoute requiredRole="admin">
+        <ProtectedAdminRoute requiredRole={['admin', 'bursar']}>
           <Layout><StudentManagement /></Layout>
         </ProtectedAdminRoute>
       } />

@@ -665,7 +665,7 @@ const StoreView = ({ allStudents = [] }) => {
                   required
                 />
                 {/* Datalist for existing items in category */}
-                {inventory[selectedCategory] && Object.keys(inventory[selectedCategory]).length > 0 && (
+                {((inventory[selectedCategory] && Object.keys(inventory[selectedCategory]).length > 0) || (selectedCategory === 'Exercise Books' && Object.keys(bookPacks).length > 0)) && (
                   <div className="mt-3 bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
                     {selectedCategory === 'Exercise Books' && Object.keys(bookPacks).length > 0 && (
                       <div className="mb-3">
@@ -699,7 +699,7 @@ const StoreView = ({ allStudents = [] }) => {
                         {selectedCategory === 'Exercise Books' ? 'Individual Items' : 'Available Items'}
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {Object.keys(inventory[selectedCategory]).map(item => (
+                        {inventory[selectedCategory] && Object.keys(inventory[selectedCategory]).map(item => (
                           <button 
                             type="button"
                             key={item} 

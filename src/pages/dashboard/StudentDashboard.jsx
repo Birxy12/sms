@@ -10,7 +10,7 @@ import {
   Eye, EyeOff, PlusCircle, Search, CheckCircle2, X, RefreshCw, BarChart3, Sparkles, Settings, Receipt, FileText
 } from 'lucide-react';
 import { getStudentWallet, fundStudentWallet, debitStudentWallet } from '../../utils/wallet';
-import { MARKS_KEYS, expandMarks } from '../../utils/firestoreSchema';
+import { MARKS_KEYS, expandMarks, STUDENT_KEYS } from '../../utils/firestoreSchema';
 import { getProspectusFeeData, getClassFees, getExpectedFeeForStudent, formatNaira } from '../../utils/prospectusFees';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -278,7 +278,7 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
         // Fetch fresh student data directly to ensure real-time accuracy for fees
         let studentSnapData = null;
         if (regNum.includes('/')) {
-          let q = query(collection(db, 'students'), where(STUDENT_KEYS?.regNo || 'r', '==', regNum));
+          let q = query(collection(db, 'students'), where('r', '==', regNum));
           let sSnap = await getDocs(q);
           if (sSnap.empty) {
             q = query(collection(db, 'students'), where('regNo', '==', regNum));

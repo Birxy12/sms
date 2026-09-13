@@ -1,28 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
-import { collection, query, getDocs, orderBy, where, doc, updateDoc as fbUpdateDoc, writeBatch as fbWriteBatch, addDoc as fbAddDoc, serverTimestamp, setDoc as fbSetDoc, getDoc, limit, arrayUnion } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, doc, updateDoc as fbUpdateDoc, writeBatch as fbWriteBatch, addDoc as fbAddDoc, serverTimestamp, setDoc as fbSetDoc, getDoc, limit, arrayUnion } from 'firebase/firestore';
 import { 
   Wallet, DollarSign, TrendingUp, TrendingDown, Users, 
   Search, Download, Plus, ArrowUpRight, 
   CheckCircle, AlertCircle, Loader2, Briefcase, Settings, Printer, MessageSquare, AlertTriangle, FileText, UserPlus, Banknote,
   FileSpreadsheet, User, ShieldCheck, Key, Lock, Clock, History, CheckCheck, RefreshCw, X, ShieldAlert,
-  Sparkles, ListChecks, CheckCircle2, ChevronDown, ChevronUp, Layers, Check, HelpCircle, UserCheck, ShoppingBag, BarChart3
+  Sparkles, ListChecks, CheckCircle2, ChevronDown, ChevronUp, Layers, Check, HelpCircle, UserCheck, ShoppingBag, BarChart3,
+  CreditCard, Activity
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { fetchGlobalClasses, DEFAULT_CLASSES, normalizeClassName, getUniqueClasses } from '../../utils/classUtils';
 import { getClassCode, formatRegNumberSuffix } from '../../utils/regNoGenerator';
 import { createWhatsAppChatUrl } from '../../utils/whatsapp';
+import { formatRelativeTime } from '../../utils/dateFormatter';
 import { 
   getProspectusFeeData, 
-  getDefaultClassFeeStructure,
   getClassFees,
   getExpectedFeeForStudent,
   formatNaira, 
   PROSPECTUS_FEES_SCHEDULE, 
-  PROSPECTUS_REQUIREMENTS, 
-  getClassSection 
+  PROSPECTUS_REQUIREMENTS 
 } from '../../utils/prospectusFees';
 import SchoolManagementDashboard from '../../components/SchoolManagementDashboard';
 import Papa from 'papaparse';
@@ -154,8 +154,7 @@ const AnimatedCounter = ({ end }) => {
 
 const BursarDashboard = () => {
   const { currentAdmin } = useAdminAuth();
-  const { primaryColor, schoolName, demoMode } = useTheme();
-  const location = window.location;
+  const { schoolName, demoMode } = useTheme();
 
   // --- DEMO MODE INTERCEPTORS ---
   const showDemoWarning = () => {
@@ -207,6 +206,11 @@ const BursarDashboard = () => {
   const [paymentMessages, setPaymentMessages] = useState([]);
   const [feeSettings, setFeeSettings] = useState({});
   const { financeData: stats } = useFinance();
+  
+  // Real-time Audit Stream State
+  const [realActivities, setRealActivities] = useState([]);
+  const [showAllActivitiesModal, setShowAllActivitiesModal] = useState(false);
+  const [activityFilter, setActivityFilter] = useState('all');
 
   const [classes, setClasses] = useState(DEFAULT_CLASSES);
 
@@ -318,6 +322,43 @@ const BursarDashboard = () => {
             if (!unsubscribeStudents) {
               unsubscribeStudents = onSnapshot(collection(db, 'students'), (snap) => {
                 const students = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                
+                const activities = [];
+                snap.forEach(docSnap => {
+                  const s = docSnap.data();
+                  const name = s.name || s.fullName || s.n || 'Student';
+                  const cls = s.className || s.c || 'Unassigned';
+                  const dateVal = s.createdAt || s.enrolledAt || s.registeredAt;
+                  
+                  if (dateVal) {
+                    activities.push({
+                      id: `enroll-${docSnap.id}`,
+                      text: `New student ${name} enrolled in ${cls}`,
+                      time: formatRelativeTime(dateVal),
+                      timestamp: new Date(dateVal).getTime() || Date.now(),
+                      type: 'enrollment',
+                      icon: UserPlus,
+                      color: 'text-indigo-600 bg-indigo-50'
+                    });
+                  }
+
+                  const paidAmt = parseFloat(s.paidFee || s.paidAmount || 0);
+                  if (paidAmt > 0 || s.lastPaymentDate) {
+                    const pDate = s.lastPaymentDate || s.updatedAt || dateVal;
+                    activities.push({
+                      id: `pay-${docSnap.id}`,
+                      text: `Fee payment (₦${paidAmt.toLocaleString()}) confirmed for ${name} (${cls})`,
+                      time: formatRelativeTime(pDate),
+                      timestamp: new Date(pDate).getTime() || Date.now() - 3600000,
+                      type: 'payment',
+                      icon: CreditCard,
+                      color: 'text-emerald-600 bg-emerald-50'
+                    });
+                  }
+                });
+                
+                activities.sort((a, b) => b.timestamp - a.timestamp);
+                setRealActivities(activities);
                 setAllStudents(students);
                 setLoading(false);
               }, (err) => {
@@ -619,8 +660,7 @@ const BursarDashboard = () => {
     },
   ];
 
-  // Derive flat tab list for backwards compat
-  const sidebarTabs = tabGroups.flatMap(g => g.tabs);
+
 
   // --- Sub-Components for Tabs ---
 
@@ -1902,7 +1942,10 @@ const BursarDashboard = () => {
       return `BDS/${code}/${year}/${formatRegNumberSuffix(rand)}`;
     };
 
-    const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+    const handleChange = e => {
+      const { name, value } = e.target;
+      setForm(prev => ({ ...prev, [name]: value }));
+    };
 
     const handleRegister = async e => {
       e.preventDefault();
@@ -2187,7 +2230,7 @@ const BursarDashboard = () => {
   };
 
   const BulkPayView = () => {
-    const [csvData, setCsvData] = useState([]);
+
     const [uploading, setUploading] = useState(false);
     const [previewRows, setPreviewRows] = useState([]);
 
@@ -2525,7 +2568,7 @@ const BursarDashboard = () => {
     const [payMonth, setPayMonth] = useState('January');
     const [payYear, setPayYear] = useState('2026');
     const [saving, setSaving] = useState(false);
-    const [loadingStaff, setLoadingStaff] = useState(true);
+
 
     const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const YEARS = ['2025', '2026', '2027', '2028'];
@@ -2847,6 +2890,53 @@ const BursarDashboard = () => {
           
           {activeView === 'overview' && (
             <div className="space-y-8">
+              {showAllActivitiesModal && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+                  <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col max-h-[85vh] overflow-hidden">
+                    <div className="p-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between shrink-0 border-b border-slate-700">
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-indigo-600/40 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+                          <Activity size={22} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-black text-white m-0">Live Activities & Audit Stream</h3>
+                            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> Real-time
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <button onClick={() => setShowAllActivitiesModal(false)} className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer">
+                        <X size={18} />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2 px-6 py-3 bg-slate-50 border-b border-slate-200 shrink-0 overflow-x-auto">
+                      {[{ id: 'all', label: 'All Activities' }, { id: 'enrollment', label: 'Enrollments' }, { id: 'payment', label: 'Fee Payments' }].map(tab => (
+                        <button key={tab.id} onClick={() => setActivityFilter(tab.id)} className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 ${activityFilter === tab.id ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="p-6 overflow-y-auto bg-slate-50 flex-1 space-y-4">
+                      {realActivities.filter(a => activityFilter === 'all' || a.type === activityFilter).map(activity => (
+                        <div key={activity.id} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-start gap-4">
+                          <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center ${activity.color}`}>
+                            <activity.icon size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-800 m-0 leading-snug">{activity.text}</p>
+                            <p className="text-xs font-black text-slate-400 mt-1 flex items-center gap-1.5">
+                              <Clock size={12} /> {activity.time}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      {realActivities.length === 0 && <p className="text-center text-slate-400 font-medium py-8">No recent activities found.</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
               {/* Stats Grid with Analytics */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
                 {statCards.map((stat, idx) => (
@@ -2975,6 +3065,35 @@ const BursarDashboard = () => {
                       })}
                       {classBreakdown.length === 0 && <p className="text-sm text-slate-400 text-center py-4">No fee data yet.</p>}
                     </div>
+                  </div>
+                  <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-black text-slate-900 tracking-widest uppercase flex items-center gap-2">
+                        <Activity size={18} className="text-indigo-600" /> Audit Stream
+                      </h3>
+                      <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" /> Live
+                      </span>
+                    </div>
+                    <div className="space-y-3 text-left">
+                      {realActivities.slice(0, 4).map(activity => (
+                        <div key={activity.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+                          <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center ${activity.color}`}>
+                            <activity.icon size={16} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-slate-800 leading-snug m-0 line-clamp-2">{activity.text}</p>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mt-1">
+                              <Clock size={10} /> {activity.time}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      {realActivities.length === 0 && <p className="text-xs text-slate-400 text-center py-4">No activities yet.</p>}
+                    </div>
+                    <button onClick={() => setShowAllActivitiesModal(true)} className="w-full mt-4 py-2.5 text-xs font-black text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl flex items-center justify-center gap-1.5 transition-all">
+                      <Activity size={14} /> View All Activities
+                    </button>
                   </div>
                 </div>
                 <OldFeesAnalytics currentCollected={stats.totalCollected} currentExpected={stats.totalExpected} />

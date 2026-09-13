@@ -61,3 +61,37 @@ export const formatDateForInput = (dateVal) => {
     return '';
   }
 };
+
+/**
+ * Formats timestamps into clean relative times (e.g. 2 hours ago, Yesterday)
+ */
+export const formatRelativeTime = (dateInput) => {
+  if (!dateInput) return 'Recently';
+  let date;
+  if (typeof dateInput === 'object' && dateInput.seconds) {
+    date = new Date(dateInput.seconds * 1000);
+  } else if (typeof dateInput === 'object' && typeof dateInput.toDate === 'function') {
+    date = dateInput.toDate();
+  } else if (typeof dateInput === 'string' || typeof dateInput === 'number') {
+    date = new Date(dateInput);
+  } else if (dateInput instanceof Date) {
+    date = dateInput;
+  } else {
+    return 'Recently';
+  }
+
+  if (isNaN(date.getTime())) return 'Recently';
+
+  const diffMs = Date.now() - date.getTime();
+  if (diffMs < 0) return 'Just now';
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return formatDateForInput(date);
+};
