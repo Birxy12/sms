@@ -99,7 +99,7 @@ const BulkStudentEnrollModal = ({
         'PHONE': '08012345678',
         'EMAIL': 'chukwuma.obi@example.com',
         'DATE OF BIRTH': '2012-05-14',
-        'HOUSE': 'Blue House',
+        'HOUSE': 'Blue Bell House',
         'CLUB': 'Jets Club'
       },
       {
@@ -109,7 +109,7 @@ const BulkStudentEnrollModal = ({
         'PHONE': '08098765432',
         'EMAIL': 'amina.bello@example.com',
         'DATE OF BIRTH': '2012-09-22',
-        'HOUSE': 'Red House',
+        'HOUSE': 'Cherry House',
         'CLUB': 'Press Club'
       },
       {
@@ -135,8 +135,8 @@ const BulkStudentEnrollModal = ({
   // Download Sample CSV Template (.csv)
   const handleDownloadTemplateCsv = () => {
     const csvContent = "regno,Names,GENDER,PHONE,EMAIL,DATE OF BIRTH,HOUSE,CLUB\n" +
-      ",Chukwuma Emmanuel Obi,Male,08012345678,chukwuma.obi@example.com,2012-05-14,Blue House,Jets Club\n" +
-      ",Amina Fatima Bello,Female,08098765432,amina.bello@example.com,2012-09-22,Red House,Press Club\n" +
+      ",Chukwuma Emmanuel Obi,Male,08012345678,chukwuma.obi@example.com,2012-05-14,Blue Bell House,Jets Club\n" +
+      ",Amina Fatima Bello,Female,08098765432,amina.bello@example.com,2012-09-22,Cherry House,Press Club\n" +
       ",Adeyemi David Olawale,Male,08134567890,adeyemi.david@example.com,2011-11-03,Green House,Drama Club\n";
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

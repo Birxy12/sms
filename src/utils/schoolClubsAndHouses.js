@@ -18,10 +18,10 @@ export const DEFAULT_CLUBS = [
 ];
 
 export const DEFAULT_HOUSES = [
-  'Blue House',
-  'Red House',
+  'Blue Bell House',
+  'Cherry House',
   'Green House',
-  'Yellow House',
+  'Alamanda',
   'Purple House',
   'Gold House',
   'Diamond House',
