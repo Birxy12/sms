@@ -108,6 +108,18 @@ const StudentResults = ({ isPublic }) => {
           return pub.targetClass === 'All Classes' || pub.targetClass === studentClass;
         });
 
+        // INJECT MOCK PUBLICATIONS FOR TEST STUDENT
+        if (regNum === 'BDS/TEST/001' || regNum === 'BDS/TEST/1') {
+          const mockTerms = [
+            { id: 'test-pub-first', examName: 'First Term Examination', session: '2025/2026', term: 'First Term', targetClass: 'All Classes', publishedAt: new Date().toISOString() },
+            { id: 'test-pub-second', examName: 'Second Term Examination', session: '2025/2026', term: 'Second Term', targetClass: 'All Classes', publishedAt: new Date().toISOString() },
+            { id: 'test-pub-third', examName: 'Third Term Examination', session: '2025/2026', term: 'Third Term', targetClass: 'All Classes', publishedAt: new Date().toISOString() }
+          ];
+          mockTerms.forEach(mt => {
+             if (!terms.find(t => t.term === mt.term)) terms.push(mt);
+          });
+        }
+
         terms.sort((a, b) => b.session.localeCompare(a.session));
 
         setPublishedTerms(terms);
@@ -185,6 +197,34 @@ const StudentResults = ({ isPublic }) => {
           allDocMap.set(doc.id, doc.data());
         });
         const allMarksData = Array.from(allDocMap.values()).map(data => expandMarks(data));
+
+        // INJECT MOCK MARKS FOR TEST STUDENT
+        if (regNum === 'BDS/TEST/001' || regNum === 'BDS/TEST/1') {
+          const mockMarksObj = {
+            _meta: { average: "85.5", total: "855", position: "1st", attendance: "95" },
+            "Mathematics": { ca1: "15", ca2: "15", exam: "60", total: "90" },
+            "English Language": { ca1: "12", ca2: "14", exam: "55", total: "81" },
+            "Basic Science": { ca1: "14", ca2: "13", exam: "58", total: "85" },
+            "Civic Education": { ca1: "10", ca2: "15", exam: "50", total: "75" },
+            "Social Studies": { ca1: "13", ca2: "12", exam: "62", total: "87" },
+          };
+          const mockTerms = ['First Term', 'Second Term', 'Third Term'];
+          mockTerms.forEach(termName => {
+            if (!allMarksData.find(d => d.regNo === regNum && d.term === termName)) {
+              allMarksData.push({
+                regNo: regNum,
+                session: selectedPub.session || '2025/2026',
+                term: termName,
+                className: historicalClass || 'Test Class',
+                marks: mockMarksObj
+              });
+            }
+          });
+          
+          if (!foundMarksDoc) {
+            foundMarksDoc = allMarksData.find(d => d.regNo === regNum && d.term === selectedPub.term);
+          }
+        }
 
         const studentTotals = {};
         (allMarksData || []).forEach(d => {
