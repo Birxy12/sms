@@ -18,6 +18,7 @@ const getLocalStorageWallet = (studentId) => {
   }
   return {
     balance: 5000, // Initial default welcome credit for demonstration
+    gteCoins: 0,
     transactions: [
       {
         id: 'TX-INIT-001',
@@ -54,6 +55,7 @@ export const getStudentWallet = async (studentId) => {
       const remoteData = docSnap.data();
       const merged = {
         balance: remoteData.balance ?? localData.balance,
+        gteCoins: remoteData.gteCoins ?? localData.gteCoins,
         transactions: remoteData.transactions || localData.transactions
       };
       saveLocalStorageWallet(studentId, merged);
@@ -89,6 +91,7 @@ export const fundStudentWallet = async (studentId, amount, method = 'Card Paymen
   };
 
   const updatedWallet = {
+    ...currentWallet,
     balance: (currentWallet.balance || 0) + numAmount,
     transactions: [newTx, ...(currentWallet.transactions || [])]
   };
@@ -126,6 +129,7 @@ export const debitStudentWallet = async (studentId, amount, purpose = 'School Fe
   };
 
   const updatedWallet = {
+    ...currentWallet,
     balance: currentWallet.balance - numAmount,
     transactions: [newTx, ...(currentWallet.transactions || [])]
   };
@@ -139,3 +143,85 @@ export const debitStudentWallet = async (studentId, amount, purpose = 'School Fe
 
   return updatedWallet;
 };
+
+/**
+ * Purchase GTE Coins using NGN Wallet Balance
+ * 1 GTE Coin = 4 NGN
+ */
+export const purchaseGteCoins = async (studentId, gteAmount) => {
+  const numGte = Number(gteAmount) || 0;
+  if (numGte <= 0) throw new Error('Amount of GTE coins must be greater than zero.');
+  
+  const costNgn = numGte * 4;
+  const currentWallet = await getStudentWallet(studentId);
+  
+  if (currentWallet.balance < costNgn) {
+    throw new Error(`Insufficient NGN balance. You need ₦${costNgn.toLocaleString()} to buy ${numGte} GTE Coins.`);
+  }
+
+  const txId = `TX-GTE-${Date.now().toString(36).toUpperCase()}`;
+  const newTx = {
+    id: txId,
+    type: 'DEBIT',
+    method: 'Wallet Direct',
+    amount: costNgn,
+    description: `Purchased ${numGte} GTE Coins`,
+    status: 'SUCCESS',
+    date: new Date().toISOString()
+  };
+
+  const updatedWallet = {
+    ...currentWallet,
+    balance: currentWallet.balance - costNgn,
+    gteCoins: (currentWallet.gteCoins || 0) + numGte,
+    transactions: [newTx, ...(currentWallet.transactions || [])]
+  };
+
+  saveLocalStorageWallet(studentId, updatedWallet);
+  try {
+    await setDoc(doc(db, 'wallets', String(studentId)), updatedWallet, { merge: true });
+  } catch (e) {
+    console.warn('Could not sync GTE purchase to Firestore:', e);
+  }
+
+  return updatedWallet;
+};
+
+/**
+ * Deduct GTE Coins for CBT Exam
+ */
+export const deductGteCoins = async (studentId, amount = 0.1, purpose = 'CBT Exam Fee') => {
+  const currentWallet = await getStudentWallet(studentId);
+  const numAmount = Number(amount) || 0;
+  
+  if ((currentWallet.gteCoins || 0) < numAmount) {
+    throw new Error(`Insufficient GTE Coins. You need ${numAmount} GTE Coins to proceed.`);
+  }
+
+  const txId = `TX-CBT-${Date.now().toString(36).toUpperCase()}`;
+  const newTx = {
+    id: txId,
+    type: 'DEBIT',
+    method: 'GTE Coin',
+    amount: 0, // No NGN deducted
+    description: purpose,
+    status: 'SUCCESS',
+    date: new Date().toISOString()
+  };
+
+  const updatedWallet = {
+    ...currentWallet,
+    gteCoins: currentWallet.gteCoins - numAmount,
+    transactions: [newTx, ...(currentWallet.transactions || [])]
+  };
+
+  saveLocalStorageWallet(studentId, updatedWallet);
+  try {
+    await setDoc(doc(db, 'wallets', String(studentId)), updatedWallet, { merge: true });
+  } catch (e) {
+    console.warn('Could not sync GTE deduction to Firestore:', e);
+  }
+
+  return updatedWallet;
+};
+

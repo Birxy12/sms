@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { sendNotification } from '../../utils/notifications';
+import { fundStudentWallet } from '../../utils/wallet';
+import { useAdminAuth } from '../../context/AdminAuthContext';
 import { db, storage } from '../../lib/firebase';
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
 import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy, where, setDoc, serverTimestamp } from 'firebase/firestore';
 import { uploadAvatar } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList, Printer, MoreVertical, KeyRound, Lock, RefreshCw, Sparkles, Eye, EyeOff, Phone, Copy, Check, ShieldCheck, Layers, MessageCircle } from 'lucide-react';
+import { Users, UserPlus, GraduationCap, Mail, Search, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, X, Filter, BookOpen, Camera, Upload, Award, ArrowUpDown, History, ClipboardList, Printer, MoreVertical, Wallet, KeyRound, Lock, RefreshCw, Sparkles, Eye, EyeOff, Phone, Copy, Check, ShieldCheck, Layers, MessageCircle } from 'lucide-react';
 import { getSubjectsForClass } from '../../utils/subjectConfig';
 import ImageCropperModal from '../../components/ImageCropperModal';
 import StudentAvatar from '../../components/StudentAvatar';
@@ -47,6 +50,29 @@ const StudentManagement = () => {
   // Admin Subject Registration state
   const [subjectRegModal, setSubjectRegModal] = useState(null); // { student }
   const [adminSelectedSubjects, setAdminSelectedSubjects] = useState([]);
+
+  const { currentAdmin } = useAdminAuth();
+  const [showFundModal, setShowFundModal] = useState(false);
+  const [fundStudent, setFundStudent] = useState(null);
+  const [fundAmount, setFundAmount] = useState('5000');
+  const [fundingProcessing, setFundingProcessing] = useState(false);
+  
+  const handleAdminFundWallet = async (e) => {
+    e.preventDefault();
+    const amount = Number(fundAmount);
+    if (!amount || amount <= 0) return;
+    setFundingProcessing(true);
+    try {
+      await fundStudentWallet(fundStudent.id, amount, 'Super Admin Credit');
+      alert(`Successfully credited ₦${amount.toLocaleString()} to ${fundStudent.name}'s wallet.`);
+      setShowFundModal(false);
+    } catch (err) {
+      alert(err.message || 'Failed to fund wallet.');
+    } finally {
+      setFundingProcessing(false);
+    }
+  };
+
   const [availableAdminSubjects, setAvailableAdminSubjects] = useState([]);
   const [savingSubjects, setSavingSubjects] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -741,7 +767,22 @@ const StudentManagement = () => {
                           onClick={() => { setActiveDropdown(null); handleDelete(student.id); }} 
                           className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-rose-50 text-slate-600 hover:text-rose-600 transition-colors text-xs font-bold text-left w-full"
                         >
-                          <Trash2 size={15} strokeWidth={2.5} /> Delete Student
+                          </button>
+
+                          {currentAdmin?.role === 'admin' && (
+                            <button 
+                              onClick={() => { setActiveDropdown(null); setFundStudent(student); setShowFundModal(true); }} 
+                              className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-emerald-50 text-slate-600 hover:text-emerald-600 transition-colors text-xs font-bold text-left w-full"
+                            >
+                              <Wallet size={15} strokeWidth={2.5} /> Fund NGN Wallet
+                            </button>
+                          )}
+
+                          <button 
+                            onClick={() => { setActiveDropdown(null); handleDelete(student.id); }} 
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-rose-50 text-slate-600 hover:text-rose-600 transition-colors text-xs font-bold text-left w-full"
+                          >
+                            <Trash2 size={15} strokeWidth={2.5} /> Delete Student
                         </button>
                       </div>
                     )}

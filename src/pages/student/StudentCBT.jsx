@@ -12,13 +12,15 @@ import {
 import {
   AlertCircle,
   Award,
-  CheckCircle2,
+  CheckCircle,
   ChevronRight,
   Clock,
-  FileQuestion,
   Loader2,
+  RefreshCw,
   Send,
+  X
 } from 'lucide-react';
+import { deductGteCoins } from '../../utils/wallet';
 import '../dashboard/CBT.css';
 
 const StudentCBT = () => {
@@ -91,7 +93,17 @@ const StudentCBT = () => {
     return acc;
   }, {}), [submissions]);
 
-  const startExam = (exam) => {
+  const startExam = async (exam) => {
+    try {
+      setLoading(true);
+      await deductGteCoins(regNo, 0.1, `CBT Exam Fee: ${exam.title}`);
+    } catch (error) {
+      alert(error.message || 'Failed to deduct GTE Coins. Please buy more GTE Coins to take this exam.');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(false);
     setActiveExam(exam);
     setAnswers({});
     setStartedAt(new Date());

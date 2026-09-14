@@ -203,8 +203,7 @@ export default function AnalyticsReportModal({
   const handleDownloadPDF = async () => {
     setIsGenerating(true);
     try {
-      const html2pdf = (await import('html2pdf.js')).default;
-      const element = printRef.current;
+            const element = printRef.current;
       
       const opt = {
         margin: [8, 8, 8, 8],

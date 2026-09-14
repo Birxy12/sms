@@ -9,7 +9,7 @@ import {
   AlertCircle, Star, ArrowUpRight, ArrowDownRight, Clock, User, Zap, GraduationCap, ChevronDown,
   Eye, EyeOff, PlusCircle, Search, CheckCircle2, X, RefreshCw, BarChart3, Sparkles, Settings, Receipt, FileText
 } from 'lucide-react';
-import { getStudentWallet, fundStudentWallet, debitStudentWallet } from '../../utils/wallet';
+import { getStudentWallet, purchaseGteCoins } from '../../utils/wallet';
 import { MARKS_KEYS, expandMarks, STUDENT_KEYS } from '../../utils/firestoreSchema';
 import { getProspectusFeeData, getClassFees, getExpectedFeeForStudent, formatNaira } from '../../utils/prospectusFees';
 import { useNavigate } from 'react-router-dom';
@@ -339,56 +339,30 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
     loadData();
   }, [currentStudent, className, regNum, authReady, currentSession]);
 
-  const handleFundSubmit = async (e) => {
+  const handleBuyGteSubmit = async (e) => {
     e.preventDefault();
-    const amount = Number(fundAmount);
-    if (!amount || amount <= 0) return;
+    const gteAmount = Number(fundAmount);
+    if (!gteAmount || gteAmount <= 0) return;
+    
+    const costNgn = gteAmount * 4;
+    if (walletData.balance < costNgn) {
+      return alert(`Insufficient NGN balance. You need ₦${costNgn.toLocaleString()} to buy ${gteAmount} GTE Coins.`);
+    }
+
     setFundingProcessing(true);
     setFundSuccessMsg('');
     try {
-      await new Promise(r => setTimeout(r, 1200));
-      const ref = `REF-${Math.floor(100000 + Math.random() * 900000)}`;
-      const updated = await fundStudentWallet(currentStudent?.id || regNum, amount, fundMethod, ref);
+      await new Promise(r => setTimeout(r, 800));
+      const updated = await purchaseGteCoins(currentStudent?.id || regNum, gteAmount);
       setWalletData(updated);
-      setFundSuccessMsg(`Wallet funded successfully with ₦${amount.toLocaleString()}!`);
+      setFundSuccessMsg(`Successfully purchased ${gteAmount} GTE Coins!`);
       setTimeout(() => {
         setShowFundModal(false);
         setFundSuccessMsg('');
-        setFundAmount('5000');
+        setFundAmount('100');
       }, 1800);
     } catch (e) {
-      alert("Failed to fund wallet: " + e.message);
-    } finally {
-      setFundingProcessing(false);
-    }
-  };
-
-  const handlePayFeeWithWallet = async () => {
-    const amountToPay = feeData.balance;
-    if (amountToPay <= 0) return alert('No pending school fees balance!');
-    if (walletData.balance < amountToPay) {
-      return alert(`Insufficient wallet balance. Available: ₦${walletData.balance.toLocaleString()}, Fee Due: ₦${amountToPay.toLocaleString()}`);
-    }
-    try {
-      setFundingProcessing(true);
-      const ref = `PAY-FEE-${Math.floor(100000 + Math.random() * 900000)}`;
-      const updated = await debitStudentWallet(currentStudent?.id || regNum, amountToPay, `School Fee Payment for ${currentSession}`, ref);
-      setWalletData(updated);
-
-      // Update Firestore student record
-      if (currentStudent?.id) {
-        const newPaid = feeData.paid + amountToPay;
-        await setDoc(doc(db, 'students', currentStudent.id), {
-          paidFee: newPaid,
-          paidAmount: newPaid,
-          lastPaymentDate: new Date().toISOString()
-        }, { merge: true }).catch(() => {});
-        setFeeData(prev => ({ ...prev, paid: newPaid, balance: 0, lastDate: 'Today' }));
-      }
-      alert(`Payment of ₦${amountToPay.toLocaleString()} successful! Your school fees are fully cleared.`);
-      setShowFeePayModal(false);
-    } catch (err) {
-      alert(err.message || 'Fee payment failed');
+      alert("Failed to purchase GTE Coins: " + e.message);
     } finally {
       setFundingProcessing(false);
     }
@@ -749,11 +723,11 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
                       <div>
                         <div className="flex items-center gap-3 text-emerald-400 font-black text-xs uppercase tracking-wider mb-2">
                           <Wallet size={18} />
-                          <span>Student Digital e-Wallet</span>
+                          <span>Student Digital e-Wallet & GTE Coins</span>
                         </div>
                         <div className="flex items-center gap-4">
                           <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white">
-                            {showBalance ? `₦${walletData.balance.toLocaleString()}` : '••••••••'}
+                            {showBalance ? `₦${walletData.balance.toLocaleString()} | ${walletData.gteCoins || 0} GTE` : '••••••••'}
                           </h2>
                           <button
                             onClick={() => setShowBalance(!showBalance)}
@@ -764,25 +738,17 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
                           </button>
                         </div>
                         <p className="text-xs text-slate-400 font-semibold mt-2">
-                          Available for instant fee payment, CBT tokens, and school shop purchases.
+                          Available for CBT tokens and school shop purchases. NGN Wallet can only be funded by Super Admin.
                         </p>
                       </div>
 
-                      <div className="flex flex-wrap gap-3 w-full md:w-auto">
+                      <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-emerald-500/20">
                         <button
                           onClick={() => setShowFundModal(true)}
                           className="flex-1 md:flex-none px-6 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-2xl transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20 text-sm"
                         >
-                          <PlusCircle size={18} /> Fund Wallet
+                          <PlusCircle size={18} /> Buy GTE Coins
                         </button>
-                        {feeData.balance > 0 && (
-                          <button
-                            onClick={() => setShowFeePayModal(true)}
-                            className="flex-1 md:flex-none px-6 py-3.5 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white font-black rounded-2xl transition-all flex items-center justify-center gap-2 text-sm border border-white/10"
-                          >
-                            <CreditCard size={18} /> Pay School Fees (₦{feeData.balance.toLocaleString()})
-                          </button>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -1024,11 +990,6 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
                       </div>
                     </div>
                     <div className="mt-8 space-y-3">
-                      {!(feeIsCleared || isScholarship) ? (
-                        <button onClick={() => setShowFeePayModal(true)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 transition-all">
-                          <Wallet size={18} /> Pay Fee via Student Wallet
-                        </button>
-                      ) : null}
                       <button onClick={() => navigate('/students/fees')} className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2 border border-slate-700/60 hover:scale-[1.01] active:scale-95 transition-all">
                         <FileText size={18} className="text-indigo-400" />
                         <span>Open Full Fee Portal</span>
@@ -1158,7 +1119,7 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
         )}
       </AnimatePresence>
 
-      {/* ===== FUND WALLET MODAL ===== */}
+      {/* ===== BUY GTE COINS MODAL ===== */}
       {showFundModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[2rem] max-w-md w-full p-8 shadow-2xl space-y-6 relative">
@@ -1171,8 +1132,8 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
                 <PlusCircle size={24} />
               </div>
               <div>
-                <h3 className="text-xl font-black text-slate-800">Fund Wallet</h3>
-                <p className="text-xs text-slate-400 font-bold uppercase">Instant Credit Gateway</p>
+                <h3 className="text-xl font-black text-slate-800">Buy GTE Coins</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase">1 GTE = 4 NGN</p>
               </div>
             </div>
 
@@ -1182,13 +1143,13 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
                 <p className="font-black text-emerald-800 text-sm">{fundSuccessMsg}</p>
               </div>
             ) : (
-              <form onSubmit={handleFundSubmit} className="space-y-6">
+              <form onSubmit={handleBuyGteSubmit} className="space-y-6">
                 <div>
-                  <label className="text-xs font-black text-slate-500 uppercase block mb-2">Deposit Amount (₦)</label>
+                  <label className="text-xs font-black text-slate-500 uppercase block mb-2">Number of GTE Coins</label>
                   <input
                     type="number"
-                    min="500"
-                    max="500000"
+                    min="1"
+                    max="10000"
                     required
                     value={fundAmount}
                     onChange={(e) => setFundAmount(e.target.value)}
@@ -1196,7 +1157,7 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
                   />
                   {/* Preset Chips */}
                   <div className="flex flex-wrap gap-2 mt-3">
-                    {['2000', '5000', '10000', '20000', '50000'].map(amt => (
+                    {['100', '250', '500', '1000'].map(amt => (
                       <button
                         key={amt}
                         type="button"
@@ -1205,100 +1166,26 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
                           fundAmount === amt ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                         }`}
                       >
-                        +₦{Number(amt).toLocaleString()}
+                        {amt} GTE (₦{Number(amt) * 4})
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-xs font-black text-slate-500 uppercase block mb-2">Payment Method</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: 'Card Payment', label: 'Debit Card' },
-                      { id: 'Bank Transfer', label: 'Transfer' },
-                      { id: 'USSD', label: 'USSD Code' }
-                    ].map(m => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => setFundMethod(m.id)}
-                        className={`py-3 px-2 rounded-2xl text-xs font-black border text-center transition-all ${
-                          fundMethod === m.id ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        {m.label}
-                      </button>
-                    ))}
-                  </div>
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs font-bold text-slate-600 flex justify-between">
+                  <span>Cost (NGN):</span>
+                  <span className="text-slate-800 font-black">₦{(Number(fundAmount || 0) * 4).toLocaleString()}</span>
                 </div>
 
                 <button
                   type="submit"
                   disabled={fundingProcessing}
-                  className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-black text-base rounded-2xl transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-base rounded-2xl transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2"
                 >
-                  {fundingProcessing ? <RefreshCw size={20} className="animate-spin" /> : <PlusCircle size={20} />}
-                  {fundingProcessing ? 'Processing Payment...' : `Confirm Deposit (₦${Number(fundAmount || 0).toLocaleString()})`}
+                  {fundingProcessing ? <RefreshCw size={20} className="animate-spin" /> : <CheckCircle2 size={20} />}
+                  {fundingProcessing ? 'Processing Purchase...' : `Buy ${Number(fundAmount || 0).toLocaleString()} GTE Coins`}
                 </button>
               </form>
-            )}
-          </motion.div>
-        </div>
-      )}
-
-      {/* ===== PAY FEE VIA WALLET MODAL ===== */}
-      {showFeePayModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[2rem] max-w-md w-full p-8 shadow-2xl space-y-6 relative">
-            <button onClick={() => setShowFeePayModal(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600">
-              <X size={20} />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black">
-                <CreditCard size={24} />
-              </div>
-              <div>
-                <h3 className="text-xl font-black text-slate-800">Pay School Fees</h3>
-                <p className="text-xs text-slate-400 font-bold uppercase">Direct Wallet Debit</p>
-              </div>
-            </div>
-
-            <div className="space-y-3 bg-slate-50 p-5 rounded-2xl border border-slate-100 text-sm">
-              <div className="flex justify-between font-bold text-slate-600">
-                <span>Fee Amount Due:</span>
-                <span className="font-black text-rose-600">₦{feeData.balance.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between font-bold text-slate-600">
-                <span>Your Wallet Balance:</span>
-                <span className="font-black text-emerald-600">₦{walletData.balance.toLocaleString()}</span>
-              </div>
-              <div className="border-t border-slate-200 pt-2 flex justify-between font-black text-slate-800">
-                <span>Balance After Payment:</span>
-                <span>₦{(walletData.balance - feeData.balance).toLocaleString()}</span>
-              </div>
-            </div>
-
-            {walletData.balance < feeData.balance ? (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs font-bold text-amber-800 space-y-2">
-                <p>Your wallet balance is insufficient to pay this fee balance.</p>
-                <button
-                  onClick={() => { setShowFeePayModal(false); setShowFundModal(true); }}
-                  className="px-4 py-2 bg-amber-500 text-white rounded-xl font-black text-xs inline-block"
-                >
-                  Fund Wallet First →
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={handlePayFeeWithWallet}
-                disabled={fundingProcessing}
-                className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-black text-base rounded-2xl transition-all shadow-xl flex items-center justify-center gap-2"
-              >
-                {fundingProcessing ? <RefreshCw size={20} className="animate-spin" /> : <CheckCircle2 size={20} />}
-                {fundingProcessing ? 'Processing Fee Debit...' : 'Pay Fee Now'}
-              </button>
             )}
           </motion.div>
         </div>

@@ -92,6 +92,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom', 'lucide-react', 'recharts', 'framer-motion', 'antd'],
+          pdf: ['html2pdf.js'],
         },
       },
     },

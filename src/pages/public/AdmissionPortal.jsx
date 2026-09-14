@@ -581,8 +581,7 @@ const AdmissionPortal = () => {
       autoEmailSent.current = true;
       const sendAdmissionEmail = async () => {
         try {
-          const html2pdf = (await import('html2pdf.js')).default;
-          const opt = {
+                    const opt = {
             margin: [6, 6, 6, 6],
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true },
@@ -669,8 +668,7 @@ const AdmissionPortal = () => {
 
     setIsLetterPdfGenerating(true);
     try {
-      const html2pdf = (await import('html2pdf.js')).default;
-
+      
       const opt = {
         margin: [6, 6, 6, 6],
         filename: `admission-letter-${(appData?.applicant?.fullName || 'candidate').replace(/\s+/g, '-').toLowerCase()}-${appData?.appNo || 'letter'}.pdf`,
@@ -858,8 +856,7 @@ const AdmissionPortal = () => {
 
     setIsReceiptPdfGenerating(true);
     try {
-      const html2pdf = (await import('html2pdf.js')).default;
-      const opt = {
+            const opt = {
         margin: [6, 6, 6, 6],
         filename: `admission-receipt-${(appData?.applicant?.fullName || 'student').replace(/\s+/g, '-').toLowerCase()}-${appData?.appNo || 'rcp'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
