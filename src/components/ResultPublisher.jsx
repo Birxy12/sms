@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { doc, setDoc, serverTimestamp, collection, getDocs, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { FileUp, CheckCircle, AlertCircle, Save, Trash2, Calendar, Users, Loader2 } from 'lucide-react';
+import { sendNotification } from '../utils/notifications';
 import { useTheme } from '../context/ThemeContext';
 import { CLASS_LIST } from '../utils/subjectConfig';
 // import { promoteStudents } from '../utils/promotion'; // temporarily disabled
@@ -54,7 +55,6 @@ const ResultPublisher = () => {
       // Notify students via Email
       try {
         const { query, collection, where, getDocs } = await import('firebase/firestore');
-        const { sendNotification } = await import('../utils/notifications');
         
         let usersQuery;
         if (targetClass === 'All Classes') {

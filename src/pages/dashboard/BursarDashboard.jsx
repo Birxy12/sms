@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { sendNotification } from '../../utils/notifications';
 import { fetchGlobalClasses, DEFAULT_CLASSES, normalizeClassName, getUniqueClasses } from '../../utils/classUtils';
 import { getClassCode, formatRegNumberSuffix } from '../../utils/regNoGenerator';
 import { createWhatsAppChatUrl } from '../../utils/whatsapp';
@@ -516,8 +517,7 @@ const BursarDashboard = () => {
       setLoading(true);
       setStatus({ type: 'info', message: 'PIN Verified. Wiping all fee records and logging audit date...' });
 
-      const { ensureFirebaseAuth } = await import('../../lib/ensureAuth');
-      await ensureFirebaseAuth();
+        await ensureFirebaseAuth();
       let batch = writeBatch(db);
       let count = 0;
       
@@ -1896,7 +1896,6 @@ const BursarDashboard = () => {
         // Notify Student via Email
         if (selectedStudent.email) {
           try {
-            const { sendNotification } = await import('../../utils/notifications');
             await sendNotification({
               type: 'email',
               subject: `Payment Receipt: \u20a6${amount.toLocaleString()}`,

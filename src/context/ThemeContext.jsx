@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { ensureFirebaseAuth } from '../lib/ensureAuth';
 
 const ThemeContext = createContext({
   schoolName: 'BONUS DOMINUS SECONDARY SCHOOL',
@@ -124,7 +125,6 @@ export const ThemeProvider = ({ children }) => {
 
     const initBranding = async () => {
       try {
-        const { ensureFirebaseAuth } = await import('../lib/ensureAuth');
         await ensureFirebaseAuth();
 
         const docSnap = await getDoc(doc(db, 'settings', 'branding'));

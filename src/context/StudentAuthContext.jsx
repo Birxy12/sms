@@ -410,7 +410,6 @@ export const StudentAuthProvider = ({ children }) => {
 
         // 2. Dispatch via notification service (Email / SMS)
         try {
-          const { sendNotification } = await import('../utils/notifications');
           const recipients = [{
             email: studentEmail.trim(),
             phone: studentPhone.trim(),
@@ -432,7 +431,6 @@ export const StudentAuthProvider = ({ children }) => {
         let whatsAppUrl = null;
         if (hasPhone) {
           try {
-            const { generateWhatsAppPinReset } = await import('../utils/whatsapp');
             const waData = generateWhatsAppPinReset({
               phone: studentPhone,
               studentName,
