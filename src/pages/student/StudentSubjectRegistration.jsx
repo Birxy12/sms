@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useStudentAuth } from '../../context/StudentAuthContext';
 import { getSubjectsForClass } from '../../utils/subjectConfig';
 import { BookOpen, CheckSquare, Square, AlertCircle, Save, Loader2, Lock } from 'lucide-react';
@@ -52,16 +52,35 @@ const StudentSubjectRegistration = () => {
       return;
     }
 
-    // Determine subject list based on class and optional stream selection
-    let subjects = [];
-    const genericSS = /^(SS2|SS3)$/.test(currentStudent.className);
-    if (genericSS && selectedStream) {
-      // Combine class name with chosen stream (e.g., 'SS2 ART')
-      subjects = getSubjectsForClass(`${currentStudent.className} ${selectedStream}`);
-    } else {
-      subjects = getSubjectsForClass(currentStudent.className);
-    }
-    setAvailableSubjects(subjects);
+    const fetchSubjects = async () => {
+      let queryClass = currentStudent.className;
+      const genericSS = /^(SS2|SS3)$/.test(currentStudent.className);
+      if (genericSS && selectedStream) {
+        queryClass = `${currentStudent.className} ${selectedStream}`;
+      }
+
+      const baseSubjects = getSubjectsForClass(queryClass);
+
+      try {
+        const q = query(collection(db, 'subjects'), where('class', '==', queryClass));
+        const snap = await getDocs(q);
+        
+        const firestoreSubjects = snap.docs.map(d => d.data());
+        const deletedNames = new Set(firestoreSubjects.filter(s => s.isDeleted).map(s => s.name.toUpperCase().trim()));
+        const customNames = firestoreSubjects.filter(s => !s.isDeleted).map(s => s.name.toUpperCase().trim());
+
+        let merged = new Set(baseSubjects.map(s => s.toUpperCase().trim()));
+        deletedNames.forEach(name => merged.delete(name));
+        customNames.forEach(name => merged.add(name));
+
+        setAvailableSubjects(Array.from(merged).sort());
+      } catch (err) {
+        console.error("Error fetching custom subjects", err);
+        setAvailableSubjects(baseSubjects); // fallback
+      }
+    };
+
+    fetchSubjects();
 
     // Load existing selected subjects
     if (currentStudent.registeredSubjects && Array.isArray(currentStudent.registeredSubjects)) {

@@ -47,6 +47,7 @@ const StudentManagement = () => {
   // Admin Subject Registration state
   const [subjectRegModal, setSubjectRegModal] = useState(null); // { student }
   const [adminSelectedSubjects, setAdminSelectedSubjects] = useState([]);
+  const [availableAdminSubjects, setAvailableAdminSubjects] = useState([]);
   const [savingSubjects, setSavingSubjects] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
 
@@ -78,10 +79,28 @@ const StudentManagement = () => {
       document.removeEventListener('touchstart', handleClickOutside);
     };
   }, []);
-  const openSubjectRegModal = (student) => {
+  const openSubjectRegModal = async (student) => {
     setSubjectRegModal({ student });
-    const available = getSubjectsForClass(student.className);
     setAdminSelectedSubjects(student.registeredSubjects || []);
+    
+    // Fetch custom subjects
+    const baseSubjects = getSubjectsForClass(student.className);
+    try {
+      const q = query(collection(db, 'subjects'), where('class', '==', student.className));
+      const snap = await getDocs(q);
+      const firestoreSubjects = snap.docs.map(d => d.data());
+      const deletedNames = new Set(firestoreSubjects.filter(s => s.isDeleted).map(s => s.name.toUpperCase().trim()));
+      const customNames = firestoreSubjects.filter(s => !s.isDeleted).map(s => s.name.toUpperCase().trim());
+
+      let merged = new Set(baseSubjects.map(s => s.toUpperCase().trim()));
+      deletedNames.forEach(name => merged.delete(name));
+      customNames.forEach(name => merged.add(name));
+
+      setAvailableAdminSubjects(Array.from(merged).sort());
+    } catch (err) {
+      console.error(err);
+      setAvailableAdminSubjects(baseSubjects);
+    }
   };
 
   const toggleAdminSubject = (subject) => {
@@ -860,7 +879,7 @@ const StudentManagement = () => {
 
       {/* Admin Subject Registration Modal */}
       {subjectRegModal && (() => {
-        const availableSubjects = getSubjectsForClass(subjectRegModal.student.className);
+        const availableSubjects = availableAdminSubjects;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
