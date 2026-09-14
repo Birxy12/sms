@@ -259,7 +259,27 @@ const CourseManagement = () => {
     }
     try {
       if (isEditing && currentSubject.id) {
-        await updateDoc(doc(db, 'subjects', currentSubject.id), { ...currentSubject, teacherName });
+        if (currentSubject.isConfigSubject && currentSubject.name.trim().toUpperCase() !== currentSubject.originalName?.trim().toUpperCase()) {
+          // They renamed a config subject. To prevent the hardcoded config subject from reappearing,
+          // we soft-delete the original and create a new custom subject with the new name.
+          await updateDoc(doc(db, 'subjects', currentSubject.id), { isDeleted: true });
+          
+          const newSubData = { ...currentSubject, teacherName };
+          delete newSubData.id;
+          delete newSubData.originalName;
+          delete newSubData.isConfigSubject;
+          delete newSubData.inFirestore;
+          delete newSubData.isCustom;
+          
+          await addDoc(collection(db, 'subjects'), { ...newSubData, createdAt: new Date().toISOString() });
+        } else {
+          const updateData = { ...currentSubject, teacherName };
+          delete updateData.originalName;
+          delete updateData.isConfigSubject;
+          delete updateData.inFirestore;
+          delete updateData.isCustom;
+          await updateDoc(doc(db, 'subjects', currentSubject.id), updateData);
+        }
         setStatus({ type: 'success', message: 'Subject updated!' });
       } else {
         await addDoc(collection(db, 'subjects'), { ...currentSubject, teacherName, createdAt: new Date().toISOString() });
@@ -478,7 +498,7 @@ const CourseManagement = () => {
                       <div className="flex items-center justify-end gap-2">
                         {sub.id && (
                           <button
-                            onClick={() => { setIsEditing(true); setCurrentSubject(sub); setShowModal(true); }}
+                            onClick={() => { setIsEditing(true); setCurrentSubject({ ...sub, originalName: sub.name }); setShowModal(true); }}
                             className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all"
                             title="Edit subject"
                           >
