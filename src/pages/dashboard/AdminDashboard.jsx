@@ -2118,25 +2118,39 @@ const AdminDashboard = () => {
                   {(globalHouses && globalHouses.length > 0 ? globalHouses : ['Unassigned']).map(houseName => {
                     const members = houseStudentData[houseName] || [];
                     const unassigned = houseStudentData['Unassigned'] || [];
+                    
+                    const getHouseColors = (name) => {
+                      const n = name.toLowerCase();
+                      if (n.includes('blue')) return { bg: 'bg-blue-50', gradient: 'bg-gradient-to-br from-blue-400 to-blue-600', badge: 'bg-blue-100 text-blue-700', gradHead: 'bg-gradient-to-r from-blue-50 to-blue-100/50', iconTxt: 'text-blue-600' };
+                      if (n.includes('red') || n.includes('cherry')) return { bg: 'bg-rose-50', gradient: 'bg-gradient-to-br from-rose-400 to-rose-600', badge: 'bg-rose-100 text-rose-700', gradHead: 'bg-gradient-to-r from-rose-50 to-rose-100/50', iconTxt: 'text-rose-600' };
+                      if (n.includes('green') || n.includes('alamanda')) return { bg: 'bg-emerald-50', gradient: 'bg-gradient-to-br from-emerald-400 to-emerald-600', badge: 'bg-emerald-100 text-emerald-700', gradHead: 'bg-gradient-to-r from-emerald-50 to-emerald-100/50', iconTxt: 'text-emerald-600' };
+                      if (n.includes('purple')) return { bg: 'bg-purple-50', gradient: 'bg-gradient-to-br from-purple-400 to-purple-600', badge: 'bg-purple-100 text-purple-700', gradHead: 'bg-gradient-to-r from-purple-50 to-purple-100/50', iconTxt: 'text-purple-600' };
+                      if (n.includes('gold') || n.includes('yellow')) return { bg: 'bg-amber-50', gradient: 'bg-gradient-to-br from-amber-400 to-amber-500', badge: 'bg-amber-100 text-amber-700', gradHead: 'bg-gradient-to-r from-amber-50 to-yellow-50', iconTxt: 'text-amber-600' };
+                      if (n.includes('diamond') || n.includes('white')) return { bg: 'bg-sky-50', gradient: 'bg-gradient-to-br from-sky-300 to-cyan-400', badge: 'bg-sky-100 text-sky-700', gradHead: 'bg-gradient-to-r from-sky-50 to-cyan-50/50', iconTxt: 'text-sky-600' };
+                      if (n.includes('silver') || n.includes('grey') || n.includes('gray')) return { bg: 'bg-slate-100', gradient: 'bg-gradient-to-br from-slate-400 to-slate-500', badge: 'bg-slate-200 text-slate-700', gradHead: 'bg-gradient-to-r from-slate-100 to-slate-50', iconTxt: 'text-slate-600' };
+                      return { bg: 'bg-indigo-50', gradient: 'bg-gradient-to-br from-indigo-400 to-indigo-600', badge: 'bg-indigo-100 text-indigo-700', gradHead: 'bg-gradient-to-r from-indigo-50 to-indigo-100/50', iconTxt: 'text-indigo-600' };
+                    };
+                    const colors = getHouseColors(houseName);
+
                     return (
                       <div key={houseName} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-amber-50 to-orange-50 flex items-center justify-between">
+                        <div className={`p-4 border-b border-slate-100 ${colors.gradHead} flex items-center justify-between`}>
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                            <div className={`w-8 h-8 rounded-xl ${colors.gradient} flex items-center justify-center`}>
                               <Home size={14} className="text-white" />
                             </div>
                             <div>
                               <p className="font-black text-slate-800 text-sm">{houseName}</p>
-                              <p className="text-[10px] font-bold text-slate-400">{members.length} student{members.length !== 1 ? 's' : ''}</p>
+                              <p className="text-[10px] font-bold text-slate-500">{members.length} student{members.length !== 1 ? 's' : ''}</p>
                             </div>
                           </div>
-                          <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">{members.length}</span>
+                          <span className={`text-xs font-black px-2.5 py-1 rounded-full ${colors.badge}`}>{members.length}</span>
                         </div>
                         {members.length > 0 ? (
                           <div className="divide-y divide-slate-50 max-h-48 overflow-y-auto">
                             {members.map(s => (
                               <div key={s.id} className="flex items-center gap-3 px-4 py-2.5">
-                                <div className="w-7 h-7 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 font-black text-xs shrink-0 overflow-hidden">
+                                <div className={`w-7 h-7 rounded-full ${colors.bg} flex items-center justify-center ${colors.iconTxt} font-black text-xs shrink-0 overflow-hidden`}>
                                   {s.photo ? <img src={s.photo} alt="" className="w-full h-full object-cover rounded-full" /> : (s.name || '?')[0]}
                                 </div>
                                 <div className="flex-1 min-w-0">
