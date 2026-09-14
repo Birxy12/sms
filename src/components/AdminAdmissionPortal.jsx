@@ -9,6 +9,7 @@ import QRCodeDisplay from './QRCodeDisplay';
 import { getApplicantFeeBreakdown, formatNaira, getBookPackForClass, formatBookPackString, calculateBookPackCost } from '../utils/prospectusFees';
 import { getDoc } from 'firebase/firestore';
 import AnalyticsReportModal from './AnalyticsReportModal';
+import { DEFAULT_CLASSES, getUniqueClasses } from '../utils/classUtils';
 
 const AdminAdmissionPortal = () => {
   const [admissions, setAdmissions] = useState([]);
@@ -18,6 +19,7 @@ const AdminAdmissionPortal = () => {
   const [editingId, setEditingId] = useState(null);
   const [editStatus, setEditStatus] = useState('');
   const [editName, setEditName] = useState('');
+  const [editTargetClass, setEditTargetClass] = useState('');
   const [editExamStatus, setEditExamStatus] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -185,12 +187,15 @@ const AdminAdmissionPortal = () => {
         status: editStatus,
         cbtCompleted: editExamStatus,
         studentName: editName || adm.studentName || adm.fullName || adm.applicantName,
+        targetClass: editTargetClass || adm.classApplyingFor || adm.targetClass || adm.appliedClass || adm.class || adm.className,
+        classApplyingFor: editTargetClass || adm.classApplyingFor || adm.targetClass || adm.appliedClass || adm.class || adm.className,
         regNo: regNo,
         updatedAt: new Date().toISOString()
       });
       setEditingId(null);
       setEditStatus('');
       setEditName('');
+      setEditTargetClass('');
     } catch (error) {
       console.error('Error updating status:', error);
       alert('Failed to update status.');
@@ -460,9 +465,23 @@ const AdminAdmissionPortal = () => {
                     )}
                   </td>
                   <td className="py-4 px-4 text-sm text-slate-600 dark:text-slate-400">
-                    <span className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg font-medium">
-                      {adm.classApplyingFor || adm.targetClass || adm.appliedClass || adm.class || adm.className || 'N/A'}
-                    </span>
+                    {editingId === adm.id ? (
+                      <select
+                        className="px-2 py-1 border border-slate-300 rounded text-xs focus:outline-none max-w-[120px]"
+                        value={editTargetClass}
+                        onChange={(e) => setEditTargetClass(e.target.value)}
+                        disabled={isUpdating}
+                      >
+                        <option value="">Select Class</option>
+                        {getUniqueClasses(DEFAULT_CLASSES).map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg font-medium">
+                        {adm.classApplyingFor || adm.targetClass || adm.appliedClass || adm.class || adm.className || 'N/A'}
+                      </span>
+                    )}
                   </td>
                   <td className="py-4 px-4 text-sm font-mono text-slate-700 dark:text-slate-300">
                     {adm.status?.toLowerCase() === 'admitted' || adm.status?.toLowerCase() === 'granted' ? (adm.regNo || 'Pending') : 'N/A'}
@@ -542,11 +561,12 @@ const AdminAdmissionPortal = () => {
                                 setEditStatus(adm.status || 'Pending');
                                 setEditExamStatus(adm.cbtCompleted || false);
                                 setEditName(adm.studentName || adm.fullName || adm.applicantName || '');
+                                setEditTargetClass(adm.classApplyingFor || adm.targetClass || adm.appliedClass || adm.class || adm.className || '');
                                 setActiveDropdown(null);
                               }}
                               className="w-full text-left px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-2 transition-colors"
                             >
-                              <Edit size={14} /> Edit Status
+                              <Edit size={14} /> Edit Details
                             </button>
                           )}
                           <button
