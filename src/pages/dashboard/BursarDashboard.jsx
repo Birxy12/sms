@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { ensureFirebaseAuth } from '../../lib/ensureAuth';
-import { collection, query, getDocs, orderBy, doc, updateDoc as fbUpdateDoc, writeBatch as fbWriteBatch, addDoc as fbAddDoc, serverTimestamp, setDoc as fbSetDoc, getDoc, limit, arrayUnion } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, doc, updateDoc as fbUpdateDoc, writeBatch as fbWriteBatch, addDoc as fbAddDoc, serverTimestamp, setDoc as fbSetDoc, getDoc, limit, arrayUnion, onSnapshot } from 'firebase/firestore';
 import { 
   Wallet, DollarSign, TrendingUp, TrendingDown, Users, 
   Search, Download, Plus, ArrowUpRight, 
@@ -296,83 +296,92 @@ const BursarDashboard = () => {
     let unsubscribeStudents = null;
     let unsubscribeFees = null;
     let unsubscribeMessages = null;
+    let isMounted = true;
 
     const setupListeners = async () => {
       try {
         await ensureFirebaseAuth();
+        if (!isMounted) return;
         
         // Sync Classes
         try {
           const dynamicClasses = await fetchGlobalClasses();
-          setClasses(dynamicClasses);
+          if (isMounted) setClasses(dynamicClasses);
         } catch (cErr) {
           console.warn("Class sync error:", cErr);
         }
+        
+        if (!isMounted) return;
 
         // Setup Fee Settings Listener
-        import('firebase/firestore').then(({ onSnapshot }) => {
-          unsubscribeFees = onSnapshot(doc(db, 'settings', 'fees'), (feeSnap) => {
-            let loadedFees = {};
-            if (feeSnap.exists()) {
-              loadedFees = feeSnap.data() || {};
-              setFeeSettings(loadedFees);
-            }
+        unsubscribeFees = onSnapshot(doc(db, 'settings', 'fees'), (feeSnap) => {
+          let loadedFees = {};
+          if (feeSnap.exists()) {
+            loadedFees = feeSnap.data() || {};
+            if (isMounted) setFeeSettings(loadedFees);
+          }
 
-            // Setup Students Listener AFTER getting fees to accurately calculate expectations
-            if (!unsubscribeStudents) {
-              unsubscribeStudents = onSnapshot(collection(db, 'students'), (snap) => {
-                const students = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          // Setup Students Listener AFTER getting fees to accurately calculate expectations
+          if (!unsubscribeStudents && isMounted) {
+            unsubscribeStudents = onSnapshot(collection(db, 'students'), (snap) => {
+              const students = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+              
+              const activities = [];
+              snap.forEach(docSnap => {
+                const s = docSnap.data();
+                const name = s.name || s.fullName || s.n || 'Student';
+                const cls = s.className || s.c || 'Unassigned';
+                const dateVal = s.createdAt || s.enrolledAt || s.registeredAt;
                 
-                const activities = [];
-                snap.forEach(docSnap => {
-                  const s = docSnap.data();
-                  const name = s.name || s.fullName || s.n || 'Student';
-                  const cls = s.className || s.c || 'Unassigned';
-                  const dateVal = s.createdAt || s.enrolledAt || s.registeredAt;
-                  
-                  if (dateVal) {
-                    activities.push({
-                      id: `enroll-${docSnap.id}`,
-                      text: `New student ${name} enrolled in ${cls}`,
-                      time: formatRelativeTime(dateVal),
-                      timestamp: new Date(dateVal).getTime() || Date.now(),
-                      type: 'enrollment',
-                      icon: UserPlus,
-                      color: 'text-indigo-600 bg-indigo-50'
-                    });
-                  }
+                if (dateVal) {
+                  activities.push({
+                    id: `enroll-${docSnap.id}`,
+                    text: `New student ${name} enrolled in ${cls}`,
+                    time: formatRelativeTime(dateVal),
+                    timestamp: new Date(dateVal).getTime() || Date.now(),
+                    type: 'enrollment',
+                    icon: UserPlus,
+                    color: 'text-indigo-600 bg-indigo-50'
+                  });
+                }
 
-                  const paidAmt = parseFloat(s.paidFee || s.paidAmount || 0);
-                  if (paidAmt > 0 || s.lastPaymentDate) {
-                    const pDate = s.lastPaymentDate || s.updatedAt || dateVal;
-                    activities.push({
-                      id: `pay-${docSnap.id}`,
-                      text: `Fee payment (₦${paidAmt.toLocaleString()}) confirmed for ${name} (${cls})`,
-                      time: formatRelativeTime(pDate),
-                      timestamp: new Date(pDate).getTime() || Date.now() - 3600000,
-                      type: 'payment',
-                      icon: CreditCard,
-                      color: 'text-emerald-600 bg-emerald-50'
-                    });
-                  }
-                });
-                
-                activities.sort((a, b) => b.timestamp - a.timestamp);
+                const paidAmt = parseFloat(s.paidFee || s.paidAmount || 0);
+                if (paidAmt > 0 || s.lastPaymentDate) {
+                  const pDate = s.lastPaymentDate || s.updatedAt || dateVal;
+                  activities.push({
+                    id: `pay-${docSnap.id}`,
+                    text: `Fee payment (₦${paidAmt.toLocaleString()}) confirmed for ${name} (${cls})`,
+                    time: formatRelativeTime(pDate),
+                    timestamp: new Date(pDate).getTime() || Date.now() - 3600000,
+                    type: 'payment',
+                    icon: CreditCard,
+                    color: 'text-emerald-600 bg-emerald-50'
+                  });
+                }
+              });
+              
+              activities.sort((a, b) => b.timestamp - a.timestamp);
+              if (isMounted) {
                 setRealActivities(activities);
                 setAllStudents(students);
                 setLoading(false);
-              }, (err) => {
-                console.error(err);
-                setLoading(false);
-              });
+              }
+            }, (err) => {
+              console.error(err);
+              if (isMounted) setLoading(false);
+            });
+          }
+        });
+
+        // Setup Messages Listener
+        if (isMounted) {
+          unsubscribeMessages = onSnapshot(query(collection(db, 'payment_messages'), orderBy('createdAt', 'desc')), (msgSnap) => {
+            if (isMounted) {
+              setPaymentMessages(msgSnap.docs.map(d => ({ id: d.id, ...d.data() })));
             }
           });
+        }
 
-          // Setup Messages Listener
-          unsubscribeMessages = onSnapshot(query(collection(db, 'payment_messages'), orderBy('createdAt', 'desc')), (msgSnap) => {
-            setPaymentMessages(msgSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-          });
-        });
 
       } catch (error) {
         console.error(error);
@@ -388,8 +397,9 @@ const BursarDashboard = () => {
     fetchResetHistory();
 
     return () => {
-      if (unsubscribeStudents) unsubscribeStudents();
+      isMounted = false;
       if (unsubscribeFees) unsubscribeFees();
+      if (unsubscribeStudents) unsubscribeStudents();
       if (unsubscribeMessages) unsubscribeMessages();
     };
   }, []);
