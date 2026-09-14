@@ -395,6 +395,7 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
   };
 
   const termsPerSession = 3;
+  const isScholarship = currentStudent?.scholarship === true;
   // Strictly PENDING until payment is made (paid > 0) AND verified or equal/exceeds expected fee
   const hasPaid = (feeData.paid || 0) > 0;
   const feeIsCleared = hasPaid && (feeData.isVerified || (feeData.expected > 0 && feeData.paid >= feeData.expected));
@@ -413,11 +414,11 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
       trend: `${totalExamsCount} Total` 
     },
     { 
-      label: feeIsCleared ? 'Fees Cleared' : (feeIsPartial ? 'Partial Fee' : 'Pending Fee'), 
-      value: feeIsCleared ? 'Cleared ✓' : (feeData.balance > 0 ? `₦${feeData.balance.toLocaleString()}` : (feeData.expected > 0 ? `₦${feeData.expected.toLocaleString()}` : 'Pending')), 
-      icon: Wallet, 
-      color: feeIsCleared ? '#10b981' : (feeIsPartial ? '#f59e0b' : '#ef4444'), 
-      trend: feeIsCleared ? 'Verified ✓' : (feeIsPartial ? 'Partial Paid' : 'Awaiting Payment') 
+      label: isScholarship ? 'Scholarship' : (feeIsCleared ? 'Fees Cleared' : (feeIsPartial ? 'Partial Fee' : 'Pending Fee')), 
+      value: isScholarship ? 'Active 🎓' : (feeIsCleared ? 'Cleared ✓' : (feeData.balance > 0 ? `₦${feeData.balance.toLocaleString()}` : (feeData.expected > 0 ? `₦${feeData.expected.toLocaleString()}` : 'Pending'))), 
+      icon: isScholarship ? GraduationCap : Wallet, 
+      color: (isScholarship || feeIsCleared) ? '#10b981' : (feeIsPartial ? '#f59e0b' : '#ef4444'), 
+      trend: isScholarship ? 'Full Scholarship' : (feeIsCleared ? 'Verified ✓' : (feeIsPartial ? 'Partial Paid' : 'Awaiting Payment')) 
     },
     { label: 'Attendance', value: '94%', icon: Calendar, color: '#ec4899', trend: 'Excellent' },
   ];
@@ -1011,18 +1012,19 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
                       <h3 className="text-2xl font-black text-slate-800 mb-2">School Fees Balance</h3>
                       <p className="text-slate-400 font-bold mb-8">Summary of your current financial standing.</p>
                       <div className="text-4xl font-black text-slate-900 mb-2">
-                        {feeIsCleared ? '₦0' : (feeData.balance > 0 ? `₦${feeData.balance.toLocaleString()}` : (feeData.expected > 0 ? `₦${feeData.expected.toLocaleString()}` : 'Pending'))}
+                        {isScholarship ? '🎓 Full Scholarship' : (feeIsCleared ? '₦0' : (feeData.balance > 0 ? `₦${feeData.balance.toLocaleString()}` : (feeData.expected > 0 ? `₦${feeData.expected.toLocaleString()}` : 'Pending')))}
                       </div>
                       <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase ${
-                        feeIsCleared 
+                        isScholarship ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' :
+                        (feeIsCleared 
                           ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' 
-                          : (feeIsPartial ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-rose-50 text-rose-600 border border-rose-200')
+                          : (feeIsPartial ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-rose-50 text-rose-600 border border-rose-200'))
                       }`}>
-                        {feeIsCleared ? '✓ Fully Cleared & Verified' : (feeIsPartial ? 'Partial Payment Made' : 'Pending / Awaiting Payment')}
+                        {isScholarship ? '✓ Active Scholarship' : (feeIsCleared ? '✓ Fully Cleared & Verified' : (feeIsPartial ? 'Partial Payment Made' : 'Pending / Awaiting Payment'))}
                       </div>
                     </div>
                     <div className="mt-8 space-y-3">
-                      {!feeIsCleared ? (
+                      {!(feeIsCleared || isScholarship) ? (
                         <button onClick={() => setShowFeePayModal(true)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 transition-all">
                           <Wallet size={18} /> Pay Fee via Student Wallet
                         </button>
