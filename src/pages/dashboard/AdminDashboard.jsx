@@ -23,11 +23,12 @@ import {
   BookOpen, Server, Activity, Database, Layers, Shield, Key, AlertTriangle, Lock, Download, Fingerprint, 
   CheckCircle, CheckCircle2, XCircle, Loader2, Search, RefreshCw, BarChart3, FileText, BookMarked, Globe, 
   Mail, Inbox, CreditCard, FileSpreadsheet, FolderOpen, UserCheck, School, ClipboardList, Library, Send, Award,
-  X, Clock, Wallet, Printer
+  X, Clock, Wallet, Printer, Home, Flag
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useGlobalClasses, normalizeClassName } from '../../utils/classUtils';
 import { useOnlineUsers } from '../../utils/presence';
+import { useGlobalClubsAndHouses } from '../../utils/schoolClubsAndHouses';
 import { getProspectusFeeData, getClassFees, getExpectedFeeForStudent, formatNaira, PROSPECTUS_FEES_SCHEDULE } from '../../utils/prospectusFees';
 import { useFinance } from '../../context/FinanceContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -85,6 +86,10 @@ const AdminDashboard = () => {
   const [selectedClass, setSelectedClass] = useState('JSS1');
   const [activeTab, setActiveTab] = useState('Overview');
   const [academicSubTab, setAcademicSubTab] = useState('marksheet'); // marksheet, assignments, materials
+  const [managementSubTab, setManagementSubTab] = useState('tools'); // tools, houses, clubs
+  const [houseStudentData, setHouseStudentData] = useState({});
+  const [clubStudentData, setClubStudentData] = useState({});
+  const [houseClubLoading, setHouseClubLoading] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordStatus, setPasswordStatus] = useState({ type: '', message: '' });
@@ -169,6 +174,7 @@ const AdminDashboard = () => {
   };
   
   const classes = useGlobalClasses();
+  const { clubs: globalClubs, houses: globalHouses } = useGlobalClubsAndHouses();
   const [showBulkEnrollModal, setShowBulkEnrollModal] = useState(false);
   const [showClubsModal, setShowClubsModal] = useState(false);
   const adminTabs = [
@@ -1900,7 +1906,65 @@ const AdminDashboard = () => {
       {/* Management Tab */}
       {activeTab === 'Management' && (
         <div className="animate-in fade-in space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Sub-tab Nav */}
+          <div className="flex gap-2 bg-white rounded-2xl border border-slate-200 p-1.5 shadow-sm w-fit">
+            {[
+              { id: 'tools', label: 'Tools', icon: Briefcase },
+              { id: 'houses', label: 'House List', icon: Home },
+              { id: 'clubs', label: 'Club List', icon: Flag },
+            ].map(st => (
+              <button
+                key={st.id}
+                onClick={async () => {
+                  setManagementSubTab(st.id);
+                  if ((st.id === 'houses' || st.id === 'clubs') && Object.keys(houseStudentData).length === 0 && !houseClubLoading) {
+                    setHouseClubLoading(true);
+                    try {
+                      const { getDocs, collection: col } = await import('firebase/firestore');
+                      const { db: firestoreDb } = await import('../../lib/firebase');
+                      const snap = await getDocs(col(firestoreDb, 'students'));
+                      const allStudents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                      // Build house map
+                      const hMap = {};
+                      allStudents.forEach(s => {
+                        const h = (s.house || '').trim() || 'Unassigned';
+                        if (!hMap[h]) hMap[h] = [];
+                        hMap[h].push(s);
+                      });
+                      setHouseStudentData(hMap);
+
+                      // Build club map
+                      const cMap = {};
+                      allStudents.forEach(s => {
+                        const studentClubs = Array.isArray(s.clubs) ? s.clubs : (s.club ? [s.club] : []);
+                        if (studentClubs.length === 0) {
+                          if (!cMap['Unassigned']) cMap['Unassigned'] = [];
+                          cMap['Unassigned'].push(s);
+                        } else {
+                          studentClubs.forEach(c => {
+                            const club = (c || '').trim() || 'Unassigned';
+                            if (!cMap[club]) cMap[club] = [];
+                            cMap[club].push(s);
+                          });
+                        }
+                      });
+                      setClubStudentData(cMap);
+                    } catch (e) { console.error(e); }
+                    setHouseClubLoading(false);
+                  }
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black transition-all ${
+                  managementSubTab === st.id
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md shadow-amber-200'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <st.icon size={15} />{st.label}
+              </button>
+            ))}
+          </div>
+          {managementSubTab === 'tools' && <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <button 
               onClick={() => setShowBulkEnrollModal(true)}
               className="card-premium flex items-center gap-4 hover:border-indigo-500 transition-all text-left bg-gradient-to-br from-indigo-50/70 via-purple-50/50 to-white border-indigo-200 shadow-md shadow-indigo-100/50 hover:-translate-y-1 group"
@@ -2024,7 +2088,156 @@ const AdminDashboard = () => {
                 </p>
               </div>
             </button>
-          </div>
+          </div>}
+
+          {/* House List View */}
+          {managementSubTab === 'houses' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-black text-slate-800 flex items-center gap-2"><Home size={20} className="text-amber-500" /> Students by House</h3>
+                <button onClick={async () => {
+                  setHouseStudentData({}); setClubStudentData({});
+                  const { getDocs, collection: col } = await import('firebase/firestore');
+                  const { db: firestoreDb } = await import('../../lib/firebase');
+                  const snap = await getDocs(col(firestoreDb, 'students'));
+                  const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                  const hMap = {};
+                  all.forEach(s => { const h = (s.house || '').trim() || 'Unassigned'; if (!hMap[h]) hMap[h] = []; hMap[h].push(s); });
+                  setHouseStudentData(hMap);
+                  const cMap = {};
+                  all.forEach(s => { const sc = Array.isArray(s.clubs) ? s.clubs : (s.club ? [s.club] : []); if (sc.length === 0) { if (!cMap['Unassigned']) cMap['Unassigned'] = []; cMap['Unassigned'].push(s); } else { sc.forEach(c => { const club = (c||'').trim()||'Unassigned'; if (!cMap[club]) cMap[club] = []; cMap[club].push(s); }); } });
+                  setClubStudentData(cMap);
+                }} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-amber-600 transition-all">
+                  <RefreshCw size={13} /> Refresh
+                </button>
+              </div>
+              {houseClubLoading ? (
+                <div className="flex justify-center py-12"><Loader2 size={28} className="animate-spin text-amber-500" /></div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(globalHouses && globalHouses.length > 0 ? globalHouses : ['Unassigned']).map(houseName => {
+                    const members = houseStudentData[houseName] || [];
+                    const unassigned = houseStudentData['Unassigned'] || [];
+                    return (
+                      <div key={houseName} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-amber-50 to-orange-50 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                              <Home size={14} className="text-white" />
+                            </div>
+                            <div>
+                              <p className="font-black text-slate-800 text-sm">{houseName}</p>
+                              <p className="text-[10px] font-bold text-slate-400">{members.length} student{members.length !== 1 ? 's' : ''}</p>
+                            </div>
+                          </div>
+                          <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">{members.length}</span>
+                        </div>
+                        {members.length > 0 ? (
+                          <div className="divide-y divide-slate-50 max-h-48 overflow-y-auto">
+                            {members.map(s => (
+                              <div key={s.id} className="flex items-center gap-3 px-4 py-2.5">
+                                <div className="w-7 h-7 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 font-black text-xs shrink-0 overflow-hidden">
+                                  {s.photo ? <img src={s.photo} alt="" className="w-full h-full object-cover rounded-full" /> : (s.name || '?')[0]}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-bold text-slate-800 truncate">{s.name}</p>
+                                  <p className="text-[10px] text-slate-400 font-medium">{s.regNo} · {s.className}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-center text-slate-400 text-xs font-medium py-6">No students in this house yet.</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {houseStudentData['Unassigned']?.length > 0 && (
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                      <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-xl bg-slate-200 flex items-center justify-center">
+                            <Home size={14} className="text-slate-500" />
+                          </div>
+                          <div>
+                            <p className="font-black text-slate-600 text-sm">Unassigned</p>
+                            <p className="text-[10px] font-bold text-slate-400">{houseStudentData['Unassigned'].length} student{houseStudentData['Unassigned'].length !== 1 ? 's' : ''}</p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">{houseStudentData['Unassigned'].length}</span>
+                      </div>
+                      <div className="divide-y divide-slate-50 max-h-48 overflow-y-auto">
+                        {houseStudentData['Unassigned'].map(s => (
+                          <div key={s.id} className="flex items-center gap-3 px-4 py-2.5">
+                            <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-black text-xs shrink-0 overflow-hidden">
+                              {s.photo ? <img src={s.photo} alt="" className="w-full h-full object-cover rounded-full" /> : (s.name || '?')[0]}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-slate-700 truncate">{s.name}</p>
+                              <p className="text-[10px] text-slate-400 font-medium">{s.regNo} · {s.className}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Club List View */}
+          {managementSubTab === 'clubs' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-black text-slate-800 flex items-center gap-2"><Flag size={20} className="text-indigo-500" /> Students by Club</h3>
+              </div>
+              {houseClubLoading ? (
+                <div className="flex justify-center py-12"><Loader2 size={28} className="animate-spin text-indigo-500" /></div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {Object.entries(clubStudentData).sort((a, b) => b[1].length - a[1].length).map(([clubName, members]) => (
+                    <div key={clubName} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                      <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-purple-50 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                            <Flag size={14} className="text-white" />
+                          </div>
+                          <div>
+                            <p className="font-black text-slate-800 text-sm">{clubName}</p>
+                            <p className="text-[10px] font-bold text-slate-400">{members.length} member{members.length !== 1 ? 's' : ''}</p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-black px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700">{members.length}</span>
+                      </div>
+                      <div className="divide-y divide-slate-50 max-h-48 overflow-y-auto">
+                        {members.map(s => (
+                          <div key={s.id} className="flex items-center gap-3 px-4 py-2.5">
+                            <div className="w-7 h-7 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-xs shrink-0 overflow-hidden">
+                              {s.photo ? <img src={s.photo} alt="" className="w-full h-full object-cover rounded-full" /> : (s.name || '?')[0]}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-slate-800 truncate">{s.name}</p>
+                              <p className="text-[10px] text-slate-400 font-medium">{s.regNo} · {s.className}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {Object.keys(clubStudentData).length === 0 && (
+                    <div className="col-span-full text-center py-12 text-slate-400">
+                      <Flag size={32} className="mx-auto mb-3 opacity-30" />
+                      <p className="font-bold text-sm">No club assignments found.</p>
+                      <p className="text-xs mt-1">Assign students to clubs from the Student Management page.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {managementSubTab === 'tools' && <>
           <BulkUpload />
           <ResultPublisher />
 
@@ -2088,6 +2301,7 @@ const AdminDashboard = () => {
               ))}
             </div>
           </div>
+          </>}
         </div>
       )}
 
