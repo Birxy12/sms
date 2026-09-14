@@ -13,6 +13,7 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { sendNotification } from '../../utils/notifications';
+import { showSuccessAlert, showErrorAlert } from '../../utils/sweetAlert';
 import { fetchGlobalClasses, DEFAULT_CLASSES, normalizeClassName, getUniqueClasses } from '../../utils/classUtils';
 import { getClassCode, formatRegNumberSuffix } from '../../utils/regNoGenerator';
 import { createWhatsAppChatUrl } from '../../utils/whatsapp';
@@ -1911,7 +1912,11 @@ const BursarDashboard = () => {
         fetchFinancialData();
         setCashAmount(''); setDiscountAmount(''); setSelectedStudent(null); setSearchTerm('');
         setPreSelectedStudent(null);
-      } catch (e) { console.error(e); alert('Payment failed.'); }
+        showSuccessAlert('Payment Recorded', `Successfully processed payment of \u20a6${amount.toLocaleString()} for ${selectedStudent.name || selectedStudent['STUDENT NAME']}`);
+      } catch (e) { 
+        console.error(e); 
+        showErrorAlert('Payment Failed', 'An error occurred while processing the payment.'); 
+      }
       finally { setSaving(false); }
     };
 

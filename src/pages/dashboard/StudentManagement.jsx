@@ -20,6 +20,7 @@ import { useGlobalClasses, normalizeClassName } from '../../utils/classUtils';
 import { expandStudent, compressStudent, sanitizeFirestoreData } from '../../utils/firestoreSchema';
 import { generateUniqueRegNoSync } from '../../utils/regNoGenerator';
 import { generateWhatsAppPinReset } from '../../utils/whatsapp';
+import { showSuccessAlert, showErrorAlert } from '../../utils/sweetAlert';
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
@@ -435,6 +436,7 @@ const StudentManagement = () => {
         });
         targetStudentId = docRef.id;
         setStatus({ type: 'success', message: 'Student registered successfully!' });
+        showSuccessAlert('Registration Complete', `${saveData.name || 'Student'} has been registered successfully!`);
       }
 
       // If a 6-digit PIN was provided or changed during save

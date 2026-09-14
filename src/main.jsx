@@ -5,6 +5,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { StudentAuthProvider } from './context/StudentAuthContext'
 import { AdminAuthProvider } from './context/AdminAuthContext'
 import { FinanceProvider } from './context/FinanceContext'
+import 'animate.css'
 import './index.css'
 import App from './App.jsx'
 
