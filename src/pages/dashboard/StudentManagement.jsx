@@ -223,7 +223,7 @@ const StudentManagement = () => {
 
           // Send via external notification (Email / SMS)
           try {
-            const { sendNotification } = await import('../../utils/notifications');
+            
             const recipients = [{
               email: sEmail,
               phone: sPhone,
@@ -461,7 +461,7 @@ const StudentManagement = () => {
           });
 
           try {
-            const { sendNotification } = await import('../../utils/notifications');
+            
             const recipients = [{ email: sEmail, phone: sPhone, name: sName }];
             const notifyType = hasEmail && hasPhone ? 'both' : hasEmail ? 'email' : 'sms';
             await sendNotification({
