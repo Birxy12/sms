@@ -26,10 +26,14 @@ async function migrate() {
       const data = studentDoc.data();
       if (data.registeredSubjects && Array.isArray(data.registeredSubjects)) {
         let needsUpdate = false;
+        const renames = {
+          'ANIMAL HUSBANDRY': 'LIVESTOCK FARMING',
+          'BASIC SC & TECH': 'INTERMEDIATE SCIENCE',
+        };
         const newSubjects = data.registeredSubjects.map(sub => {
-          if (sub === 'ANIMAL HUSBANDRY') {
+          if (renames[sub]) {
             needsUpdate = true;
-            return 'LIVESTOCK FARMING';
+            return renames[sub];
           }
           return sub;
         });
