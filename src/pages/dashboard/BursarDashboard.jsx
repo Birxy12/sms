@@ -1652,6 +1652,7 @@ const BursarDashboard = () => {
 
   const CashPaymentView = () => {
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedClass, setSelectedClass] = useState('All');
     const [selectedStudent, setSelectedStudent] = useState(preSelectedStudent);
     const [cashAmount, setCashAmount] = useState('');
     const [discountAmount, setDiscountAmount] = useState('');
@@ -1674,10 +1675,18 @@ const BursarDashboard = () => {
       }
     }, [preSelectedStudent]);
 
+    const classes = Array.from(new Set(allStudents.map(s => s.className || s.class_name || s.CLASS || ''))).filter(Boolean).sort();
+
     const filtered = allStudents.filter(s => {
       const name = (s.name || s['STUDENT NAME'] || '').toLowerCase();
       const reg = (s.regNo || s.REGNO || '').toLowerCase();
-      return (name.includes(searchTerm.toLowerCase()) || reg.includes(searchTerm.toLowerCase())) && searchTerm.length > 0;
+      const sClass = s.className || s.class_name || s.CLASS || '';
+      
+      const matchesSearch = searchTerm.length === 0 ? true : (name.includes(searchTerm.toLowerCase()) || reg.includes(searchTerm.toLowerCase()));
+      const matchesClass = selectedClass === 'All' ? true : sClass === selectedClass;
+      
+      if (selectedClass === 'All' && searchTerm.length === 0) return false;
+      return matchesClass && matchesSearch;
     }).slice(0, 15);
 
     const handlePay = async () => {
@@ -1830,8 +1839,18 @@ const BursarDashboard = () => {
           <div className="space-y-6">
             <div>
               <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Search Student</label>
-              <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Name or Reg No..."
-                className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold text-slate-800 transition-all" />
+              <div className="flex gap-3">
+                <select 
+                  value={selectedClass} 
+                  onChange={e => setSelectedClass(e.target.value)}
+                  className="w-1/3 px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold text-slate-800 transition-all"
+                >
+                  <option value="All">All Classes</option>
+                  {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Name or Reg No..."
+                  className="w-2/3 px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none font-bold text-slate-800 transition-all" />
+              </div>
               {filtered.length > 0 && (
                 <div className="mt-1 border border-slate-200 rounded-xl overflow-hidden shadow-lg bg-white max-h-48 overflow-y-auto relative z-10">
                   {filtered.map(s => (
