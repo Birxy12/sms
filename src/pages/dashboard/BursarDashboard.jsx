@@ -8,7 +8,7 @@ import {
   CheckCircle, AlertCircle, Loader2, Briefcase, Settings, Printer, MessageSquare, AlertTriangle, FileText, UserPlus, Banknote,
   FileSpreadsheet, User, ShieldCheck, Key, Lock, Clock, History, CheckCheck, RefreshCw, X, ShieldAlert,
   Sparkles, ListChecks, CheckCircle2, ChevronDown, ChevronUp, Layers, Check, HelpCircle, UserCheck, ShoppingBag, BarChart3,
-  CreditCard, Activity
+  CreditCard, Activity, GraduationCap
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
@@ -627,6 +627,7 @@ const BursarDashboard = () => {
       tabs: [
         { id: 'overview',    label: 'Overview',       icon: TrendingUp    },
         { id: 'cashpay',     label: 'Cash Payment',   icon: Banknote      },
+        { id: 'scholarships',label: 'Scholarships',   icon: GraduationCap },
         { id: 'bulkpay',     label: 'Bulk Upload',    icon: Download      },
         { id: 'expenses',    label: 'Expenses',       icon: Wallet        },
         { id: 'dailyincome', label: 'Daily Income',   icon: BarChart3     },
@@ -1649,6 +1650,155 @@ const BursarDashboard = () => {
 
   const SESSIONS = ['2024/2025', '2025/2026', '2026/2027', '2027/2028'];
   const TERMS = ['First Term', 'Second Term', 'Third Term'];
+
+  const ScholarshipsView = () => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [saving, setSaving] = useState(false);
+
+    const scholarshipStudents = allStudents.filter(s => s.scholarship === true);
+    
+    // Students eligible to receive scholarship (not already on one)
+    const eligibleStudents = allStudents.filter(s => !s.scholarship);
+    const filteredEligible = eligibleStudents.filter(s => {
+      const name = (s.name || s['STUDENT NAME'] || '').toLowerCase();
+      const reg = (s.regNo || s.REGNO || '').toLowerCase();
+      return (name.includes(searchTerm.toLowerCase()) || reg.includes(searchTerm.toLowerCase())) && searchTerm.length > 0;
+    }).slice(0, 15);
+
+    const handleGrantScholarship = async () => {
+      if (!selectedStudent) return;
+      if (!window.confirm(`Are you sure you want to grant a scholarship to ${selectedStudent.name || selectedStudent['STUDENT NAME']}? This will clear their expected fees and balance.`)) return;
+      
+      setSaving(true);
+      try {
+        const ref = doc(db, 'students', selectedStudent.id);
+        await updateDoc(ref, {
+          scholarship: true,
+          expectedFee: 0,
+          paidFee: 0,
+          paidAmount: 0,
+          discountApplied: 0
+        });
+        setSelectedStudent(null);
+        setSearchTerm('');
+      } catch (e) {
+        console.error(e);
+        alert('Failed to grant scholarship.');
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    const handleRevokeScholarship = async (student) => {
+      if (!window.confirm(`Are you sure you want to revoke the scholarship for ${student.name || student['STUDENT NAME']}? Their expected fees will be recalculated.`)) return;
+      
+      try {
+        const cls = student.className || student.class_name || student.CLASS || 'JSS1';
+        const isIntake = student.studentType === 'new_intake' || student.isNewIntake;
+        const newExpected = getExpectedFeeForStudent(cls, isIntake, feeSettings);
+        
+        const ref = doc(db, 'students', student.id);
+        await updateDoc(ref, {
+          scholarship: false,
+          expectedFee: newExpected
+        });
+      } catch (e) {
+        console.error(e);
+        alert('Failed to revoke scholarship.');
+      }
+    };
+
+    return (
+      <div className="card-white p-8 mt-8 border border-slate-200 rounded-3xl shadow-sm max-w-4xl mx-auto">
+        <div className="flex items-center gap-4 mb-8 border-b border-slate-100 pb-6">
+          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+            <GraduationCap size={24} />
+          </div>
+          <div>
+            <h3 className="text-xl font-black text-slate-900">Scholarships Management</h3>
+            <p className="text-sm text-slate-500">Grant and manage student scholarships.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Grant Section */}
+          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4">Grant Scholarship</h4>
+            
+            <div className="space-y-4">
+              <div>
+                <input 
+                  type="text" 
+                  value={searchTerm} 
+                  onChange={e => setSearchTerm(e.target.value)} 
+                  placeholder="Search student by name or Reg No..."
+                  className="w-full px-4 py-3 rounded-xl bg-white border-2 border-transparent focus:border-indigo-500 outline-none font-bold text-slate-800 transition-all shadow-sm" 
+                />
+                {filteredEligible.length > 0 && (
+                  <div className="mt-1 border border-slate-200 rounded-xl overflow-hidden shadow-lg bg-white max-h-48 overflow-y-auto relative z-10">
+                    {filteredEligible.map(s => (
+                      <button key={s.id} type="button" onClick={() => { setSelectedStudent(s); setSearchTerm(''); }}
+                        className="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors border-b border-slate-100 last:border-0">
+                        <p className="font-bold text-slate-800 text-sm">{s.name||s['STUDENT NAME']}</p>
+                        <p className="text-xs text-slate-400">{s.regNo||s.REGNO} \u2022 {s.className||s.CLASS}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {selectedStudent && (
+                <div className="bg-slate-900 rounded-2xl p-5 shadow-xl text-white relative">
+                  <button onClick={() => setSelectedStudent(null)} className="absolute top-4 right-4 text-slate-400 hover:text-rose-400">\u2715</button>
+                  <p className="font-black text-lg pr-6">{selectedStudent.name || selectedStudent['STUDENT NAME']}</p>
+                  <p className="text-sm text-slate-400 font-bold mt-0.5">{selectedStudent.regNo || selectedStudent.REGNO} \u2022 {selectedStudent.className || selectedStudent.CLASS}</p>
+                  <button 
+                    onClick={handleGrantScholarship} 
+                    disabled={saving}
+                    className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 size={16} className="animate-spin" /> : <GraduationCap size={16} />}
+                    Grant Full Scholarship
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* List Section */}
+          <div>
+            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 flex justify-between items-center">
+              Current Scholars
+              <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full text-xs">{scholarshipStudents.length}</span>
+            </h4>
+            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+              {scholarshipStudents.length === 0 ? (
+                <div className="text-center py-8 bg-slate-50 rounded-2xl border border-slate-100">
+                  <p className="text-sm text-slate-500 font-medium">No students on scholarship.</p>
+                </div>
+              ) : (
+                scholarshipStudents.map(s => (
+                  <div key={s.id} className="bg-white border border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
+                    <div>
+                      <p className="font-bold text-slate-800 text-sm">{s.name || s['STUDENT NAME']}</p>
+                      <p className="text-xs text-slate-500">{s.regNo || s.REGNO} \u2022 {s.className || s.CLASS}</p>
+                    </div>
+                    <button 
+                      onClick={() => handleRevokeScholarship(s)}
+                      className="text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      Revoke
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const CashPaymentView = () => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -3157,6 +3307,7 @@ const BursarDashboard = () => {
           {activeView === 'dailyincome' && <DailyIncomeView />}
           {activeView === 'messages' && <MessageHubView />}
           {activeView === 'cashpay' && <CashPaymentView />}
+          {activeView === 'scholarships' && <ScholarshipsView />}
           {activeView === 'register' && <RegisterStudentView />}
           {activeView === 'bulkpay' && <BulkPayView />}
           {activeView === 'analysis' && <AnalysisView />}
