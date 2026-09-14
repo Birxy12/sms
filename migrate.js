@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, updateDoc, doc, writeBatch } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, updateDoc, doc, writeBatch, query, where } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCBEsjJYSh4mzzAxWTq_bJzmY5toswIHs4",
@@ -14,42 +14,66 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+const RENAMES = {
+  'ANIMAL HUSBANDRY': 'LIVESTOCK FARMING',
+  'BASIC SC & TECH': 'INTERMEDIATE SCIENCE',
+};
+
 async function migrate() {
   console.log("Starting migration...");
   
   try {
-    const studentsSnap = await getDocs(collection(db, 'students'));
     const batch = writeBatch(db);
-    let updatedCount = 0;
+    let totalUpdated = 0;
 
+    // --- 1. Rename in the 'subjects' collection ---
+    console.log("Scanning 'subjects' collection...");
+    const subjectsSnap = await getDocs(collection(db, 'subjects'));
+    let subjectUpdates = 0;
+    for (const subDoc of subjectsSnap.docs) {
+      const data = subDoc.data();
+      const upperName = (data.name || '').trim().toUpperCase();
+      const newName = RENAMES[upperName];
+      if (newName) {
+        batch.update(doc(db, 'subjects', subDoc.id), { name: newName });
+        console.log(`  subjects: "${upperName}" → "${newName}" (${subDoc.id})`);
+        subjectUpdates++;
+        totalUpdated++;
+      }
+    }
+    console.log(`Found ${subjectUpdates} subject doc(s) to rename.`);
+
+    // --- 2. Rename in student registeredSubjects arrays ---
+    console.log("Scanning 'students' collection...");
+    const studentsSnap = await getDocs(collection(db, 'students'));
+    let studentUpdates = 0;
     for (const studentDoc of studentsSnap.docs) {
       const data = studentDoc.data();
       if (data.registeredSubjects && Array.isArray(data.registeredSubjects)) {
         let needsUpdate = false;
-        const renames = {
-          'ANIMAL HUSBANDRY': 'LIVESTOCK FARMING',
-          'BASIC SC & TECH': 'INTERMEDIATE SCIENCE',
-        };
         const newSubjects = data.registeredSubjects.map(sub => {
-          if (renames[sub]) {
+          const upper = (sub || '').trim().toUpperCase();
+          if (RENAMES[upper]) {
             needsUpdate = true;
-            return renames[sub];
+            return RENAMES[upper];
           }
           return sub;
         });
-
         if (needsUpdate) {
           batch.update(doc(db, 'students', studentDoc.id), { registeredSubjects: newSubjects });
-          updatedCount++;
+          studentUpdates++;
+          totalUpdated++;
         }
       }
     }
-    
-    console.log(`Updating ${updatedCount} students...`);
-    if (updatedCount > 0) {
+    console.log(`Found ${studentUpdates} student(s) to update.`);
+
+    if (totalUpdated > 0) {
       await batch.commit();
+      console.log(`✅ Migration complete. Updated ${totalUpdated} record(s).`);
+    } else {
+      console.log("✅ Nothing to update — already up to date.");
     }
-    console.log("Migration complete.");
     process.exit(0);
   } catch (err) {
     console.error("Migration failed:", err);
