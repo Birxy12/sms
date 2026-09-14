@@ -74,6 +74,8 @@ class PresenceManager {
     this.lastHeartbeatTime = 0;
     this.lastPruneTime = 0;
     this.broadcastChannel = null;
+    this.consecutiveFailures = 0;
+    this.backoffUntil = 0;
 
     this.initBroadcastChannel();
     this.initWindowEvents();
@@ -177,6 +179,12 @@ class PresenceManager {
     }
 
     const now = Date.now();
+
+    // Exponential backoff: if we've had repeated failures, wait before retrying
+    if (now < this.backoffUntil) {
+      return;
+    }
+
     if (!force && (now - this.lastHeartbeatTime < DEBOUNCE_HEARTBEAT_MS)) {
       return;
     }
@@ -185,17 +193,29 @@ class PresenceManager {
     try {
       await ensureFirebaseAuth();
       const presenceRef = doc(db, 'presence', this.sessionId);
-      await setDoc(presenceRef, {
-        userId: this.getUserId(),
-        clientId: this.clientId,
-        sessionId: this.sessionId,
-        userName: this.getUserName(),
-        userRole: this.getUserRole(),
-        lastSeen: now,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
+
+      // Use a timeout so the write doesn't hang indefinitely
+      await Promise.race([
+        setDoc(presenceRef, {
+          userId: this.getUserId(),
+          clientId: this.clientId,
+          sessionId: this.sessionId,
+          userName: this.getUserName(),
+          userRole: this.getUserRole(),
+          lastSeen: now,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+      ]);
+
+      // Reset backoff on success
+      this.consecutiveFailures = 0;
+      this.backoffUntil = 0;
     } catch (e) {
-      // Silent catch
+      // Exponential backoff: 30s, 60s, 120s, 240s, max 300s
+      this.consecutiveFailures = (this.consecutiveFailures || 0) + 1;
+      const backoffMs = Math.min(30000 * Math.pow(2, this.consecutiveFailures - 1), 300000);
+      this.backoffUntil = Date.now() + backoffMs;
     }
   }
 

@@ -55,9 +55,7 @@ const initFirestore = () => {
     return firestoreInstance;
   }
 
-  const connectionSettings = {
-    experimentalForceLongPolling: true
-  };
+  const connectionSettings = {};
 
   if (typeof window !== 'undefined' && typeof indexedDB !== 'undefined') {
     try {
