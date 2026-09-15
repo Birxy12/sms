@@ -7,9 +7,9 @@ import {
   LayoutDashboard, Award, CreditCard, Calendar, Bell, ChevronRight, 
   Inbox as InboxIcon, Trophy, Wallet, BookOpen, Library, MonitorCheck, 
   AlertCircle, Star, ArrowUpRight, ArrowDownRight, Clock, User, Zap, GraduationCap, ChevronDown,
-  Eye, EyeOff, PlusCircle, Search, CheckCircle2, X, RefreshCw, BarChart3, Sparkles, Settings, Receipt, FileText
+  Eye, EyeOff, PlusCircle, Search, CheckCircle2, X, RefreshCw, BarChart3, Sparkles, Settings, Receipt, FileText, Send
 } from 'lucide-react';
-import { getStudentWallet, purchaseGteCoins } from '../../utils/wallet';
+import { getStudentWallet, purchaseGteCoins, transferGteCoins } from '../../utils/wallet';
 import { MARKS_KEYS, expandMarks, STUDENT_KEYS } from '../../utils/firestoreSchema';
 import { getProspectusFeeData, getClassFees, getExpectedFeeForStudent, formatNaira } from '../../utils/prospectusFees';
 import { useNavigate } from 'react-router-dom';
@@ -61,6 +61,11 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
   const [walletData, setWalletData]     = useState({ balance: 0, transactions: [] });
   const [showBalance, setShowBalance]   = useState(true);
   const [showFundModal, setShowFundModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferAmount, setTransferAmount] = useState('10');
+  const [transferReceiverId, setTransferReceiverId] = useState('');
+  const [transferProcessing, setTransferProcessing] = useState(false);
+  const [transferSuccessMsg, setTransferSuccessMsg] = useState('');
   const [fundAmount, setFundAmount]     = useState('5000');
   const [fundMethod, setFundMethod]     = useState('Card Payment');
   const [fundingProcessing, setFundingProcessing] = useState(false);
@@ -102,13 +107,11 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
         }
 
         // 1. Fetch Notifications & Count
-        const [s1, s2, s3] = await Promise.all([
-          getDocs(query(collection(db, 'notifications'), where('targetType', '==', 'global'), limit(5))),
-          getDocs(query(collection(db, 'notifications'), where('targetType', '==', 'class'), where('targetValue', '==', className), limit(5))),
+        const [s3] = await Promise.all([
           getDocs(query(collection(db, 'notifications'), where('targetType', '==', 'student'), where('targetValue', '==', regNum), limit(5))),
         ]);
         
-        const allNotifs = [...s1.docs, ...s2.docs, ...s3.docs]
+        const allNotifs = [...s3.docs]
           .map(d => ({ id: d.id, ...d.data() }))
           .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
         
@@ -365,6 +368,32 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
       alert("Failed to purchase GTE Coins: " + e.message);
     } finally {
       setFundingProcessing(false);
+    }
+  };
+
+  const handleTransferGteSubmit = async (e) => {
+    e.preventDefault();
+    const gteAmount = Number(transferAmount);
+    if (!gteAmount || gteAmount <= 0) return;
+    if (!transferReceiverId.trim()) return alert('Please enter a valid Registration Number.');
+
+    setTransferProcessing(true);
+    setTransferSuccessMsg('');
+    try {
+      await new Promise(r => setTimeout(r, 800));
+      const updated = await transferGteCoins(currentStudent?.id || regNum, transferReceiverId.trim(), gteAmount);
+      setWalletData(updated);
+      setTransferSuccessMsg(`Successfully transferred ${gteAmount} GTE Coins to ${transferReceiverId}!`);
+      setTimeout(() => {
+        setShowTransferModal(false);
+        setTransferSuccessMsg('');
+        setTransferAmount('10');
+        setTransferReceiverId('');
+      }, 2000);
+    } catch (e) {
+      alert("Transfer Failed: " + e.message);
+    } finally {
+      setTransferProcessing(false);
     }
   };
 
@@ -744,6 +773,12 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
 
                       <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-emerald-500/20">
                         <button
+                          onClick={() => setShowTransferModal(true)}
+                          className="flex-1 md:flex-none px-6 py-3.5 bg-indigo-500 hover:bg-indigo-400 text-white font-black rounded-2xl transition-all flex items-center justify-center gap-2 shadow-xl shadow-indigo-500/20 text-sm"
+                        >
+                          <Send size={18} /> Transfer Coins
+                        </button>
+                        <button
                           onClick={() => setShowFundModal(true)}
                           className="flex-1 md:flex-none px-6 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-2xl transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20 text-sm"
                         >
@@ -1118,6 +1153,70 @@ const StudentDashboard = ({ asAdminTest = false, testStudentClass = 'BASIC 3' })
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ===== TRANSFER GTE COINS MODAL ===== */}
+      {showTransferModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[2rem] max-w-md w-full p-8 shadow-2xl space-y-6 relative">
+            <button onClick={() => setShowTransferModal(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600">
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black">
+                <Send size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-800">Transfer GTE Coins</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase">Send to another student</p>
+              </div>
+            </div>
+
+            {transferSuccessMsg ? (
+              <div className="p-6 bg-emerald-50 border border-emerald-200 rounded-2xl text-center space-y-3">
+                <CheckCircle2 size={40} className="mx-auto text-emerald-500" />
+                <p className="font-black text-emerald-800 text-sm">{transferSuccessMsg}</p>
+              </div>
+            ) : (
+              <form onSubmit={handleTransferGteSubmit} className="space-y-6">
+                <div>
+                  <label className="text-xs font-black text-slate-500 uppercase block mb-2">Receiver's Reg No</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. BDS/25/001"
+                    value={transferReceiverId}
+                    onChange={(e) => setTransferReceiverId(e.target.value)}
+                    className="w-full px-5 py-3.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-800 outline-none focus:border-indigo-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-xs font-black text-slate-500 uppercase block mb-2">Amount (GTE Coins)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10000"
+                    required
+                    value={transferAmount}
+                    onChange={(e) => setTransferAmount(e.target.value)}
+                    className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-slate-200 font-black text-xl text-slate-800 outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={transferProcessing}
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base rounded-2xl transition-all shadow-xl shadow-indigo-500/20 flex items-center justify-center gap-2"
+                >
+                  {transferProcessing ? <RefreshCw size={20} className="animate-spin" /> : <Send size={20} />}
+                  {transferProcessing ? 'Processing Transfer...' : `Transfer ${Number(transferAmount || 0).toLocaleString()} GTE Coins`}
+                </button>
+              </form>
+            )}
+          </motion.div>
+        </div>
+      )}
 
       {/* ===== BUY GTE COINS MODAL ===== */}
       {showFundModal && (

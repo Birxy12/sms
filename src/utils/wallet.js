@@ -225,3 +225,65 @@ export const deductGteCoins = async (studentId, amount = 0.1, purpose = 'CBT Exa
   return updatedWallet;
 };
 
+/**
+ * Transfer GTE Coins from one student to another.
+ */
+export const transferGteCoins = async (senderId, receiverId, amount) => {
+  const numAmount = Number(amount) || 0;
+  if (numAmount <= 0) throw new Error('Transfer amount must be greater than zero.');
+  if (senderId === receiverId) throw new Error('Cannot transfer to yourself.');
+
+  const senderWallet = await getStudentWallet(senderId);
+  if ((senderWallet.gteCoins || 0) < numAmount) {
+    throw new Error(`Insufficient GTE Coins. You need ${numAmount} GTE Coins to transfer.`);
+  }
+
+  // Ensure receiver wallet exists
+  const receiverWallet = await getStudentWallet(receiverId);
+
+  const txId = `TX-TRF-${Date.now().toString(36).toUpperCase()}`;
+
+  const senderTx = {
+    id: txId,
+    type: 'DEBIT',
+    method: 'GTE Coin',
+    amount: 0,
+    description: `Transfer to ${receiverId}`,
+    status: 'SUCCESS',
+    date: new Date().toISOString()
+  };
+
+  const receiverTx = {
+    id: txId,
+    type: 'CREDIT',
+    method: 'GTE Coin',
+    amount: 0,
+    description: `Received from ${senderId}`,
+    status: 'SUCCESS',
+    date: new Date().toISOString()
+  };
+
+  const updatedSenderWallet = {
+    ...senderWallet,
+    gteCoins: senderWallet.gteCoins - numAmount,
+    transactions: [senderTx, ...(senderWallet.transactions || [])]
+  };
+
+  const updatedReceiverWallet = {
+    ...receiverWallet,
+    gteCoins: (receiverWallet.gteCoins || 0) + numAmount,
+    transactions: [receiverTx, ...(receiverWallet.transactions || [])]
+  };
+
+  saveLocalStorageWallet(senderId, updatedSenderWallet);
+  saveLocalStorageWallet(receiverId, updatedReceiverWallet);
+
+  try {
+    await setDoc(doc(db, 'wallets', String(senderId)), updatedSenderWallet, { merge: true });
+    await setDoc(doc(db, 'wallets', String(receiverId)), updatedReceiverWallet, { merge: true });
+  } catch (e) {
+    console.warn('Could not sync transfer to Firestore:', e);
+  }
+
+  return updatedSenderWallet;
+};
