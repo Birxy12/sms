@@ -18,7 +18,8 @@ import {
   Loader2,
   RefreshCw,
   Send,
-  X
+  X,
+  FileQuestion
 } from 'lucide-react';
 import { deductGteCoins } from '../../utils/wallet';
 import '../dashboard/CBT.css';

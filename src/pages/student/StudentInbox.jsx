@@ -18,12 +18,10 @@ const StudentInbox = () => {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const [s1, s2, s3] = await Promise.all([
-          getDocs(query(collection(db, 'notifications'), where('targetType', '==', 'global'))),
-          getDocs(query(collection(db, 'notifications'), where('targetType', '==', 'class'),   where('targetValue', '==', className))),
+        const [s3] = await Promise.all([
           getDocs(query(collection(db, 'notifications'), where('targetType', '==', 'student'), where('targetValue', '==', regNum))),
         ]);
-        const msgs = [...s1.docs, ...s2.docs, ...s3.docs].map(d => ({ id: d.id, ...d.data() }));
+        const msgs = [...s3.docs].map(d => ({ id: d.id, ...d.data() }));
         msgs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setInbox(Array.from(new Map(msgs.map(m => [m.id, m])).values()));
       } catch (e) { console.error(e); }
