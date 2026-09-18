@@ -25,7 +25,7 @@ const MainFooter = () => {
   const displayName = schoolName || 'Birxy SMS';
   const displayLogo = schoolLogo || bdsLogo;
 
-  const apkDownloadUrl = 'https://github.com/Birxy12/sms/raw/main/app-debug.apk';
+  const apkDownloadUrl = 'https://github.com/Birxy12/sms/raw/main/app-release.apk';
   const iosDownloadUrl = '#'; // TODO: Update with actual iOS App Store link
 
   const quickLinks = [

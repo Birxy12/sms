@@ -2,7 +2,7 @@ import React from 'react';
 import { Download, Sparkles, ArrowRight } from 'lucide-react';
 
 const UpdateModal = ({ latestVersion }) => {
-  const downloadLink = "https://github.com/Birxy12/sms/raw/main/app-debug.apk";
+  const downloadLink = "https://github.com/Birxy12/sms/raw/main/app-release.apk";
 
   return (
     <div style={{
