@@ -82,7 +82,7 @@ export default defineConfig({
       host: '127.0.0.1',
     },
     watch: {
-      ignored: ['**/android/**', '**/ios/**', '**/flutter_app/**']
+      ignored: ['**/android/**', '**/ios/**', '**/flutter_app/**', '**/installer/**']
     }
   },
   build: {

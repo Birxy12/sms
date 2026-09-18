@@ -2,7 +2,7 @@ name: sms_app
 description: "School Management System App"
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 2.0.0+1
 
 environment:
   sdk: ^3.13.2
@@ -15,6 +15,9 @@ dependencies:
   webview_windows: ^0.4.0
   connectivity_plus: ^7.3.1
   url_launcher: ^6.3.2
+  http: ^1.6.0
+  path_provider: ^2.1.6
+  local_notifier: ^0.1.6
 
 dev_dependencies:
   flutter_test:

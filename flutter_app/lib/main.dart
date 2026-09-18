@@ -1,16 +1,26 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:io' show Platform;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:local_notifier/local_notifier.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_windows/webview_windows.dart';
 
-const _appUrl = 'https://bdsportal.vercel.app';
+const String currentAppVersion = "2.0.0";
 
-void main() {
+const _appUrl = 'https://bdsportals.vercel.app';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (Platform.isWindows) {
+    await localNotifier.setup(appName: 'SMS Portal', shortcutPolicy: ShortcutPolicy.requireCreate);
+  }
   runApp(const MyApp());
 }
 
@@ -57,6 +67,70 @@ class _AppShellState extends State<AppShell> {
         setState(() => _isOnline = online);
       }
     });
+    
+    // Check for updates if online and on Windows
+    if (Platform.isWindows) {
+      Future.delayed(const Duration(seconds: 5), () {
+        if (_isOnline) {
+          _checkForUpdates();
+        }
+      });
+    }
+  }
+
+  Future<void> _checkForUpdates() async {
+    try {
+      final response = await http.get(Uri.parse('$_appUrl/windows-version.json'));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final latestVersion = data['version'] as String;
+        final downloadUrl = data['downloadUrl'] as String;
+        
+        if (_isNewerVersion(currentAppVersion, latestVersion)) {
+          _showUpdateNotification(downloadUrl, latestVersion);
+        }
+      }
+    } catch (e) {
+      debugPrint("Update check failed: $e");
+    }
+  }
+
+  bool _isNewerVersion(String current, String latest) {
+    final v1 = current.split('.').map(int.parse).toList();
+    final v2 = latest.split('.').map(int.parse).toList();
+    for (var i = 0; i < 3; i++) {
+      if (v2[i] > v1[i]) return true;
+      if (v2[i] < v1[i]) return false;
+    }
+    return false;
+  }
+
+  void _showUpdateNotification(String downloadUrl, String latestVersion) {
+    final notification = LocalNotification(
+      title: "Update Available",
+      body: "Version $latestVersion is available. Click here to update the app.",
+    );
+    notification.onClick = () async {
+      final tempDir = await getTemporaryDirectory();
+      final savePath = '${tempDir.path}\\SMSPortal-Setup-$latestVersion.exe';
+      
+      // Notify downloading
+      final downloadNotif = LocalNotification(title: "Downloading Update", body: "Please wait...");
+      downloadNotif.show();
+      
+      try {
+        final req = await http.get(Uri.parse(downloadUrl));
+        final file = File(savePath);
+        await file.writeAsBytes(req.bodyBytes);
+        
+        // Execute installer silently and close current app
+        Process.start(savePath, ['/SILENT', '/SUPPRESSMSGBOXES']);
+        exit(0);
+      } catch (e) {
+        debugPrint("Download failed: $e");
+      }
+    };
+    notification.show();
   }
 
   Future<void> _checkConnectivity() async {

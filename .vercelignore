@@ -1,0 +1,8 @@
+node_modules/
+flutter_app/
+installer/
+*.exe
+*.iss
+*.zip
+*.log
+.git/
