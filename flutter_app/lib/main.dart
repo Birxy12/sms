@@ -399,19 +399,32 @@ class MobileWebView extends StatefulWidget {
   State<MobileWebView> createState() => _MobileWebViewState();
 }
 
-class _MobileWebViewState extends State<MobileWebView> {
+class _MobileWebViewState extends State<MobileWebView> with SingleTickerProviderStateMixin {
   late final WebViewController _controller;
   bool _loading = true;
+  int _progress = 0;
   bool _wasOnline = true;
+  late final AnimationController _animController;
+  late final Animation<double> _bounceAnim;
 
   @override
   void initState() {
     super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+    
+    _bounceAnim = Tween<double>(begin: 0, end: -30).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
+    );
+
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.white)
       ..setNavigationDelegate(NavigationDelegate(
-        onPageStarted: (_) { if (mounted) setState(() => _loading = true); },
+        onPageStarted: (_) { if (mounted) setState(() { _loading = true; _progress = 0; }); },
+        onProgress: (progress) { if (mounted) setState(() => _progress = progress); },
         onPageFinished: (_) { if (mounted) setState(() => _loading = false); },
         onWebResourceError: (err) {
           if (mounted) setState(() => _loading = false);
@@ -429,6 +442,12 @@ class _MobileWebViewState extends State<MobileWebView> {
     }
     _wasOnline = widget.isOnline;
   }
+  
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -440,7 +459,50 @@ class _MobileWebViewState extends State<MobileWebView> {
             if (_loading)
               Container(
                 color: Colors.white,
-                child: const Center(child: CircularProgressIndicator(color: Color(0xFF4F46E5))),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedBuilder(
+                        animation: _bounceAnim,
+                        builder: (context, child) {
+                          return Transform.translate(
+                            offset: Offset(0, _bounceAnim.value),
+                            child: child,
+                          );
+                        },
+                        child: Image.asset(
+                          'assets/logo.png',
+                          width: 100,
+                          height: 100,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.school, size: 100, color: Color(0xFF4F46E5)
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      SizedBox(
+                        width: 200,
+                        child: LinearProgressIndicator(
+                          value: _progress / 100.0,
+                          color: const Color(0xFF4F46E5),
+                          backgroundColor: const Color(0xFFE5E7EB),
+                          minHeight: 8,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '$_progress%',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF4F46E5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             if (!widget.isOnline)
               Positioned(

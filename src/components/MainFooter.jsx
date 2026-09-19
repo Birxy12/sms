@@ -27,6 +27,7 @@ const MainFooter = () => {
 
   const apkDownloadUrl = 'https://github.com/Birxy12/sms/raw/main/app-release.apk';
   const iosDownloadUrl = '#'; // TODO: Update with actual iOS App Store link
+  const windowsDownloadUrl = '/SMSPortal-Setup-v2.exe';
 
   const quickLinks = [
     { to: '/check-result', label: 'Check Result' },
@@ -39,6 +40,7 @@ const MainFooter = () => {
     { to: '/terms', label: 'Terms of Service' },
     { href: apkDownloadUrl, label: '⚡ Download Android App', external: true },
     { href: iosDownloadUrl, label: '🍎 Download iOS App', external: true },
+    { href: windowsDownloadUrl, label: '💻 Download Windows App', external: true },
   ];
 
   const getDashboardPath = () => {
@@ -595,6 +597,37 @@ const MainFooter = () => {
           >
             <Smartphone size={14} />
             iOS App
+          </a>
+          
+          <a
+            href={windowsDownloadUrl}
+            download
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '8px',
+              backgroundColor: '#0078d7',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 600,
+              textDecoration: 'none',
+              transition: 'all 0.2s ease',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.filter = 'brightness(1.2)';
+              e.currentTarget.style.transform = 'scale(1.03)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.filter = 'brightness(1)';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            <Smartphone size={14} />
+            Windows App
           </a>
         </div>
         <span style={{ fontSize: '12px', opacity: 0.4 }}>
